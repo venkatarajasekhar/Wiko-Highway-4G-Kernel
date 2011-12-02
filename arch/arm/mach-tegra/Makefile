@@ -11,6 +11,7 @@ obj-y                                   += io.o
 obj-y                                   += irq.o
 obj-y                                   += clock.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_clocks.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11_clocks.o
 obj-y                                   += timer.o
 obj-y                                   += timerinfo.o
 ifeq ($(CONFIG_ARCH_TEGRA_2x_SOC),y)
@@ -83,6 +84,7 @@ obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra3_actmon.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_emc.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_emc.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_emc.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11_emc.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += wakeups-t2.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += wakeups-t3.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += pm-t2.o
@@ -91,6 +93,7 @@ obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += pinmux-tegra20-tables.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += pinmux-tegra30-tables.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += board-dt-tegra30.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += pinmux-t11-tables.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += pinmux-t11-tables.o
 obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
 obj-y					+= pmc.o
 obj-y					+= flowctrl.o
@@ -175,6 +178,11 @@ obj-${CONFIG_MACH_CURACAO}              += board-curacao-pinmux.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-power.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-sdhci.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-sensors.o
+
+obj-${CONFIG_MACH_DOLAK}                += board-dolak.o
+obj-${CONFIG_MACH_DOLAK}                += board-dolak-panel.o
+obj-${CONFIG_MACH_DOLAK}                += board-dolak-pinmux.o
+obj-${CONFIG_MACH_DOLAK}                += board-dolak-power.o
 
 obj-${CONFIG_MACH_WHISTLER}             += board-whistler.o
 obj-${CONFIG_MACH_WHISTLER}             += board-whistler-pinmux.o

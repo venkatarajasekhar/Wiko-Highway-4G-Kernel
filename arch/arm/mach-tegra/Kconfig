@@ -6,6 +6,7 @@ config ARCH_TEGRA_2x_SOC
 	bool "Enable support for Tegra20 family"
 	depends on !ARCH_TEGRA_3x_SOC
 	depends on !ARCH_TEGRA_11x_SOC
+	depends on !ARCH_TEGRA_14x_SOC
 	select ARM_CPU_SUSPEND if PM
 	select ARCH_TEGRA_HAS_ARM_SCU
 	select ARCH_TEGRA_HAS_PCIE
@@ -43,6 +44,7 @@ config ARCH_TEGRA_3x_SOC
 	depends on !ARCH_TEGRA_11x_SOC
 	select ARM_CPU_SUSPEND if PM
 	depends on !ARCH_TEGRA_11x_SOC
+	depends on !ARCH_TEGRA_14x_SOC
 	select ARCH_TEGRA_HAS_ARM_SCU
 	select ARCH_TEGRA_HAS_PCIE
 	select ARCH_TEGRA_HAS_SATA
@@ -78,6 +80,7 @@ config ARCH_TEGRA_3x_SOC
 
 config ARCH_TEGRA_11x_SOC
 	bool "Tegra 11x family SOC"
+	depends on !ARCH_TEGRA_14x_SOC
 	select ARCH_TEGRA_HAS_DUAL_CPU_CLUSTERS
 	select CPU_V7
 	select ARM_L1_CACHE_SHIFT_6
@@ -101,6 +104,20 @@ config ARCH_TEGRA_11x_SOC
 
 config ARCH_TEGRA_HAS_ARM_SCU
 	bool
+
+config ARCH_TEGRA_14x_SOC
+	bool "Tegra 14x family SOC"
+	select CPU_V7
+	select ARM_GIC
+	select ARM_SMP_TWD
+	select ARCH_REQUIRE_GPIOLIB
+	select ARCH_TEGRA_HAS_DUAL_CPU_CLUSTERS
+	select USB_ARCH_HAS_EHCI if USB_SUPPORT
+	select USB_EHCI_TEGRA if USB_SUPPORT
+	select REPORT_PRESENT_CPUS if TEGRA_AUTO_HOTPLUG
+	help
+	  Support for NVIDIA Tegra 14x family of SoCs, based upon the
+	  ARM CortexA9MP CPU and the ARM PL310 L2 cache controller
 
 config ARCH_TEGRA_HAS_DUAL_3D
 	bool
@@ -215,6 +232,13 @@ config MACH_CURACAO
        select TEGRA_FPGA_PLATFORM
        help
          Support for NVIDIA Curacao FPGA development platform
+
+config MACH_DOLAK
+       bool "Dolak board"
+       depends on ARCH_TEGRA_14x_SOC
+       select TEGRA_FPGA_PLATFORM
+       help
+         Support for NVIDIA Dolak FPGA development platform
 
 config MACH_CARDHU
        bool "Cardhu board"
