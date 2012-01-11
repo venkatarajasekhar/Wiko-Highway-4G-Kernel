@@ -250,7 +250,6 @@ static struct resource tsec_resources[] = {
 };
 
 static struct nvhost_device tegra_tsec01_device = {
-	/* channel 7 */
 	.name          = "tsec",
 	.id            = -1,
 	.resource      = tsec_resources,
