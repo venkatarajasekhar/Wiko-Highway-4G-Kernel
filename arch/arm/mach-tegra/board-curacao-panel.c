@@ -262,8 +262,8 @@ static struct tegra_fb_data curacao_fb_data = {
 #else
 	.xres		= 864,
 	.yres		= 480,
-#endif
 	.bits_per_pixel = 32,
+#endif
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 #endif
 };
@@ -363,7 +363,11 @@ static struct tegra_dsi_out curacao_dsi = {
 static struct tegra_dc_out curacao_disp1_out = {
 	.sd_settings	= &curacao_sd_settings,
 
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+	.type		= TEGRA_DC_OUT_RGB,
+#else
 	.type		= TEGRA_DC_OUT_DSI,
+#endif
 	.dsi		= &curacao_dsi,
 
 	.align		= TEGRA_DC_ALIGN_MSB,
