@@ -123,7 +123,7 @@
 #define MC_SMMU_HDA_ASID_0              0x254   /* High-def audio */
 #define MC_SMMU_ISP_ASID_0              0x258   /* Image signal processor */
 #define MC_SMMU_MPE_ASID_0              0x264   /* MPEG encoder (T30) */
-#define MC_SMMU_MSENC_ASID_0            0x264   /* MPEG encoder (T11x) */
+#define MC_SMMU_MSENC_ASID_0            0x264   /* MPEG encoder (T11x, T14x) */
 #define MC_SMMU_NV_ASID_0               0x268   /* 3D */
 #define MC_SMMU_NV2_ASID_0              0x26c   /* 3D secondary (T30) */
 #define MC_SMMU_PPCS_ASID_0             0x270   /* AHB */
@@ -132,7 +132,7 @@
 #define MC_SMMU_VI_ASID_0               0x280   /* Video input */
 #define MC_SMMU_XUSB_HOST_ASID_0        0x288   /* USB host (T11x) */
 #define MC_SMMU_XUSB_DEV_ASID_0         0x28c   /* USB dev (T11x) */
-#define MC_SMMU_TSEC_ASID_0             0x294   /* TSEC (T11x) */
+#define MC_SMMU_TSEC_ASID_0             0x294   /* TSEC (T11x, T14x) */
 #define MC_SMMU_PPCS1_ASID_0            0x298   /* AHB secondary (T11x) */
 
 /*
@@ -283,6 +283,24 @@
 	op(VI)		\
 	op(XUSB_DEV)	\
 	op(XUSB_HOST)
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#define SMMU_HWC	\
+	op(AVPC)	\
+	op(DC)		\
+	op(DCB)		\
+	op(EPP)		\
+	op(G2)		\
+	op(HC)		\
+	op(HDA)		\
+	op(ISP)		\
+	op(MSENC)	\
+	op(NV)		\
+	op(PPCS)	\
+	op(TSEC)	\
+	op(VDE)		\
+	op(VI)
 #endif
 
 /* Keep this as a "natural" enumeration (no assignments) */
