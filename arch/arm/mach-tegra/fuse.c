@@ -238,6 +238,10 @@ unsigned long long tegra_chip_uid(void)
 		cid = 1;
 		break;
 
+	case TEGRA_CHIPID_TEGRA14:
+		cid = 3;
+		break;
+
 	default:
 		BUG();
 		break;
@@ -319,6 +323,7 @@ static struct chip_revision tegra_chip_revisions[] = {
 	CHIP_REVISION(TEGRA3,  1, 2, 0,   A02),
 	CHIP_REVISION(TEGRA3,  1, 3, 0,   A03),
 	CHIP_REVISION(TEGRA11, 1, 0, 0,   A01),
+	CHIP_REVISION(TEGRA14, 1, 0, 0,   A01),
 };
 #endif
 
@@ -352,9 +357,14 @@ static enum tegra_revision tegra_decode_revision(const struct tegra_id *id)
 			revision = TEGRA_REVISION_A01;
 		else
 			revision = TEGRA_REVISION_QT;
+	} else if ((id->chipid & 0xff) == TEGRA_CHIPID_TEGRA14) {
+		if ((id->major == 0) && (id->minor == 1))
+			revision = TEGRA_REVISION_A01;
 	}
 #elif defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 	if ((id->chipid & 0xff) == TEGRA_CHIPID_TEGRA11)
+		revision = TEGRA_REVISION_A01;
+	else if ((id->chipid & 0xff) == TEGRA_CHIPID_TEGRA14)
 		revision = TEGRA_REVISION_A01;
 #endif
 
