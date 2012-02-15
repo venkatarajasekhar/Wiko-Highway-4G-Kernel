@@ -130,7 +130,21 @@ static struct resource dolak_disp1_resources[] = {
 };
 
 static struct tegra_dc_mode dolak_panel_modes[] = {
-#if DSI_PANEL_218
+#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
+	{
+		.pclk = 18000000,
+		.h_ref_to_sync = 11,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 16,
+		.v_sync_width = 4,
+		.h_back_porch = 16,
+		.v_back_porch = 4,
+		.h_active = 240,
+		.v_active = 320,
+		.h_front_porch = 16,
+		.v_front_portch = 4,
+	},
+#else
 	{
 		.pclk = 323000000,
 		.h_ref_to_sync = 11,
@@ -149,11 +163,15 @@ static struct tegra_dc_mode dolak_panel_modes[] = {
 
 static struct tegra_fb_data dolak_fb_data = {
 	.win		= 0,
-#if DSI_PANEL_218
+#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
+	.xres		= 240,
+	.yres		= 320,
+	.bits_per_pixel = 16,
+#else
 	.xres		= 864,
 	.yres		= 480,
-#endif
 	.bits_per_pixel = 32,
+#endif
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
@@ -237,7 +255,11 @@ static struct tegra_dsi_out dolak_dsi = {
 };
 
 static struct tegra_dc_out dolak_disp1_out = {
+#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
+	.type		= TEGRA_DC_OUT_RGB,
+#else
 	.type		= TEGRA_DC_OUT_DSI,
+#endif
 	.dsi		= &dolak_dsi,
 
 	.align		= TEGRA_DC_ALIGN_MSB,
