@@ -142,7 +142,7 @@ static struct tegra_dc_mode dolak_panel_modes[] = {
 		.h_active = 240,
 		.v_active = 320,
 		.h_front_porch = 16,
-		.v_front_portch = 4,
+		.v_front_porch = 4,
 	},
 #else
 	{
