@@ -281,7 +281,7 @@ static struct tegra_dc_platform_data dolak_disp1_pdata = {
 };
 
 static struct nvhost_device dolak_disp1_device = {
-	.name		= "tegra_dc_dsi_vs1",
+	.name		= "tegradc",
 	.id		= 0,
 	.resource	= dolak_disp1_resources,
 	.num_resources	= ARRAY_SIZE(dolak_disp1_resources),
