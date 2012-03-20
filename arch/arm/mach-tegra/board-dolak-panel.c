@@ -329,9 +329,6 @@ static struct platform_device dolak_nvmap_device = {
 
 static struct platform_device *dolak_gfx_devices[] __initdata = {
 	&dolak_nvmap_device,
-#ifdef CONFIG_TEGRA_GRHOST
-	&tegra_grhost_device,
-#endif
 	&tegra_pwfm2_device,
 	&dolak_backlight_device,
 };
@@ -345,6 +342,12 @@ int __init dolak_panel_init(void)
 	dolak_carveouts[1].size = tegra_carveout_size;
 	dolak_carveouts[2].base = tegra_vpr_start;
 	dolak_carveouts[2].size = tegra_vpr_size;
+
+#ifdef CONFIG_TEGRA_GRHOST
+	err = nvhost_device_register(&tegra_grhost_device);
+	if (err)
+		return err;
+#endif
 
 	err = platform_add_devices(dolak_gfx_devices,
 				   ARRAY_SIZE(dolak_gfx_devices));
