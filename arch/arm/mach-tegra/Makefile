@@ -69,6 +69,7 @@ obj-$(CONFIG_TEGRA_ARB_SEMAPHORE)       += arb_sema.o
 obj-y                                   += powergate.o
 obj-y                                   += dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_dvfs.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra14_dvfs.o
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_dvfs.o
