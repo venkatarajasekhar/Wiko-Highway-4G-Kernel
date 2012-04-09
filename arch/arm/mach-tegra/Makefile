@@ -184,6 +184,7 @@ obj-${CONFIG_MACH_DOLAK}                += board-dolak.o
 obj-${CONFIG_MACH_DOLAK}                += board-dolak-panel.o
 obj-${CONFIG_MACH_DOLAK}                += board-dolak-pinmux.o
 obj-${CONFIG_MACH_DOLAK}                += board-dolak-power.o
+obj-${CONFIG_MACH_DOLAK}                += board-dolak-sdhci.o
 
 obj-${CONFIG_MACH_WHISTLER}             += board-whistler.o
 obj-${CONFIG_MACH_WHISTLER}             += board-whistler-pinmux.o
