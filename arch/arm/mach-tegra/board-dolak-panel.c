@@ -167,12 +167,13 @@ static struct tegra_fb_data dolak_fb_data = {
 	.xres		= 240,
 	.yres		= 320,
 	.bits_per_pixel = 16,
+	.flags		= 0,
 #else
 	.xres		= 864,
 	.yres		= 480,
 	.bits_per_pixel = 32,
-#endif
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
+#endif
 };
 
 static struct tegra_dsi_cmd dsi_init_cmd[] = {
