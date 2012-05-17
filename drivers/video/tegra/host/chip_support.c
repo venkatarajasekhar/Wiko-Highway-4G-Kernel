@@ -27,6 +27,7 @@
 #include "t20/t20.h"
 #include "t30/t30.h"
 #include "t114/t114.h"
+#include "t148/t148.h"
 #include <mach/hardware.h>
 
 struct nvhost_chip_support *nvhost_get_chip_ops(void)
@@ -52,6 +53,10 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 
 	case TEGRA_CHIPID_TEGRA11:
 		err = nvhost_init_t114_support(host, chip_ops);
+		break;
+
+	case TEGRA_CHIPID_TEGRA14:
+		err = nvhost_init_t148_support(host, chip_ops);
 		break;
 
 	default:
