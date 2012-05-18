@@ -56,7 +56,6 @@
 #include "fuse.h"
 
 #define ENABLE_OTG 0
-#define ENABLE_WAR_840123 1	/* !!!!DELETEME!!! Bug 840123 */
 
 static struct plat_serial8250_port debug_uart_platform_data[] = {
 	{
@@ -467,6 +466,8 @@ static void __init tegra_dolak_init(void)
 {
 	tegra_clk_init_from_table(dolak_clk_init_table);
 	dolak_pinmux_init();
+	if (tegra_get_revision() == TEGRA_REVISION_QT)
+		debug_uart_platform_data[0].uartclk = tegra_clk_measure_input_freq();
 
 	platform_add_devices(dolak_devices, ARRAY_SIZE(dolak_devices));
 
