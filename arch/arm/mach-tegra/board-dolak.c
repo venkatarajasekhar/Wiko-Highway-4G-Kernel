@@ -51,6 +51,7 @@
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
 #include <mach/nand.h>
+#include <mach/tegra_bb.h>
 #include "board.h"
 #include "clock.h"
 #include "common.h"
@@ -365,6 +366,18 @@ static struct platform_device tegra_sim_smc91x_device = {
 };
 #endif
 
+#if defined(CONFIG_TEGRA_BASEBAND)
+static struct tegra_bb_platform_data dolak_tegra_bb_data;
+
+static struct platform_device dolak_tegra_bb_device = {
+	.name = "tegra_bb",
+	.id = 0,
+	.dev = {
+		.platform_data = &dolak_tegra_bb_data,
+	},
+};
+#endif
+
 static struct platform_device *dolak_devices[] __initdata = {
 #if ENABLE_OTG
 	&tegra_otg_device,
@@ -566,6 +579,25 @@ static void __init dolak_hs_uart_init(void)
 				ARRAY_SIZE(dolak_hs_uart_devices));
 }
 
+#if defined(CONFIG_TEGRA_BASEBAND)
+static void dolak_tegra_bb_init(void)
+{
+	/*
+	   Real AP device
+	   ToDo: match sizes to reserve sizes when MC has final value
+	   This 16/32M mapping is needed on Qt due to memory limitation
+	   if you map all 64/64M reserved today, kernel will panic
+	   Modem still access 64/64M so memory is unusable by AP
+	*/
+	dolak_tegra_bb_data.ipc_base = tegra_bb_ipc_start;
+	dolak_tegra_bb_data.ipc_size = SZ_16M;
+	dolak_tegra_bb_data.priv_base = tegra_bb_priv_start;
+	dolak_tegra_bb_data.priv_size = SZ_32M;
+	dolak_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
+	platform_device_register(&dolak_tegra_bb_device);
+}
+#endif
+
 static void __init tegra_dolak_init(void)
 {
 	tegra_clk_init_from_table(dolak_clk_init_table);
@@ -589,10 +621,17 @@ static void __init tegra_dolak_init(void)
 	dolak_panel_init();
 	dolak_hs_uart_init();
 	dolak_bt_rfkill();
+#if defined(CONFIG_TEGRA_BASEBAND)
+	dolak_tegra_bb_init();
+#endif
 }
 
 static void __init tegra_dolak_reserve(void)
 {
+#if defined(CONFIG_TEGRA_BASEBAND)
+	/* ToDo: match reserve sizes to final boot rom value */
+	tegra_reserve_shmem(SZ_64M, SZ_64M);
+#endif
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	tegra_reserve(0, SZ_4M, 0);
 #else
