@@ -34,6 +34,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
+#include <linux/tegra_uart.h>
 #include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/irqs.h>
@@ -77,28 +78,6 @@ static struct platform_device debug_uart = {
 	.id = PLAT8250_DEV_PLATFORM,
 	.dev = {
 		.platform_data = debug_uart_platform_data,
-	},
-};
-
-/* !!!FIXME!!! */
-static struct tegra_utmip_config utmi_phy_config[] = {
-	[0] = {
-			.hssync_start_delay = 0,
-			.idle_wait_delay = 17,
-			.elastic_limit = 16,
-			.term_range_adj = 6,
-			.xcvr_setup = 15,
-			.xcvr_lsfslew = 2,
-			.xcvr_lsrslew = 2,
-	},
-	[1] = {
-			.hssync_start_delay = 0,
-			.idle_wait_delay = 17,
-			.elastic_limit = 16,
-			.term_range_adj = 6,
-			.xcvr_setup = 8,
-			.xcvr_lsfslew = 2,
-			.xcvr_lsrslew = 2,
 	},
 };
 
@@ -147,19 +126,11 @@ static inline void dolak_bt_rfkill(void) { }
 
 static __initdata struct tegra_clk_init_table dolak_clk_init_table[] = {
 	/* name		parent		rate		enabled */
-#if ENABLE_WAR_840123
-	{ "uarta",	"clk_m",	925000,		true},
-	{ "uartb",	"clk_m",	925000,		true},
-	{ "uartc",	"clk_m",	925000,		true},
-	{ "uartd",	"clk_m",	925000,		true},
-	{ "uarte",	"clk_m",	925000,		true},
-#else
 	{ "uarta",	"clk_m",	13000000,	true},
 	{ "uartb",	"clk_m",	13000000,	true},
 	{ "uartc",	"clk_m",	13000000,	true},
 	{ "uartd",	"clk_m",	13000000,	true},
 	{ "uarte",	"clk_m",	13000000,	true},
-#endif
 	{ "pll_m",	NULL,		0,		true},
 	{ "blink",      "clk_32k",      32768,          false},
 	{ "pll_p_out4",	"pll_p",	24000000,	true },
@@ -394,13 +365,11 @@ static struct platform_device *dolak_devices[] __initdata = {
 	&tegra_otg_device,
 #endif
 	&debug_uart,
-	&tegra_uartb_device,
-	&tegra_uartc_device,
-	&tegra_uartd_device,
-	&tegra_uarte_device,
 	&tegra_pmu_device,
 	&tegra_rtc_device,
+#if !defined(USB_HOST_ONLY)
 	&tegra_udc_device,
+#endif
 #if defined(CONFIG_TEGRA_IOVMM_SMMU)
 	&tegra_smmu_device,
 #endif
@@ -435,32 +404,163 @@ static int __init dolak_touch_init(void)
 	return 0;
 }
 
-
-static struct tegra_ehci_platform_data tegra_ehci_pdata[] = {
-	[0] = {
-			.phy_config = &utmi_phy_config[0],
-			.operating_mode = TEGRA_USB_HOST,
-			.power_down_on_bus_suspend = 0,
+static struct tegra_usb_platform_data tegra_udc_pdata = {
+	.port_otg = true,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_DEVICE,
+	.u_data.dev = {
+		.vbus_pmu_irq = 0,
+		.vbus_gpio = -1,
+		.charging_supported = false,
+		.remote_wakeup_supported = false,
 	},
-	[1] = {
-			.phy_config = &ulpi_phy_config,
-			.operating_mode = TEGRA_USB_HOST,
-			.power_down_on_bus_suspend = 1,
-	},
-	[2] = {
-			.phy_config = &utmi_phy_config[1],
-			.operating_mode = TEGRA_USB_HOST,
-			.power_down_on_bus_suspend = 0,
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
 	},
 };
 
+static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
+	.port_otg = true,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.vbus_reg = "vdd_vbus_micro_usb",
+		.hot_plug = true,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 15,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = true,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 15,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.vbus_reg = "vdd_vbus_typea_usb",
+		.hot_plug = true,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
+	},
+};
+
+static struct tegra_usb_otg_data tegra_otg_pdata = {
+	.ehci_device = &tegra_ehci1_device,
+	.ehci_pdata = &tegra_ehci1_utmi_pdata,
+};
 
 static void dolak_usb_init(void)
 {
-	tegra_ehci2_device.dev.platform_data = &tegra_ehci_pdata[1];
-	platform_device_register(&tegra_ehci2_device);
+#if defined(USB_HOST_ONLY)
+	tegra_ehci1_device.dev.platform_data = &tegra_ehci1_utmi_pdata;
+	platform_device_register(&tegra_ehci1_device);
+#else
+	/* setup the udc platform data */
+	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
+
+#endif
 }
 
+static struct platform_device *dolak_hs_uart_devices[] __initdata = {
+	&tegra_uartb_device,
+	&tegra_uartc_device,
+	&tegra_uartd_device,
+	&tegra_uarte_device,
+};
+
+static struct uart_clk_parent uart_parent_clk[] = {
+	[0] = {.name = "clk_m"},
+};
+
+static struct tegra_uart_platform_data dolak_uart_pdata;
+static struct tegra_uart_platform_data dolak_loopback_uart_pdata;
+
+static void __init dolak_hs_uart_init(void)
+{
+	struct clk *c;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(uart_parent_clk); ++i) {
+		c = tegra_get_clock_by_name(uart_parent_clk[i].name);
+		if (IS_ERR_OR_NULL(c)) {
+			pr_err("Not able to get the clock for %s\n",
+					uart_parent_clk[i].name);
+			continue;
+		}
+		uart_parent_clk[i].parent_clk = c;
+		uart_parent_clk[i].fixed_clk_rate = clk_get_rate(c);
+	}
+	dolak_uart_pdata.parent_clk_list = uart_parent_clk;
+	dolak_loopback_uart_pdata.parent_clk_list = uart_parent_clk;
+	dolak_uart_pdata.parent_clk_count = ARRAY_SIZE(uart_parent_clk);
+	dolak_loopback_uart_pdata.parent_clk_count =
+						ARRAY_SIZE(uart_parent_clk);
+	dolak_loopback_uart_pdata.is_loopback = true;
+	tegra_uartb_device.dev.platform_data = &dolak_uart_pdata;
+	tegra_uartc_device.dev.platform_data = &dolak_uart_pdata;
+	tegra_uartd_device.dev.platform_data = &dolak_uart_pdata;
+	tegra_uarte_device.dev.platform_data = &dolak_loopback_uart_pdata;
+	platform_add_devices(dolak_hs_uart_devices,
+				ARRAY_SIZE(dolak_hs_uart_devices));
+}
 
 static void __init tegra_dolak_init(void)
 {
@@ -479,6 +579,7 @@ static void __init tegra_dolak_init(void)
 	dolak_keys_init();
 	dolak_usb_init();
 	dolak_panel_init();
+	dolak_hs_uart_init();
 	dolak_bt_rfkill();
 }
 
