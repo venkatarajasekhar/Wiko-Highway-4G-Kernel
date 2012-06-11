@@ -225,14 +225,12 @@ static void dolak_i2c_init(void)
 		.debounce_interval = 10,	\
 	}
 
-/* !!!FIXME!!! */
 static struct gpio_keys_button dolak_keys[] = {
-	[0] = GPIO_KEY(KEY_MENU, PQ0, 0),
-	[1] = GPIO_KEY(KEY_HOME, PQ1, 0),
-	[2] = GPIO_KEY(KEY_BACK, PQ2, 0),
-	[3] = GPIO_KEY(KEY_VOLUMEUP, PQ3, 0),
-	[4] = GPIO_KEY(KEY_VOLUMEDOWN, PQ4, 0),
-	[5] = GPIO_KEY(KEY_POWER, PV2, 1),
+	[0] = GPIO_KEY(KEY_MENU, PV1, 0),
+	[1] = GPIO_KEY(KEY_HOME, PV2, 0),
+	[2] = GPIO_KEY(KEY_BACK, PV3, 0),
+	[3] = GPIO_KEY(KEY_VOLUMEUP, PV4, 0),
+	[4] = GPIO_KEY(KEY_VOLUMEDOWN, PV5, 0),
 };
 
 static struct gpio_keys_platform_data dolak_keys_platform_data = {
