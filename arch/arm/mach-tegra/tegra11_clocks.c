@@ -5414,6 +5414,10 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("dam0",	"tegra30-dam.0",	"dam.0",	108,	0x3d8,	48000000,  mux_plla_pllc_pllp_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("dam1",	"tegra30-dam.1",	"dam.1",	109,	0x3dc,	48000000,  mux_plla_pllc_pllp_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("dam2",	"tegra30-dam.2",	"dam.2",	110,	0x3e0,	48000000,  mux_plla_pllc_pllp_clkm,	MUX | DIV_U71),
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	PERIPH_CLK("dmic0",	"dmic.0",		NULL,   161,	0x64c,	1000000000,  mux_pllaout0_audio0_2x_pllp_clkm,	MUX | DIV_U71),
+	PERIPH_CLK("dmic1",	"dmic.1",		NULL,   162,	0x650,	1000000000,  mux_pllaout0_audio0_2x_pllp_clkm,	MUX | DIV_U71),
+#endif
 	PERIPH_CLK("hda",	"hda",			NULL,   125,	0x428,	108000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("hda2codec_2x",	"hda2codec_2x",	NULL,   111,	0x3e4,	48000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("hda2hdmi",	"hda2hdmi",		NULL,	128,	0,	48000000,  mux_clk_m,			0),
