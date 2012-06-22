@@ -65,6 +65,8 @@ static __initdata struct tegra_pingroup_config dolak_pinmux[] = {
 	DEFAULT_PINMUX(UART3_RXD,       UARTC,           NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(UART3_CTS_N,     UARTC,           NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(UART3_RTS_N,     UARTC,           NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(I2C1_SCL,	I2C1,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(I2C1_SDA,	I2C1,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GEN2_I2C_SCL,    I2C2,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GEN2_I2C_SDA,    I2C2,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC4_CLK,      SDMMC4,          NORMAL,    NORMAL,     INPUT),
