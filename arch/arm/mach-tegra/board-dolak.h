@@ -22,6 +22,7 @@
 
 int dolak_regulator_init(void);
 int dolak_suspend_init(void);
+int dolak_sdhci_init(void);
 int dolak_pinmux_init(void);
 int dolak_panel_init(void);
 
