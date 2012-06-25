@@ -35,6 +35,7 @@
 #include "board.h"
 #include "devices.h"
 #include "gpio-names.h"
+#include "tegra14_host1x_devices.h"
 
 #define PANEL_ENABLE	1
 
@@ -345,7 +346,7 @@ int __init dolak_panel_init(void)
 	dolak_carveouts[2].size = tegra_vpr_size;
 
 #ifdef CONFIG_TEGRA_GRHOST
-	err = nvhost_device_register(&tegra_grhost_device);
+	err = tegra14_register_host1x_devices();
 	if (err)
 		return err;
 #endif
