@@ -43,6 +43,8 @@
 #include <mach/io.h>
 #include <mach/i2s.h>
 #include <mach/audio.h>
+#include <mach/hardware.h>
+#include <mach/gpio-tegra.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -563,8 +565,10 @@ static void __init dolak_hs_uart_init(void)
 static void __init tegra_dolak_init(void)
 {
 	tegra_clk_init_from_table(dolak_clk_init_table);
+	tegra_enable_pinmux();
 	dolak_pinmux_init();
-	if (tegra_get_revision() == TEGRA_REVISION_QT)
+
+	if (tegra_revision == TEGRA_REVISION_QT)
 		debug_uart_platform_data[0].uartclk = tegra_clk_measure_input_freq();
 
 	platform_add_devices(dolak_devices, ARRAY_SIZE(dolak_devices));
@@ -575,7 +579,7 @@ static void __init tegra_dolak_init(void)
 	dolak_regulator_init();
 	dolak_suspend_init();
 	dolak_touch_init();
-	dolak_keys_init();
+	/* dolak_keys_init(); */
 	dolak_usb_init();
 	dolak_panel_init();
 	dolak_hs_uart_init();
@@ -592,11 +596,11 @@ static void __init tegra_dolak_reserve(void)
 }
 
 MACHINE_START(DOLAK, DOLAK_BOARD_NAME)
-	.boot_params    = 0x80000100,
+	.atag_offset    = 0x80000100,
 	.soc            = &tegra_soc_desc,
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_dolak_reserve,
-	.init_early     = tegra_init_early,
+	.init_early	= tegra14x_init_early,
 	.init_irq       = tegra_init_irq,
 	.handle_irq     = gic_handle_irq,
 	.timer          = &tegra_timer,

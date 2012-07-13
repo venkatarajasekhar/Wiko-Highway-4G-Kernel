@@ -890,6 +890,9 @@ static struct of_device_id tegra_pinmux_of_match[] __devinitdata = {
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	{ .compatible = "nvidia,tegra11x-pinmux", tegra11x_pinmux_init },
 #endif
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	{ .compatible = "nvidia,tegra14x-pinmux", tegra14x_pinmux_init },
+#endif
 	{ },
 };
 
@@ -992,6 +995,10 @@ static struct platform_device_id tegra_pinmux_id[] = {
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	{ .name = "tegra11x-pinmux",
 	  .driver_data = (kernel_ulong_t)tegra11x_pinmux_init, },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	{ .name = "tegra14x-pinmux",
+	  .driver_data = (kernel_ulong_t)tegra14x_pinmux_init, },
 #endif
 	{},
 };

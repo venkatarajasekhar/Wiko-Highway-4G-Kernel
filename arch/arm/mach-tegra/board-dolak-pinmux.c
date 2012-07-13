@@ -16,6 +16,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/bug.h>
 #include <mach/pinmux.h>
 
 #define DEFAULT_DRIVE(_name)					\
@@ -109,6 +110,7 @@ static __initdata struct tegra_pingroup_config dolak_pinmux[] = {
 
 void __init dolak_pinmux_init(void)
 {
+	tegra14x_default_pinmux();
 	tegra_pinmux_config_table(dolak_pinmux, ARRAY_SIZE(dolak_pinmux));
 	tegra_drive_pinmux_config_table(dolak_drive_pinmux,
 					ARRAY_SIZE(dolak_drive_pinmux));
