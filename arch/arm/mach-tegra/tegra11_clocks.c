@@ -6046,9 +6046,9 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("dmic0",	"dmic.0",		NULL,   161,	0x64c,	1000000000,  mux_pllaout0_audio0_2x_pllp_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("dmic1",	"dmic.1",		NULL,   162,	0x650,	1000000000,  mux_pllaout0_audio0_2x_pllp_clkm,	MUX | DIV_U71),
 #endif
-	PERIPH_CLK("hda",	"hda",			NULL,   125,	0x428,	48000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
-	PERIPH_CLK("hda2codec_2x",	"hda2codec_2x",	NULL,   111,	0x3e4,	48000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
-	PERIPH_CLK("hda2hdmi",	"hda2hdmi",		NULL,	128,	0,	48000000,  mux_clk_m,			0),
+	PERIPH_CLK("hda",	"tegra30-hda",			"hda",   125,	0x428,	108000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
+	PERIPH_CLK("hda2codec_2x",	"tegra30-hda",	"hda2codec",   111,	0x3e4,	48000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
+	PERIPH_CLK("hda2hdmi",	"tegra30-hda",		"hda2hdmi",	128,	0,	48000000,  mux_clk_m,			0),
 	PERIPH_CLK("sbc1",	"tegra11-spi.0",		NULL,	41,	0x134,	48000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("sbc2",	"tegra11-spi.1",		NULL,	44,	0x118,	48000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("sbc3",	"tegra11-spi.2",		NULL,	46,	0x11c,	48000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
