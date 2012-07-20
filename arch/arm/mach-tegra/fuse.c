@@ -357,9 +357,6 @@ static enum tegra_revision tegra_decode_revision(const struct tegra_id *id)
 			revision = TEGRA_REVISION_A01;
 		else
 			revision = TEGRA_REVISION_QT;
-	} else if ((id->chipid & 0xff) == TEGRA_CHIPID_TEGRA14) {
-		if ((id->major == 0) && (id->minor == 1))
-			revision = TEGRA_REVISION_A01;
 	}
 #elif defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 	if ((id->chipid & 0xff) == TEGRA_CHIPID_TEGRA11)
