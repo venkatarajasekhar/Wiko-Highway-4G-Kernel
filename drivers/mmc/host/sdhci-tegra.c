@@ -83,9 +83,7 @@ static unsigned int tegra_sdhost_std_freq;
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 static void tegra_3x_sdhci_set_card_clock(struct sdhci_host *sdhci, unsigned int clock);
 static void tegra3_sdhci_post_reset_init(struct sdhci_host *sdhci);
-#endif
-
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#elif !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 static void tegra11x_sdhci_post_reset_init(struct sdhci_host *sdhci);
 #endif
 
@@ -264,9 +262,7 @@ static void tegra3_sdhci_post_reset_init(struct sdhci_host *sdhci)
 		SDHCI_VENDOR_MISC_CNTRL_ENABLE_SDR50_SUPPORT;
 	sdhci_writew(sdhci, misc_ctrl, SDHCI_VENDOR_MISC_CNTRL);
 }
-#endif
-
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#elif !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 static void tegra11x_sdhci_post_reset_init(struct sdhci_host *sdhci)
 {
 	u16 misc_ctrl;
