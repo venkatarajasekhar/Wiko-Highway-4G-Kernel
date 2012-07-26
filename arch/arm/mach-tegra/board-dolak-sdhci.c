@@ -245,6 +245,7 @@ static int __init dolak_wifi_init(void)
 
 int __init dolak_sdhci_init(void)
 {
+	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device2);
 	platform_device_register(&tegra_sdhci_device0);
 	return 0;
