@@ -46,7 +46,7 @@ static __initdata struct tegra_drive_pingroup_config dolak_drive_pinmux[] = {
 	}
 
 static __initdata struct tegra_pingroup_config dolak_pinmux[] = {
-	DEFAULT_PINMUX(SDMMC1_CLK,      SDMMC1,          NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(SDMMC1_CLK,      SDMMC1,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC1_CMD,      SDMMC1,          PULL_UP,   NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC1_DAT3,     SDMMC1,          PULL_UP,   NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC1_DAT2,     SDMMC1,          PULL_UP,   NORMAL,     INPUT),
@@ -100,7 +100,7 @@ static __initdata struct tegra_pingroup_config dolak_pinmux[] = {
 	DEFAULT_PINMUX(DAP2_DIN,        I2S1,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(DAP2_DOUT,       I2S1,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(DAP2_SCLK,       I2S1,            NORMAL,    NORMAL,     INPUT),
-	DEFAULT_PINMUX(SDMMC3_CLK,      SDMMC3,          NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(SDMMC3_CLK,      SDMMC3,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC3_CMD,      SDMMC3,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC3_DAT0,     SDMMC3,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC3_DAT1,     SDMMC3,          NORMAL,    NORMAL,     INPUT),
