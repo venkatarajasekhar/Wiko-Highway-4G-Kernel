@@ -377,7 +377,6 @@ static struct platform_device *dolak_devices[] __initdata = {
 	&tegra_smmu_device,
 #endif
 	&dolak_keys_device,
-	&tegra_wdt_device,
 #if defined(CONFIG_SND_HDA_TEGRA)
 	&tegra_hda_device,
 #endif

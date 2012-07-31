@@ -1,6 +1,7 @@
 GCOV_PROFILE := y
 
-subdir-ccflags-y := -Werror
+#Keep -Werror disabled until most of the options are enabled.
+#subdir-ccflags-y := -Werror
 
 obj-y                                   += board-pinmux.o
 obj-y                                   += ahb.o
