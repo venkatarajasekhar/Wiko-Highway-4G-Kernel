@@ -28,7 +28,8 @@ struct cpuquiet_governor *cpuquiet_curr_governor;
 struct cpuquiet_governor *cpuquiet_get_first_governor(void)
 {
 	if (!list_empty(&cpuquiet_governors))
-		return list_entry(&cpuquiet_governors, struct cpuquiet_governor,
+		return list_entry(cpuquiet_governors.next,
+					struct cpuquiet_governor,
 					governor_list);
 	else
 		return NULL;
@@ -98,4 +99,18 @@ void cpuquiet_unregister_governor(struct cpuquiet_governor *gov)
 		cpuquiet_switch_governor(NULL);
 	list_del(&gov->governor_list);
 	mutex_unlock(&cpuquiet_lock);
+}
+
+void cpuquiet_device_busy(void)
+{
+	if (cpuquiet_curr_governor &&
+			cpuquiet_curr_governor->device_busy_notification)
+		cpuquiet_curr_governor->device_busy_notification();
+}
+
+void cpuquiet_device_free(void)
+{
+	if (cpuquiet_curr_governor &&
+			cpuquiet_curr_governor->device_free_notification)
+		cpuquiet_curr_governor->device_free_notification();
 }

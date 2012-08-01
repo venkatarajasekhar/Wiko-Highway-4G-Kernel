@@ -1,3 +1,17 @@
+# Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 if ARCH_TEGRA
 
 comment "NVIDIA Tegra options"
@@ -12,7 +26,6 @@ config ARCH_TEGRA_2x_SOC
 	select ARCH_TEGRA_HAS_PCIE
 	select CPU_V7
 	select ARM_GIC
-	select ARM_SMP_TWD
 	select ARM_SAVE_DEBUG_CONTEXT if PM_SLEEP
 	select ARCH_REQUIRE_GPIOLIB
 	select PINCTRL
@@ -52,7 +65,6 @@ config ARCH_TEGRA_3x_SOC
 	select ARCH_TEGRA_HAS_DUAL_CPU_CLUSTERS
 	select CPU_V7
 	select ARM_GIC
-	select ARM_SMP_TWD
 	select ARM_SAVE_DEBUG_CONTEXT if PM_SLEEP
 	select GIC_SET_MULTIPLE_CPUS if SMP
 	select ARCH_REQUIRE_GPIOLIB
@@ -71,7 +83,7 @@ config ARCH_TEGRA_3x_SOC
 	select ARM_ERRATA_764369
 	select PL310_ERRATA_769419 if CACHE_L2X0
 	select CPU_FREQ_TABLE if CPU_FREQ
-	select TEGRA_LP2_ARM_TWD if HAVE_ARM_TWD && !TEGRA_RAIL_OFF_MULTIPLE_CPUS
+	select TEGRA_LP2_CPU_TIMER if HAVE_ARM_TWD && !TEGRA_RAIL_OFF_MULTIPLE_CPUS
 	select CPA
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
 	help
@@ -95,9 +107,11 @@ config ARCH_TEGRA_11x_SOC
 	select USB_ULPI_VIEWPORT if USB_SUPPORT
 	select USE_OF
 	select REPORT_PRESENT_CPUS if TEGRA_AUTO_HOTPLUG
+	select TEGRA_LP2_CPU_TIMER if !TEGRA_RAIL_OFF_MULTIPLE_CPUS
 	select ARCH_TEGRA_HAS_CL_DVFS
 	select TEGRA_DYNAMIC_CBUS
 	select TEGRA_DUAL_CBUS
+	select ARCH_TEGRA_4GB_MEMORY
 	help
 	  Support for NVIDIA Tegra 11x family of SoCs, based upon the
 	  ARM Cortex-A15MP CPU
@@ -150,6 +164,14 @@ config TEGRA_PCI
 	depends on ARCH_TEGRA_HAS_PCIE
 	help
 	  Adds PCIe Host controller driver for tegra based systems
+
+config TEGRA_IRDA
+	bool "IRDA on UARTB Port of Verbier"
+	select IRDA_CPLD
+	depends on ARCH_TEGRA_3x_SOC && MACH_CARDHU
+	help
+	  Adds support for Vishay IrDA transceiver at UARTB port
+	  of Verbier Boards(E1186 and E1198) with no ULPI rework done.
 
 comment "Tegra board type"
 
@@ -279,6 +301,14 @@ config MACH_KAI
        help
          Support for NVIDIA KAI development platform
 
+config MACH_DALMORE
+       bool "Dalmore board"
+       depends on ARCH_TEGRA_3x_SOC
+       select MACH_HAS_SND_SOC_TEGRA_RT5639 if SND_SOC
+       select MACH_HAS_SND_SOC_TEGRA_RT5640 if SND_SOC
+       help
+         Support for NVIDIA DALMORE development platform
+
 choice
        prompt "Tegra platform type"
        default TEGRA_SILICON_PLATFORM
@@ -393,7 +423,7 @@ config TEGRA_CORE_DVFS
 
 config TEGRA_IOVMM_GART
 	bool "Enable I/O virtual memory manager for GART"
-	depends on ARCH_TEGRA_2x_SOC
+	depends on ARCH_TEGRA_2x_SOC && !TEGRA_IOMMU_GART
 	default y
 	select TEGRA_IOVMM
 	help
@@ -404,7 +434,7 @@ config TEGRA_IOVMM_GART
 
 config TEGRA_IOVMM_SMMU
 	bool "Enable I/O virtual memory manager for SMMU"
-	depends on !ARCH_TEGRA_2x_SOC
+	depends on !ARCH_TEGRA_2x_SOC && !TEGRA_IOMMU_SMMU
 	default y
 	select TEGRA_IOVMM
 	help
@@ -421,6 +451,7 @@ config TEGRA_IOVMM_SMMU_SYSFS
 	  Enables SMMU register access through /sys/devices/smmu/* files.
 
 config TEGRA_IOVMM
+	depends on TEGRA_IOVMM_GART || TEGRA_IOVMM_SMMU
 	bool
 
 config TEGRA_AVP_KERNEL_ON_MMU
@@ -432,7 +463,7 @@ config TEGRA_AVP_KERNEL_ON_MMU
 
 config TEGRA_AVP_KERNEL_ON_SMMU
 	bool "Use SMMU to relocate AVP kernel"
-	depends on TEGRA_IOVMM_SMMU
+	depends on TEGRA_IOVMM_SMMU || TEGRA_IOMMU_SMMU
 	default y
 	help
 	  Use SMMU to relocate AVP kernel (nvrm_avp.bin).
@@ -501,12 +532,15 @@ config TEGRA_EMC_TO_DDR_CLOCK
 	default "2" if ARCH_TEGRA_2x_SOC
 	default "1"
 
-config TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-	bool "Use conservative cpu frequency governor when device enters early suspend"
-	depends on HAS_EARLYSUSPEND && CPU_FREQ
-	default n
+config TEGRA_SE_ON_CBUS
+	bool "To Drive SE clock from cbus"
+	default y
 	help
-	 Also will restore to original cpu frequency governor when device is resumed
+	  This option enables SE clock to be derived from cbus
+
+config TEGRA_CBUS_CLOCK_DIVIDER
+	int "CBUS clock divider"
+	default "2"
 
 config TEGRA_STAT_MON
         bool "Enable H/W statistics monitor"
@@ -518,6 +552,17 @@ config TEGRA_STAT_MON
 config USB_HOTPLUG
 	bool "Enabling the USB hotplug"
 	default n
+
+config TEGRA_GADGET_BOOST_CPU_FREQ
+	int "Boost cpu frequency for tegra usb gadget (0-1300 mhz)"
+	range 0 1300
+	default 0
+	help
+	  Devices need to boost frequency of CPU when they are connected
+	  to host pc through usb cable for better performance. This value
+	  is the amount of the frequency (in mhz) to be boosted. If it is
+	  zero boosting frequency will not be enabled. This value will be
+	  used only by usb gadget driver.
 
 config TEGRA_DYNAMIC_PWRDET
 	bool "Enable dynamic activation of IO level auto-detection"
@@ -577,7 +622,7 @@ config TEGRA_WDT_RECOVERY
 	  Enables watchdog recovery mechanism to protect against
 	  suspend/resume hangs.
 
-config TEGRA_LP2_ARM_TWD
+config TEGRA_LP2_CPU_TIMER
 	bool
 
 config TEGRA_RAIL_OFF_MULTIPLE_CPUS
@@ -612,4 +657,20 @@ config TEGRA_DUAL_CBUS
 config TEGRA_MIGRATE_CBUS_USERS
 	bool "Move cbus users between source plls to optimize cumulative dvfs"
 	depends on TEGRA_DYNAMIC_CBUS && TEGRA_DUAL_CBUS
+
+config TEGRA_SKIN_THROTTLE
+	bool "Skin Temperature throttling"
+	depends on TEGRA_THERMAL_THROTTLE
+	depends on THERM_EST
+	default n
+	help
+	  Enable throttling to control the temperature of the skin/case
+	  of the device.
+
+config ARCH_TEGRA_4GB_MEMORY
+	bool "Full 4GB physical memory support"
+	default n
+	help
+	  Harmless to select this even if hardware does not support full
+	  4GB physical memory.
 endif

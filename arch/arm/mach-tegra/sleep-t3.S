@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/include/mach/sleep-t3.S
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 #include <asm/asm-offsets.h>
 #include <asm/glue-cache.h>
 #include <asm/glue-proc.h>
+#include <asm/cp15.h>
 
 #include <mach/iomap.h>
 #include <mach/io.h>
@@ -91,6 +92,7 @@
 #define CLK_RESET_PLLP_OUTB		0xa8
 
 #define PMC_PLLP_WB0_OVERRIDE		0xf8
+#define PMC_PLLM_WB0_OVERRIDE		0x1dc
 
 #define CLK_RESET_CLK_SOURCE_MSELECT	0x3b4
 
@@ -181,8 +183,14 @@ delay_1:
 	ldr	r3, [r1]				@ read CSR
 	str	r3, [r1]				@ clear CSR
 	tst	r0, #TEGRA_POWER_HOTPLUG_SHUTDOWN
+#ifdef CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE
+	mov	r3, #FLOW_CTRL_WAITEVENT
+	orreq	r3, r3, #FLOW_CTRL_HALT_GIC_IRQ
+	orreq	r3, r3, #FLOW_CTRL_HALT_GIC_FIQ
+#else
 	moveq	r3, #FLOW_CTRL_WAIT_FOR_INTERRUPT	@ For LP2
 	movne	r3, #FLOW_CTRL_WAITEVENT		@ For hotplug
+#endif
 	str	r3, [r2]
 	ldr	r0, [r2]
 	b	wfe_war
@@ -252,6 +260,13 @@ ENTRY(tegra3_sleep_cpu_secondary_finish)
 	mov	lr, pc
 	ldr	pc, [r10, #CACHE_FLUSH_KERN_ALL]
 #else
+	/* Disable the data cache */
+	mrc	p15, 0, r2, c1, c0, 0
+	bic	r2, r2, #CR_C
+	dsb
+	mcr	p15, 0, r2, c1, c0, 0
+	isb
+
 	cpu_id	r2
 	cpu_to_csr_reg	r1,	r2
 	mov32	r10, TEGRA_FLOW_CTRL_VIRT
@@ -552,10 +567,12 @@ tegra3_cpu_clk32k:
 	tst	r0, #PMC_CTRL_SIDE_EFFECT_LP0
 	beq	lp1_clocks_prepare
 
-	/* enable PLLM via PMC in LP0 */
+	/* enable PLLM auto-restart via PMC in LP0; restore override settings */
 	ldr	r0, [r4, #PMC_PLLP_WB0_OVERRIDE]
 	orr	r0, r0, #((1 << 12) | (1 << 11))
 	str	r0, [r4, #PMC_PLLP_WB0_OVERRIDE]
+	ldr	r0, [r4, #PMC_SCRATCH2]
+	str	r0, [r4, #PMC_PLLM_WB0_OVERRIDE]
 	mov	pc, lr
 
 	/* start by jumping to clkm to safely disable PLLs, then jump

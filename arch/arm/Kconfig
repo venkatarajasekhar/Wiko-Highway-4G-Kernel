@@ -1162,6 +1162,7 @@ source arch/arm/mm/Kconfig
 config ARM_NR_BANKS
 	int
 	default 16 if ARCH_EP93XX
+	default 16 if ARCH_TEGRA_4GB_MEMORY
 	default 8
 
 config IWMMXT
@@ -1500,6 +1501,8 @@ config PCI_HOST_ITE8152
 
 source "drivers/pci/Kconfig"
 
+source "drivers/pci/pcie/Kconfig"
+
 source "drivers/pcmcia/Kconfig"
 
 endmenu
@@ -1681,9 +1684,9 @@ config HOTPLUG_CPU
 
 config LOCAL_TIMERS
 	bool "Use local timer interrupts"
-	depends on SMP && !ARM_ARCH_TIMER
+	depends on SMP
 	default y
-	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT)
+	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT && !ARM_ARCH_TIMER)
 	help
 	  Enable support for local timers on SMP platforms, rather then the
 	  legacy IPI broadcast method.  Local timers allows the system
@@ -2284,6 +2287,8 @@ endif
 source "drivers/cpuidle/Kconfig"
 
 source "drivers/cpuquiet/Kconfig"
+
+source "drivers/edp/Kconfig"
 
 endmenu
 

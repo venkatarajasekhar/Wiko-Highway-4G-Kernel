@@ -144,12 +144,13 @@ static struct nvhost_device tegra_gr2d02_device = {
 	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.clocks		= { {"gr2d", UINT_MAX},
+	.clocks		= { {"gr2d", 0},
 			  {"epp", 0},
 			  {"emc", 300000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
 	.moduleid	= NVHOST_MODULE_NONE,
+	.serialize	= true,
 };
 
 static struct resource isp_resources_t20[] = {
@@ -167,7 +168,11 @@ static struct nvhost_device tegra_isp01_device = {
 	.resource = isp_resources_t20,
 	.num_resources = ARRAY_SIZE(isp_resources_t20),
 	.index		= 3,
-	.syncpts	= 0,
+	.syncpts	= BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
+			  BIT(NVSYNCPT_VI_ISP_4),
+	.clocks		= { {"epp", 0}
+			  },
+	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_ISP,

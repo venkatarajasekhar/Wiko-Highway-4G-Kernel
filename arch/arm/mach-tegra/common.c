@@ -311,32 +311,33 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "kfuse",	NULL,		0,		true },
 	{ "fuse",	NULL,		0,		true },
 	{ "sclk",	NULL,		0,		true },
-#ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	{ "pll_p",	NULL,		0,		true },
 	{ "pll_p_out1",	"pll_p",	0,		false },
 	{ "pll_p_out3",	"pll_p",	0,		true },
+#ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	{ "pll_m_out1",	"pll_m",	275000000,	false },
 	{ "pll_p_out2",	 "pll_p",	102000000,	false },
 	{ "sclk",	 "pll_p_out2",	102000000,	true },
 	{ "pll_p_out4",	 "pll_p",	204000000,	true },
+	{ "hclk",	"sclk",		102000000,	true },
+	{ "pclk",	"hclk",		51000000,	true },
+	{ "wake.sclk",	NULL,		40000000,	true },
+	{ "mselect",	"pll_p",	102000000,	true },
 	{ "host1x",	"pll_p",	102000000,	false },
 	{ "cl_dvfs_ref", "pll_p",       54000000,       false },
 	{ "cl_dvfs_soc", "pll_p",       54000000,       false },
 #else
-	{ "pll_p",	NULL,		0,		true },
-	{ "pll_p_out1",	"pll_p",	0,		false },
-	{ "pll_p_out3",	"pll_p",	0,		true },
 	{ "pll_m_out1",	"pll_m",	275000000,	true },
 	{ "pll_p_out2",	"pll_p",	108000000,	false },
 	{ "sclk",	"pll_p_out2",	108000000,	true },
 	{ "pll_p_out4",	"pll_p",	216000000,	true },
-	{ "host1x",	"pll_p",	108000000,	false },
-	{ "cl_dvfs_ref", "clk_m",	13000000,	false },
-	{ "cl_dvfs_soc", "clk_m",	13000000,	false },
 	{ "hclk",	"sclk",		108000000,	true },
 	{ "pclk",	"hclk",		54000000,	true },
 	{ "wake.sclk",  NULL,           250000000,	true },
 	{ "mselect",	"pll_p",	108000000,	true },
+	{ "host1x",	"pll_p",	108000000,	false },
+	{ "cl_dvfs_ref", "clk_m",	13000000,	false },
+	{ "cl_dvfs_soc", "clk_m",	13000000,	false },
 #endif
 #ifdef CONFIG_TEGRA_SLOW_CSITE
 	{ "csite",	"clk_m",	1000000,	true },
@@ -1269,64 +1270,6 @@ void __init tegra_release_bootloader_fb(void)
 						tegra_bootloader_fb_size))
 			pr_err("Failed to free bootloader fb.\n");
 }
-
-#ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-char cpufreq_default_gov[CONFIG_NR_CPUS][MAX_GOV_NAME_LEN];
-char *cpufreq_conservative_gov = "conservative";
-static char *cpufreq_sysfs_place_holder =
-		"/sys/devices/system/cpu/cpu%i/cpufreq/scaling_governor";
-static char *cpufreq_gov_conservative_param =
-		"/sys/devices/system/cpu/cpufreq/conservative/%s";
-
-void cpufreq_store_default_gov(void)
-{
-	unsigned int cpu;
-	struct cpufreq_policy *policy;
-
-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
-		policy = cpufreq_cpu_get(cpu);
-		if (policy) {
-			sprintf(cpufreq_default_gov[cpu], "%s",
-					policy->governor->name);
-			cpufreq_cpu_put(policy);
-		}
-	}
-}
-
-int cpufreq_change_gov(char *target_gov)
-{
-	unsigned int cpu = 0, ret = -EINVAL;
-
-#ifndef CONFIG_TEGRA_AUTO_HOTPLUG
-	for_each_online_cpu(cpu)
-#endif
-	ret = cpufreq_set_gov(target_gov, cpu);
-
-	return ret;
-}
-
-int cpufreq_restore_default_gov(void)
-{
-	int ret = 0;
-	unsigned int cpu;
-
-	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
-		if (strlen((const char *)&cpufreq_default_gov[cpu])) {
-			ret = cpufreq_set_gov(cpufreq_default_gov[cpu], cpu);
-			if (ret < 0)
-				/* Unable to restore gov for the cpu as
-				 * It was online on suspend and becomes
-				 * offline on resume.
-				 */
-				pr_info("Unable to restore gov:%s for cpu:%d,"
-						, cpufreq_default_gov[cpu]
-							, cpu);
-		}
-		cpufreq_default_gov[cpu][0] = '\0';
-	}
-	return ret;
-}
-#endif /* CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND */
 
 static struct platform_device *pinmux_devices[] = {
 	&tegra_gpio_device,

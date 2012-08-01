@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/include/mach/pm.h
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (c) 2010-2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -67,12 +67,8 @@ struct tegra_suspend_platform_data {
 	unsigned int cpu_resume_boost;	/* CPU frequency resume boost in kHz */
 };
 
-/* Tegra io dpd entry - for each supported driver */
-struct tegra_io_dpd {
-	const char *name;	/* driver name */
-	u8 io_dpd_reg_index;	/* io dpd register index */
-	u8 io_dpd_bit;		/* bit position for driver in dpd register */
-};
+/* clears io dpd settings before kernel code */
+void tegra_bl_io_dpd_cleanup(void);
 
 unsigned long tegra_cpu_power_good_time(void);
 unsigned long tegra_cpu_power_off_time(void);
@@ -193,7 +189,7 @@ static inline unsigned long tegra_lp2_timer_remain(void)
 
 static inline int tegra_is_lp2_timer_ready(unsigned int cpu)
 {
-#if defined(CONFIG_TEGRA_LP2_ARM_TWD) || defined(CONFIG_ARCH_TEGRA_2x_SOC)
+#if defined(CONFIG_TEGRA_LP2_CPU_TIMER) || defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	return 1;
 #else
 	return tegra3_is_lp2_timer_ready(cpu);

@@ -39,6 +39,7 @@
 #include <mach/clk.h>
 #include <mach/gpio-tegra.h>
 #include <mach/iomap.h>
+#include <mach/io_dpd.h>
 #include <mach/irqs.h>
 #include <mach/pinmux.h>
 #include <mach/iomap.h>
@@ -170,16 +171,6 @@ static const struct tegra_pingroup_config i2c2_gen2 = {
 	.func		= TEGRA_MUX_I2C2,
 };
 #endif
-
-static struct tegra_i2c_platform_data curacao_i2c2_platform_data = {
-	.adapter_nr	= 1,
-	.bus_count	= 2,
-	.bus_clk_rate	= { 100000, 100000 },
-#if 0	/* !!!FIXME!!!! */
-	.bus_mux	= { &i2c2_ddc, &i2c2_gen2 },
-	.bus_mux_len	= { 1, 1 },
-#endif
-};
 
 static struct tegra_i2c_slave_platform_data curacao_i2c2_slave_platform_data = {
 	.adapter_nr	= 1,
@@ -385,7 +376,6 @@ static struct platform_device *curacao_devices[] __initdata = {
 	&tegra_smmu_device,
 #endif
 	&curacao_keys_device,
-	&tegra_wdt_device,
 #if defined(CONFIG_SND_HDA_TEGRA)
 	&tegra_hda_device,
 #endif
@@ -440,6 +430,7 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 	},
 };
 
+#if defined(USB_HOST_ONLY)
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
@@ -465,62 +456,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_use_fuses = 1,
 	},
 };
-
-static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.unaligned_dma_buf_supported = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.hot_plug = true,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 15,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
-static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.unaligned_dma_buf_supported = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.vbus_reg = "vdd_vbus_typea_usb",
-		.hot_plug = true,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
-static struct tegra_usb_otg_data tegra_otg_pdata = {
-	.ehci_device = &tegra_ehci1_device,
-	.ehci_pdata = &tegra_ehci1_utmi_pdata,
-};
+#endif
 
 static void curacao_usb_init(void)
 {
@@ -589,6 +525,7 @@ static void __init tegra_curacao_init(void)
 	platform_add_devices(curacao_devices, ARRAY_SIZE(curacao_devices));
 
 	curacao_power_off_init();
+	tegra_io_dpd_init();
 	curacao_sdhci_init();
 	curacao_i2c_init();
 	curacao_regulator_init();

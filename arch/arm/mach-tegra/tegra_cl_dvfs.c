@@ -112,6 +112,7 @@
 
 #define CL_DVFS_I2C_VDD_REG_ADDR	0x44
 #define CL_DVFS_I2C_STS			0x48
+#define CL_DVFS_I2C_STS_I2C_REQ_PENDING	0x1
 
 #define CL_DVFS_INTR_STS		0x5c
 #define CL_DVFS_INTR_EN			0x60
@@ -120,10 +121,12 @@
 
 #define CL_DVFS_I2C_CLK_DIVISOR		0x16c
 #define CL_DVFS_I2C_CLK_DIVISOR_MASK	0xffff
-#define CL_DVFS_I2C_CLK_DIVISOR_FS_SHIFT 0
-#define CL_DVFS_I2C_CLK_DIVISOR_HS_SHIFT 16
+#define CL_DVFS_I2C_CLK_DIVISOR_FS_SHIFT 16
+#define CL_DVFS_I2C_CLK_DIVISOR_HS_SHIFT 0
 
 #define CL_DVFS_OUTPUT_LUT		0x200
+
+#define CL_DVFS_OUTPUT_PENDING_TIMEOUT	1000
 
 /* Conversion macros (different scales for frequency request, and monitored
    rate is not a typo)*/
@@ -134,7 +137,7 @@
 #define ROUND_MIN_RATE(rate, ref_rate)		\
 		(DIV_ROUND_UP(rate, (ref_rate) / 2) * ((ref_rate) / 2))
 #define GET_DIV(ref_rate, out_rate, scale)	\
-		DIV_ROUND_CLOSEST((ref_rate), (out_rate) * (scale))
+		DIV_ROUND_UP((ref_rate), (out_rate) * (scale))
 
 static const char *mode_name[] = {
 	[TEGRA_CL_DVFS_UNINITIALIZED] = "uninitialized",
@@ -169,6 +172,17 @@ static inline void output_enable(struct tegra_cl_dvfs *cld, bool enable)
 
 	cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_CFG);
 	cl_dvfs_wmb(cld);
+
+	if (!enable) {
+		int i;
+		for (i = 0; i < CL_DVFS_OUTPUT_PENDING_TIMEOUT; i++) {
+			udelay(1);
+			val = cl_dvfs_readl(cld, CL_DVFS_I2C_STS);
+			if (!(val & CL_DVFS_I2C_STS_I2C_REQ_PENDING))
+				return;
+		}
+		pr_err("%s: I2C pending transaction timeout\n", __func__);
+	}
 }
 
 static inline void set_mode(struct tegra_cl_dvfs *cld,
@@ -183,8 +197,8 @@ static int find_safe_output(
 	struct tegra_cl_dvfs *cld, unsigned long rate, u8 *safe_output)
 {
 	int i;
-	int n = cld->cpu_clk->dvfs->num_freqs;
-	unsigned long *freqs = cld->cpu_clk->dvfs->freqs;
+	int n = cld->safe_dvfs->num_freqs;
+	unsigned long *freqs = cld->safe_dvfs->freqs;
 
 	for (i = 0; i < n; i++) {
 		if (freqs[i] >= rate) {
@@ -222,10 +236,10 @@ static void cl_dvfs_init_maps(struct tegra_cl_dvfs *cld)
 
 	BUILD_BUG_ON(MAX_DVFS_FREQS >= MAX_CL_DVFS_VOLTAGES);
 	BUILD_BUG_ON(MAX_CL_DVFS_VOLTAGES > OUT_MASK + 1);
-	BUG_ON(!cld->cpu_clk || !cld->cpu_clk->dvfs);
+	BUG_ON(!cld->safe_dvfs);
 
-	millivolts = cld->cpu_clk->dvfs->millivolts;
-	v_max = cld->cpu_clk->dvfs->max_millivolts;
+	millivolts = cld->safe_dvfs->millivolts;
+	v_max = cld->safe_dvfs->max_millivolts;
 
 	v = cld->soc_data->dfll_millivolts_min;
 	BUG_ON(v > millivolts[0]);
@@ -267,10 +281,9 @@ static void cl_dvfs_init_pwm_if(struct tegra_cl_dvfs *cld)
 
 static void cl_dvfs_init_i2c_if(struct tegra_cl_dvfs *cld)
 {
-	u32 val;
+	u32 val, div;
 	struct tegra_cl_dvfs_platform_data *p_data = cld->p_data;
-	bool hs_mode = p_data->u.pmu_i2c.hs_master_code &&
-		p_data->u.pmu_i2c.hs_rate;
+	bool hs_mode = p_data->u.pmu_i2c.hs_rate;
 
 	/* PMU slave address, vdd register offset, and transfer mode */
 	val = p_data->u.pmu_i2c.slave_addr << CL_DVFS_I2C_CFG_SLAVE_ADDR_SHIFT;
@@ -291,10 +304,12 @@ static void cl_dvfs_init_i2c_if(struct tegra_cl_dvfs *cld)
 	BUG_ON(!val || (val > CL_DVFS_I2C_CLK_DIVISOR_MASK));
 	val = (val - 1) << CL_DVFS_I2C_CLK_DIVISOR_FS_SHIFT;
 	if (hs_mode) {
-		u32 div = GET_DIV(cld->i2c_rate, p_data->u.pmu_i2c.hs_rate, 12);
+		div = GET_DIV(cld->i2c_rate, p_data->u.pmu_i2c.hs_rate, 12);
 		BUG_ON(!div || (div > CL_DVFS_I2C_CLK_DIVISOR_MASK));
-		val |= (div - 1) << CL_DVFS_I2C_CLK_DIVISOR_FS_SHIFT;
+	} else {
+		div = 2;	/* default hs divisor just in case */
 	}
+	val |= (div - 1) << CL_DVFS_I2C_CLK_DIVISOR_HS_SHIFT;
 	cl_dvfs_writel(cld, val, CL_DVFS_I2C_CLK_DIVISOR);
 	cl_dvfs_wmb(cld);
 }
@@ -376,11 +391,30 @@ static void cl_dvfs_init_cntrl_logic(struct tegra_cl_dvfs *cld)
 	cl_dvfs_wmb(cld);
 }
 
-int __init tegra_init_cl_dvfs(struct clk *dfll_clk)
+static int cl_dvfs_enable_clocks(struct tegra_cl_dvfs *cld)
+{
+	if (cld->p_data->pmu_if == TEGRA_CL_DVFS_PMU_I2C) {
+		clk_enable(cld->i2c_clk);
+		clk_enable(cld->i2c_fast);
+	}
+	clk_enable(cld->ref_clk);
+	clk_enable(cld->soc_clk);
+	return 0;
+}
+
+static void cl_dvfs_disable_clocks(struct tegra_cl_dvfs *cld)
+{
+	if (cld->p_data->pmu_if == TEGRA_CL_DVFS_PMU_I2C) {
+		clk_disable(cld->i2c_clk);
+		clk_disable(cld->i2c_fast);
+	}
+	clk_disable(cld->ref_clk);
+	clk_disable(cld->soc_clk);
+}
+
+int __init tegra_init_cl_dvfs(struct tegra_cl_dvfs *cld)
 {
 	int ret;
-	unsigned long flags;
-	struct tegra_cl_dvfs *cld = dfll_clk->u.dfll.cl_dvfs;
 
 	/* Check platform and SoC data, get i2c clock */
 	if (!cld->soc_data) {
@@ -392,9 +426,13 @@ int __init tegra_init_cl_dvfs(struct clk *dfll_clk)
 		return -EINVAL;
 	}
 	if (cld->p_data->pmu_if == TEGRA_CL_DVFS_PMU_I2C) {
-		cld->i2c_clk = clk_get_sys("tegra_cl_dvfs", "i2c");
-		BUG_ON(IS_ERR_OR_NULL(cld->i2c_clk));
 		ret = clk_enable(cld->i2c_clk);
+		if (ret) {
+			pr_err("%s: Failed to enable %s\n",
+			       __func__, cld->i2c_clk->name);
+			return ret;
+		}
+		ret = clk_enable(cld->i2c_fast);
 		if (ret) {
 			pr_err("%s: Failed to enable %s\n",
 			       __func__, cld->i2c_clk->name);
@@ -406,12 +444,7 @@ int __init tegra_init_cl_dvfs(struct clk *dfll_clk)
 		return -EINVAL;
 	}
 
-	/* Enable clocks, release control logic reset (DFLL is still reset) */
-	cld->ref_clk = tegra_get_clock_by_name("cl_dvfs_ref");
-	cld->soc_clk = tegra_get_clock_by_name("cl_dvfs_soc");
-	cld->cpu_clk = tegra_get_clock_by_name("cpu_g");
-	BUG_ON(!cld->ref_clk || !cld->soc_clk || !cld->cpu_clk);
-
+	/* Enable clocks, release control logic reset */
 	ret = clk_enable(cld->ref_clk);
 	if (ret) {
 		pr_err("%s: Failed to enable %s\n",
@@ -430,17 +463,12 @@ int __init tegra_init_cl_dvfs(struct clk *dfll_clk)
 	/* Get ready ouput voltage mapping*/
 	cl_dvfs_init_maps(cld);
 
-	/* setup PMU interface */
+	/* Setup PMU interface */
 	cl_dvfs_init_out_if(cld);
 
-	/* release DFLL reset and configure control registers in
-	   disabled mode (changing mode is protected by dfll clock
-	   lock) */
-	clk_lock_save(dfll_clk, &flags);
-	tegra_periph_reset_deassert(dfll_clk);
+	/* Configure control registers in disabled mode and disable clocks */
 	cl_dvfs_init_cntrl_logic(cld);
-	dfll_clk->state = OFF;
-	clk_unlock_restore(dfll_clk, &flags);
+	cl_dvfs_disable_clocks(cld);
 
 	return 0;
 }
@@ -479,6 +507,7 @@ void tegra_cl_dvfs_disable(struct tegra_cl_dvfs *cld)
 
 	output_enable(cld, false);
 	set_mode(cld, TEGRA_CL_DVFS_DISABLED);
+	cl_dvfs_disable_clocks(cld);
 }
 
 /* Switch from DISABLE state to OPEN_LOOP state */
@@ -493,6 +522,7 @@ int tegra_cl_dvfs_enable(struct tegra_cl_dvfs *cld)
 	if (cld->mode != TEGRA_CL_DVFS_DISABLED)
 		return 0;
 
+	cl_dvfs_enable_clocks(cld);
 	set_mode(cld, TEGRA_CL_DVFS_OPEN_LOOP);
 	return 0;
 }
@@ -611,7 +641,8 @@ int tegra_cl_dvfs_request_rate(struct tegra_cl_dvfs *cld, unsigned long rate)
 
 	if (cld->mode == TEGRA_CL_DVFS_CLOSED_LOOP) {
 		int force_val = req.output - cld->safe_ouput;
-		force_val = force_val * 128 / cld->p_data->cfg_param->cg;
+		int coef = cld->p_data->cfg_param->cg_scale ? 128 : 16;
+		force_val = force_val * coef / cld->p_data->cfg_param->cg;
 		force_val = clamp(force_val, FORCE_MIN, FORCE_MAX);
 		val |= ((u32)force_val << CL_DVFS_FREQ_REQ_FORCE_SHIFT) &
 					CL_DVFS_FREQ_REQ_FORCE_MASK;

@@ -32,7 +32,6 @@
 #include <linux/err.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
 #include <linux/suspend.h>
 #include <linux/slab.h>
 #include <linux/serial_reg.h>
@@ -100,6 +99,9 @@ struct suspend_context {
 	u8 uart[5];
 
 	struct tegra_twd_context twd;
+#ifdef CONFIG_ARM_ARCH_TIMER
+	struct arch_timer_context arch_timer;
+#endif
 };
 
 #ifdef CONFIG_PM_SLEEP
@@ -183,7 +185,7 @@ struct suspend_context tegra_sctx;
 #define MC_SECURITY_SIZE	0x70
 #define MC_SECURITY_CFG2	0x7c
 
-#define AWAKE_CPU_FREQ_MIN	100000
+#define AWAKE_CPU_FREQ_MIN	51000
 static struct pm_qos_request awake_cpu_freq_req;
 
 struct dvfs_rail *tegra_cpu_rail;
@@ -388,9 +390,20 @@ static void restore_cpu_complex(u32 mode)
 	   timekeeping switched over to the global system timer. In this
 	   case keep local timer disabled, and restore only periodic load. */
 	if (!(mode & (TEGRA_POWER_CLUSTER_MASK |
-		      TEGRA_POWER_CLUSTER_IMMEDIATE)))
+		      TEGRA_POWER_CLUSTER_IMMEDIATE))) {
+#ifdef CONFIG_ARM_ARCH_TIMER
+		tegra_sctx.arch_timer.cntp_ctl = 0;
+#endif
+#ifdef CONFIG_HAVE_ARM_TWD
 		tegra_sctx.twd.twd_ctrl = 0;
+#endif
+	}
+#ifdef CONFIG_ARM_ARCH_TIMER
+	arch_timer_resume(&tegra_sctx.arch_timer);
+#endif
+#ifdef CONFIG_HAVE_ARM_TWD
 	tegra_twd_resume(&tegra_sctx.twd);
+#endif
 }
 
 /*
@@ -425,7 +438,12 @@ static void suspend_cpu_complex(u32 mode)
 	tegra_sctx.pllp_misc = readl(clk_rst + CLK_RESET_PLLP_MISC);
 	tegra_sctx.cclk_divider = readl(clk_rst + CLK_RESET_CCLK_DIVIDER);
 
+#ifdef CONFIG_HAVE_ARM_TWD
 	tegra_twd_suspend(&tegra_sctx.twd);
+#endif
+#ifdef CONFIG_ARM_ARCH_TIMER
+	arch_timer_suspend(&tegra_sctx.arch_timer);
+#endif
 
 	reg = readl(FLOW_CTRL_CPU_CSR(cpu));
 	reg &= ~FLOW_CTRL_CSR_WFE_BITMAP;	/* clear wfe bitmap */
@@ -1192,6 +1210,10 @@ out:
 
 	iram_cpu_lp2_mask = tegra_cpu_lp2_mask;
 	iram_cpu_lp1_mask = tegra_cpu_lp1_mask;
+
+	/* clear io dpd settings before kernel */
+	tegra_bl_io_dpd_cleanup();
+
 fail:
 #endif
 	if (plat->suspend_mode == TEGRA_SUSPEND_NONE)
@@ -1291,34 +1313,3 @@ static int tegra_debug_uart_syscore_init(void)
 	return 0;
 }
 arch_initcall(tegra_debug_uart_syscore_init);
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static struct clk *clk_wake;
-static void pm_early_suspend(struct early_suspend *h)
-{
-	if (clk_wake)
-		clk_disable(clk_wake);
-	pm_qos_update_request(&awake_cpu_freq_req, PM_QOS_DEFAULT_VALUE);
-}
-
-static void pm_late_resume(struct early_suspend *h)
-{
-	if (clk_wake)
-		clk_enable(clk_wake);
-	pm_qos_update_request(&awake_cpu_freq_req, (s32)AWAKE_CPU_FREQ_MIN);
-}
-
-static struct early_suspend pm_early_suspender = {
-		.suspend = pm_early_suspend,
-		.resume = pm_late_resume,
-};
-
-static int pm_init_wake_behavior(void)
-{
-	clk_wake = tegra_get_clock_by_name("wake.sclk");
-	register_early_suspend(&pm_early_suspender);
-	return 0;
-}
-
-late_initcall(pm_init_wake_behavior);
-#endif

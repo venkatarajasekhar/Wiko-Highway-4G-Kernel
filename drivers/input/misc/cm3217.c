@@ -3,6 +3,8 @@
  * Copyright (C) 2011 Capella Microsystems Inc.
  * Author: Frank Hsieh <pengyueh@gmail.com>
  *
+ * Copyright (c) 2012, NVIDIA Corporation.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -15,9 +17,6 @@
  */
 
 #include <linux/delay.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
@@ -38,11 +37,11 @@
 #include <asm/mach-types.h>
 #include <asm/setup.h>
 
-#define D(x...)			pr_info(x)
+#define D(x...)			pr_debug(x)
 
 #define I2C_RETRY_COUNT		10
 
-#define LS_POLLING_DELAY	500
+#define LS_POLLING_DELAY	1000 /* mSec */
 
 static void report_do_work(struct work_struct *w);
 static DECLARE_DELAYED_WORK(report_work, report_do_work);
@@ -52,9 +51,6 @@ struct cm3217_info {
 	struct device *ls_dev;
 	struct input_dev *ls_input_dev;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
-#endif
 	struct i2c_client *i2c_client;
 	struct workqueue_struct *lp_wq;
 
@@ -386,20 +382,8 @@ static int lightsensor_enable(struct cm3217_info *lpi)
 	if (ret < 0)
 		pr_err("[LS][CM3217 error]%s: set auto light sensor fail\n",
 		       __func__);
-	else {
-		msleep(50);	/* wait for 50 ms for the first report adc */
 
-		/* report an invalid value first to ensure we
-		 * trigger an event when adc_level is zero.
-		 */
-		input_report_abs(lpi->ls_input_dev, ABS_MISC, -1);
-		input_sync(lpi->ls_input_dev);
-		/* resume, IOCTL and DEVICE_ATTR */
-		report_lsensor_input_event(lpi, 1);
-		lpi->als_enable = 1;
-	}
-
-	queue_delayed_work(lpi->lp_wq, &report_work, lpi->polling_delay);
+	queue_work(lpi->lp_wq, &report_work);
 	lpi->als_enable = 1;
 
 	mutex_unlock(&als_enable_mutex);
@@ -462,8 +446,10 @@ static int lightsensor_release(struct inode *inode, struct file *file)
 static long lightsensor_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
-	int rc, val;
+	int rc = 0;
+	int val;
 	struct cm3217_info *lpi = lp_info;
+	unsigned long delay;
 
 	/* D("[CM3217] %s cmd %d\n", __func__, _IOC_NR(cmd)); */
 
@@ -483,6 +469,17 @@ static long lightsensor_ioctl(struct file *file, unsigned int cmd,
 		D("[LS][CM3217] %s LIGHTSENSOR_IOCTL_GET_ENABLED, enabled %d\n",
 		  __func__, val);
 		rc = put_user(val, (unsigned long __user *)arg);
+		break;
+
+	case LIGHTSENSOR_IOCTL_SET_DELAY:
+		if (get_user(delay, (unsigned long __user *)arg)) {
+			rc = -EFAULT;
+			break;
+		}
+		D("[LS][CM3217] %s LIGHTSENSOR_IOCTL_SET_DELAY, delay %ld\n",
+			__func__, delay);
+		delay = delay / 1000;
+		lpi->polling_delay = msecs_to_jiffies(delay);
 		break;
 
 	default:
@@ -870,29 +867,6 @@ static int cm3217_setup(struct cm3217_info *lpi)
 	return ret;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void cm3217_early_suspend(struct early_suspend *h)
-{
-	struct cm3217_info *lpi = lp_info;
-
-	D("[LS][CM3217] %s\n", __func__);
-
-	lpi->als_enabled_before_suspend = lpi->als_enable;
-	if (lpi->als_enable)
-		lightsensor_disable(lpi);
-}
-
-static void cm3217_late_resume(struct early_suspend *h)
-{
-	struct cm3217_info *lpi = lp_info;
-
-	D("[LS][CM3217] %s\n", __func__);
-
-	if (lpi->als_enabled_before_suspend)
-		lightsensor_enable(lpi);
-}
-#endif
-
 static int cm3217_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1022,13 +996,6 @@ static int cm3217_probe(struct i2c_client *client,
 	ret = device_create_file(lpi->ls_dev, &dev_attr_ls_flevel);
 	if (ret)
 		goto err_create_ls_device_file;
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	lpi->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	lpi->early_suspend.suspend = cm3217_early_suspend;
-	lpi->early_suspend.resume = cm3217_late_resume;
-	register_early_suspend(&lpi->early_suspend);
-#endif
 
 	lpi->als_enable = 0;
 	lpi->als_enabled_before_suspend = 0;

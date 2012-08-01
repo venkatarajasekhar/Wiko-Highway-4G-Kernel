@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsd.c
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -959,9 +959,12 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 				mutex_unlock(&dc->lock);
 				return -ENODEV;
 			}
-			mutex_unlock(&dc->lock);
 
+			tegra_dc_hold_dc_out(dc);
 			nvsd_init(dc, sd_settings);
+			tegra_dc_release_dc_out(dc);
+
+			mutex_unlock(&dc->lock);
 
 			/* Update backlight state IFF we're disabling! */
 			if (!sd_settings->enable && sd_settings->bl_device) {

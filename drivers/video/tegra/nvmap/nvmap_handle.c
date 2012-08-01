@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2009-2012, NVIDIA Corporation.
+ * Copyright (c) 2009-2012, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,16 +30,17 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/fs.h>
+#include <linux/shrinker.h>
+#include <linux/moduleparam.h>
+#include <linux/nvmap.h>
 
 #include <asm/cacheflush.h>
 #include <asm/outercache.h>
 #include <asm/pgtable.h>
 
 #include <mach/iovmm.h>
-#include <linux/nvmap.h>
+#include <trace/events/nvmap.h>
 
-#include <linux/shrinker.h>
-#include <linux/moduleparam.h>
 #include "nvmap.h"
 #include "nvmap_mru.h"
 #include "nvmap_common.h"
@@ -55,7 +56,7 @@
  * the kernel (i.e., not a carveout handle) includes its array of pages. to
  * preserve kmalloc space, if the array of pages exceeds PAGELIST_VMALLOC_MIN,
  * the array is allocated using vmalloc. */
-#define PAGELIST_VMALLOC_MIN	(PAGE_SIZE * 2)
+#define PAGELIST_VMALLOC_MIN	(PAGE_SIZE)
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 
@@ -400,7 +401,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	if (pool->max_pages <= 0 || pool->max_pages >= info.totalram)
 		goto fail;
 	pool_size[flags] = pool->max_pages;
-	pr_info("nvmap %s page pool size=%d pages",
+	pr_info("nvmap %s page pool size=%d pages\n",
 		s_memtype_str[flags], pool->max_pages);
 	pool->page_array = vmalloc(sizeof(void *) * pool->max_pages);
 	pool->shrink_array = vmalloc(sizeof(struct page *) * pool->max_pages);
@@ -426,7 +427,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags)
 	}
 	si_meminfo(&info);
 	pr_info("nvmap pool = %s, highmem=%d, pool_size=%d,"
-		"totalram=%lu, freeram=%lu, totalhigh=%lu, freehigh=%lu",
+		"totalram=%lu, freeram=%lu, totalhigh=%lu, freehigh=%lu\n",
 		s_memtype_str[flags], highmem_pages, pool->max_pages,
 		info.totalram, info.freeram, info.totalhigh, info.freehigh);
 do_cpa:
@@ -443,7 +444,7 @@ fail:
 
 static inline void *altalloc(size_t len)
 {
-	if (len >= PAGELIST_VMALLOC_MIN)
+	if (len > PAGELIST_VMALLOC_MIN)
 		return vmalloc(len);
 	else
 		return kmalloc(len, GFP_KERNEL);
@@ -454,7 +455,7 @@ static inline void altfree(void *ptr, size_t len)
 	if (!ptr)
 		return;
 
-	if (len >= PAGELIST_VMALLOC_MIN)
+	if (len > PAGELIST_VMALLOC_MIN)
 		vfree(ptr);
 	else
 		kfree(ptr);
@@ -737,6 +738,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	if (h->alloc)
 		goto out;
 
+	trace_nvmap_alloc_handle_id(client, id, heap_mask, align, flags);
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	h->secure = !!(flags & NVMAP_HANDLE_SECURE);
@@ -746,7 +748,7 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 #ifndef CONFIG_TEGRA_IOVMM
 	/* convert iovmm requests to generic carveout. */
 	if (heap_mask & NVMAP_HEAP_IOVMM) {
-		heap_mask = heap_mask & ~NVMAP_HEAP_IOVMM |
+		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |
 			    NVMAP_HEAP_CARVEOUT_GENERIC;
 	}
 #endif
@@ -819,6 +821,7 @@ void nvmap_free_handle_id(struct nvmap_client *client, unsigned long id)
 		return;
 	}
 
+	trace_nvmap_free_handle_id(client, id);
 	BUG_ON(!ref->handle);
 	h = ref->handle;
 
@@ -919,6 +922,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	ref->handle = h;
 	atomic_set(&ref->pin, 0);
 	add_handle_ref(client, ref);
+	trace_nvmap_create_handle(client, h, size, ref);
 	return ref;
 }
 
@@ -992,5 +996,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	ref->handle = h;
 	atomic_set(&ref->pin, 0);
 	add_handle_ref(client, ref);
+	trace_nvmap_duplicate_handle_id(client, id, ref);
 	return ref;
 }

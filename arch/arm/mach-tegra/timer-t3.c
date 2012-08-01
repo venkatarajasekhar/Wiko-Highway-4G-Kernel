@@ -71,14 +71,21 @@
 #define TIMER6_OFFSET (TEGRA_TMR6_BASE-TEGRA_TMR1_BASE)
 
 static void __iomem *timer_reg_base = IO_ADDRESS(TEGRA_TMR1_BASE);
-static cpumask_t wake_timer_ready;
+
+#if defined(CONFIG_PM_SLEEP)
 static cpumask_t wake_timer_canceled;
+static cpumask_t wake_timer_ready;
+#endif
 
-#define timer_writel(value, reg) \
-	__raw_writel(value, timer_reg_base + (reg))
-#define timer_readl(reg) \
-	__raw_readl(timer_reg_base + (reg))
+static inline void timer_writel(u32 value, unsigned long reg)
+{
+	__raw_writel(value, timer_reg_base + (reg));
+}
 
+static inline unsigned int timer_readl(unsigned long reg)
+{
+	return __raw_readl(timer_reg_base + (reg));
+}
 
 #ifdef CONFIG_PM_SLEEP
 static u32 lp2_wake_timers[] = {

@@ -53,7 +53,9 @@
 #define DSI_PANEL_RESET	1
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 static atomic_t sd_brightness = ATOMIC_INIT(255);
+#endif
 
 static int curacao_backlight_init(struct device *dev)
 {
@@ -96,6 +98,7 @@ static struct platform_device curacao_backlight_device = {
 	},
 };
 
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 static int curacao_panel_enable(void)
 {
 #if DSI_PANEL_218
@@ -112,6 +115,7 @@ static int curacao_panel_disable(void)
 	return -ENODEV;
 }
 
+#if TEGRA_DSI_GANGED_MODE
 static struct resource curacao_disp1_resources[] = {
 	{
 		.name	= "irq",
@@ -155,6 +159,7 @@ static struct resource curacao_disp1_resources[] = {
 
 #endif
 };
+#endif
 
 static struct tegra_dc_sd_settings curacao_sd_settings = {
 	.enable = 0, /* Normal mode operation */
@@ -360,6 +365,7 @@ static struct tegra_dsi_out curacao_dsi = {
 	.fpga_freq_khz = 162000,
 };
 
+#if TEGRA_DSI_GANGED_MODE
 static struct tegra_dc_out curacao_disp1_out = {
 	.sd_settings	= &curacao_sd_settings,
 
@@ -397,6 +403,7 @@ static struct nvhost_device curacao_disp1_device = {
 		.platform_data = &curacao_disp1_pdata,
 	},
 };
+#endif
 
 static struct resource curacao_disp2_resources[] = {
 	{
@@ -478,6 +485,7 @@ static struct nvhost_device curacao_disp2_device = {
 		.platform_data = &curacao_disp2_pdata,
 	},
 };
+#endif
 
 static struct nvmap_platform_carveout curacao_carveouts[] = {
 	[0] = {
@@ -525,7 +533,9 @@ static struct platform_device *curacao_gfx_devices[] __initdata = {
 int __init curacao_panel_init(void)
 {
 	int err;
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 	struct resource *res;
+#endif
 
 	curacao_carveouts[1].base = tegra_carveout_start;
 	curacao_carveouts[1].size = tegra_carveout_size;
@@ -541,6 +551,7 @@ int __init curacao_panel_init(void)
 		return err;
 #endif
 
+#if TEGRA_DSI_GANGED_MODE
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 	res = nvhost_get_resource_byname(&curacao_disp1_device,
 					 IORESOURCE_MEM, "fbmem");
@@ -549,6 +560,17 @@ int __init curacao_panel_init(void)
 
 	if (!err)
 		err = nvhost_device_register(&curacao_disp1_device);
+#endif
+#else
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
+	res = nvhost_get_resource_byname(&curacao_disp2_device,
+					 IORESOURCE_MEM, "fbmem");
+	res->start = tegra_fb_start;
+	res->end = tegra_fb_start + tegra_fb_size - 1;
+
+	if (!err)
+		err = nvhost_device_register(&curacao_disp2_device);
+#endif
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_NVAVP)

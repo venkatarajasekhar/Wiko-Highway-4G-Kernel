@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-enterprise-panel.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,10 +24,8 @@
 #include <linux/resource.h>
 #include <asm/mach-types.h>
 #include <linux/platform_device.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 #include <linux/tegra_pwm_bl.h>
+#include <linux/pwm_backlight.h>
 #include <asm/atomic.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
@@ -65,6 +63,8 @@
 #define ENTERPRISE_STEREO_PORTRAIT	1
 
 #define enterprise_lcd_te		TEGRA_GPIO_PJ1
+
+#define enterprise_bl_pwm		TEGRA_GPIO_PH3
 
 #ifdef CONFIG_TEGRA_DC
 static struct regulator *enterprise_dsi_reg;
@@ -170,6 +170,17 @@ static int enterprise_backlight_notify(struct device *unused, int brightness)
 
 static int enterprise_disp1_check_fb(struct device *dev, struct fb_info *info);
 
+#if IS_EXTERNAL_PWM
+static struct platform_pwm_backlight_data enterprise_disp1_backlight_data = {
+	.pwm_id		= 3,
+	.max_brightness	= 255,
+	.dft_brightness	= 224,
+	.pwm_period_ns	= 1000000,
+	.notify		= enterprise_backlight_notify,
+	/* Only toggle backlight on fb blank notifications for disp1 */
+	.check_fb	= enterprise_disp1_check_fb,
+};
+#else
 /*
  * In case which_pwm is TEGRA_PWM_PM0,
  * gpio_conf_to_sfio should be TEGRA_GPIO_PW0: set LCD_CS1_N pin to SFIO
@@ -180,7 +191,6 @@ static struct platform_tegra_pwm_backlight_data enterprise_disp1_backlight_data 
 	.which_dc		= 0,
 	.which_pwm		= TEGRA_PWM_PM1,
 	.gpio_conf_to_sfio	= TEGRA_GPIO_PW1,
-	.switch_to_sfio		= &tegra_gpio_disable,
 	.max_brightness		= 255,
 	.dft_brightness		= 224,
 	.notify		= enterprise_backlight_notify,
@@ -190,9 +200,15 @@ static struct platform_tegra_pwm_backlight_data enterprise_disp1_backlight_data 
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= enterprise_disp1_check_fb,
 };
+#endif
+
 
 static struct platform_device enterprise_disp1_backlight_device = {
+#if IS_EXTERNAL_PWM
+	.name	= "pwm-backlight",
+#else
 	.name	= "tegra-pwm-bl",
+#endif
 	.id	= -1,
 	.dev	= {
 		.platform_data = &enterprise_disp1_backlight_data,
@@ -515,8 +531,11 @@ static int enterprise_dsi_panel_enable(void)
 	if (ret)
 		return ret;
 
-#if DSI_PANEL_RESET
+#if IS_EXTERNAL_PWM
+	tegra_gpio_disable(enterprise_bl_pwm);
+#endif
 
+#if DSI_PANEL_RESET
 	if (board_info.fab >= BOARD_FAB_A03) {
 		if (enterprise_lcd_reg == NULL) {
 			enterprise_lcd_reg = regulator_get(NULL, "lcd_vddio_en");
@@ -536,16 +555,13 @@ static int enterprise_dsi_panel_enable(void)
 		}
 	}
 
-	if (kernel_1st_panel_init != true) {
+	if (kernel_1st_panel_init == true) {
 		ret = gpio_request(enterprise_dsi_panel_reset, "panel reset");
 		if (ret < 0)
 			return ret;
-
-		ret = gpio_direction_output(enterprise_dsi_panel_reset, 0);
-		if (ret < 0) {
-			gpio_free(enterprise_dsi_panel_reset);
-			return ret;
-		}
+		kernel_1st_panel_init = false;
+	} else {
+		gpio_direction_output(enterprise_dsi_panel_reset, 0);
 
 		gpio_set_value(enterprise_dsi_panel_reset, 0);
 		udelay(2000);
@@ -563,10 +579,7 @@ static int enterprise_dsi_panel_disable(void)
 		regulator_disable(enterprise_lcd_reg);
 
 #if DSI_PANEL_RESET
-	if (kernel_1st_panel_init != true) {
-		gpio_free(enterprise_dsi_panel_reset);
-	} else
-		kernel_1st_panel_init = false;
+	gpio_direction_output(enterprise_dsi_panel_reset, 0);
 #endif
 	return 0;
 }
@@ -799,47 +812,16 @@ static struct platform_device *enterprise_gfx_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_NVMAP)
 	&enterprise_nvmap_device,
 #endif
+#if IS_EXTERNAL_PWM
+	&tegra_pwfm3_device,
+#else
 	&tegra_pwfm0_device,
+#endif
 };
 
 static struct platform_device *enterprise_bl_devices[]  = {
 	&enterprise_disp1_backlight_device,
 };
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-/* put early_suspend/late_resume handlers here for the display in order
- * to keep the code out of the display driver, keeping it closer to upstream
- */
-struct early_suspend enterprise_panel_early_suspender;
-
-static void enterprise_panel_early_suspend(struct early_suspend *h)
-{
-	/* power down LCD, add use a black screen for HDMI */
-	if (num_registered_fb > 0)
-		fb_blank(registered_fb[0], FB_BLANK_POWERDOWN);
-	if (num_registered_fb > 1)
-		fb_blank(registered_fb[1], FB_BLANK_NORMAL);
-
-#ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-	cpufreq_store_default_gov();
-	if (cpufreq_change_gov(cpufreq_conservative_gov))
-		pr_err("Early_suspend: Error changing governor to %s\n",
-				cpufreq_conservative_gov);
-#endif
-}
-
-static void enterprise_panel_late_resume(struct early_suspend *h)
-{
-	unsigned i;
-
-#ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-	if (cpufreq_restore_default_gov())
-		pr_err("Early_suspend: Unable to restore governor\n");
-#endif
-	for (i = 0; i < num_registered_fb; i++)
-		fb_blank(registered_fb[i], FB_BLANK_UNBLANK);
-}
-#endif
 
 int __init enterprise_panel_init(void)
 {
@@ -853,7 +835,9 @@ int __init enterprise_panel_init(void)
 	BUILD_BUG_ON(ARRAY_SIZE(enterprise_bl_output_measured_a02) != 256);
 
 	if (board_info.fab >= BOARD_FAB_A03) {
+#if !(IS_EXTERNAL_PWM)
 		enterprise_disp1_backlight_data.clk_div = 0x1D;
+#endif
 		bl_output = enterprise_bl_output_measured_a03;
 	} else
 		bl_output = enterprise_bl_output_measured_a02;
@@ -880,13 +864,6 @@ int __init enterprise_panel_init(void)
 #if !(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
 	gpio_request(enterprise_lcd_swp_pl, "lcd_te");
 	gpio_direction_input(enterprise_lcd_te);
-#endif
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	enterprise_panel_early_suspender.suspend = enterprise_panel_early_suspend;
-	enterprise_panel_early_suspender.resume = enterprise_panel_late_resume;
-	enterprise_panel_early_suspender.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
-	register_early_suspend(&enterprise_panel_early_suspender);
 #endif
 
 #ifdef CONFIG_TEGRA_GRHOST
