@@ -52,6 +52,8 @@
 #include <mach/usb_phy.h>
 #include <mach/nand.h>
 #include <mach/tegra_bb.h>
+#include <mach/tegra_asoc_pdata.h>
+#include <sound/wm8903.h>
 #include "board.h"
 #include "clock.h"
 #include "common.h"
@@ -146,10 +148,11 @@ static __initdata struct tegra_clk_init_table dolak_clk_init_table[] = {
 	{ "blink",	"clk_32k",	32768,		false},
 	{ "pll_a",	NULL,		56448000,	true},
 	{ "pll_a_out0",	NULL,		11289600,	true},
-	{ "i2s1",	"pll_a_out0",	11289600,	true},
-	{ "i2s2",	"pll_a_out0",	11289600,	true},
-	{ "d_audio",	"pll_a_out0",	11289600,	false},
-	{ "audio_2x",	"audio",	22579200,	true},
+	{ "dam0",	"clk_m",	13000000,	true},
+	{ "i2s0",	"clk_m",	13000000,	true},
+	{ "d_audio",	"clk_m",	13000000,	true},
+	{ "apbif",	"clk_m",	13000000,	true},
+	{ "audio_2x",	"audio",	26000000,	true},
 	{ NULL,		NULL,		0,		0},
 };
 
@@ -205,6 +208,17 @@ static struct tegra_i2c_platform_data dolak_i2c5_platform_data = {
 	.bus_clk_rate	= { 100000, 0 },
 };
 
+static struct wm8903_platform_data dolak_wm8903_pdata = {
+	.irq_active_low = 0,
+	.micdet_cfg = 0,
+	.micdet_delay = 100,
+};
+
+static struct i2c_board_info __initdata wm8903_board_info = {
+	I2C_BOARD_INFO("wm8903", 0x1a),
+	.platform_data = &dolak_wm8903_pdata,
+};
+
 static void dolak_i2c_init(void)
 {
 	tegra_i2c_device1.dev.platform_data = &dolak_i2c1_platform_data;
@@ -213,7 +227,7 @@ static void dolak_i2c_init(void)
 	tegra_i2c_device4.dev.platform_data = &dolak_i2c4_platform_data;
 	tegra_i2c_device5.dev.platform_data = &dolak_i2c5_platform_data;
 
-	i2c_register_board_info(0, dolak_i2c_bus1_board_info, 1);
+	i2c_register_board_info(0, &wm8903_board_info, 1);
 
 	platform_device_register(&tegra_i2c_device5);
 	platform_device_register(&tegra_i2c_device4);
@@ -344,6 +358,27 @@ struct platform_device tegra_nand_device = {
 };
 #endif
 
+static struct tegra_asoc_platform_data dolak_audio_pdata = {
+	.gpio_spkr_en		= -1,
+	.gpio_hp_det		= -1,
+	.gpio_hp_mute		= -1,
+	.gpio_int_mic_en	= -1,
+	.gpio_ext_mic_en	= -1,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
+};
+
+static struct platform_device dolak_audio_device = {
+	.name	= "tegra-snd-wm8903",
+	.id	= 0,
+	.dev	= {
+		.platform_data  = &dolak_audio_pdata,
+	},
+};
+
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && defined(CONFIG_SMC91X)
 static struct resource tegra_sim_smc91x_resources[] = {
 	[0] = {
@@ -399,6 +434,11 @@ static struct platform_device *dolak_devices[] __initdata = {
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra_se_device,
 #endif
+	&tegra_ahub_device,
+	&tegra_dam_device0,
+	&tegra_i2s_device0,
+	&tegra_pcm_device,
+	&dolak_audio_device,
 #if defined(CONFIG_MTD_NAND_TEGRA)
 	&tegra_nand_device,
 #endif
