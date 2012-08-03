@@ -75,22 +75,3 @@ int __init dolak_suspend_init(void)
 	tegra_init_suspend(&dolak_suspend_data);
 	return 0;
 }
-
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-
-#define COSIM_SHUTDOWN_REG	0x538f0ffc
-
-static void dolak_power_off(void)
-{
-	pr_err("Dolak powering off the device\n");
-	writel(1, IO_ADDRESS(COSIM_SHUTDOWN_REG));
-	while (1)
-		;
-}
-
-int __init dolak_power_off_init(void)
-{
-	pm_power_off = dolak_power_off;
-	return 0;
-}
-#endif

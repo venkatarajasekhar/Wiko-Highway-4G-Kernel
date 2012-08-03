@@ -29,13 +29,8 @@ int dolak_sensors_init(void);
 
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 #define DOLAK_BOARD_NAME "dolak_sim"
-int __init dolak_power_off_init(void);
 #else
 #define DOLAK_BOARD_NAME "dolak"
-static inline int dolak_power_off_init(void)
-{
-	return 0;
-}
 #endif
 
 #endif

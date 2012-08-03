@@ -641,7 +641,6 @@ static void __init tegra_dolak_init(void)
 
 	platform_add_devices(dolak_devices, ARRAY_SIZE(dolak_devices));
 
-	dolak_power_off_init();
 	tegra_io_dpd_init();
 	dolak_sdhci_init();
 	dolak_i2c_init();

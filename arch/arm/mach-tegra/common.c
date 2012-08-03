@@ -1715,3 +1715,24 @@ struct arm_soc_desc tegra_soc_desc __initdata = {
 	soc_smp_init_ops(tegra_soc_smp_init_ops)
 	soc_smp_ops(tegra_soc_smp_ops)
 };
+
+#ifdef CONFIG_TEGRA_PRE_SILICON_SUPPORT
+#define ASIM_SHUTDOWN_REG	0x538f0ffc
+
+static void asim_power_off(void)
+{
+	pr_err("ASIM Powering off the device\n");
+	writel(1, IO_ADDRESS(ASIM_SHUTDOWN_REG));
+	while (1)
+		;
+}
+
+static int __init asim_power_off_init(void)
+{
+	if (tegra_cpu_is_asim())
+		pm_power_off = asim_power_off;
+	return 0;
+}
+
+arch_initcall(asim_power_off_init);
+#endif
