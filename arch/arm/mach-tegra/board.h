@@ -87,6 +87,10 @@ void __init tegra_ram_console_debug_init(void);
 void __init tegra_release_bootloader_fb(void);
 void __init tegra_protected_aperture_init(unsigned long aperture);
 int  __init tegra_init_board_info(void);
+#if defined(CONFIG_TEGRA_BASEBAND)
+void __init tegra_reserve_shmem(unsigned long priv_size,
+				unsigned long ipc_size);
+#endif
 void tegra_move_framebuffer(unsigned long to, unsigned long from,
 	unsigned long size);
 bool is_tegra_debug_uartport_hs(void);
@@ -103,6 +107,8 @@ extern unsigned long tegra_carveout_start;
 extern unsigned long tegra_carveout_size;
 extern unsigned long tegra_vpr_start;
 extern unsigned long tegra_vpr_size;
+extern unsigned long tegra_bb_ipc_start;
+extern unsigned long tegra_bb_priv_start;
 extern unsigned long tegra_lp0_vec_start;
 extern unsigned long tegra_lp0_vec_size;
 extern bool tegra_lp0_vec_relocate;

@@ -730,7 +730,26 @@ config TEGRA_LATENCY_ALLOWANCE
 	  memory client can wait before it is served.
 	  Enabling this option allows memory clients configure the
 	  latency allowance as per their bandwidth requirement.
-endif
+	bool
+
+config TEGRA_BASEBAND
+	bool "Enable integrated tegra baseband support"
+	default n
+	help
+	  This option enables support for integrated icera baseband
+	  This driver is used to setup shared memory space, provide
+	  functions to handle IPC mechanism and a sysfs interface for IPC
+	  notification which support polling on sysfs file.
+
+config TEGRA_BASEBAND_SIMU
+	bool "Enable integrated tegra baseband simulation"
+	select TEGRA_BASEBAND
+	help
+	  This option enables tegra baseband simulation when actual hardware
+	  is not present. IPC is simulated when writing to status file which
+	  allow high level tests in local loopback
+
+	  If unsure, say N.
 
 config TEGRA_DC_USE_HW_BPP
 	bool "Default Bits Per Pixel value from tegra DC hardware"
@@ -740,3 +759,5 @@ config TEGRA_DC_USE_HW_BPP
 	  Programs platform data to inform DC driver to use current
 	  hardware value for bits per pixel setting.  Useful for
           preserving and displaying framebuffer content from bootloader.
+
+endif

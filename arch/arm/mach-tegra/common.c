@@ -104,6 +104,8 @@ unsigned long tegra_tsec_start;
 unsigned long tegra_tsec_size;
 unsigned long tegra_lp0_vec_start;
 unsigned long tegra_lp0_vec_size;
+unsigned long tegra_bb_priv_start;
+unsigned long tegra_bb_ipc_start;
 bool tegra_lp0_vec_relocate;
 unsigned long tegra_grhost_aperture = ~0ul;
 static   bool is_tegra_debug_uart_hsport;
@@ -144,6 +146,9 @@ void __init tegra_dt_init_irq(void)
 	of_irq_init(tegra_dt_irq_match);
 }
 #endif
+
+static unsigned long tegra_bb_priv_size;
+static unsigned long tegra_bb_ipc_size;
 
 #define NEVER_RESET 0
 
@@ -1221,7 +1226,9 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 		"2nd Framebuffer:        %08lx - %08lx\n"
 		"Carveout:               %08lx - %08lx\n"
 		"Vpr:                    %08lx - %08lx\n"
-		"Tsec:                   %08lx - %08lx\n",
+		"Tsec:                   %08lx - %08lx\n"
+		"Baseband Private:       %08lx - %08lx\n"
+		"Baseband IPC:           %08lx - %08lx\n",
 		tegra_lp0_vec_start,
 		tegra_lp0_vec_size ?
 			tegra_lp0_vec_start + tegra_lp0_vec_size - 1 : 0,
@@ -1243,7 +1250,13 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 			tegra_vpr_start + tegra_vpr_size - 1 : 0,
 		tegra_tsec_start,
 		tegra_tsec_size ?
-			tegra_tsec_start + tegra_tsec_size - 1 : 0);
+		tegra_tsec_start + tegra_tsec_size - 1 : 0,
+		tegra_bb_ipc_start,
+		tegra_bb_ipc_size ?
+		tegra_bb_ipc_start + tegra_bb_ipc_size - 1 : 0,
+		tegra_bb_priv_start,
+		tegra_bb_priv_size ?
+		tegra_bb_priv_start + tegra_bb_priv_size - 1 : 0);
 
 	if (tegra_avp_kernel_size) {
 		/* Return excessive memory reserved for AVP kernel */
@@ -1311,6 +1324,34 @@ void __init tegra_release_bootloader_fb(void)
 						tegra_bootloader_fb_size))
 			pr_err("Failed to free bootloader fb.\n");
 }
+
+#if defined(CONFIG_TEGRA_BASEBAND)
+void __init tegra_reserve_shmem(unsigned long priv_size, unsigned long ipc_size)
+{
+
+	if (ipc_size) {
+		tegra_bb_ipc_size = ipc_size;
+		tegra_bb_ipc_start = memblock_end_of_DRAM() - ipc_size;
+		if (memblock_remove(tegra_bb_ipc_start, ipc_size)) {
+			pr_err("Failed to remove carveout %08lx@%08lx\n",
+				ipc_size, tegra_bb_ipc_start);
+			tegra_bb_ipc_start = 0;
+			tegra_bb_ipc_size = 0;
+		}
+	}
+
+	if (priv_size) {
+		tegra_bb_priv_size = priv_size;
+		tegra_bb_priv_start = memblock_end_of_DRAM() - priv_size;
+		if (memblock_remove(tegra_bb_priv_start, priv_size)) {
+			pr_err("Failed to remove carveout %08lx@%08lx\n",
+				priv_size, tegra_bb_priv_start);
+			tegra_bb_priv_start = 0;
+			tegra_bb_priv_size = 0;
+		}
+	}
+}
+#endif
 
 static struct platform_device *pinmux_devices[] = {
 	&tegra_gpio_device,

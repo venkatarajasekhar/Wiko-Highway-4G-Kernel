@@ -265,3 +265,4 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-kbc.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
+obj-${CONFIG_TEGRA_BASEBAND}            += tegra_bb.o
