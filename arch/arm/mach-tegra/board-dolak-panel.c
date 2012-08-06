@@ -345,14 +345,14 @@ int __init dolak_panel_init(void)
 	dolak_carveouts[2].base = tegra_vpr_start;
 	dolak_carveouts[2].size = tegra_vpr_size;
 
+	err = platform_add_devices(dolak_gfx_devices,
+				   ARRAY_SIZE(dolak_gfx_devices));
+
 #ifdef CONFIG_TEGRA_GRHOST
 	err = tegra14_register_host1x_devices();
 	if (err)
 		return err;
 #endif
-
-	err = platform_add_devices(dolak_gfx_devices,
-				   ARRAY_SIZE(dolak_gfx_devices));
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 	res = nvhost_get_resource_byname(&dolak_disp1_device,
