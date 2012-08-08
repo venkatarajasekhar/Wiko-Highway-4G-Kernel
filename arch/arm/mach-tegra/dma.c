@@ -1206,7 +1206,7 @@ fail:
 }
 postcore_initcall(tegra_dma_init);
 
-#ifdef CONFIG_PM_SLEEP
+#if defined(CONFIG_PM_SLEEP) && !defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 
 static u32 apb_dma[5*TEGRA_SYSTEM_DMA_CH_NR + 3];
 
