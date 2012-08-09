@@ -30,6 +30,7 @@
 #include <linux/bitops.h>
 #include <linux/sched.h>
 #include <linux/cpufreq.h>
+#include <linux/of.h>
 
 #include <asm/soc.h>
 #include <asm/hardware/cache-l2x0.h>
@@ -248,10 +249,14 @@ static __initdata struct tegra_clk_init_table tegra20_clk_init_table[] = {
 static __initdata struct tegra_clk_init_table tegra30_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "clk_m",	NULL,		0,		true },
+	{ "emc",	NULL,		0,		true },
+	{ "cpu",	NULL,		0,		true },
+	{ "kfuse",	NULL,		0,		true },
+	{ "fuse",	NULL,		0,		true },
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	{ "pll_p",	NULL,		0,		true },
 	{ "pll_p_out1",	"pll_p",	0,		false },
-	{ "pll_p_out2",	"pll_p",	102000000,	false },
+	{ "pll_p_out2",	"pll_p",	48000000,	false },
 	{ "pll_p_out3",	"pll_p",	0,		true },
 	{ "pll_m_out1",	"pll_m",	275000000,	false },
 	{ "pll_p_out4",	"pll_p",	102000000,	true },
@@ -259,45 +264,34 @@ static __initdata struct tegra_clk_init_table tegra30_clk_init_table[] = {
 	{ "hclk",	"sclk",		102000000,	true },
 	{ "pclk",	"hclk",		51000000,	true },
 #else
-	{ "pll_p",	NULL,		0,		true },
-	{ "pll_p_out1",	"pll_p",	0,		false },
+	{ "pll_p",	NULL,		216000000,	true },
+	{ "pll_p_out1",	"pll_p",	28800000,	false },
 	{ "pll_p_out2",	"pll_p",	48000000,	false },
-	{ "pll_p_out3",	"pll_p",	0,		true },
+	{ "pll_p_out3",	"pll_p",	72000000,	true },
 	{ "pll_m_out1",	"pll_m",	275000000,	true },
 	{ "pll_p_out4",	"pll_p",	108000000,	false },
 	{ "sclk",	"pll_p_out4",	108000000,	true },
 	{ "hclk",	"sclk",		108000000,	true },
 	{ "pclk",	"hclk",		54000000,	true },
-	{ "pll_c",      NULL,           ULONG_MAX,      false },
-	{ "pll_c_out1", "pll_c",        208000000,      false },
 #endif
-	{ "wake.sclk",	NULL,		250000000,	true },
-	{ "sbc1.sclk",	NULL,		40000000,	false},
-	{ "sbc2.sclk",	NULL,		40000000,	false},
-	{ "sbc3.sclk",	NULL,		40000000,	false},
-	{ "sbc4.sclk",	NULL,		40000000,	false},
 #ifdef CONFIG_TEGRA_SLOW_CSITE
 	{ "csite",	"clk_m",	1000000,	true },
 #else
 	{ "csite",      NULL,           0,              true },
 #endif
-	{ "emc",	NULL,		0,		true },
-	{ "cpu",	NULL,		0,		true },
-	{ "kfuse",	NULL,		0,		true },
-	{ "fuse",	NULL,		0,		true },
 	{ "pll_u",	NULL,		480000000,	false },
 	{ "sdmmc1",	"pll_p",	48000000,	false},
 	{ "sdmmc3",	"pll_p",	48000000,	false},
 	{ "sdmmc4",	"pll_p",	48000000,	false},
-	{ "pll_a",	"pll_p_out1",	0,		false},
-	{ "pll_a_out0",	"pll_a",	0,		false},
-#ifdef CONFIG_TEGRA_DUAL_CBUS
-	{ "c2bus",	"pll_c2",	300000000,	false },
-	{ "c3bus",	"pll_c3",	300000000,	false },
-#else
+	{ "sbc1.sclk",	NULL,		40000000,	false},
+	{ "sbc2.sclk",	NULL,		40000000,	false},
+	{ "sbc3.sclk",	NULL,		40000000,	false},
+	{ "sbc4.sclk",	NULL,		40000000,	false},
+	{ "sbc5.sclk",	NULL,		40000000,	false},
+	{ "sbc6.sclk",	NULL,		40000000,	false},
+	{ "wake.sclk",	NULL,		40000000,	true },
 	{ "cbus",	"pll_c",	416000000,	false },
 	{ "pll_c_out1",	"pll_c",	208000000,	false },
-#endif
 	{ "mselect",	"pll_p",	102000000,	true },
 	{ NULL,		NULL,		0,		0},
 };
@@ -706,6 +700,7 @@ void __init tegra11x_init_early(void)
 	tegra11x_init_dvfs();
 	tegra_common_init_clock();
 	tegra_clk_init_from_table(tegra11x_clk_init_table);
+	tegra11x_clk_init_la();
 	tegra_init_cache(true);
 	tegra_pmc_init();
 	tegra_powergate_init();
@@ -939,11 +934,54 @@ __setup("audio_codec=", tegra_audio_codec_type);
 
 void tegra_get_board_info(struct board_info *bi)
 {
-	bi->board_id = (system_serial_high >> 16) & 0xFFFF;
-	bi->sku = (system_serial_high) & 0xFFFF;
-	bi->fab = (system_serial_low >> 24) & 0xFF;
-	bi->major_revision = (system_serial_low >> 16) & 0xFF;
-	bi->minor_revision = (system_serial_low >> 8) & 0xFF;
+#ifdef CONFIG_OF
+	struct device_node *board_info;
+	u32 prop_val;
+	int err;
+
+	board_info = of_find_node_by_path("/chosen/board_info");
+	if (!IS_ERR_OR_NULL(board_info)) {
+		memset(bi, 0, sizeof(*bi));
+
+		err = of_property_read_u32(board_info, "id", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/id\n");
+		else
+			bi->board_id = prop_val;
+
+		err = of_property_read_u32(board_info, "sku", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/sku\n");
+		else
+			bi->sku = prop_val;
+
+		err = of_property_read_u32(board_info, "fab", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/fab\n");
+		else
+			bi->fab = prop_val;
+
+		err = of_property_read_u32(board_info, "major_revision", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/major_revision\n");
+		else
+			bi->major_revision = prop_val;
+
+		err = of_property_read_u32(board_info, "minor_revision", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/minor_revision\n");
+		else
+			bi->minor_revision = prop_val;
+	} else {
+#endif
+		bi->board_id = (system_serial_high >> 16) & 0xFFFF;
+		bi->sku = (system_serial_high) & 0xFFFF;
+		bi->fab = (system_serial_low >> 24) & 0xFF;
+		bi->major_revision = (system_serial_low >> 16) & 0xFF;
+		bi->minor_revision = (system_serial_low >> 8) & 0xFF;
+#ifdef CONFIG_OF
+	}
+#endif
 }
 
 static int __init tegra_pmu_board_info(char *info)

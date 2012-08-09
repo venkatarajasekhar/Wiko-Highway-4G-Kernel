@@ -71,9 +71,8 @@ static int tegra_idle_enter_lp3(struct cpuidle_device *dev,
 	ktime_t enter, exit;
 	s64 us;
 
-	trace_power_start(POWER_CSTATE, 1, dev->cpu);
+	/* cpu_idle calls us with IRQs disabled */
 
-	local_irq_disable();
 	local_fiq_disable();
 
 	enter = ktime_get();
@@ -84,6 +83,8 @@ static int tegra_idle_enter_lp3(struct cpuidle_device *dev,
 	us = ktime_to_us(exit);
 
 	local_fiq_enable();
+
+	/* cpu_idle expects us to return with IRQs enabled */
 	local_irq_enable();
 
 	dev->last_residency = us;
@@ -129,7 +130,7 @@ static int tegra_idle_enter_lp2(struct cpuidle_device *dev,
 					dev->safe_state_index);
 	}
 
-	local_irq_disable();
+	/* cpu_idle calls us with IRQs disabled */
 	enter = ktime_get();
 
 	tegra_cpu_idle_stats_lp2_ready(dev->cpu);
@@ -138,6 +139,7 @@ static int tegra_idle_enter_lp2(struct cpuidle_device *dev,
 	exit = ktime_sub(ktime_get(), enter);
 	us = ktime_to_us(exit);
 
+	/* cpu_idle expects us to return with IRQs enabled */
 	local_irq_enable();
 
 	/* cpu clockevents may have been reset by powerdown */
@@ -222,6 +224,7 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 
 	dev->state_count = 0;
 	dev->cpu = cpu;
+	dev->power_specified = 1;
 
 	state = &dev->states[0];
 	snprintf(state->name, CPUIDLE_NAME_LEN, "LP3");
@@ -246,7 +249,6 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 	state->power_usage = 0;
 	state->flags = CPUIDLE_FLAG_TIME_VALID;
 	state->enter = tegra_idle_enter_lp2;
-	dev->power_specified = 1;
 	dev->state_count++;
 #endif
 

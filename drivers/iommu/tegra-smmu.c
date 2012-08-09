@@ -30,6 +30,10 @@
 #include <linux/sched.h>
 #include <linux/iommu.h>
 #include <linux/io.h>
+#include <linux/of.h>
+#include <linux/of_iommu.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #include <asm/page.h>
 #include <asm/cacheflush.h>
@@ -48,16 +52,31 @@
 #define SMMU_CONFIG_DISABLE			0
 #define SMMU_CONFIG_ENABLE			1
 
-#define SMMU_TLB_CONFIG				0x14
-#define SMMU_TLB_CONFIG_STATS__MASK		(1 << 31)
-#define SMMU_TLB_CONFIG_STATS__ENABLE		(1 << 31)
+/* REVISIT: To support multiple MCs */
+enum {
+	_MC = 0,
+};
+
+enum {
+	_TLB = 0,
+	_PTC,
+};
+
+#define SMMU_CACHE_CONFIG_BASE			0x14
+#define __SMMU_CACHE_CONFIG(mc, cache)		(SMMU_CACHE_CONFIG_BASE + 4 * cache)
+#define SMMU_CACHE_CONFIG(cache)		__SMMU_CACHE_CONFIG(_MC, cache)
+
+#define SMMU_CACHE_CONFIG_STATS_SHIFT		31
+#define SMMU_CACHE_CONFIG_STATS_MASK		(1 << SMMU_CACHE_CONFIG_STATS_SHIFT)
+#define SMMU_CACHE_CONFIG_STATS_ENABLE		(1 << SMMU_CACHE_CONFIG_STATS_SHIFT)
+#define SMMU_CACHE_CONFIG_STATS_TEST_SHIFT	30
+#define SMMU_CACHE_CONFIG_STATS_TEST_MASK	(1 << SMMU_CACHE_CONFIG_STATS_TEST_SHIFT)
+#define SMMU_CACHE_CONFIG_STATS_TEST		(1 << SMMU_CACHE_CONFIG_STATS_TEST_SHIFT)
+
 #define SMMU_TLB_CONFIG_HIT_UNDER_MISS__ENABLE	(1 << 29)
 #define SMMU_TLB_CONFIG_ACTIVE_LINES__VALUE	0x10
 #define SMMU_TLB_CONFIG_RESET_VAL		0x20000010
 
-#define SMMU_PTC_CONFIG				0x18
-#define SMMU_PTC_CONFIG_STATS__MASK		(1 << 31)
-#define SMMU_PTC_CONFIG_STATS__ENABLE		(1 << 31)
 #define SMMU_PTC_CONFIG_CACHE__ENABLE		(1 << 29)
 #define SMMU_PTC_CONFIG_INDEX_MAP__PATTERN	0x3f
 #define SMMU_PTC_CONFIG_RESET_VAL		0x2000003f
@@ -87,10 +106,10 @@
 
 #define SMMU_ASID_SECURITY			0x38
 
-#define SMMU_STATS_TLB_HIT_COUNT		0x1f0
-#define SMMU_STATS_TLB_MISS_COUNT		0x1f4
-#define SMMU_STATS_PTC_HIT_COUNT		0x1f8
-#define SMMU_STATS_PTC_MISS_COUNT		0x1fc
+#define SMMU_STATS_CACHE_COUNT_BASE		0x1f0
+
+#define SMMU_STATS_CACHE_COUNT(mc, cache, hitmiss)		\
+	(SMMU_STATS_CACHE_COUNT_BASE + 8 * cache + 4 * hitmiss)
 
 #define SMMU_TRANSLATION_ENABLE_0		0x228
 #define SMMU_TRANSLATION_ENABLE_1		0x22c
@@ -164,10 +183,17 @@
 
 #define _PDE_ATTR	(_READABLE | _WRITABLE | _NONSECURE)
 #define _PDE_ATTR_N	(_PDE_ATTR | _PDE_NEXT)
-#define _PDE_VACANT(pdn)	(((pdn) << 10) | _PDE_ATTR)
+#define _PDE_VACANT(pdn)	(0)
 
 #define _PTE_ATTR	(_READABLE | _WRITABLE | _NONSECURE)
-#define _PTE_VACANT(addr)	(((addr) >> SMMU_PAGE_SHIFT) | _PTE_ATTR)
+#define _PTE_VACANT(addr)	(0)
+
+#ifdef	CONFIG_TEGRA_IOMMU_SMMU_LINEAR
+#undef	_PDE_VACANT(pdn)
+#undef	_PTE_VACANT(addr)
+#define	_PDE_VACANT(pdn)	(((pdn) << 10) | _PDE_ATTR)
+#define	_PTE_VACANT(addr)	(((addr) >> SMMU_PAGE_SHIFT) | _PTE_ATTR)
+#endif
 
 #define SMMU_MK_PDIR(page, attr)	\
 		((page_to_phys(page) >> SMMU_PDIR_SHIFT) | (attr))
@@ -256,6 +282,13 @@ struct smmu_device {
 	unsigned long translation_enable_1;
 	unsigned long translation_enable_2;
 	unsigned long asid_security;
+
+	struct dentry *debugfs_root;
+
+	struct device_node *ahb;
+
+	int		num_as;
+	struct smmu_as	as[0];		/* Run-time allocated array */
 };
 
 static struct smmu_device *smmu_handle; /* unique for a system */
@@ -320,8 +353,15 @@ static int __smmu_client_set_hwgrp(struct smmu_client *c,
 		val = smmu_read(smmu, offs);
 		if (on) {
 #if !defined(SKIP_SWGRP_CHECK)
-			if (WARN_ON(val & mask))
-				goto err_hw_busy;
+			if (WARN_ON(val & mask)) {
+				for_each_set_bit(i, &map, HWGRP_COUNT) {
+					offs = HWGRP_ASID_REG(i);
+					val = smmu_read(smmu, offs);
+					val &= ~mask;
+					smmu_write(smmu, val, offs);
+				}
+				return -EBUSY;
+			}
 #endif
 			val |= mask;
 		} else {
@@ -336,14 +376,6 @@ static int __smmu_client_set_hwgrp(struct smmu_client *c,
 	c->hwgrp = map;
 	return 0;
 
-err_hw_busy:
-	for_each_set_bit(i, &map, HWGRP_COUNT) {
-		offs = HWGRP_ASID_REG(i);
-		val = smmu_read(smmu, offs);
-		val &= ~mask;
-		smmu_write(smmu, val, offs);
-	}
-	return -EBUSY;
 }
 
 static int smmu_client_set_hwgrp(struct smmu_client *c, u32 map, int on)
@@ -401,8 +433,8 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 	smmu_write(smmu, smmu->translation_enable_1, SMMU_TRANSLATION_ENABLE_1);
 	smmu_write(smmu, smmu->translation_enable_2, SMMU_TRANSLATION_ENABLE_2);
 	smmu_write(smmu, smmu->asid_security, SMMU_ASID_SECURITY);
-	smmu_write(smmu, SMMU_TLB_CONFIG_RESET_VAL, SMMU_TLB_CONFIG);
-	smmu_write(smmu, SMMU_PTC_CONFIG_RESET_VAL, SMMU_PTC_CONFIG);
+	smmu_write(smmu, SMMU_TLB_CONFIG_RESET_VAL, SMMU_CACHE_CONFIG(_TLB));
+	smmu_write(smmu, SMMU_PTC_CONFIG_RESET_VAL, SMMU_CACHE_CONFIG(_PTC));
 
 	smmu_flush_regs(smmu, 1);
 
@@ -545,33 +577,41 @@ static inline void put_signature(struct smmu_as *as,
 #endif
 
 /*
- * Caller must lock/unlock as
+ * Caller must not hold as->lock
  */
 static int alloc_pdir(struct smmu_as *as)
 {
-	unsigned long *pdir;
-	int pdn;
+	unsigned long *pdir, flags;
+	int pdn, err = 0;
 	u32 val;
 	struct smmu_device *smmu = as->smmu;
+	struct page *page;
+	unsigned int *cnt;
 
-	if (as->pdir_page)
-		return 0;
+	/*
+	 * do the allocation outside the as lock
+	 */
+	cnt = devm_kzalloc(smmu->dev,
+			   sizeof(cnt[0]) * SMMU_PDIR_COUNT, GFP_KERNEL);
+	page = alloc_page(GFP_KERNEL | __GFP_DMA);
 
-	as->pte_count = devm_kzalloc(smmu->dev,
-		     sizeof(as->pte_count[0]) * SMMU_PDIR_COUNT, GFP_ATOMIC);
-	if (!as->pte_count) {
-		dev_err(smmu->dev,
-			"failed to allocate smmu_device PTE cunters\n");
-		return -ENOMEM;
+	spin_lock_irqsave(&as->lock, flags);
+
+	if (as->pdir_page) {
+		/* We raced, free the redundant */
+		err = -EAGAIN;
+		goto err_out;
 	}
-	as->pdir_page = alloc_page(GFP_ATOMIC | __GFP_DMA);
-	if (!as->pdir_page) {
-		dev_err(smmu->dev,
-			"failed to allocate smmu_device page directory\n");
-		devm_kfree(smmu->dev, as->pte_count);
-		as->pte_count = NULL;
-		return -ENOMEM;
+
+	if (!page || !cnt) {
+		dev_err(smmu->dev, "failed to allocate at %s\n", __func__);
+		err = -ENOMEM;
+		goto err_out;
 	}
+
+	as->pdir_page = page;
+	as->pte_count = cnt;
+
 	SetPageReserved(as->pdir_page);
 	pdir = page_address(as->pdir_page);
 
@@ -587,7 +627,17 @@ static int alloc_pdir(struct smmu_as *as)
 	smmu_write(smmu, val, SMMU_TLB_FLUSH);
 	FLUSH_SMMU_REGS(as->smmu);
 
+	spin_unlock_irqrestore(&as->lock, flags);
+
 	return 0;
+
+err_out:
+	spin_unlock_irqrestore(&as->lock, flags);
+
+	devm_kfree(smmu->dev, cnt);
+	if (page)
+		__free_page(page);
+	return err;
 }
 
 static void __smmu_iommu_unmap(struct smmu_as *as, dma_addr_t iova)
@@ -783,32 +833,69 @@ out:
 	spin_unlock(&as->client_lock);
 }
 
-static int smmu_iommu_domain_init(struct iommu_domain *domain)
+#if !defined(CONFIG_TEGRA_IOMMU_SMMU_LINEAR)
+static inline void __smmu_iommu_map_linear(struct smmu_as *as,
+					   unsigned long start, size_t size)
 {
 	int i;
+	unsigned long count = size >> PAGE_SHIFT;
+
+	for (i = 0; i < count; i++) {
+		unsigned long addr;
+
+		addr = start + i * PAGE_SIZE;
+		__smmu_iommu_map_pfn(as, addr, __phys_to_pfn(addr));
+	}
+}
+
+void smmu_iommu_map_linear(unsigned long start, size_t size)
+{
+	int i;
+	struct smmu_device *smmu = smmu_handle;
+
+	for  (i = 0; i < smmu->num_as; i++) {
+		struct smmu_as *as;
+
+		as = &smmu->as[i];
+		if (!as->pdir_page)
+			continue;
+
+		__smmu_iommu_map_linear(as, start, size);
+
+		dev_dbg(smmu->dev, "%s as[%d]: %08lx(%x)\n",
+			__func__, i, start, size);
+	}
+}
+EXPORT_SYMBOL_GPL(smmu_iommu_map_linear);
+#endif
+
+static int smmu_iommu_domain_init(struct iommu_domain *domain)
+{
+	int i, err = -EAGAIN;
 	unsigned long flags;
 	struct smmu_as *as;
 	struct smmu_device *smmu = smmu_handle;
 
 	/* Look for a free AS with lock held */
 	for  (i = 0; i < smmu->num_as; i++) {
-		struct smmu_as *tmp = &smmu->as[i];
+		as = &smmu->as[i];
 
-		spin_lock_irqsave(&tmp->lock, flags);
-		if (!tmp->pdir_page) {
-			as = tmp;
+		if (as->pdir_page)
+			continue;
+
+		err = alloc_pdir(as);
+		if (!err)
 			goto found;
-		}
-		spin_unlock_irqrestore(&tmp->lock, flags);
+
+		if (err != -EAGAIN)
+			break;
 	}
-	dev_err(smmu->dev, "no free AS\n");
-	return -ENODEV;
+	if (i == smmu->num_as)
+		dev_err(smmu->dev,  "no free AS\n");
+	return err;
 
 found:
-	if (alloc_pdir(as) < 0)
-		goto err_alloc_pdir;
-
-	spin_lock(&smmu->lock);
+	spin_lock_irqsave(&smmu->lock, flags);
 
 	/* Update PDIR register */
 	smmu_write(smmu, SMMU_PTB_ASID_CUR(as->asid), SMMU_PTB_ASID);
@@ -816,17 +903,12 @@ found:
 		   SMMU_MK_PDIR(as->pdir_page, as->pdir_attr), SMMU_PTB_DATA);
 	FLUSH_SMMU_REGS(smmu);
 
-	spin_unlock(&smmu->lock);
+	spin_unlock_irqrestore(&smmu->lock, flags);
 
-	spin_unlock_irqrestore(&as->lock, flags);
 	domain->priv = as;
 
 	dev_dbg(smmu->dev, "smmu_as@%p\n", as);
 	return 0;
-
-err_alloc_pdir:
-	spin_unlock_irqrestore(&as->lock, flags);
-	return -ENODEV;
 }
 
 static void smmu_iommu_domain_destroy(struct iommu_domain *domain)
@@ -872,6 +954,163 @@ static struct iommu_ops smmu_iommu_ops = {
 	.pgsize_bitmap	= SMMU_IOMMU_PGSIZES,
 };
 
+static const char * const smmu_debugfs_mc[] = { "mc", };
+static const char * const smmu_debugfs_cache[] = {  "tlb", "ptc", };
+
+static ssize_t smmu_debugfs_stats_write(struct file *file,
+					const char __user *buffer,
+					size_t count, loff_t *pos)
+{
+	struct smmu_device *smmu;
+	struct dentry *dent;
+	int i, cache, mc;
+	enum {
+		_OFF = 0,
+		_ON,
+		_RESET,
+	};
+	const char * const command[] = {
+		[_OFF]		= "off",
+		[_ON]		= "on",
+		[_RESET]	= "reset",
+	};
+	char str[] = "reset";
+	u32 val;
+	size_t offs;
+
+	count = min_t(size_t, count, sizeof(str));
+	if (copy_from_user(str, buffer, count))
+		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(command); i++)
+		if (strncmp(str, command[i],
+			    strlen(command[i])) == 0)
+			break;
+
+	if (i == ARRAY_SIZE(command))
+		return -EINVAL;
+
+	dent = file->f_dentry;
+	cache = (int)dent->d_inode->i_private;
+	mc = (int)dent->d_parent->d_inode->i_private;
+	smmu = dent->d_parent->d_parent->d_inode->i_private;
+
+	offs = SMMU_CACHE_CONFIG(cache);
+	val = smmu_read(smmu, offs);
+	switch (i) {
+	case _OFF:
+		val &= ~SMMU_CACHE_CONFIG_STATS_ENABLE;
+		val &= ~SMMU_CACHE_CONFIG_STATS_TEST;
+		smmu_write(smmu, val, offs);
+		break;
+	case _ON:
+		val |= SMMU_CACHE_CONFIG_STATS_ENABLE;
+		val &= ~SMMU_CACHE_CONFIG_STATS_TEST;
+		smmu_write(smmu, val, offs);
+		break;
+	case _RESET:
+		val |= SMMU_CACHE_CONFIG_STATS_TEST;
+		smmu_write(smmu, val, offs);
+		val &= ~SMMU_CACHE_CONFIG_STATS_TEST;
+		smmu_write(smmu, val, offs);
+		break;
+	default:
+		BUG();
+		break;
+	}
+
+	dev_dbg(smmu->dev, "%s() %08x, %08x @%08x\n", __func__,
+		val, smmu_read(smmu, offs), offs);
+
+	return count;
+}
+
+static int smmu_debugfs_stats_show(struct seq_file *s, void *v)
+{
+	struct smmu_device *smmu;
+	struct dentry *dent;
+	int i, cache, mc;
+	const char * const stats[] = { "hit", "miss", };
+
+	dent = d_find_alias(s->private);
+	cache = (int)dent->d_inode->i_private;
+	mc = (int)dent->d_parent->d_inode->i_private;
+	smmu = dent->d_parent->d_parent->d_inode->i_private;
+
+	for (i = 0; i < ARRAY_SIZE(stats); i++) {
+		u32 val;
+		size_t offs;
+
+		offs = SMMU_STATS_CACHE_COUNT(mc, cache, i);
+		val = smmu_read(smmu, offs);
+		seq_printf(s, "%s:%08x ", stats[i], val);
+
+		dev_dbg(smmu->dev, "%s() %s %08x @%08x\n", __func__,
+			stats[i], val, offs);
+	}
+	seq_printf(s, "\n");
+
+	return 0;
+}
+
+static int smmu_debugfs_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, smmu_debugfs_stats_show, inode);
+}
+
+static const struct file_operations smmu_debugfs_stats_fops = {
+	.open		= smmu_debugfs_stats_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+	.write		= smmu_debugfs_stats_write,
+};
+
+static void smmu_debugfs_delete(struct smmu_device *smmu)
+{
+	debugfs_remove_recursive(smmu->debugfs_root);
+}
+
+static void smmu_debugfs_create(struct smmu_device *smmu)
+{
+	int i;
+	struct dentry *root;
+
+	root = debugfs_create_file("smmu",
+				   S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO,
+				   NULL, smmu, NULL);
+	if (!root)
+		goto err_out;
+	smmu->debugfs_root = root;
+
+	for (i = 0; i < ARRAY_SIZE(smmu_debugfs_mc); i++) {
+		int j;
+		struct dentry *mc;
+
+		mc = debugfs_create_file(smmu_debugfs_mc[i],
+					 S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO,
+					 root, (void *)i, NULL);
+		if (!mc)
+			goto err_out;
+
+		for (j = 0; j < ARRAY_SIZE(smmu_debugfs_cache); j++) {
+			struct dentry *cache;
+
+			cache = debugfs_create_file(smmu_debugfs_cache[j],
+						    S_IWUGO | S_IRUGO, mc,
+						    (void *)j,
+						    &smmu_debugfs_stats_fops);
+			if (!cache)
+				goto err_out;
+		}
+	}
+
+	return;
+
+err_out:
+	smmu_debugfs_delete(smmu);
+}
+
 static int tegra_smmu_suspend(struct device *dev)
 {
 	struct smmu_device *smmu = dev_get_drvdata(dev);
@@ -908,7 +1147,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	regs2 = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	window = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	window = tegra_smmu_window(0);
 	if (!regs || !regs2 || !window) {
 		dev_err(dev, "No SMMU resources\n");
 		return -ENODEV;
@@ -923,7 +1162,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	smmu->dev = dev;
 	smmu->num_as = SMMU_NUM_ASIDS;
 	smmu->iovmm_base = (unsigned long)window->start;
-	smmu->page_count = resource_size(window) >> SMMU_PAGE_SHIFT;
+	smmu->page_count = (window->end + 1 - window->start) >> SMMU_PAGE_SHIFT;
 	smmu->regs = devm_ioremap(dev, regs->start, resource_size(regs));
 	smmu->regs_ahbarb = devm_ioremap(dev, regs2->start,
 					 resource_size(regs2));
@@ -966,6 +1205,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	if (!smmu->avp_vector_page)
 		goto fail;
 
+	smmu_debugfs_create(smmu);
 	smmu_handle = smmu;
 	return 0;
 
@@ -993,6 +1233,8 @@ static int tegra_smmu_remove(struct platform_device *pdev)
 {
 	struct smmu_device *smmu = platform_get_drvdata(pdev);
 	struct device *dev = smmu->dev;
+
+	smmu_debugfs_delete(smmu);
 
 	smmu_write(smmu, SMMU_CONFIG_DISABLE, SMMU_CONFIG);
 	platform_set_drvdata(pdev, NULL);
@@ -1024,7 +1266,7 @@ static struct platform_driver tegra_smmu_driver = {
 	.remove		= tegra_smmu_remove,
 	.driver = {
 		.owner	= THIS_MODULE,
-		.name	= "tegra-smmu",
+		.name	= "tegra_smmu",
 		.pm	= &tegra_smmu_pm_ops,
 	},
 };

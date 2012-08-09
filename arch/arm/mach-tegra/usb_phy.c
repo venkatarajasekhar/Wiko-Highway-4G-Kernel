@@ -145,7 +145,7 @@ static irqreturn_t usb_phy_dev_vbus_pmu_irq_thr(int irq, void *pdata)
 
 	if (phy->vdd_reg && !phy->vdd_reg_on) {
 		regulator_enable(phy->vdd_reg);
-		phy->vdd_reg_on = 1;
+		phy->vdd_reg_on = true;
 		/*
 		 * Optimal time to get the regulator turned on
 		 * before detecting vbus interrupt.
@@ -182,7 +182,8 @@ static int tegra_usb_phy_get_clocks(struct tegra_usb_phy *phy)
 	phy->pllu_clk = clk_get_sys(NULL, "pll_u");
 	if (IS_ERR(phy->pllu_clk)) {
 		ERR("inst:[%d] Can't get pllu_clk clock\n", phy->inst);
-		return PTR_ERR(phy->pllu_clk);
+		err = PTR_ERR(phy->pllu_clk);
+		goto fail_pll;
 	}
 	clk_enable(phy->pllu_clk);
 
@@ -230,6 +231,7 @@ fail_ctrlr_clk:
 	clk_disable(phy->pllu_clk);
 	clk_put(phy->pllu_clk);
 
+fail_pll:
 	return err;
 }
 
@@ -246,20 +248,23 @@ struct tegra_usb_phy *tegra_usb_phy_open(struct platform_device *pdev)
 	if (!pdata) {
 		dev_err(&pdev->dev, "inst:[%d] Platform data missing\n",
 								pdev->id);
-		return ERR_PTR(-EINVAL);
+		err = -EINVAL;
+		goto fail_inval;
 	}
 
 	phy = devm_kzalloc(&pdev->dev, sizeof(struct tegra_usb_phy), GFP_KERNEL);
 	if (!phy) {
 		ERR("inst:[%d] malloc usb phy failed\n", pdev->id);
-		return ERR_PTR(-ENOMEM);
+		err = -ENOMEM;
+		goto fail_nomem;
 	}
 
 	phy->pdata = devm_kzalloc(&pdev->dev, plat_data_size, GFP_KERNEL);
 	if (!phy->pdata) {
 		ERR("inst:[%d] malloc usb phy pdata failed\n", pdev->id);
-		kfree(phy);
-		return ERR_PTR(-ENOMEM);
+		devm_kfree(&pdev->dev, phy);
+		err = -ENOMEM;
+		goto fail_nomem;
 	}
 
 	memcpy(phy->pdata, pdata, plat_data_size);
@@ -272,20 +277,24 @@ struct tegra_usb_phy *tegra_usb_phy_open(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		ERR("inst:[%d] failed to get I/O memory\n", phy->inst);
-		return ERR_PTR(-ENXIO);
+		err = -ENXIO;
+		goto fail_io;
 	}
 
 	phy->regs = ioremap(res->start, resource_size(res));
 	if (!phy->regs) {
 		ERR("inst:[%d] Failed to remap I/O memory\n", phy->inst);
-		return ERR_PTR(-ENOMEM);
+		err = -ENOMEM;
+		goto fail_io;
 	}
 
-	phy->vdd_reg = regulator_get(NULL, "avdd_usb");
+	phy->vdd_reg = regulator_get(&pdev->dev, "avdd_usb");
 	if (IS_ERR_OR_NULL(phy->vdd_reg)) {
 		ERR("inst:[%d] couldn't get regulator avdd_usb: %ld\n",
 			phy->inst, PTR_ERR(phy->vdd_reg));
 		phy->vdd_reg = NULL;
+		err = PTR_ERR(phy->vdd_reg);
+		goto fail_io;
 	}
 
 	err = tegra_usb_phy_get_clocks(phy);
@@ -327,8 +336,6 @@ struct tegra_usb_phy *tegra_usb_phy_open(struct platform_device *pdev)
 						 req failed\n", phy->inst);
 					goto fail_init;
 				}
-				if (gpio < TEGRA_NR_GPIOS)
-					tegra_gpio_enable(gpio);
 				if (gpio_direction_output(gpio, 1) < 0) {
 					ERR("inst:[%d] host vbus gpio \
 						 dir failed\n", phy->inst);
@@ -381,6 +388,12 @@ fail_init:
 fail_clk:
 	regulator_put(phy->vdd_reg);
 	iounmap(phy->regs);
+fail_io:
+	devm_kfree(&pdev->dev, phy->pdata);
+	devm_kfree(&pdev->dev, phy);
+
+fail_nomem:
+fail_inval:
 	return ERR_PTR(err);
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_open);
@@ -420,8 +433,10 @@ void tegra_usb_phy_close(struct tegra_usb_phy *phy)
 		regulator_put(phy->vdd_reg);
 	}
 
-
 	tegra_usb_phy_release_clocks(phy);
+
+	devm_kfree(&phy->pdev->dev, phy->pdata);
+	devm_kfree(&phy->pdev->dev, phy);
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_close);
 
@@ -434,6 +449,7 @@ irqreturn_t tegra_usb_phy_irq(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_irq);
 
 int tegra_usb_phy_init(struct tegra_usb_phy *phy)
 {
@@ -449,6 +465,7 @@ int tegra_usb_phy_init(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_init);
 
 int tegra_usb_phy_power_off(struct tegra_usb_phy *phy)
 {
@@ -471,30 +488,35 @@ int tegra_usb_phy_power_off(struct tegra_usb_phy *phy)
 	clk_disable(phy->sys_clk);
 	if (phy->pdata->op_mode == TEGRA_USB_OPMODE_HOST) {
 		if (!phy->pdata->u_data.host.hot_plug &&
-			!phy->pdata->u_data.host.remote_wakeup_supported)
-			clk_disable(phy->ctrlr_clk);
-	} else {
-		/* In device mode clock is turned on by pmu irq handler
-		 * if pmu irq is not available clocks will not be turned off/on
-		 */
-		if (phy->pdata->u_data.dev.vbus_pmu_irq) {
+			!phy->pdata->u_data.host.remote_wakeup_supported) {
 			clk_disable(phy->ctrlr_clk);
 			phy->ctrl_clk_on = false;
+			if (phy->vdd_reg && phy->vdd_reg_on) {
+				regulator_disable(phy->vdd_reg);
+				phy->vdd_reg_on = false;
+			}
+		}
+	} else {
+		/* In device mode clock regulator/clocks will be turned off
+		 * only if pmu interrupt is present on the board and host mode
+		 * support through OTG is supported on the board.
+		 */
+		if (phy->pdata->u_data.dev.vbus_pmu_irq &&
+			phy->pdata->builtin_host_disabled) {
+			clk_disable(phy->ctrlr_clk);
+			phy->ctrl_clk_on = false;
+			if (phy->vdd_reg && phy->vdd_reg_on) {
+				regulator_disable(phy->vdd_reg);
+				phy->vdd_reg_on = false;
+			}
 		}
 	}
-
-#ifndef CONFIG_ARCH_TEGRA_2x_SOC
-	if (phy->vdd_reg && phy->vdd_reg_on)
-		if (phy->pdata->has_hostpc || phy->pdata->builtin_host_disabled) {
-			regulator_disable(phy->vdd_reg);
-			phy->vdd_reg_on = false;
-	}
-#endif
 
 	phy->phy_power_on = false;
 
 	return err;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_power_off);
 
 int tegra_usb_phy_power_on(struct tegra_usb_phy *phy)
 {
@@ -553,6 +575,7 @@ int tegra_usb_phy_reset(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_reset);
 
 int tegra_usb_phy_pre_suspend(struct tegra_usb_phy *phy)
 {
@@ -584,6 +607,7 @@ int tegra_usb_phy_suspend(struct tegra_usb_phy *phy)
 
 	return err;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_suspend);
 
 int tegra_usb_phy_post_suspend(struct tegra_usb_phy *phy)
 {
@@ -599,6 +623,7 @@ int tegra_usb_phy_post_suspend(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_post_suspend);
 
 int tegra_usb_phy_pre_resume(struct tegra_usb_phy *phy, bool remote_wakeup)
 {
@@ -614,6 +639,7 @@ int tegra_usb_phy_pre_resume(struct tegra_usb_phy *phy, bool remote_wakeup)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_pre_resume);
 
 int tegra_usb_phy_resume(struct tegra_usb_phy *phy)
 {
@@ -631,6 +657,7 @@ int tegra_usb_phy_resume(struct tegra_usb_phy *phy)
 	return err;
 
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_resume);
 
 int tegra_usb_phy_post_resume(struct tegra_usb_phy *phy)
 {
@@ -646,6 +673,7 @@ int tegra_usb_phy_post_resume(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_post_resume);
 
 int tegra_usb_phy_port_power(struct tegra_usb_phy *phy)
 {
@@ -658,6 +686,7 @@ int tegra_usb_phy_port_power(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_port_power);
 
 int tegra_usb_phy_bus_reset(struct tegra_usb_phy *phy)
 {
@@ -670,6 +699,7 @@ int tegra_usb_phy_bus_reset(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_bus_reset);
 
 bool tegra_usb_phy_charger_detected(struct tegra_usb_phy *phy)
 {
@@ -690,21 +720,25 @@ bool tegra_usb_phy_hw_accessible(struct tegra_usb_phy *phy)
 
 	return phy->hw_accessible;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_hw_accessible);
 
 bool tegra_usb_phy_remote_wakeup(struct tegra_usb_phy *phy)
 {
 	return phy->remote_wakeup;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_remote_wakeup);
 
 bool tegra_usb_phy_has_hostpc(struct tegra_usb_phy *phy)
 {
 	return phy->pdata->has_hostpc;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_has_hostpc);
 
 bool tegra_usb_phy_otg_supported(struct tegra_usb_phy *phy)
 {
 	return phy->pdata->port_otg;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_otg_supported);
 
 void tegra_usb_phy_memory_prefetch_on(struct tegra_usb_phy *phy)
 {
@@ -735,3 +769,4 @@ void tegra_usb_phy_memory_prefetch_off(struct tegra_usb_phy *phy)
 		writel(val, ahb_gizmo + AHB_MEM_PREFETCH_CFG2);
 	}
 }
+

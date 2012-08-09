@@ -111,6 +111,7 @@ static int tegra_wake_event_irq[] = {
 	INT_USB, /* TEGRA_USB1_UTMIP, */	/* wake39 */
 	INT_USB2, /* TEGRA_USB2_UTMIP, */	/* wake40 */
 	INT_USB3, /* TEGRA_USB3_UTMIP, */	/* wake41 */
+	INT_USB2, /* TEGRA_USB2_UHSIC, */	/* wake42 */
 };
 
 static int last_gpio = -1;
@@ -181,4 +182,13 @@ int tegra_wake_to_irq(int wake)
 	}
 
 	return ret;
+}
+
+int tegra_disable_wake_source(int wake)
+{
+	if (wake >= ARRAY_SIZE(tegra_wake_event_irq))
+		return -EINVAL;
+
+	tegra_wake_event_irq[wake] = -EINVAL;
+	return 0;
 }

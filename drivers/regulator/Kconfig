@@ -342,6 +342,18 @@ config REGULATOR_RC5T583
 	  through regulator interface. The device supports multiple DCDC/LDO
 	  outputs which can be controlled by i2c communication.
 
+config REGULATOR_PALMAS
+	tristate "TI Palmas PMIC Regulators"
+	depends on MFD_PALMAS
+	help
+	  If you wish to control the regulators on the Palmas series of
+	  chips say Y here. This will enable support for all the software
+	  controllable SMPS/LDO regulators.
+
+	  The regulators available on Palmas series chips vary depending
+	  on the muxing. This is handled automatically in the driver by
+	  reading the mux info from OTP.
+
 config REGULATOR_TPS6105X
 	tristate "TI TPS6105X Power regulators"
 	depends on TPS6105X
@@ -438,6 +450,13 @@ config REGULATOR_TPS51632
 	  The TPS52632 is 3-2-1 Phase D-Cap+ Step Down Driverless Controller
 	  with Serial VID control and DVFS.
 
+config REGULATOR_TPS65090
+	tristate "TI TPS65090 Power regulator"
+	depends on MFD_TPS65090
+	help
+	  This driver provides support for the voltage regulators on the
+	  TI TPS65090 PMIC.
+
 config REGULATOR_WM8350
 	tristate "Wolfson Microelectronics WM8350 AudioPlus PMIC"
 	depends on MFD_WM8350
@@ -491,12 +510,6 @@ config REGULATOR_TPS6591X
 	default n
 	help
 	  This driver supports TPS6591X voltage regulator chips.
-
-config REGULATOR_TPS65090
-	tristate "TI TPS65090 Power regulators"
-	depends on MFD_TPS65090
-	help
-	  This driver supports TPS65090 voltage regulator chips.
 
 config REGULATOR_TPS80031
 	tristate "TI TPS80031 Power regulators"

@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (c) 2011 NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -35,6 +35,7 @@
 
 #include <mach/gpio-tegra.h>
 #include <mach/iomap.h>
+#include <mach/legacy_irq.h>
 #include <mach/pinmux.h>
 
 #include "../../arch/arm/mach-tegra/pm-irq.h"
@@ -79,6 +80,7 @@ struct tegra_gpio_bank {
 	u32 oe[4];
 	u32 int_enb[4];
 	u32 int_lvl[4];
+	u32 wake_enb[4];
 #endif
 };
 
@@ -307,6 +309,9 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 	spin_unlock_irqrestore(&bank->lvl_lock[port], flags);
 
+	tegra_gpio_mask_write(GPIO_MSK_OE(gpio), gpio, 0);
+	tegra_gpio_enable(gpio);
+
 	if (type & (IRQ_TYPE_LEVEL_LOW | IRQ_TYPE_LEVEL_HIGH))
 		__irq_set_handler_locked(d->irq, handle_level_irq);
 	else if (type & (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING))
@@ -383,9 +388,37 @@ int tegra_gpio_suspend(void)
 			bank->oe[p] = tegra_gpio_readl(GPIO_OE(gpio));
 			bank->int_enb[p] = tegra_gpio_readl(GPIO_INT_ENB(gpio));
 			bank->int_lvl[p] = tegra_gpio_readl(GPIO_INT_LVL(gpio));
+
+			/* disable gpio interrupts that are not wake sources */
+			tegra_gpio_writel(bank->wake_enb[p], GPIO_INT_ENB(gpio));
 		}
 	}
 	local_irq_restore(flags);
+
+	return 0;
+}
+
+static int tegra_update_lp1_gpio_wake(struct irq_data *d, bool enable)
+{
+#ifdef CONFIG_PM_SLEEP
+	struct tegra_gpio_bank *bank = irq_data_get_irq_chip_data(d);
+	u8 mask;
+	u8 port_index;
+	u8 pin_index_in_bank;
+	u8 pin_in_port;
+	int gpio = d->hwirq;
+
+	if (gpio < 0)
+		return -EIO;
+	pin_index_in_bank = (gpio & 0x1F);
+	port_index = pin_index_in_bank >> 3;
+	pin_in_port = (pin_index_in_bank & 0x7);
+	mask = BIT(pin_in_port);
+	if (enable)
+		bank->wake_enb[port_index] |= mask;
+	else
+		bank->wake_enb[port_index] &= ~mask;
+#endif
 
 	return 0;
 }
@@ -396,20 +429,34 @@ static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 	int ret = 0;
 	int wake = tegra_gpio_to_wake(d->hwirq);
 
+	/*
+	 * update LP1 mask for gpio port/pin interrupt
+	 * LP1 enable independent of LP0 wake support
+	 */
+	ret = tegra_update_lp1_gpio_wake(d, enable);
+	if (ret) {
+		pr_err("Failed gpio lp1 %s for irq=%d, error=%d\n",
+			(enable ? "enable" : "disable"), d->irq, ret);
+		goto fail;
+	}
+
+	/* LP1 enable for bank interrupt */
+	ret = tegra_update_lp1_irq_wake(bank->irq, enable);
+	if (ret)
+		pr_err("Failed gpio lp1 %s for irq=%d, error=%d\n",
+			(enable ? "enable" : "disable"), bank->irq, ret);
+
 	ret = tegra_pm_irq_set_wake(wake, enable);
-
 	if (ret)
-		return ret;
+		pr_err("Failed gpio lp0 %s for irq=%d, error=%d\n",
+			(enable ? "enable" : "disable"), d->irq, ret);
 
-	ret = irq_set_irq_wake(bank->irq, enable);
-
-	if (ret)
-		tegra_pm_irq_set_wake(wake, !enable);
-
+fail:
 	return ret;
 }
 #else
 #define tegra_gpio_irq_set_wake NULL
+#define tegra_update_lp1_gpio_wake NULL
 #define tegra_gpio_suspend NULL
 #define tegra_gpio_resume NULL
 #endif

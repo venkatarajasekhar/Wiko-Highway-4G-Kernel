@@ -61,6 +61,9 @@
 #include "devices.h"
 #include "fuse.h"
 #include "gpio-names.h"
+#include <mach/i2s.h>
+#include <mach/tegra_wm8903_pdata.h>
+#include <sound/wm8903.h>
 
 #define ENABLE_OTG 0
 
@@ -136,11 +139,12 @@ static __initdata struct tegra_clk_init_table curacao_clk_init_table[] = {
 	{ "sdmmc1",	"clk_m",	13000000,	false},
 	{ "sdmmc3",	"clk_m",	13000000,	false},
 	{ "sdmmc4",	"clk_m",	13000000,	false},
-	{ "blink",      "clk_32k",      32768,          false},
+	{ "blink",	"clk_32k",	32768,		false},
 	{ "pwm",	"clk_32k",	32768,		false},
 	{ "blink",	"clk_32k",	32768,		false},
 	{ "pll_a",	NULL,		56448000,	true},
 	{ "pll_a_out0",	NULL,		11289600,	true},
+	{ "i2s0",	"clk_m",	13000000,	true},
 	{ "i2s1",	"pll_a_out0",	11289600,	true},
 	{ "i2s2",	"pll_a_out0",	11289600,	true},
 	{ "d_audio",	"pll_a_out0",	11289600,	false},
@@ -148,11 +152,6 @@ static __initdata struct tegra_clk_init_table curacao_clk_init_table[] = {
 	{ NULL,		NULL,		0,		0},
 };
 
-static struct i2c_board_info __initdata curacao_i2c_bus1_board_info[] = {
-	{
-		I2C_BOARD_INFO("wm8903", 0x1a),
-	},
-};
 
 static struct tegra_i2c_platform_data curacao_i2c1_platform_data = {
 	.adapter_nr	= 0,
@@ -195,6 +194,17 @@ static struct tegra_i2c_platform_data curacao_i2c5_platform_data = {
 	.bus_clk_rate	= { 100000, 0 },
 };
 
+static struct wm8903_platform_data curacao_wm8903_pdata = {
+	.irq_active_low = 0,
+	.micdet_cfg = 0,
+	.micdet_delay = 100,
+};
+
+static struct i2c_board_info __initdata wm8903_board_info = {
+	I2C_BOARD_INFO("wm8903", 0x1a),
+	.platform_data = &curacao_wm8903_pdata,
+};
+
 static void curacao_i2c_init(void)
 {
 	tegra11_i2c_device1.dev.platform_data = &curacao_i2c1_platform_data;
@@ -204,7 +214,7 @@ static void curacao_i2c_init(void)
 	tegra11_i2c_device4.dev.platform_data = &curacao_i2c4_platform_data;
 	tegra11_i2c_device5.dev.platform_data = &curacao_i2c5_platform_data;
 
-	i2c_register_board_info(0, curacao_i2c_bus1_board_info, 1);
+	i2c_register_board_info(0, &wm8903_board_info, 1);
 
 	platform_device_register(&tegra11_i2c_device5);
 	platform_device_register(&tegra11_i2c_device4);
@@ -342,6 +352,21 @@ struct platform_device tegra_nand_device = {
 };
 #endif
 
+static struct tegra_wm8903_platform_data curacao_audio_pdata = {
+	.gpio_spkr_en		= -1,
+	.gpio_hp_det		= -1,
+	.gpio_hp_mute		= -1,
+	.gpio_int_mic_en	= -1,
+	.gpio_ext_mic_en	= -1,
+};
+
+static struct platform_device curacao_audio_device = {
+	.name	= "tegra-snd-wm8903",
+	.id	= 0,
+	.dev	= {
+		.platform_data  = &curacao_audio_pdata,
+	},
+};
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && defined(CONFIG_SMC91X)
 static struct resource tegra_sim_smc91x_resources[] = {
 	[0] = {
@@ -372,7 +397,7 @@ static struct platform_device *curacao_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_IOVMM_SMMU)
+#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
 	&tegra_smmu_device,
 #endif
 	&curacao_keys_device,
@@ -384,6 +409,11 @@ static struct platform_device *curacao_devices[] __initdata = {
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,
 #endif
+	&tegra_ahub_device,
+	&tegra_dam_device0,
+	&tegra_i2s_device0,
+	&tegra_pcm_device,
+	&curacao_audio_device,
 #if defined(CONFIG_MTD_NAND_TEGRA)
 	&tegra_nand_device,
 #endif
@@ -406,29 +436,6 @@ static int __init curacao_touch_init(void)
 	return 0;
 }
 
-static struct tegra_usb_platform_data tegra_udc_pdata = {
-	.port_otg = true,
-	.has_hostpc = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode = TEGRA_USB_OPMODE_DEVICE,
-	.u_data.dev = {
-		.vbus_pmu_irq = 0,
-		.vbus_gpio = -1,
-		.charging_supported = false,
-		.remote_wakeup_supported = false,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
 
 #if defined(USB_HOST_ONLY)
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
@@ -456,6 +463,74 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_use_fuses = 1,
 	},
 };
+
+
+static void ulpi_link_platform_open(void)
+{
+	int reset_gpio = TEGRA_GPIO_PV1;
+
+	gpio_request(reset_gpio, "ulpi_phy_reset");
+	gpio_direction_output(reset_gpio, 0);
+	tegra_gpio_enable(reset_gpio);
+
+	gpio_direction_output(reset_gpio, 0);
+	msleep(5);
+	gpio_direction_output(reset_gpio, 1);
+}
+
+static struct tegra_usb_phy_platform_ops ulpi_link_plat_ops = {
+	.open = ulpi_link_platform_open,
+};
+
+static struct tegra_usb_platform_data tegra_ehci2_ulpi_link_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_ULPI_LINK,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.vbus_reg = NULL,
+		.hot_plug = false,
+		.remote_wakeup_supported = false,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.ulpi = {
+		.shadow_clk_delay = 10,
+		.clock_out_delay = 1,
+		.data_trimmer = 4,
+		.stpdirnxt_trimmer = 4,
+		.dir_trimmer = 4,
+		.clk = "cdev2",
+	},
+	.ops = &ulpi_link_plat_ops,
+};
+#else
+
+static struct tegra_usb_platform_data tegra_udc_pdata = {
+	.port_otg = true,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_DEVICE,
+	.u_data.dev = {
+		.vbus_pmu_irq = 0,
+		.vbus_gpio = -1,
+		.charging_supported = false,
+		.remote_wakeup_supported = false,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
+	},
+};
+
 #endif
 
 static void curacao_usb_init(void)
@@ -463,6 +538,9 @@ static void curacao_usb_init(void)
 #if defined(USB_HOST_ONLY)
 	tegra_ehci1_device.dev.platform_data = &tegra_ehci1_utmi_pdata;
 	platform_device_register(&tegra_ehci1_device);
+
+	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_ulpi_link_pdata;
+	platform_device_register(&tegra_ehci2_device);
 #else
 	/* setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
@@ -537,6 +615,7 @@ static void __init tegra_curacao_init(void)
 	curacao_hs_uart_init();
 	curacao_bt_rfkill();
 	curacao_sensors_init();
+	curacao_soctherm_init();
 }
 
 static void __init tegra_curacao_reserve(void)

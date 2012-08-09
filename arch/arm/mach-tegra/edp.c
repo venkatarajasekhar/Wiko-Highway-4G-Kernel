@@ -22,13 +22,24 @@
 #include <linux/init.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
+#include <linux/module.h>
+#include <linux/uaccess.h>
 #include <mach/edp.h>
 
 #include "fuse.h"
+#include "dvfs.h"
+#include "clock.h"
+#include "cpu-tegra.h"
 
-static const struct tegra_edp_limits *edp_limits;
+#define FREQ_STEP 10000000
+#define A_TEMP_LUT_MAX 7
+#define A_VOLTAGE_LUT_MAX 49
+
+static struct tegra_edp_limits *edp_limits;
 static int edp_limits_size;
 static unsigned int regulator_cur;
+/* Value to subtract from regulator current limit */
+static unsigned int edp_reg_override_mA = 0;
 
 static const unsigned int *system_edp_limits;
 
@@ -314,39 +325,295 @@ static struct tegra_edp_limits edp_default_limits[] = {
 	{85, {1000000, 1000000, 1000000, 1000000} },
 };
 
+/*
+ * Constants for EDP calculations
+ */
 
+struct a_voltage_lut_t {
+	unsigned int voltage;
+	unsigned int a_voltage;
+};
+
+struct a_temp_lut_t {
+	unsigned int temp;
+	unsigned int a_temp;
+};
+
+/* TODO: This struct will get large for 13 speedo IDs... relocate. */
+struct edp_constants_lut_t {
+	int cpu_speedo_id;
+
+	struct a_temp_lut_t a_temp_lut [A_TEMP_LUT_MAX];
+	unsigned int a_temp_lut_size;
+
+	struct a_voltage_lut_t a_voltage_lut [A_VOLTAGE_LUT_MAX];
+	unsigned int a_voltage_lut_size;
+
+	unsigned int a_cores_lut[NR_CPUS];
+} edp_constants_lut[] = {
+	{
+		.cpu_speedo_id = -1,
+		.a_temp_lut = {
+			{23, 23270},
+			{45, 37559},
+			{60, 52056},
+			{70, 64712},
+			{75, 72150},
+			{85, 89690},
+			{90, 100000}
+		},
+		.a_temp_lut_size = 7,
+		.a_voltage_lut = {
+			{700, 321},
+			{713, 336},
+			{725, 352},
+			{738, 369},
+			{750, 386},
+			{763, 405},
+			{775, 423},
+			{788, 444},
+			{800, 464},
+			{813, 487},
+			{825, 509},
+			{838, 534},
+			{850, 558},
+			{863, 585},
+			{875, 612},
+			{888, 642},
+			{900, 671},
+			{913, 704},
+			{925, 736},
+			{938, 772},
+			{950, 807},
+			{963, 847},
+			{975, 885},
+			{988, 929},
+			{1000, 971},
+			{1013, 1019},
+			{1025, 1066},
+			{1038, 1119},
+			{1050, 1170},
+			{1063, 1228},
+			{1075, 1284},
+			{1088, 1348},
+			{1100, 1410},
+			{1113, 1480},
+			{1125, 1548},
+			{1138, 1625},
+			{1150, 1699},
+			{1163, 1784},
+			{1175, 1865},
+			{1188, 1958},
+			{1200, 2048},
+			{1213, 2150},
+			{1225, 2248},
+			{1238, 2360},
+			{1250, 2468},
+			{1263, 2591},
+			{1275, 2709},
+			{1288, 2844},
+			{1300, 2974}
+		},
+		.a_voltage_lut_size = 49,
+		.a_cores_lut = {
+			3565,
+			5710,
+			7855,
+			10000
+		},
+	}
+};
+
+struct freq_voltage_lut_t {
+	unsigned int freq;
+	struct a_voltage_lut_t *a_voltage_lut;
+} *freq_voltage_lut = 0;
+unsigned int freq_voltage_lut_size;
 
 /*
- * Specify regulator current in mA, e.g. 5000mA
- * Use 0 for default
+ * Find the maximum frequency that results in dynamic and leakage current that
+ * is less than the regulator current limit.
  */
-void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
+unsigned int edp_calculate_maxf(unsigned int a_temp,
+				unsigned int a_cores,
+				unsigned int n_cores,
+				unsigned int iddq_mA)
 {
-	int cpu_speedo_id = tegra_cpu_speedo_id();
+	unsigned int voltage_mV, a_voltage, leakage_mA, op_mA, freq_MHz;
+	unsigned int regulator_cur_effective = regulator_cur - edp_reg_override_mA;
+	int i;
+
+	for (i = freq_voltage_lut_size - 1; i  >= 0; i--) {
+		freq_MHz = freq_voltage_lut[i].freq / 1000000;
+		voltage_mV = freq_voltage_lut[i].a_voltage_lut->voltage;
+		a_voltage = freq_voltage_lut[i].a_voltage_lut->a_voltage;
+
+		leakage_mA = a_temp * a_voltage;
+		/* a_voltage was pre-multiplied by 1000 */
+		leakage_mA /= 1000;
+		leakage_mA *= a_cores;
+		/* a_temp was pre-multiplied by 100,000 */
+		leakage_mA /= 100000;
+		leakage_mA *= iddq_mA;
+		/* a_cores was pre-multiplied by 10,000 */
+		leakage_mA /= 10000;
+
+		op_mA = 55 * voltage_mV * freq_MHz * n_cores;
+		/* 55 was pre-multiplied by 100000 */
+		op_mA /= 100000;
+
+		/* TODO: Apply additional margin to total current calculated? */
+		if ((leakage_mA + op_mA) <= regulator_cur_effective)
+			return freq_MHz * 1000;
+	}
+	return 0;
+}
+
+static int edp_relate_freq_voltage(struct clk *clk_cpu_g,
+				unsigned int cpu_speedo_idx)
+{
+	unsigned int i, j, freq, voltage_mV, a_voltage_lut_size;
+	struct a_voltage_lut_t *a_voltage_lut;
+
+	a_voltage_lut = edp_constants_lut[cpu_speedo_idx].a_voltage_lut;
+	a_voltage_lut_size = edp_constants_lut[cpu_speedo_idx].a_voltage_lut_size;
+
+	for (i = 0, j = 0, freq = clk_get_min_rate(clk_cpu_g);
+		 i < freq_voltage_lut_size;
+		 i++, freq += FREQ_STEP) {
+
+		/* Predict voltages */
+		voltage_mV = tegra_dvfs_predict_millivolts(clk_cpu_g, freq);
+		if (voltage_mV < 0) {
+			pr_err("%s: could not predict voltage for freqency %u, err %d\n",
+				__func__, freq, voltage_mV);
+			return -EINVAL;
+		}
+
+		/* Look up voltage constant */
+		for (;j < a_voltage_lut_size; j++) {
+			if (voltage_mV <= a_voltage_lut[j].voltage) {
+				break;
+			}
+		}
+		if (j == a_voltage_lut_size) {
+			pr_err("%s: couldn't find voltage const for predicted voltage %d\n",
+				__func__, voltage_mV);
+			return -EINVAL;
+		}
+
+		/* Cache frequency / voltage / voltage constant relationship */
+		freq_voltage_lut[i].freq = freq;
+		freq_voltage_lut[i].a_voltage_lut = &a_voltage_lut[j];
+	}
+
+	return 0;
+}
+
+int edp_find_speedo_idx(int cpu_speedo_id, unsigned int *cpu_speedo_idx)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(edp_constants_lut); i++)
+		if (cpu_speedo_id == edp_constants_lut[i].cpu_speedo_id) {
+			*cpu_speedo_idx = i;
+			return 0;
+		}
+
+	pr_err("%s: couldn't find cpu speedo id in freq/voltage LUT\n", __func__);
+	return -EINVAL;
+}
+
+int init_cpu_edp_limits_calculated(int cpu_speedo_id)
+{
+	unsigned int temp_idx, n_cores_idx, cpu_speedo_idx;
+	unsigned int cpu_g_minf, cpu_g_maxf;
+	unsigned int *a_cores_lut, a_temp_lut_size, iddq_mA;
+	struct a_temp_lut_t *a_temp_lut;
+	struct tegra_edp_limits *edp_calculated_limits;
+	int ret, edp_calculated_limits_size;
+	struct clk *clk_cpu_g = tegra_get_clock_by_name("cpu_g");
+
+	/* Determine all inputs to EDP formula */
+	tegra_fuse_get_cpu_iddq_mA(&iddq_mA);
+
+	ret = edp_find_speedo_idx(cpu_speedo_id, &cpu_speedo_idx);
+	if (ret)
+		return ret;
+
+	a_temp_lut = edp_constants_lut[cpu_speedo_idx].a_temp_lut;
+	a_temp_lut_size = edp_constants_lut[cpu_speedo_idx].a_temp_lut_size;
+
+	a_cores_lut = edp_constants_lut[cpu_speedo_idx].a_cores_lut;
+
+	edp_calculated_limits =
+		kmalloc(sizeof(struct tegra_edp_limits) * a_temp_lut_size, GFP_KERNEL);
+	BUG_ON(!edp_calculated_limits);
+	edp_calculated_limits_size = a_temp_lut_size;
+
+	cpu_g_minf = clk_get_min_rate(clk_cpu_g);
+	cpu_g_maxf = clk_get_max_rate(clk_cpu_g);
+	freq_voltage_lut_size = (cpu_g_maxf - cpu_g_minf) / FREQ_STEP + 1;
+	freq_voltage_lut =
+		kmalloc(sizeof(struct freq_voltage_lut_t) * freq_voltage_lut_size,
+		GFP_KERNEL);
+	if (!freq_voltage_lut) {
+		pr_err("%s: failed to allocate mem for freq/voltage LUT\n", __func__);
+		return -ENOMEM;
+	}
+
+	ret = edp_relate_freq_voltage(clk_cpu_g, cpu_speedo_idx);
+	if (ret) {
+		kfree(freq_voltage_lut);
+		return ret;
+	}
+
+	/* Calculate EDP table */
+	for (temp_idx = 0; temp_idx < a_temp_lut_size; temp_idx++) {
+		edp_calculated_limits[temp_idx].temperature = a_temp_lut[temp_idx].temp;
+
+		for (n_cores_idx = 0; n_cores_idx < NR_CPUS; n_cores_idx++)
+			edp_calculated_limits[temp_idx].freq_limits[n_cores_idx] =
+				edp_calculate_maxf(a_temp_lut[temp_idx].a_temp,
+						a_cores_lut[n_cores_idx],
+						n_cores_idx + 1,
+						iddq_mA);
+	}
+
+	/*
+	 * If this is an EDP table update, need to overwrite old table.
+	 * The old table's address must remain valid.
+	 */
+	if (edp_limits != edp_default_limits) {
+		memcpy(edp_limits, edp_calculated_limits,
+			sizeof(struct tegra_edp_limits) * edp_calculated_limits_size);
+		kfree(edp_calculated_limits);
+	}
+	else {
+		edp_limits = edp_calculated_limits;
+		edp_limits_size = edp_calculated_limits_size;
+	}
+
+	kfree(freq_voltage_lut);
+	return 0;
+}
+
+int init_cpu_edp_limits_lookup(int cpu_speedo_id)
+{
 	int i, j;
 	struct tegra_edp_limits *e;
 	struct tegra_edp_entry *t = (struct tegra_edp_entry *)tegra_edp_map;
 	int tsize = sizeof(tegra_edp_map)/sizeof(struct tegra_edp_entry);
 
-	if (!regulator_mA) {
-		edp_limits = edp_default_limits;
-		edp_limits_size = ARRAY_SIZE(edp_default_limits);
-		return;
-	}
-	regulator_cur = regulator_mA;
-
 	for (i = 0; i < tsize; i++) {
 		if (t[i].speedo_id == cpu_speedo_id &&
-		    t[i].regulator_100mA <= regulator_mA / 100)
+		    t[i].regulator_100mA <= regulator_cur / 100)
 			break;
 	}
 
 	/* No entry found in tegra_edp_map */
-	if (i >= tsize) {
-		edp_limits = edp_default_limits;
-		edp_limits_size = ARRAY_SIZE(edp_default_limits);
-		return;
-	}
+	if (i >= tsize)
+		return -EINVAL;
 
 	/* Find all rows for this entry */
 	for (j = i + 1; j < tsize; j++) {
@@ -372,8 +639,32 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 		kfree(edp_limits);
 
 	edp_limits = e;
+	return 0;
 }
 
+/*
+ * Specify regulator current in mA, e.g. 5000mA
+ * Use 0 for default
+ */
+void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
+{
+	int cpu_speedo_id = tegra_cpu_speedo_id();
+	if (!regulator_mA) {
+		edp_limits = edp_default_limits;
+		edp_limits_size = ARRAY_SIZE(edp_default_limits);
+		return;
+	}
+	regulator_cur = regulator_mA;
+
+	if (!init_cpu_edp_limits_lookup(cpu_speedo_id))
+		return;
+
+	if (!init_cpu_edp_limits_calculated(cpu_speedo_id))
+		return;
+
+	edp_limits = edp_default_limits;
+	edp_limits_size = ARRAY_SIZE(edp_default_limits);
+}
 
 void __init tegra_init_system_edp_limits(unsigned int power_limit_mW)
 {
@@ -470,6 +761,59 @@ static int edp_debugfs_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int edp_reg_override_show(struct seq_file *s, void *data)
+{
+	seq_printf(s,
+		"Regulator limit override: %u mA. Effective regulator limit: %u mA\n",
+		edp_reg_override_mA, regulator_cur - edp_reg_override_mA);
+	return 0;
+}
+
+static int edp_reg_override_write(struct file *file,
+	const char __user *userbuf, size_t count, loff_t *ppos)
+{
+	char buf[32], *end;
+	unsigned int edp_reg_override_mA_temp;
+	int cpu_speedo_id;
+
+	if (sizeof(buf) <= count)
+		goto override_err;
+
+	if (copy_from_user(buf, userbuf, count))
+		goto override_err;
+
+	/* terminate buffer and trim - white spaces may be appended
+	 *  at the end when invoked from shell command line */
+	buf[count]='\0';
+	strim(buf);
+
+	edp_reg_override_mA_temp = simple_strtoul(buf, &end, 10);
+	if (*end != '\0')
+		goto override_err;
+
+	if (edp_reg_override_mA_temp >= regulator_cur)
+		goto override_err;
+
+	edp_reg_override_mA = edp_reg_override_mA_temp;
+	cpu_speedo_id = tegra_cpu_speedo_id();
+	if(init_cpu_edp_limits_calculated(cpu_speedo_id))
+		goto override_err;
+
+	if (tegra_cpu_set_speed_cap(NULL))
+		goto override_err;
+
+	pr_info("Reinitialized VDD_CPU EDP table with regulator current limit"
+			" %u mA\n", regulator_cur - edp_reg_override_mA);
+
+	return count;
+
+override_err:
+	pr_err("Failed to reinitialized VDD_CPU EDP table with override \"%s\"\n"
+		,buf);
+
+	return -EINVAL;
+
+}
 
 static int edp_debugfs_open(struct inode *inode, struct file *file)
 {
@@ -481,6 +825,10 @@ static int edp_limit_debugfs_open(struct inode *inode, struct file *file)
 	return single_open(file, edp_limit_debugfs_show, inode->i_private);
 }
 
+static int edp_reg_override_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, edp_reg_override_show, inode->i_private);
+}
 
 static const struct file_operations edp_debugfs_fops = {
 	.open		= edp_debugfs_open,
@@ -496,6 +844,14 @@ static const struct file_operations edp_limit_debugfs_fops = {
 	.release	= single_release,
 };
 
+static const struct file_operations edp_reg_override_debugfs_fops = {
+	.open		= edp_reg_override_open,
+	.read		= seq_read,
+	.write		= edp_reg_override_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int __init tegra_edp_debugfs_init(void)
 {
 	struct dentry *d;
@@ -507,6 +863,11 @@ static int __init tegra_edp_debugfs_init(void)
 
 	d = debugfs_create_file("edp_limit", S_IRUGO, NULL, NULL,
 				&edp_limit_debugfs_fops);
+
+	d = debugfs_create_file("edp_reg_override", S_IRUGO | S_IWUSR, NULL, NULL,
+				&edp_reg_override_debugfs_fops);
+	if (!d)
+		return -ENOMEM;
 
 	return 0;
 }
