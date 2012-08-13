@@ -18,6 +18,7 @@
 #include <linux/init.h>
 #include <linux/bug.h>
 #include <mach/pinmux.h>
+#include <mach/pinmux-t14.h>
 
 #define DEFAULT_DRIVE(_name)					\
 	{							\
