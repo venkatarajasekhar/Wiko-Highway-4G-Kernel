@@ -41,6 +41,7 @@
 #include <mach/pinmux.h>
 #include <mach/iomap.h>
 #include <mach/io.h>
+#include <mach/io_dpd.h>
 #include <mach/i2s.h>
 #include <mach/audio.h>
 #include <mach/hardware.h>
@@ -576,6 +577,7 @@ static void __init tegra_dolak_init(void)
 	platform_add_devices(dolak_devices, ARRAY_SIZE(dolak_devices));
 
 	dolak_power_off_init();
+	tegra_io_dpd_init();
 	dolak_sdhci_init();
 	dolak_i2c_init();
 	dolak_regulator_init();
