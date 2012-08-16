@@ -85,6 +85,7 @@ struct dvfs {
 	unsigned long freqs[MAX_DVFS_FREQS];
 	unsigned long *alt_freqs;
 	const int *millivolts;
+	const int *dfll_millivolts;
 	struct dvfs_rail *dvfs_rail;
 	bool auto_dvfs;
 
@@ -97,6 +98,20 @@ struct dvfs {
 	struct list_head node;
 	struct list_head debug_node;
 	struct list_head reg_node;
+};
+
+struct cpu_cvb_dvfs_parameters {
+	unsigned long freq_mhz;
+	u32	c0;
+	u32	c1;
+	u32	c2;
+};
+
+struct cpu_cvb_dvfs {
+	int speedo_id;
+	int min_mv;
+	int margin;
+	struct cpu_cvb_dvfs_parameters cvb_table[MAX_DVFS_FREQS];
 };
 
 extern struct dvfs_rail *tegra_cpu_rail;
@@ -126,17 +141,17 @@ int tegra_cpu_dvfs_alter(int edp_thermal_index, const cpumask_t *cpus,
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 int tegra_dvfs_rail_disable_prepare(struct dvfs_rail *rail);
 int tegra_dvfs_rail_post_enable(struct dvfs_rail *rail);
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-void tegra_dvfs_age_cpu(int cur_linear_age);
-#else
-static inline void tegra_dvfs_age_cpu(int cur_linear_age)
-{ return; }
-#endif
 #else
 static inline int tegra_dvfs_rail_disable_prepare(struct dvfs_rail *rail)
 { return 0; }
 static inline int tegra_dvfs_rail_post_enable(struct dvfs_rail *rail)
 { return 0; }
+#endif
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+void tegra_dvfs_age_cpu(int cur_linear_age);
+#else
+static inline void tegra_dvfs_age_cpu(int cur_linear_age)
+{ return; }
 #endif
 
 

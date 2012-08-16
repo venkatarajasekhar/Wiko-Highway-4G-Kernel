@@ -30,7 +30,11 @@ obj-y                                   += common-t3.o
 obj-y                                   += pm-t3.o
 obj-y                                   += sleep-t3.o
 obj-y                                   += timer-t3.o
+ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
 obj-y                                   += wakeups-t3.o
+else
+obj-y					+= wakeups-t11x.o
+endif
 ifeq ($(CONFIG_CPU_IDLE),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t3.o
 endif
@@ -238,6 +242,7 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-memory.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-pinmux.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-power.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
+obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
