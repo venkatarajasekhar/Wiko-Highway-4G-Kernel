@@ -60,6 +60,7 @@
 #include "fuse.h"
 
 #define ENABLE_OTG 0
+/*#define USB_HOST_ONLY */
 
 static struct plat_serial8250_port debug_uart_platform_data[] = {
 	{
