@@ -31,6 +31,10 @@
 
 #include "sdhci.h"
 
+#ifdef CONFIG_TEGRA_PRE_SILICON_SUPPORT
+#include <mach/hardware.h>
+#endif
+
 #define DRIVER_NAME "sdhci"
 
 #define DBG(f, x...) \
@@ -1142,8 +1146,8 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	if (real_div)
 		host->mmc->actual_clock = (host->max_clk * clk_mul) / real_div;
 
-#ifdef CONFIG_TEGRA_FPGA_PLATFORM
-	if(clock > 400000)
+#ifdef CONFIG_TEGRA_PRE_SILICON_SUPPORT
+	if (tegra_platform_is_fpga() && clock > 400000)
 		div = 1;
 #endif
 	clk |= (div & SDHCI_DIV_MASK) << SDHCI_DIVIDER_SHIFT;
