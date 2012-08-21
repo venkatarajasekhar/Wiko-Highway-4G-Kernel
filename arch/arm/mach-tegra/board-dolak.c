@@ -355,28 +355,6 @@ static struct platform_device dolak_audio_device = {
 	},
 };
 
-#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && defined(CONFIG_SMC91X)
-static struct resource tegra_sim_smc91x_resources[] = {
-	[0] = {
-		.start		= TEGRA_SIM_ETH_BASE,
-		.end		= TEGRA_SIM_ETH_BASE + TEGRA_SIM_ETH_SIZE - 1,
-		.flags		= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start		= IRQ_ETH,
-		.end		= IRQ_ETH,
-		.flags		= IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device tegra_sim_smc91x_device = {
-	.name		= "smc91x",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(tegra_sim_smc91x_resources),
-	.resource	= tegra_sim_smc91x_resources,
-};
-#endif
-
 #if defined(CONFIG_TEGRA_BASEBAND)
 static struct tegra_bb_platform_data dolak_tegra_bb_data;
 
@@ -424,9 +402,6 @@ static struct platform_device *dolak_devices[] __initdata = {
 	&tegra_nand_device,
 #endif
 
-#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && defined(CONFIG_SMC91X)
-	&tegra_sim_smc91x_device,
-#endif
 	&tegra_camera,
 	&tegra_mipi_bif_device,
 };
