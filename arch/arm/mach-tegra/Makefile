@@ -29,6 +29,7 @@ else
 obj-y                                   += common-t3.o
 obj-y                                   += pm-t3.o
 obj-y                                   += sleep-t3.o
+obj-$(CONFIG_DEBUG_FS)                  += clocks_stats.o
 obj-y                                   += timer-t3.o
 ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
 obj-y                                   += wakeups-t3.o
@@ -119,7 +120,7 @@ ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_throttle.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_throttle.o
 endif
-obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_thermal.o
+obj-$(CONFIG_TEGRA_THERMAL)             += tegra3_thermal.o
 obj-$(CONFIG_TEGRA_IOVMM)               += iovmm.o
 obj-$(CONFIG_TEGRA_IOVMM_GART)          += iovmm-gart.o
 obj-$(CONFIG_TEGRA_IOVMM_SMMU)          += iovmm-smmu.o
@@ -217,6 +218,11 @@ obj-${CONFIG_MACH_P1852}               += board-p1852-panel.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-pinmux.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-sdhci.o
 
+obj-${CONFIG_MACH_E1853}               += board-e1853.o
+obj-${CONFIG_MACH_E1853}               += board-e1853-panel.o
+obj-${CONFIG_MACH_E1853}               += board-e1853-pinmux.o
+obj-${CONFIG_MACH_E1853}               += board-e1853-sdhci.o
+
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise.o
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise-panel.o
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise-pinmux.o
@@ -243,6 +249,12 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-pinmux.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-power.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
+
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-memory.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-pinmux.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-power.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sdhci.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

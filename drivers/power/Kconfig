@@ -178,6 +178,12 @@ config BATTERY_GAUGE_TPS8003X
 	help
 	 Say Y here to enable support for battery gauge for TPS80031x chips.
 
+config CHARGER_TPS65090
+	tristate "TPS65090 battery charger driver"
+	depends on MFD_TPS65090
+	help
+	 Say Y here to enable support for battery charging with TPS65090 chips.
+
 config CHARGER_SMB349
 	tristate "SMB349 battery charger driver"
 	depends on I2C
@@ -225,6 +231,16 @@ config BATTERY_MAX17048
 	  in handheld and portable equipment. The MAX17048 is configured
 	  to operate with a single lithium cell, and MAX17049 for two lithium
 	  cells.
+
+config BATTERY_ANDROID
+	tristate "Battery driver for Android"
+	help
+	  Say Y to enable generic support for battery charging according
+	  to common Android policies.
+	  This driver adds periodic battery level and health monitoring,
+	  kernel log reporting and other debugging features, common board
+	  battery file glue logic for battery/case temperature sensors,
+	  etc.
 
 config BATTERY_Z2
 	tristate "Z2 battery driver"

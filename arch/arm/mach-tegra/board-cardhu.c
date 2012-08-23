@@ -2,6 +2,7 @@
  * arch/arm/mach-tegra/board-cardhu.c
  *
  * Copyright (c) 2011-2012, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,7 +81,6 @@
 #include "common.h"
 
 static struct balanced_throttle throttle_list[] = {
-#ifdef CONFIG_TEGRA_THERMAL_THROTTLE
 	{
 		.id = BALANCED_THROTTLE_ID_TJ,
 		.throt_tab_size = 10,
@@ -97,7 +97,6 @@ static struct balanced_throttle throttle_list[] = {
 			{1000000, 1100 },
 		},
 	},
-#endif
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	{
 		.id = BALANCED_THROTTLE_ID_SKIN,
@@ -118,27 +117,24 @@ static struct balanced_throttle throttle_list[] = {
 static struct tegra_thermal_data thermal_data = {
 	.shutdown_device_id = THERMAL_DEVICE_ID_NCT_EXT,
 	.temp_shutdown = 90000,
-
-#if defined(CONFIG_TEGRA_EDP_LIMITS) || defined(CONFIG_TEGRA_THERMAL_THROTTLE)
 	.throttle_edp_device_id = THERMAL_DEVICE_ID_NCT_EXT,
-#endif
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 	.edp_offset = TDIODE_OFFSET,  /* edp based on tdiode */
 	.hysteresis_edp = 3000,
 #endif
-#ifdef CONFIG_TEGRA_THERMAL_THROTTLE
 	.temp_throttle = 85000,
 	.tc1 = 0,
 	.tc2 = 1,
 	.passive_delay = 2000,
-#endif
+};
+
+static struct tegra_skin_data skin_data = {
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	.skin_device_id = THERMAL_DEVICE_ID_SKIN,
 	.temp_throttle_skin = 43000,
 	.tc1_skin = 0,
 	.tc2_skin = 1,
 	.passive_delay_skin = 5000,
-
 	.skin_temp_offset = 9793,
 	.skin_period = 1100,
 	.skin_devs_size = 2,
@@ -164,8 +160,11 @@ static struct tegra_thermal_data thermal_data = {
 			}
 		},
 	},
+#else
+	.skin_device_id = THERMAL_DEVICE_ID_NULL,
 #endif
 };
+
 
 static struct rfkill_gpio_platform_data cardhu_bt_rfkill_pdata[] = {
 	{
@@ -730,12 +729,25 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
-static struct tegra_wm8903_platform_data cardhu_audio_wm8903_pdata = {
+static struct tegra_asoc_platform_data cardhu_audio_wm8903_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= -1,
 	.gpio_ext_mic_en	= -1,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= -1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+	},
 };
 
 static struct tegra_asoc_platform_data cardhu_audio_max98095_pdata = {
@@ -744,6 +756,19 @@ static struct tegra_asoc_platform_data cardhu_audio_max98095_pdata = {
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= -1,
 	.gpio_ext_mic_en	= -1,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= -1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+	},
 };
 
 static struct platform_device cardhu_audio_wm8903_device = {
@@ -769,14 +794,17 @@ static struct tegra_asoc_platform_data cardhu_audio_aic326x_pdata = {
 	.gpio_int_mic_en	= -1,
 	.gpio_ext_mic_en	= -1,
 	/*defaults for Verbier-Cardhu board with TI AIC326X codec*/
-	.audio_port_id		= {
-		[HIFI_CODEC] = 0,
-		[BASEBAND] = -1,
-		[BT_SCO] = 3,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
 	},
-	.baseband_param		= {
-		.rate = -1,
-		.channels = -1,
+	.i2s_param[BT_SCO]	= {
+		.sample_size	= 16,
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
 	},
 };
 
@@ -1385,6 +1413,7 @@ static void cardhu_sata_init(void) { }
 static void __init tegra_cardhu_init(void)
 {
 	tegra_thermal_init(&thermal_data,
+				&skin_data,
 				throttle_list,
 				ARRAY_SIZE(throttle_list));
 	tegra_clk_init_from_table(cardhu_clk_init_table);

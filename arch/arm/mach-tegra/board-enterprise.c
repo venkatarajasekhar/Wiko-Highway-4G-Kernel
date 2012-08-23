@@ -110,22 +110,23 @@ static struct balanced_throttle throttle_list[] = {
 static struct tegra_thermal_data thermal_data = {
 	.shutdown_device_id = THERMAL_DEVICE_ID_NCT_EXT,
 	.temp_shutdown = 90000,
-#if defined(CONFIG_TEGRA_EDP_LIMITS) || defined(CONFIG_TEGRA_THERMAL_THROTTLE)
 	.throttle_edp_device_id = THERMAL_DEVICE_ID_NCT_EXT,
-#endif
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 	.edp_offset = TDIODE_OFFSET,  /* edp based on tdiode */
 	.hysteresis_edp = 3000,
 #endif
-#ifdef CONFIG_TEGRA_THERMAL_THROTTLE
 	.temp_throttle = 85000,
 	.tc1 = 0,
 	.tc2 = 1,
 	.passive_delay = 2000,
-#endif
+};
+
+static struct tegra_skin_data skin_data = {
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	.skin_device_id = THERMAL_DEVICE_ID_SKIN,
 	.temp_throttle_skin = 43000,
+#else
+	.skin_device_id = THERMAL_DEVICE_ID_NULL,
 #endif
 };
 
@@ -487,8 +488,6 @@ static void __init enterprise_uart_init(void)
 				ARRAY_SIZE(enterprise_uart_devices));
 }
 
-
-
 static struct resource tegra_rtc_resources[] = {
 	[0] = {
 		.start = TEGRA_RTC_BASE,
@@ -520,16 +519,27 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= -1,
 	.gpio_ext_mic_en	= -1,
-	.debounce_time_hp = -1,
+	.debounce_time_hp	= -1,
 	/*defaults for Enterprise board*/
-	.audio_port_id		= {
-		[HIFI_CODEC] = 0,
-		[BASEBAND] = 2,
-		[BT_SCO] = 3,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
 	},
-	.baseband_param		= {
-		.rate = 8000,
-		.channels = 1,
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= 2,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.sample_size	= 16,
+		.rate		= 8000,
+		.channels	= 1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.sample_size	= 16,
 	},
 };
 
@@ -548,15 +558,25 @@ static struct tegra_asoc_platform_data enterprise_audio_aic326x_pdata = {
 	.gpio_int_mic_en	= -1,
 	.gpio_ext_mic_en	= -1,
 	/*defaults for Verbier-Enterprise (E1197) board with TI AIC326X codec*/
-	.audio_port_id		= {
-		[HIFI_CODEC] = 0,
-		[BASEBAND] = 2,
-		[BT_SCO] = 3,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
 	},
-	.baseband_param		= {
-		.rate = 8000,
-		.channels = 1,
-		.bit_format = TEGRA_DAIFMT_DSP_A,
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= 2,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.sample_size	= 16,
+		.rate		= 8000,
+		.channels	= 1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.sample_size	= 16,
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
 	},
 };
 
@@ -710,6 +730,7 @@ static struct tegra_usb_phy_platform_ops hsic_xmm_plat_ops = {
 	.post_suspend = enterprise_usb_hsic_postsupend,
 	.pre_resume = enterprise_usb_hsic_preresume,
 	.port_power = enterprise_usb_hsic_phy_power,
+	.post_phy_on = enterprise_usb_hsic_phy_power,
 	.post_phy_off = enterprise_usb_hsic_post_phy_off,
 };
 
@@ -819,9 +840,15 @@ error:
 	return NULL;
 }
 
-void tegra_usb_hsic_host_unregister(struct platform_device *pdev)
+void tegra_usb_hsic_host_unregister(struct platform_device **platdev)
 {
-	platform_device_unregister(pdev);
+	struct platform_device *pdev = *platdev;
+
+	if (pdev && &pdev->dev) {
+		platform_device_unregister(pdev);
+		*platdev = NULL;
+	} else
+		pr_err("%s: no platform device\n", __func__);
 }
 
 static void enterprise_usb_init(void)
@@ -856,12 +883,12 @@ static void enterprise_audio_init(void)
 	tegra_get_board_info(&board_info);
 
 	if (board_info.board_id == BOARD_E1197)
-		enterprise_audio_pdata.audio_port_id[HIFI_CODEC] = 1;
+		enterprise_audio_pdata.i2s_param[HIFI_CODEC].audio_port_id = 1;
 	else if (board_info.fab == BOARD_FAB_A04) {
-		enterprise_audio_pdata.audio_port_id[BASEBAND] = 4;
+		enterprise_audio_pdata.i2s_param[BASEBAND].audio_port_id = 4;
 		platform_device_register(&tegra_i2s_device4);
 	} else {
-		enterprise_audio_pdata.audio_port_id[BASEBAND] = 2;
+		enterprise_audio_pdata.i2s_param[BASEBAND].audio_port_id = 2;
 		platform_device_register(&tegra_i2s_device2);
 	}
 
@@ -981,6 +1008,7 @@ static void __init tegra_enterprise_init(void)
 		tegra_clk_init_from_table(enterprise_clk_i2s2_table);
 
 	tegra_thermal_init(&thermal_data,
+				&skin_data,
 				throttle_list,
 				ARRAY_SIZE(throttle_list));
 	tegra_clk_init_from_table(enterprise_clk_init_table);

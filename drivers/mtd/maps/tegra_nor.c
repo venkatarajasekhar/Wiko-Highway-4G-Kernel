@@ -139,7 +139,7 @@ static inline void snor_tegra_writel(struct tegra_nor_info *tnor,
 
 #define DRV_NAME "tegra-nor"
 
-static const char * const part_probes[] = { "cmdlinepart", NULL };
+static const char *part_probes[] = { "cmdlinepart", NULL };
 
 static int wait_for_dma_completion(struct tegra_nor_info *info)
 {
@@ -417,15 +417,7 @@ static int tegra_nor_probe(struct platform_device *pdev)
 	info->parts = NULL;
 
 	platform_set_drvdata(pdev, info);
-	err = parse_mtd_partitions(info->mtd, part_probes, &info->parts, 0);
-	if (err > 0)
-		err = mtd_device_register(info->mtd, info->parts, err);
-	else if (err <= 0 && plat->flash.parts)
-		err =
-		    mtd_device_register(info->mtd, plat->flash.parts,
-				       plat->flash.nr_parts);
-	else
-		mtd_device_register(info->mtd, NULL, 0);
+	mtd_device_parse_register(info->mtd, part_probes, NULL, info->parts, 0);
 
 	return 0;
 

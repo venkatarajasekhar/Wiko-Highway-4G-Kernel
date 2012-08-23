@@ -31,7 +31,7 @@
 #include <linux/mmc/sd.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
-
+#include <linux/pm_runtime.h>
 #include <asm/gpio.h>
 
 #include <mach/gpio-tegra.h>
@@ -583,6 +583,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
+	struct platform_device *pdev = to_platform_device(mmc_dev(sdhci->mmc));
 	u8 ctrl;
 
 	pr_debug("%s %s %u enabled=%u\n", __func__,
@@ -598,6 +599,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		}
 
 		if (!tegra_host->clk_enabled) {
+			pm_runtime_get_sync(&pdev->dev);
 			clk_enable(pltfm_host->clk);
 			ctrl = sdhci_readb(sdhci, SDHCI_VENDOR_CLOCK_CNTRL);
 			ctrl |= SDHCI_VENDOR_CLOCK_CNTRL_SDMMC_CLK;
@@ -614,6 +616,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		ctrl &= ~SDHCI_VENDOR_CLOCK_CNTRL_SDMMC_CLK;
 		sdhci_writeb(sdhci, ctrl, SDHCI_VENDOR_CLOCK_CNTRL);
 		clk_disable(pltfm_host->clk);
+		pm_runtime_put_sync(&pdev->dev);
 		tegra_host->clk_enabled = false;
 		/* io dpd enable call for sd instance */
 
@@ -1105,7 +1108,6 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	struct sdhci_pltfm_host *pltfm_host;
 	struct tegra_sdhci_platform_data *plat;
 	struct sdhci_tegra *tegra_host;
-	struct clk *clk;
 	int rc;
 
 	match = of_match_device(sdhci_tegra_dt_match, &pdev->dev);
@@ -1260,13 +1262,15 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 		}
 	}
 
-	clk = clk_get(mmc_dev(host->mmc), NULL);
-	if (IS_ERR(clk)) {
+	pm_runtime_enable(&pdev->dev);
+	pltfm_host->clk = clk_get(mmc_dev(host->mmc), NULL);
+	if (IS_ERR(pltfm_host->clk)) {
 		dev_err(mmc_dev(host->mmc), "clk err\n");
-		rc = PTR_ERR(clk);
+		rc = PTR_ERR(pltfm_host->clk);
 		goto err_clk_get;
 	}
-	rc = clk_enable(clk);
+	pm_runtime_get_sync(&pdev->dev);
+	rc = clk_enable(pltfm_host->clk);
 	if (rc != 0)
 		goto err_clk_put;
 
@@ -1281,7 +1285,6 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 			clk_round_rate(tegra_host->emc_clk, ULONG_MAX);
 	}
 
-	pltfm_host->clk = clk;
 	pltfm_host->priv = tegra_host;
 	tegra_host->clk_enabled = true;
 	tegra_host->max_clk_limit = plat->max_clk_limit;
@@ -1311,11 +1314,14 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	host->mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
 
 #ifdef CONFIG_MMC_BKOPS
-	host->mmc->caps |= MMC_CAP_BKOPS;
+	host->mmc->caps2 |= MMC_CAP2_BKOPS;
 #endif
 
 	/* enable HS200 capable */
 	host->mmc->caps2 |= MMC_CAP2_HS200;
+
+	/* enable packed command support*/
+	host->mmc->caps2 |= MMC_CAP2_PACKED_CMD;
 
 	tegra_sdhost_min_freq = TEGRA_SDHOST_MIN_FREQ;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
@@ -1337,6 +1343,7 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 err_add_host:
 	clk_put(tegra_host->emc_clk);
 	clk_disable(pltfm_host->clk);
+	pm_runtime_put_sync(&pdev->dev);
 err_clk_put:
 	clk_put(pltfm_host->clk);
 err_clk_get:
@@ -1391,8 +1398,10 @@ static int __devexit sdhci_tegra_remove(struct platform_device *pdev)
 	if (gpio_is_valid(plat->power_gpio))
 		gpio_free(plat->power_gpio);
 
-	if (tegra_host->clk_enabled)
+	if (tegra_host->clk_enabled) {
 		clk_disable(pltfm_host->clk);
+		pm_runtime_put_sync(&pdev->dev);
+	}
 	clk_put(pltfm_host->clk);
 
 	sdhci_pltfm_free(pdev);
