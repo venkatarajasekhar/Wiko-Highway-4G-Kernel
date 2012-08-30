@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011 NVIDIA Corporation
+ * Copyright (C) 2011-2012 NVIDIA Corporation
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,7 +25,6 @@
 #include "bus.h"
 #include "dev.h"
 #include "debug.h"
-#include "host1x/host1x_actmon.h"
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "chip_support.h"
@@ -198,7 +197,8 @@ static const struct file_operations nvhost_debug_fops = {
 
 static int actmon_below_wmark_show(struct seq_file *s, void *unused)
 {
-	seq_printf(s, "%d\n", host1x_actmon_below_wmark_count());
+	struct nvhost_master *host = s->private;
+	seq_printf(s, "%d\n", actmon_op().below_wmark_count(host));
 	return 0;
 }
 
@@ -216,7 +216,8 @@ static const struct file_operations actmon_below_wmark_fops = {
 
 static int actmon_above_wmark_show(struct seq_file *s, void *unused)
 {
-	seq_printf(s, "%d\n", host1x_actmon_above_wmark_count());
+	struct nvhost_master *host = s->private;
+	seq_printf(s, "%d\n", actmon_op().above_wmark_count(host));
 	return 0;
 }
 
@@ -237,7 +238,7 @@ static int actmon_avg_show(struct seq_file *s, void *unused)
 	u32 avg;
 	int err;
 
-	err = host1x_actmon_avg(host, &avg);
+	err = actmon_op().read_avg(host, &avg);
 	if (!err)
 		seq_printf(s, "%d\n", avg);
 	return err;
@@ -255,9 +256,107 @@ static const struct file_operations actmon_avg_fops = {
 	.release	= single_release,
 };
 
+static int tickcount_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().tickcount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int tickcount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().tickcount)
+		return -ENODEV;
+
+	return single_open(file, tickcount_show, inode->i_private);
+}
+
+static const struct file_operations tickcount_fops = {
+	.open		= tickcount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int stallcount_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().stallcount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int stallcount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().stallcount)
+		return -ENODEV;
+
+	return single_open(file, stallcount_show, inode->i_private);
+}
+
+static const struct file_operations stallcount_fops = {
+	.open		= stallcount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int xfercount_show(struct seq_file *s, void *unused)
+{
+	struct nvhost_device *dev = s->private;
+	u64 cnt;
+	int err;
+
+	err = tickctrl_op().xfercount(dev, &cnt);
+	if (!err)
+		seq_printf(s, "%lld\n", cnt);
+	return err;
+}
+
+static int xfercount_open(struct inode *inode, struct file *file)
+{
+	if (!tickctrl_op().xfercount)
+		return -ENODEV;
+
+	return single_open(file, xfercount_show, inode->i_private);
+}
+
+static const struct file_operations xfercount_fops = {
+	.open		= xfercount_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+void nvhost_device_debug_init(struct nvhost_device *dev)
+{
+	struct dentry *de = nvhost_get_parent(dev)->debugfs;
+
+	de = debugfs_create_dir(dev->name, de);
+	debugfs_create_file("stallcount", S_IRUGO, de, dev, &stallcount_fops);
+	debugfs_create_file("xfercount", S_IRUGO, de, dev, &xfercount_fops);
+
+	dev->debugfs = de;
+}
+
 void nvhost_debug_init(struct nvhost_master *master)
 {
 	struct dentry *de = debugfs_create_dir("tegra_host", NULL);
+
+	if (!de)
+		return;
+
+	/* Store the created entry */
+	master->dev->debugfs = de;
 
 	debugfs_create_file("status", S_IRUGO, de,
 			master, &nvhost_debug_fops);
@@ -285,6 +384,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 			master, &actmon_above_wmark_fops);
 	debugfs_create_file("3d_actmon_below_wmark", S_IRUGO, de,
 			master, &actmon_below_wmark_fops);
+	debugfs_create_file("tickcount", S_IRUGO, de,
+			master->dev, &tickcount_fops);
 }
 #else
 void nvhost_debug_init(struct nvhost_master *master)

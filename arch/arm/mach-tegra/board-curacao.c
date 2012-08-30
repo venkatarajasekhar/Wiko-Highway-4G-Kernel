@@ -142,12 +142,13 @@ static __initdata struct tegra_clk_init_table curacao_clk_init_table[] = {
 	{ "blink",	"clk_32k",	32768,		false},
 	{ "pwm",	"clk_32k",	32768,		false},
 	{ "blink",	"clk_32k",	32768,		false},
-	{ "pll_a",	NULL,		56448000,	true},
+	{ "pll_a",	NULL,		282240000,	true},
 	{ "pll_a_out0",	NULL,		11289600,	true},
 	{ "i2s0",	"clk_m",	13000000,	true},
 	{ "i2s1",	"pll_a_out0",	11289600,	true},
 	{ "i2s2",	"pll_a_out0",	11289600,	true},
 	{ "d_audio",	"pll_a_out0",	11289600,	false},
+	{ "audio",	"pll_a_out0",	11289600,	false},
 	{ "audio_2x",	"audio",	22579200,	true},
 	{ NULL,		NULL,		0,		0},
 };
@@ -171,9 +172,10 @@ static const struct tegra_pingroup_config i2c2_gen2 = {
 };
 #endif
 
-static struct tegra_i2c_slave_platform_data curacao_i2c2_slave_platform_data = {
-	.adapter_nr	= 1,
-	.bus_clk_rate	= 100000,
+static struct tegra_i2c_platform_data curacao_i2c2_platform_data = {
+	.adapter_nr	= 2,
+	.bus_count	= 1,
+	.bus_clk_rate	= { 100000, 0 },
 };
 
 static struct tegra_i2c_platform_data curacao_i2c3_platform_data = {
@@ -208,8 +210,7 @@ static struct i2c_board_info __initdata wm8903_board_info = {
 static void curacao_i2c_init(void)
 {
 	tegra11_i2c_device1.dev.platform_data = &curacao_i2c1_platform_data;
-	tegra_i2c_slave_device2.dev.platform_data =
-					&curacao_i2c2_slave_platform_data;
+	tegra11_i2c_device2.dev.platform_data = &curacao_i2c2_platform_data;
 	tegra11_i2c_device3.dev.platform_data = &curacao_i2c3_platform_data;
 	tegra11_i2c_device4.dev.platform_data = &curacao_i2c4_platform_data;
 	tegra11_i2c_device5.dev.platform_data = &curacao_i2c5_platform_data;
@@ -219,7 +220,7 @@ static void curacao_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device5);
 	platform_device_register(&tegra11_i2c_device4);
 	platform_device_register(&tegra11_i2c_device3);
-	platform_device_register(&tegra_i2c_slave_device2);
+	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
 }
 
@@ -596,6 +597,7 @@ static void __init tegra_curacao_init(void)
 	curacao_sdhci_init();
 	curacao_i2c_init();
 	curacao_regulator_init();
+	curacao_emc_init();
 	curacao_suspend_init();
 	curacao_touch_init();
 	curacao_usb_init();

@@ -21,6 +21,7 @@
  */
 #include <linux/err.h>
 #include <linux/init.h>
+#include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -40,7 +41,7 @@
 
 #define TPS65090_NOITERM	BIT(5)
 #define CHARGER_ENABLE		0x01
-#define	TPS65090_VACG		0x02
+#define TPS65090_VACG		0x02
 
 struct tps65090_charger {
 	struct	device	*dev;
@@ -72,7 +73,7 @@ static int tps65090_enable_charging(struct tps65090_charger *charger,
 	uint8_t enable)
 {
 	int ret;
-	uint8_t retval;
+	uint8_t retval = 0;
 
 	ret = tps65090_read(charger->dev->parent, TPS65090_CG_CTRL0, &retval);
 	if (ret < 0) {
@@ -131,7 +132,7 @@ static irqreturn_t tps65090_charger_isr(int irq, void *dev_id)
 {
 	struct tps65090_charger *charger = dev_id;
 	int ret;
-	uint8_t retval;
+	uint8_t retval = 0;
 
 	ret = tps65090_read(charger->dev->parent, TPS65090_INTR_STS, &retval);
 	if (ret < 0) {
@@ -156,11 +157,12 @@ error:
 
 static __devinit int tps65090_charger_probe(struct platform_device *pdev)
 {
-	uint8_t retval;
+	uint8_t retval = 0;
 	int ret;
 	struct tps65090_charger *charger_data;
-	struct tps65090_plat_data *pdata = pdev->dev.platform_data;
+	struct tps65090_platform_data *pdata;
 
+	pdata = dev_get_platdata(pdev->dev.parent);
 	if (!pdata) {
 		dev_err(&pdev->dev, "%s():no platform data available\n",
 				__func__);
@@ -192,8 +194,8 @@ static __devinit int tps65090_charger_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	ret = devm_request_threaded_irq(&pdev->dev, charger_data->irq_base,
-			NULL, tps65090_charger_isr, 0, "tps65090",
+	ret = request_threaded_irq(charger_data->irq_base,
+			NULL, tps65090_charger_isr, 0, "tps65090-charger",
 			charger_data);
 	if (ret) {
 		dev_err(charger_data->dev, "Unable to register irq %d err %d\n",
@@ -210,24 +212,30 @@ static __devinit int tps65090_charger_probe(struct platform_device *pdev)
 	ret = power_supply_register(&pdev->dev, &charger_data->ac);
 	if (ret) {
 		dev_err(&pdev->dev, "failed: power supply register\n");
-		return ret;
+		goto fail_suppy_reg;
 	}
 
 	ret = tps65090_config_charger(charger_data);
-	if (ret < 0)
-		goto error;
+	if (ret < 0) {
+		dev_err(&pdev->dev, "charger config failed, err %d\n", ret);
+		goto fail_config;
+	}
 
 	return 0;
-error:
+fail_config:
 	power_supply_unregister(&charger_data->ac);
+
+fail_suppy_reg:
+	free_irq(charger_data->irq_base, charger_data);
 	return ret;
 }
 
-static int tps65090_charger_remove(struct platform_device *pdev)
+static int __devexit tps65090_charger_remove(struct platform_device *pdev)
 {
 	struct tps65090_charger *charger = dev_get_drvdata(&pdev->dev);
 
 	power_supply_unregister(&charger->ac);
+	free_irq(charger->irq_base, charger);
 	return 0;
 }
 
@@ -242,6 +250,6 @@ static struct platform_driver tps65090_charger_driver = {
 
 module_platform_driver(tps65090_charger_driver);
 
-MODULE_LICENSE("GPL V2");
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Syed Rafiuddin <srafiuddin@nvidia.com>");
 MODULE_DESCRIPTION("tps65090 battery charger driver");

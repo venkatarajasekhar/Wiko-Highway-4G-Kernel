@@ -21,15 +21,11 @@
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/edp.h>
-
-struct loan_client {
-	struct list_head link;
-	struct edp_client *client;
-	unsigned int size;
-};
+#include "edp_internal.h"
 
 DEFINE_MUTEX(edp_lock);
 static LIST_HEAD(edp_managers);
+LIST_HEAD(edp_governors);
 
 static struct edp_manager *find_manager(const char *name)
 {
@@ -45,6 +41,14 @@ static struct edp_manager *find_manager(const char *name)
 	return NULL;
 }
 
+static void promote(struct work_struct *work)
+{
+	struct edp_manager *m = container_of(work, struct edp_manager, work);
+	mutex_lock(&edp_lock);
+	m->gov->promote(m);
+	mutex_unlock(&edp_lock);
+}
+
 int edp_register_manager(struct edp_manager *mgr)
 {
 	int r = -EEXIST;
@@ -57,7 +61,9 @@ int edp_register_manager(struct edp_manager *mgr)
 		list_add_tail(&mgr->link, &edp_managers);
 		mgr->registered = true;
 		mgr->remaining = mgr->imax;
+		mgr->gov = NULL;
 		INIT_LIST_HEAD(&mgr->clients);
+		INIT_WORK(&mgr->work, promote);
 		r = 0;
 	}
 	mutex_unlock(&edp_lock);
@@ -65,6 +71,43 @@ int edp_register_manager(struct edp_manager *mgr)
 	return r;
 }
 EXPORT_SYMBOL(edp_register_manager);
+
+int edp_set_governor_unlocked(struct edp_manager *mgr,
+		struct edp_governor *gov)
+{
+	int r = 0;
+
+	if (mgr ? !mgr->registered : 0)
+		return -EINVAL;
+
+	if (mgr->gov) {
+		cancel_work_sync(&mgr->work);
+		if (mgr->gov->stop)
+			mgr->gov->stop(mgr);
+		mgr->gov->refcnt--;
+		module_put(mgr->gov->owner);
+		mgr->gov = NULL;
+	}
+
+	if (gov) {
+		if (!gov->refcnt)
+			return -EINVAL;
+		if (!try_module_get(gov->owner))
+			return -EINVAL;
+		if (gov->start)
+			r = gov->start(mgr);
+		if (r) {
+			module_put(gov->owner);
+			WARN_ON(1);
+			return r;
+		}
+
+		gov->refcnt++;
+		mgr->gov = gov;
+	}
+
+	return 0;
+}
 
 int edp_unregister_manager(struct edp_manager *mgr)
 {
@@ -79,6 +122,7 @@ int edp_unregister_manager(struct edp_manager *mgr)
 	} else if (!list_empty(&mgr->clients)) {
 		r = -EBUSY;
 	} else {
+		edp_set_governor_unlocked(mgr, NULL);
 		list_del(&mgr->link);
 		mgr->registered = false;
 	}
@@ -142,25 +186,41 @@ static bool states_ok(struct edp_client *client)
 	return true;
 }
 
+/* Keep the list sorted on priority */
+static void add_client(struct edp_client *new, struct list_head *head)
+{
+	struct edp_client *p;
+
+	list_for_each_entry(p, head, link) {
+		if (p->priority > new->priority) {
+			list_add_tail(&new->link, &p->link);
+			return;
+		}
+	}
+
+	list_add_tail(&new->link, &p->link);
+}
+
 static int register_client(struct edp_manager *mgr, struct edp_client *client)
 {
 	if (!mgr || !client)
 		return -EINVAL;
 
-	if (client->manager || find_client(mgr, client->name))
-		return -EEXIST;
-
 	if (!mgr->registered)
 		return -ENODEV;
 
-	if (!states_ok(client))
+	if (client->manager || find_client(mgr, client->name))
+		return -EEXIST;
+
+	if (!states_ok(client) || client->priority < EDP_MIN_PRIO ||
+			client->priority > EDP_MAX_PRIO)
 		return -EINVAL;
 
 	/* make sure that we can satisfy E0 for all registered clients */
 	if (e0_current_sum(mgr) + client->states[client->e0_index] > mgr->imax)
 		return -E2BIG;
 
-	list_add_tail(&client->link, &mgr->clients);
+	add_client(client, &mgr->clients);
 	client->manager = mgr;
 	client->req = NULL;
 	client->cur = NULL;
@@ -186,48 +246,28 @@ EXPORT_SYMBOL(edp_register_client);
 
 static void update_loans(struct edp_client *client)
 {
-	struct loan_client *p;
-	unsigned int size;
-
-	if (!client->cur || list_empty(&client->borrowers))
-		return;
-
-	size = *client->cur < client->ithreshold ? 0 :
-		*client->cur - client->ithreshold;
-
-	/* TODO: multi-party loans */
-	if (!list_is_singular(&client->borrowers)) {
-		WARN_ON(1);
-		return;
-	}
-
-	p = list_first_entry(&client->borrowers, struct loan_client, link);
-
-	/* avoid spurious change notifications */
-	if (size != p->size) {
-		p->size = size;
-		p->client->notify_loan_update(size, client);
+	struct edp_governor *gov;
+	gov = client->manager ? client->manager->gov : NULL;
+	if (gov && client->cur && !list_empty(&client->borrowers)) {
+		if (gov->update_loans)
+			gov->update_loans(client);
 	}
 }
 
 static int mod_request(struct edp_client *client, const unsigned int *req)
 {
-	unsigned int old = client->cur ? *client->cur : 0;
-	unsigned int new = req ? *req : 0;
-	unsigned int need;
+	struct edp_manager *m = client->manager;
+	unsigned int prev_remain = m->remaining;
 
-	if (new < old) {
-		client->cur = req;
-		client->manager->remaining += old - new;
-	} else {
-		need = new - old;
-		if (need > client->manager->remaining)
-			return -ENODEV;
-		client->manager->remaining -= need;
-		client->cur = req;
-	}
+	if (!m->gov)
+		return -ENODEV;
 
+	m->gov->update_request(client, req);
 	update_loans(client);
+
+	/* Do not block calling clients for promotions */
+	if (m->remaining > prev_remain && m->num_denied && m->gov->promote)
+		schedule_work(&m->work);
 
 	return 0;
 }
@@ -356,6 +396,21 @@ static struct loan_client *find_borrower(struct edp_client *lender,
 	return NULL;
 }
 
+/* Keep the list sorted on priority */
+static void add_borrower(struct loan_client *new, struct list_head *head)
+{
+	struct loan_client *p;
+
+	list_for_each_entry(p, head, link) {
+		if (p->client->priority > new->client->priority) {
+			list_add_tail(&new->link, &p->link);
+			return;
+		}
+	}
+
+	list_add_tail(&new->link, &p->link);
+}
+
 static int register_loan(struct edp_client *lender, struct edp_client *borrower)
 {
 	struct loan_client *p;
@@ -381,7 +436,7 @@ static int register_loan(struct edp_client *lender, struct edp_client *borrower)
 	p->client = borrower;
 	lender->num_borrowers++;
 	borrower->num_loans++;
-	list_add_tail(&p->link, &lender->borrowers);
+	add_borrower(p, &lender->borrowers);
 
 	update_loans(lender);
 	return 0;
@@ -445,3 +500,80 @@ int edp_update_loan_threshold(struct edp_client *client, unsigned int threshold)
 	return r;
 }
 EXPORT_SYMBOL(edp_update_loan_threshold);
+
+struct edp_governor *edp_find_governor_unlocked(const char *s)
+{
+	struct edp_governor *g;
+
+	list_for_each_entry(g, &edp_governors, link)
+		if (!strnicmp(s, g->name, EDP_NAME_LEN))
+			return g;
+
+	return NULL;
+}
+
+int edp_register_governor(struct edp_governor *gov)
+{
+	int r = 0;
+
+	if (!gov)
+		return -EINVAL;
+
+	if (!gov->update_request)
+		return -EINVAL;
+
+	mutex_lock(&edp_lock);
+	if (edp_find_governor_unlocked(gov->name)) {
+		r = -EEXIST;
+	} else {
+		gov->refcnt = 1;
+		list_add(&gov->link, &edp_governors);
+	}
+	mutex_unlock(&edp_lock);
+
+	return r;
+}
+EXPORT_SYMBOL(edp_register_governor);
+
+int edp_unregister_governor(struct edp_governor *gov)
+{
+	int r = 0;
+
+	mutex_lock(&edp_lock);
+	if (!gov) {
+		r = -EINVAL;
+	} else if (gov->refcnt != 1) {
+		r = gov->refcnt > 1 ? -EBUSY : -ENODEV;
+	} else {
+		list_del(&gov->link);
+		gov->refcnt = 0;
+	}
+	mutex_unlock(&edp_lock);
+
+	return r;
+}
+EXPORT_SYMBOL(edp_unregister_governor);
+
+struct edp_governor *edp_get_governor(const char *name)
+{
+	struct edp_governor *g;
+
+	mutex_lock(&edp_lock);
+	g = edp_find_governor_unlocked(name);
+	mutex_unlock(&edp_lock);
+
+	return g;
+}
+EXPORT_SYMBOL(edp_get_governor);
+
+int edp_set_governor(struct edp_manager *mgr, struct edp_governor *gov)
+{
+	int r;
+
+	mutex_lock(&edp_lock);
+	r = edp_set_governor_unlocked(mgr, gov);
+	mutex_unlock(&edp_lock);
+
+	return r;
+}
+EXPORT_SYMBOL(edp_set_governor);

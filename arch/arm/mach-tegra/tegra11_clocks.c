@@ -212,7 +212,7 @@
 #define PLLD_MISC_DIV_RST		(1<<23)
 #define PLLD_MISC_DCCON_SHIFT		12
 
-#define PLLDU_LFCON_SET_DIVN		600
+#define PLLDU_LFCON			2
 
 /* PLLC2 and PLLC3 (PLLCX) */
 #define PLLCX_USE_DYN_RAMP		0
@@ -334,7 +334,6 @@
 #define PLLRE_MISC_LOCK			(0x1 << 24)
 #define PLLRE_MISC_IDDQ			(0x1 << 16)
 
-/* FIXME: OUT_OF_TABLE_CPCON per pll */
 #define OUT_OF_TABLE_CPCON		0x8
 
 #define SUPER_CLK_MUX			0x00
@@ -1780,7 +1779,7 @@ static int tegra11_pll_clk_set_rate(struct clk *c, unsigned long rate)
 
 	/* Configure out-of-table rate */
 	if (sel->input_rate == 0) {
-		unsigned long cfreq;
+		unsigned long cfreq, vco;
 		BUG_ON(c->flags & PLLU);
 		sel = &cfg;
 
@@ -1809,14 +1808,15 @@ static int tegra11_pll_clk_set_rate(struct clk *c, unsigned long rate)
 			BUG();
 		}
 
-		/* Raise VCO to guarantee 0.5% accuracy */
-		for (cfg.output_rate = rate; cfg.output_rate < 200 * cfreq;
-		      cfg.output_rate <<= 1, p_div++);
+		/* Raise VCO to guarantee 0.5% accuracy, and vco min boundary */
+		vco = max(200 * cfreq, c->u.pll.vco_min);
+		for (cfg.output_rate = rate; cfg.output_rate < vco; p_div++)
+			cfg.output_rate <<= 1;
 
 		cfg.p = 0x1 << p_div;
 		cfg.m = input_rate / cfreq;
 		cfg.n = cfg.output_rate / cfreq;
-		cfg.cpcon = OUT_OF_TABLE_CPCON;
+		cfg.cpcon = c->u.pll.cpcon_default ? : OUT_OF_TABLE_CPCON;
 
 		if ((cfg.m > (PLL_BASE_DIVM_MASK >> PLL_BASE_DIVM_SHIFT)) ||
 		    (cfg.n > (PLL_BASE_DIVN_MASK >> PLL_BASE_DIVN_SHIFT)) ||
@@ -1852,8 +1852,7 @@ static int tegra11_pll_clk_set_rate(struct clk *c, unsigned long rate)
 		val |= sel->cpcon << PLL_MISC_CPCON_SHIFT;
 		if (c->flags & (PLLU | PLLD)) {
 			val &= ~PLL_MISC_LFCON_MASK;
-			if (sel->n >= PLLDU_LFCON_SET_DIVN)
-				val |= 0x1 << PLL_MISC_LFCON_SHIFT;
+			val |= PLLDU_LFCON << PLL_MISC_LFCON_SHIFT;
 		}
 		clk_writel(val, c->reg + PLL_MISC(c));
 	}
@@ -3163,6 +3162,9 @@ static void tegra11_pll_div_clk_init(struct clk *c)
 		}
 		else
 			BUG();
+	} else if (c->flags & PLLU) {
+		u32 val = clk_readl(c->reg);
+		c->state = val & (0x1 << c->reg_shift) ? ON : OFF;
 	} else {
 		c->state = ON;
 		c->div = 1;
@@ -3192,6 +3194,12 @@ static int tegra11_pll_div_clk_enable(struct clk *c)
 		return 0;
 	} else if (c->flags & DIV_2) {
 		return 0;
+	} else if (c->flags & PLLU) {
+		clk_lock_save(c->parent, &flags);
+		val = clk_readl(c->reg) | (0x1 << c->reg_shift);
+		clk_writel_delay(val, c->reg);
+		clk_unlock_restore(c->parent, &flags);
+		return 0;
 	}
 	return -EINVAL;
 }
@@ -3215,6 +3223,11 @@ static void tegra11_pll_div_clk_disable(struct clk *c)
 		val |= new_val << c->reg_shift;
 		clk_writel_delay(val, c->reg);
 		spin_unlock_irqrestore(&pll_div_lock, flags);
+	} else if (c->flags & PLLU) {
+		clk_lock_save(c->parent, &flags);
+		val = clk_readl(c->reg) & (~(0x1 << c->reg_shift));
+		clk_writel_delay(val, c->reg);
+		clk_unlock_restore(c->parent, &flags);
 	}
 }
 
@@ -4869,8 +4882,8 @@ static struct clk tegra_pll_p = {
 		.input_max = 31000000,
 		.cf_min    = 1000000,
 		.cf_max    = 6000000,
-		.vco_min   = 20000000,
-		.vco_max   = 1400000000,
+		.vco_min   = 200000000,
+		.vco_max   = 700000000,
 		.freq_table = tegra_pll_p_freq_table,
 		.lock_delay = 300,
 	},
@@ -4917,13 +4930,13 @@ static struct clk tegra_pll_p_out4 = {
 };
 
 static struct clk_pll_freq_table tegra_pll_a_freq_table[] = {
-	{ 9600000, 564480000, 294, 5, 1, 4},
-	{ 9600000, 552960000, 288, 5, 1, 4},
-	{ 9600000, 24000000,  5,   2, 1, 1},
+	{  9600000, 282240000, 147,  5, 1, 4},
+	{  9600000, 368640000, 192,  5, 1, 4},
+	{  9600000, 240000000, 200,  8, 1, 8},
 
-	{ 28800000, 56448000, 49, 25, 1, 1},
-	{ 28800000, 73728000, 64, 25, 1, 1},
-	{ 28800000, 24000000,  5,  6, 1, 1},
+	{ 28800000, 282240000, 245, 25, 1, 8},
+	{ 28800000, 368640000, 320, 25, 1, 8},
+	{ 28800000, 240000000, 200, 24, 1, 8},
 	{ 0, 0, 0, 0, 0, 0 },
 };
 
@@ -4939,8 +4952,8 @@ static struct clk tegra_pll_a = {
 		.input_max = 31000000,
 		.cf_min    = 1000000,
 		.cf_max    = 6000000,
-		.vco_min   = 20000000,
-		.vco_max   = 1400000000,
+		.vco_min   = 200000000,
+		.vco_max   = 700000000,
 		.freq_table = tegra_pll_a_freq_table,
 		.lock_delay = 300,
 	},
@@ -4957,21 +4970,21 @@ static struct clk tegra_pll_a_out0 = {
 };
 
 static struct clk_pll_freq_table tegra_pll_d_freq_table[] = {
-	{ 12000000, 216000000, 216, 12, 1, 4},
-	{ 13000000, 216000000, 216, 13, 1, 4},
-	{ 16800000, 216000000, 180, 14, 1, 4},
-	{ 19200000, 216000000, 180, 16, 1, 4},
-	{ 26000000, 216000000, 216, 26, 1, 4},
+	{ 12000000, 216000000, 864, 12, 4, 12},
+	{ 13000000, 216000000, 864, 13, 4, 12},
+	{ 16800000, 216000000, 720, 14, 4, 12},
+	{ 19200000, 216000000, 720, 16, 4, 12},
+	{ 26000000, 216000000, 864, 26, 4, 12},
 
-	{ 12000000, 594000000, 594, 12, 1, 8},
-	{ 13000000, 594000000, 594, 13, 1, 8},
-	{ 16800000, 594000000, 495, 14, 1, 8},
-	{ 19200000, 594000000, 495, 16, 1, 8},
-	{ 26000000, 594000000, 594, 26, 1, 8},
+	{ 12000000, 594000000, 594, 12, 1, 12},
+	{ 13000000, 594000000, 594, 13, 1, 12},
+	{ 16800000, 594000000, 495, 14, 1, 12},
+	{ 19200000, 594000000, 495, 16, 1, 12},
+	{ 26000000, 594000000, 594, 26, 1, 12},
 
 	{ 12000000, 1000000000, 1000, 12, 1, 12},
 	{ 13000000, 1000000000, 1000, 13, 1, 12},
-	{ 19200000, 1000000000, 625,  12, 1, 8},
+	{ 19200000, 1000000000, 625,  12, 1, 12},
 	{ 26000000, 1000000000, 1000, 26, 1, 12},
 
 	{ 0, 0, 0, 0, 0, 0 },
@@ -4989,10 +5002,11 @@ static struct clk tegra_pll_d = {
 		.input_max = 40000000,
 		.cf_min    = 1000000,
 		.cf_max    = 6000000,
-		.vco_min   = 40000000,
+		.vco_min   = 500000000,
 		.vco_max   = 1000000000,
 		.freq_table = tegra_pll_d_freq_table,
 		.lock_delay = 1000,
+		.cpcon_default = 12,
 	},
 };
 
@@ -5016,10 +5030,11 @@ static struct clk tegra_pll_d2 = {
 		.input_max = 40000000,
 		.cf_min    = 1000000,
 		.cf_max    = 6000000,
-		.vco_min   = 40000000,
+		.vco_min   = 500000000,
 		.vco_max   = 1000000000,
 		.freq_table = tegra_pll_d_freq_table,
 		.lock_delay = 1000,
+		.cpcon_default = 12,
 	},
 };
 
@@ -5056,37 +5071,56 @@ static struct clk tegra_pll_u = {
 		.vco_max   = 960000000,
 		.freq_table = tegra_pll_u_freq_table,
 		.lock_delay = 1000,
+		.cpcon_default = 12,
 	},
 };
 
 static struct clk tegra_pll_u_480M = {
 	.name      = "pll_u_480M",
 	.flags     = PLLU,
+	.ops       = &tegra_pll_div_ops,
+	.reg       = 0xc0,
+	.reg_shift = 22,
 	.parent    = &tegra_pll_u,
 	.mul       = 1,
 	.div       = 1,
-	.state     = ON,
 	.max_rate  = 480000000,
 };
 
 static struct clk tegra_pll_u_60M = {
 	.name      = "pll_u_60M",
 	.flags     = PLLU,
+	.ops       = &tegra_pll_div_ops,
+	.reg       = 0xc0,
+	.reg_shift = 23,
 	.parent    = &tegra_pll_u,
 	.mul       = 1,
 	.div       = 8,
-	.state     = ON,
 	.max_rate  = 60000000,
 };
 
 static struct clk tegra_pll_u_48M = {
 	.name      = "pll_u_48M",
 	.flags     = PLLU,
+	.ops       = &tegra_pll_div_ops,
+	.reg       = 0xc0,
+	.reg_shift = 25,
 	.parent    = &tegra_pll_u,
 	.mul       = 1,
 	.div       = 10,
-	.state     = ON,
 	.max_rate  = 48000000,
+};
+
+static struct clk tegra_pll_u_12M = {
+	.name      = "pll_u_12M",
+	.flags     = PLLU,
+	.ops       = &tegra_pll_div_ops,
+	.reg       = 0xc0,
+	.reg_shift = 21,
+	.parent    = &tegra_pll_u,
+	.mul       = 1,
+	.div       = 40,
+	.max_rate  = 12000000,
 };
 
 static struct clk_pll_freq_table tegra_pll_x_freq_table[] = {
@@ -5141,7 +5175,7 @@ static struct clk tegra_dfll_cpu = {
 	.flags     = DFLL,
 	.ops       = &tegra_dfll_ops,
 	.reg	   = 0x2f4,
-	.max_rate  = 1800000000,
+	.max_rate  = 2000000000,
 	.u.dfll = {
 		.cl_dvfs = &cpu_cl_dvfs,
 	},
@@ -5422,7 +5456,7 @@ static struct clk tegra_clk_cclk_g = {
 	.inputs	= mux_cclk_g,
 	.reg	= 0x368,
 	.ops	= &tegra_super_ops,
-	.max_rate = 1800000000,
+	.max_rate = 2000000000,
 };
 
 static struct clk tegra_clk_cclk_lp = {
@@ -5447,7 +5481,7 @@ static struct clk tegra_clk_virtual_cpu_g = {
 	.name      = "cpu_g",
 	.parent    = &tegra_clk_cclk_g,
 	.ops       = &tegra_cpu_ops,
-	.max_rate  = 1800000000,
+	.max_rate  = 2000000000,
 	.u.cpu = {
 		.main      = &tegra_pll_x,
 		.backup    = &tegra_pll_p_out4,
@@ -5481,7 +5515,7 @@ static struct clk tegra_clk_cpu_cmplx = {
 	.name      = "cpu",
 	.inputs    = mux_cpu_cmplx,
 	.ops       = &tegra_cpu_cmplx_ops,
-	.max_rate  = 1800000000,
+	.max_rate  = 2000000000,
 };
 
 static struct clk tegra_clk_cop = {
@@ -6169,6 +6203,7 @@ struct clk *tegra_ptr_clks[] = {
 	&tegra_pll_u_480M,
 	&tegra_pll_u_60M,
 	&tegra_pll_u_48M,
+	&tegra_pll_u_12M,
 	&tegra_pll_x,
 	&tegra_pll_x_out0,
 	&tegra_dfll_cpu,
@@ -6565,6 +6600,30 @@ unsigned long tegra_emc_to_cpu_ratio(unsigned long cpu_rate)
 		return 100000000;	/* cpu >= 250 MHz, emc 100 MHz */
 	else
 		return 0;		/* emc min */
+}
+
+int tegra_update_mselect_rate(unsigned long cpu_rate)
+{
+	static struct clk *mselect = NULL;
+
+	unsigned long mselect_rate;
+
+	if (!mselect) {
+		mselect = tegra_get_clock_by_name("mselect");
+		if (!mselect)
+			return -ENODEV;
+	}
+
+	/* Vote on mselect frequency based on cpu frequency:
+	   keep mselect at half of cpu rate up to 102 MHz;
+	   cpu rate is in kHz, mselect rate is in Hz */
+	mselect_rate = DIV_ROUND_UP(cpu_rate, 2) * 1000;
+	mselect_rate = min(mselect_rate, 102000000UL);
+
+	if (mselect_rate != clk_get_rate(mselect))
+		return clk_set_rate(mselect, mselect_rate);
+
+	return 0;
 }
 #endif
 

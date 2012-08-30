@@ -188,6 +188,17 @@ static int __devinit tps65090_regulator_preinit(int id,
 	struct device *parent = ri->dev->parent;
 
 	if (!tps_pdata->enable_ext_control) {
+		if (tps_pdata->reg_init_data->constraints.always_on ||
+				tps_pdata->reg_init_data->constraints.boot_on) {
+			ret =  tps65090_set_bits(parent,
+					ri->rinfo->reg_en_reg, 0);
+			if (ret < 0) {
+				dev_err(ri->dev, "Error in set reg 0x%x\n",
+					ri->rinfo->reg_en_reg);
+				return ret;
+			}
+		}
+
 		ret =  tps65090_clr_bits(parent,
 				ri->rinfo->reg_en_reg, 1);
 		if (ret < 0) {
@@ -287,7 +298,7 @@ static int __devinit tps65090_regulator_probe(struct platform_device *pdev)
 			}
 		}
 		rdev = regulator_register(&ri->rinfo->desc, &pdev->dev,
-				tps_pdata->reg_init_data, ri);
+				tps_pdata->reg_init_data, ri, NULL);
 		if (IS_ERR(rdev)) {
 			dev_err(&pdev->dev, "failed to register regulator %s\n",
 				ri->rinfo->desc.name);

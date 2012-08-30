@@ -169,7 +169,6 @@ static struct platform_device *pluto_uart_devices[] __initdata = {
 	&tegra_uartb_device,
 	&tegra_uartc_device,
 	&tegra_uartd_device,
-	&tegra_uarte_device,
 };
 static struct uart_clk_parent uart_parent_clk[] = {
 	[0] = {.name = "clk_m"},
@@ -227,15 +226,6 @@ static void __init uart_debug_init(void)
 			debug_uartd_device.dev.platform_data))->mapbase;
 		break;
 
-	case 4:
-		/* UARTE is the debug port. */
-		pr_info("Selecting UARTE as the debug console\n");
-		pluto_uart_devices[4] = &debug_uarte_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarte");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarte_device.dev.platform_data))->mapbase;
-		break;
-
 	default:
 		pr_info("The debug console id %d is invalid, Assuming UARTA",
 			debug_port_id);
@@ -272,8 +262,6 @@ static void __init pluto_uart_init(void)
 	tegra_uartb_device.dev.platform_data = &pluto_uart_pdata;
 	tegra_uartc_device.dev.platform_data = &pluto_uart_pdata;
 	tegra_uartd_device.dev.platform_data = &pluto_uart_pdata;
-	/* UARTE is used for loopback test purpose */
-	tegra_uarte_device.dev.platform_data = &pluto_loopback_uart_pdata;
 
 	/* Register low speed only if it is selected */
 	if (!is_tegra_debug_uartport_hs()) {
@@ -359,6 +347,19 @@ static struct platform_device *pluto_devices[] __initdata = {
 #endif
 };
 
+static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+};
+
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
@@ -408,33 +409,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	},
 };
 
-
-static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.vbus_reg = NULL,
-		.hot_plug = false,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
 static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_device = &tegra_ehci1_device,
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
@@ -449,7 +423,8 @@ static void pluto_usb_init(void)
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 
-	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
+	tegra_ehci2_device.dev.platform_data =
+		&tegra_ehci2_hsic_smsc_hub_pdata;
 	platform_device_register(&tegra_ehci2_device);
 }
 
@@ -513,6 +488,7 @@ static void __init tegra_pluto_init(void)
 	pluto_regulator_init();
 	pluto_suspend_init();
 	pluto_emc_init();
+	pluto_panel_init();
 	tegra_release_bootloader_fb();
 	pluto_modem_init();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY

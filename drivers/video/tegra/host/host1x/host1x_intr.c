@@ -26,7 +26,6 @@
 
 #include "nvhost_intr.h"
 #include "dev.h"
-#include "host1x_actmon.h"
 
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
@@ -132,6 +131,16 @@ static void t20_intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 			BIT_WORD(id) * REGISTER_STRIDE);
 }
 
+static void t20_intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	void __iomem *sync_regs = dev->sync_aperture;
+
+	writel(BIT_MASK(id), sync_regs +
+			host1x_sync_syncpt_thresh_int_disable_r() +
+			BIT_WORD(id) * REGISTER_STRIDE);
+}
+
 static void t20_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -190,7 +199,7 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	stat = readl(sync_regs + host1x_sync_hintstatus_r());
 	ext_stat = readl(sync_regs + host1x_sync_hintstatus_ext_r());
 
-	host1x_actmon_process_isr(stat, sync_regs);
+	actmon_op().isr(stat, sync_regs);
 
 	if (host1x_sync_hintstatus_ext_ip_read_int_v(ext_stat)) {
 		addr = readl(sync_regs + host1x_sync_ip_read_timeout_addr_r());
@@ -279,6 +288,7 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec,
 	.set_syncpt_threshold = t20_intr_set_syncpt_threshold,
 	.enable_syncpt_intr = t20_intr_enable_syncpt_intr,
+	.disable_syncpt_intr = t20_intr_disable_syncpt_intr,
 	.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs,
 	.request_host_general_irq = t20_intr_request_host_general_irq,
 	.free_host_general_irq = t20_intr_free_host_general_irq,

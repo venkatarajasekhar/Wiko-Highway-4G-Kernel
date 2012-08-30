@@ -38,6 +38,9 @@
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/memblock.h>
 #include <linux/rfkill-gpio.h>
+#include <linux/mfd/tlv320aic3262-registers.h>
+#include <linux/mfd/tlv320aic3262-core.h>
+
 #include <linux/nfc/pn544.h>
 
 #include <sound/max98088.h>
@@ -75,7 +78,9 @@
 
 static struct balanced_throttle throttle_list[] = {
 	{
-		.id = BALANCED_THROTTLE_ID_TJ,
+		.tegra_cdev = {
+			.id = CDEV_BTHROT_ID_TJ,
+		},
 		.throt_tab_size = 10,
 		.throt_tab = {
 			{      0, 1000 },
@@ -92,7 +97,9 @@ static struct balanced_throttle throttle_list[] = {
 	},
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	{
-		.id = BALANCED_THROTTLE_ID_SKIN,
+		.tegra_cdev = {
+			.id = CDEV_BTHROT_ID_SKIN,
+		},
 		.throt_tab_size = 6,
 		.throt_tab = {
 			{ 640000, 1200 },
@@ -107,24 +114,39 @@ static struct balanced_throttle throttle_list[] = {
 };
 
 /* All units are in millicelsius */
-static struct tegra_thermal_data thermal_data = {
-	.shutdown_device_id = THERMAL_DEVICE_ID_NCT_EXT,
-	.temp_shutdown = 90000,
-	.throttle_edp_device_id = THERMAL_DEVICE_ID_NCT_EXT,
-#ifdef CONFIG_TEGRA_EDP_LIMITS
-	.edp_offset = TDIODE_OFFSET,  /* edp based on tdiode */
-	.hysteresis_edp = 3000,
+static struct tegra_thermal_bind thermal_binds[] = {
+	{
+		.tdev_id = THERMAL_DEVICE_ID_NCT_EXT,
+		.cdev_id = CDEV_BTHROT_ID_TJ,
+		.type = THERMAL_TRIP_PASSIVE,
+		.passive = {
+			.trip_temp = 85000,
+			.tc1 = 0,
+			.tc2 = 1,
+			.passive_delay = 2000,
+		}
+	},
+#ifdef CONFIG_TEGRA_SKIN_THROTTLE
+	{
+		.tdev_id = THERMAL_DEVICE_ID_SKIN,
+		.cdev_id = CDEV_BTHROT_ID_SKIN,
+		.type = THERMAL_TRIP_PASSIVE,
+		.passive = {
+			.trip_temp = 43000,
+			.tc1 = 10,
+			.tc2 = 1,
+			.passive_delay = 15000,
+		}
+	},
 #endif
-	.temp_throttle = 85000,
-	.tc1 = 0,
-	.tc2 = 1,
-	.passive_delay = 2000,
+	{
+		.tdev_id = THERMAL_DEVICE_ID_NULL,
+	},
 };
 
 static struct tegra_skin_data skin_data = {
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	.skin_device_id = THERMAL_DEVICE_ID_SKIN,
-	.temp_throttle_skin = 43000,
 #else
 	.skin_device_id = THERMAL_DEVICE_ID_NULL,
 #endif
@@ -217,6 +239,45 @@ static __initdata struct tegra_clk_init_table enterprise_clk_i2s4_table[] = {
 	/* name		parent		rate		enabled */
 	{ "i2s4",	"pll_a_out0",	0,		false},
 	{ NULL,		NULL,		0,		0},
+};
+
+static struct aic3262_gpio_setup aic3262_gpio[] = {
+	/* GPIO 1*/
+	{
+		.used		= 1,
+		.in		= 0,
+		.value		= AIC3262_GPIO1_FUNC_INT1_OUTPUT ,
+	},
+	/* GPIO 2*/
+	{
+		.used		= 1,
+		.in		= 0,
+		.value		= AIC3262_GPIO2_FUNC_ADC_MOD_CLK_OUTPUT,
+	},
+	/* GPIO 1 */
+	{
+		.used		= 0,
+	},
+	{// GPI2
+		.used		= 1,
+		.in		= 1,
+		.in_reg         = AIC3262_DMIC_INPUT_CNTL,
+		.in_reg_bitmask	= AIC3262_DMIC_CONFIGURE_MASK,
+		.in_reg_shift	= AIC3262_DMIC_CONFIGURE_SHIFT,
+		.value		= AIC3262_DMIC_GPI2_LEFT_GPI2_RIGHT,
+	},
+	{// GPO1
+		.used		= 0,
+		.value		= AIC3262_GPO1_FUNC_DISABLED,
+	},
+};
+
+static struct aic3262_pdata aic3262_codec_pdata = {
+	.gpio_irq	= 1,
+	.gpio_reset	= TEGRA_GPIO_CODEC_RST,
+	.gpio		= aic3262_gpio,
+	.naudint_irq	= TEGRA_GPIO_HP_DET,
+	.irq_base	= AIC3262_CODEC_IRQ_BASE,
 };
 
 static struct tegra_i2c_platform_data enterprise_i2c1_platform_data = {
@@ -372,7 +433,9 @@ static struct i2c_board_info __initdata max98088_board_info = {
 };
 
 static struct i2c_board_info __initdata enterprise_codec_aic326x_info = {
-	I2C_BOARD_INFO("aic3262-codec", 0x18),
+	I2C_BOARD_INFO("tlv320aic3262", 0x18),
+	.platform_data = &aic3262_codec_pdata,
+	.irq = TEGRA_GPIO_HP_DET,
 };
 
 static struct i2c_board_info __initdata nfc_board_info = {
@@ -394,8 +457,6 @@ static void enterprise_i2c_init(void)
 	platform_device_register(&tegra_i2c_device2);
 	platform_device_register(&tegra_i2c_device1);
 
-	max98088_board_info.irq = enterprise_codec_aic326x_info.irq =
-		gpio_to_irq(TEGRA_GPIO_HP_DET);
 	i2c_register_board_info(0, &max98088_board_info, 1);
 	i2c_register_board_info(0, &enterprise_codec_aic326x_info, 1);
 	nfc_board_info.irq = gpio_to_irq(TEGRA_GPIO_PS4);
@@ -882,18 +943,31 @@ static void enterprise_audio_init(void)
 
 	tegra_get_board_info(&board_info);
 
-	if (board_info.board_id == BOARD_E1197)
-		enterprise_audio_pdata.i2s_param[HIFI_CODEC].audio_port_id = 1;
-	else if (board_info.fab == BOARD_FAB_A04) {
-		enterprise_audio_pdata.i2s_param[BASEBAND].audio_port_id = 4;
+	if (board_info.board_id == BOARD_E1239) {
+		enterprise_audio_aic326x_pdata.i2s_param[BASEBAND].
+					audio_port_id = 4;
+		enterprise_audio_aic326x_pdata.i2s_param[BASEBAND].
+					i2s_mode	= TEGRA_DAIFMT_I2S;
+		enterprise_audio_aic326x_pdata.i2s_param[BASEBAND].
+					channels	= 2;
 		platform_device_register(&tegra_i2s_device4);
 	} else {
-		enterprise_audio_pdata.i2s_param[BASEBAND].audio_port_id = 2;
-		platform_device_register(&tegra_i2s_device2);
-	}
+		if (board_info.board_id == BOARD_E1197)
+			enterprise_audio_pdata.i2s_param[HIFI_CODEC].
+					audio_port_id = 1;
+		else if (board_info.fab == BOARD_FAB_A04) {
+			enterprise_audio_pdata.i2s_param[BASEBAND].
+					audio_port_id = 4;
+			platform_device_register(&tegra_i2s_device4);
+		} else {
+			enterprise_audio_pdata.i2s_param[BASEBAND].
+					audio_port_id = 2;
+			platform_device_register(&tegra_i2s_device2);
+		}
 
+	}
 	platform_add_devices(enterprise_audio_devices,
-			ARRAY_SIZE(enterprise_audio_devices));
+		ARRAY_SIZE(enterprise_audio_devices));
 }
 
 static struct baseband_power_platform_data tegra_baseband_power_data = {
@@ -959,7 +1033,11 @@ static struct platform_device tegra_baseband_m7400_device = {
 
 static void enterprise_baseband_init(void)
 {
+	struct board_info board_info;
+
 	int modem_id = tegra_get_modem_id();
+
+	tegra_get_board_info(&board_info);
 
 	switch (modem_id) {
 	case TEGRA_BB_PH450: /* PH450 ULPI */
@@ -973,7 +1051,13 @@ static void enterprise_baseband_init(void)
 						&tegra_usb_hsic_host_register;
 		tegra_baseband_power_data.hsic_unregister =
 						&tegra_usb_hsic_host_unregister;
-
+		if ((board_info.board_id == BOARD_E1239) &&
+			(board_info.fab <= BOARD_FAB_A02)) {
+			tegra_baseband_power_data.modem.
+				xmm.ipc_hsic_active  = BB_GPIO_LCD_PWR2;
+			tegra_baseband_power_data.modem.
+				xmm.ipc_hsic_sus_req = BB_GPIO_LCD_PWR1;
+		}
 		platform_device_register(&tegra_baseband_power_device);
 		platform_device_register(&tegra_baseband_power2_device);
 		break;
@@ -995,6 +1079,8 @@ static void enterprise_nfc_init(void)
 	tegra_get_board_info(&bi);
 	if (bi.board_id == BOARD_E1205 && bi.fab >= BOARD_FAB_A03) {
 		nfc_pdata.firm_gpio = TEGRA_GPIO_PX7;
+	} else if (bi.board_id == BOARD_E1239) {
+		nfc_pdata.firm_gpio = TEGRA_GPIO_PN6;
 	}
 }
 
@@ -1007,7 +1093,7 @@ static void __init tegra_enterprise_init(void)
 	else
 		tegra_clk_init_from_table(enterprise_clk_i2s2_table);
 
-	tegra_thermal_init(&thermal_data,
+	tegra_thermal_init(thermal_binds,
 				&skin_data,
 				throttle_list,
 				ARRAY_SIZE(throttle_list));
@@ -1018,6 +1104,9 @@ static void __init tegra_enterprise_init(void)
 	enterprise_i2c_init();
 	enterprise_uart_init();
 	enterprise_usb_init();
+	if (board_info.board_id == BOARD_E1239)
+		enterprise_bt_rfkill_pdata[0].shutdown_gpio = TEGRA_GPIO_PF4;
+
 	platform_add_devices(enterprise_devices, ARRAY_SIZE(enterprise_devices));
 	tegra_ram_console_debug_init();
 	enterprise_regulator_init();

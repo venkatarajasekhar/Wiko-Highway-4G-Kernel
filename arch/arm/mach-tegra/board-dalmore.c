@@ -55,7 +55,7 @@
 #include <mach/io.h>
 #include <mach/io_dpd.h>
 #include <mach/i2s.h>
-#include <mach/tegra_rt5640_pdata.h>
+#include <mach/tegra_asoc_pdata.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
@@ -143,7 +143,9 @@ static struct tegra_i2c_platform_data dalmore_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
-
+static struct i2c_board_info __initdata rt5640_board_info = {
+	I2C_BOARD_INFO("rt5640", 0x1c),
+};
 
 static void dalmore_i2c_init(void)
 {
@@ -157,6 +159,8 @@ static void dalmore_i2c_init(void)
 	tegra_i2c_device4.dev.platform_data = &dalmore_i2c4_platform_data;
 	tegra_i2c_device5.dev.platform_data = &dalmore_i2c5_platform_data;
 
+	i2c_register_board_info(0, &rt5640_board_info, 1);
+
 	platform_device_register(&tegra_i2c_device5);
 	platform_device_register(&tegra_i2c_device4);
 	platform_device_register(&tegra_i2c_device3);
@@ -169,7 +173,6 @@ static struct platform_device *dalmore_uart_devices[] __initdata = {
 	&tegra_uartb_device,
 	&tegra_uartc_device,
 	&tegra_uartd_device,
-	&tegra_uarte_device,
 };
 static struct uart_clk_parent uart_parent_clk[] = {
 	[0] = {.name = "clk_m"},
@@ -227,15 +230,6 @@ static void __init uart_debug_init(void)
 			debug_uartd_device.dev.platform_data))->mapbase;
 		break;
 
-	case 4:
-		/* UARTE is the debug port. */
-		pr_info("Selecting UARTE as the debug console\n");
-		dalmore_uart_devices[4] = &debug_uarte_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarte");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarte_device.dev.platform_data))->mapbase;
-		break;
-
 	default:
 		pr_info("The debug console id %d is invalid, Assuming UARTA",
 			debug_port_id);
@@ -272,8 +266,6 @@ static void __init dalmore_uart_init(void)
 	tegra_uartb_device.dev.platform_data = &dalmore_uart_pdata;
 	tegra_uartc_device.dev.platform_data = &dalmore_uart_pdata;
 	tegra_uartd_device.dev.platform_data = &dalmore_uart_pdata;
-	/* UARTE is used for loopback test purpose */
-	tegra_uarte_device.dev.platform_data = &dalmore_loopback_uart_pdata;
 
 	/* Register low speed only if it is selected */
 	if (!is_tegra_debug_uartport_hs()) {
@@ -320,12 +312,18 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
-static struct tegra_rt5640_platform_data dalmore_audio_pdata = {
+static struct tegra_asoc_platform_data dalmore_audio_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
+	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
 };
 
 static struct platform_device dalmore_audio_device = {
@@ -351,12 +349,31 @@ static struct platform_device *dalmore_devices[] __initdata = {
 	&tegra_se_device,
 #endif
 	&tegra_ahub_device,
+	&tegra_dam_device0,
+	&tegra_dam_device1,
+	&tegra_dam_device2,
+	&tegra_i2s_device1,
+	&tegra_i2s_device3,
+	&tegra_i2s_device4,
 	&tegra_pcm_device,
 	&dalmore_audio_device,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_AES)
 	&tegra_aes_device,
 #endif
+};
+
+static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
 };
 
 static struct tegra_usb_platform_data tegra_udc_pdata = {
@@ -408,33 +425,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	},
 };
 
-
-static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.vbus_reg = NULL,
-		.hot_plug = false,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
 static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_device = &tegra_ehci1_device,
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
@@ -449,7 +439,8 @@ static void dalmore_usb_init(void)
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 
-	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
+	tegra_ehci2_device.dev.platform_data =
+		&tegra_ehci2_hsic_smsc_hub_pdata;
 	platform_device_register(&tegra_ehci2_device);
 }
 
@@ -493,7 +484,7 @@ static void dalmore_audio_init(void)
 
 	tegra_get_board_info(&board_info);
 
-	dalmore_audio_pdata.codec_name = "rt5640.4-001c";
+	dalmore_audio_pdata.codec_name = "rt5640.0-001c";
 	dalmore_audio_pdata.codec_dai_name = "rt5640-aif1";
 }
 

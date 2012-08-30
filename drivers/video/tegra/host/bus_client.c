@@ -161,7 +161,8 @@ static int nvhost_channelopen(struct inode *inode, struct file *filp)
 	}
 	filp->private_data = priv;
 	priv->ch = ch;
-	nvhost_module_add_client(ch->dev, priv);
+	if(nvhost_module_add_client(ch->dev, priv))
+		goto fail;
 
 	if (ch->ctxhandler && ch->ctxhandler->alloc) {
 		priv->hwctx = ch->ctxhandler->alloc(ch->ctxhandler, ch);
@@ -602,6 +603,11 @@ int nvhost_client_device_init(struct nvhost_device *dev)
 	err = nvhost_module_init(dev);
 	if (err)
 		goto fail;
+
+	if (tickctrl_op().init_channel)
+		tickctrl_op().init_channel(dev);
+
+	nvhost_device_debug_init(dev);
 
 	dev_info(&dev->dev, "initialized\n");
 

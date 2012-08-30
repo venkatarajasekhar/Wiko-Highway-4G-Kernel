@@ -39,13 +39,6 @@ endif
 ifeq ($(CONFIG_CPU_IDLE),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t3.o
 endif
-ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
-ifeq ($(CONFIG_CPUQUIET_FRAMEWORK),y)
-obj-y                                   += cpuquiet.o
-else
-obj-y                                   += cpu-tegra3.o
-endif
-endif
 endif
 
 obj-y                                   += pinmux.o
@@ -89,6 +82,7 @@ endif
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_speedo.o
+obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_actmon.o
 endif
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra3_actmon.o
@@ -114,6 +108,13 @@ obj-y					+= headsmp.o
 obj-y					+= reset.o
 obj-$(CONFIG_TEGRA_SYSTEM_DMA)		+= dma.o apbio.o
 obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
+ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
+ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
+obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpuquiet.o
+else
+obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpu-tegra3.o
+endif
+endif
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 obj-$(CONFIG_USB_SUPPORT)               += usb_phy.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_soctherm.o
@@ -181,6 +182,7 @@ obj-${CONFIG_MACH_CURACAO}              += board-curacao-pinmux.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-power.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-sdhci.o
 obj-${CONFIG_MACH_CURACAO}              += board-curacao-sensors.o
+obj-${CONFIG_MACH_CURACAO}              += board-curacao-memory.o
 
 obj-${CONFIG_MACH_DOLAK}                += board-dolak.o
 obj-${CONFIG_MACH_DOLAK}                += board-dolak-panel.o
@@ -250,12 +252,14 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-pinmux.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-power.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
+obj-${CONFIG_MACH_DALMORE}              += board-dalmore-kbc.o
 
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-memory.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-pinmux.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-power.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sdhci.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-panel.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

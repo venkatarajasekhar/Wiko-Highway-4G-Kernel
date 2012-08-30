@@ -114,10 +114,8 @@ struct max77663_regulator_fps_cfg {
 };
 
 struct max77663_regulator_platform_data {
-	struct regulator_init_data init_data;
-	bool init_apply;
-	bool init_enable;
-	int init_uV;
+	struct regulator_init_data *reg_init_data;
+	int id;
 	enum max77663_regulator_fps_src fps_src;
 	enum max77663_regulator_fps_power_period fps_pu_period;
 	enum max77663_regulator_fps_power_period fps_pd_period;
