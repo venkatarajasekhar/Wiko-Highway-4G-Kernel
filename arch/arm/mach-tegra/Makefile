@@ -76,7 +76,7 @@ obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11_dvfs.o
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_dvfs.o
-obj-y                                   += latency_allowance.o
+obj-$(CONFIG_TEGRA_LATENCY_ALLOWANCE)   += latency_allowance.o
 obj-$(CONFIG_TEGRA_EDP_LIMITS)          += edp.o
 endif
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
@@ -260,6 +260,7 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-pinmux.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-power.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sdhci.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-panel.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-kbc.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
