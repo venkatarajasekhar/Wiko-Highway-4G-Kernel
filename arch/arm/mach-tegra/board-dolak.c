@@ -412,6 +412,11 @@ static struct platform_device dolak_tegra_bb_device = {
 };
 #endif
 
+static struct platform_device tegra_camera = {
+	.name = "tegra_camera",
+	.id = -1,
+};
+
 static struct platform_device *dolak_devices[] __initdata = {
 #if ENABLE_OTG
 	&tegra_otg_device,
@@ -445,6 +450,7 @@ static struct platform_device *dolak_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM) && defined(CONFIG_SMC91X)
 	&tegra_sim_smc91x_device,
 #endif
+	&tegra_camera,
 };
 
 static void dolak_keys_init(void)
