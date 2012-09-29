@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-e1853-sdhci.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data1 = {
 	.cd_gpio = -1,
 	.wp_gpio = -1,
 	.power_gpio = -1,
+	.ddr_clk_limit = 30000000,
 	.is_8bit = false,
 };
 
@@ -48,6 +49,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.is_8bit = 1,
+	.ddr_clk_limit = 30000000,
 	.mmc_data = {
 		.built_in = 1,
 	}
@@ -58,6 +60,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.wp_gpio = TEGRA_GPIO_PD4,
 	.power_gpio = TEGRA_GPIO_PN7,
 	.is_8bit = false,
+	.ddr_clk_limit = 30000000,
 	.mmc_data = {
 		.ocr_mask = MMC_OCR_2V8_MASK,
 	}
@@ -68,6 +71,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.is_8bit = true,
+	.ddr_clk_limit = 51000000,
 };
 
 int __init e1853_sdhci_init(void)
