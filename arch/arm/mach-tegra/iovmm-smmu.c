@@ -143,6 +143,7 @@
 #define MC_SMMU_XUSB_DEV_ASID_0         0x28c   /* USB dev (T11x) */
 #define MC_SMMU_TSEC_ASID_0             0x294   /* TSEC (T11x, T14x) */
 #define MC_SMMU_PPCS1_ASID_0            0x298   /* AHB secondary (T11x) */
+#define MC_SMMU_DC1_ASID_0		0x490   /* Display controller1 (T14x) */
 
 /*
  * Tegra11x
@@ -298,6 +299,7 @@
 #define SMMU_HWC	\
 	op(AVPC)	\
 	op(DC)		\
+	op(DC1)		\
 	op(DCB)		\
 	op(EPP)		\
 	op(G2)		\
