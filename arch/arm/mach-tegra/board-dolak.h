@@ -25,6 +25,7 @@ int dolak_suspend_init(void);
 int dolak_sdhci_init(void);
 int dolak_pinmux_init(void);
 int dolak_panel_init(void);
+int dolak_sensors_init(void);
 
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 #define DOLAK_BOARD_NAME "dolak_sim"

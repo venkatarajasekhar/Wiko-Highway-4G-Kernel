@@ -661,6 +661,7 @@ static void __init tegra_dolak_init(void)
 	dolak_panel_init();
 	dolak_hs_uart_init();
 	dolak_bt_rfkill();
+	dolak_sensors_init();
 #if defined(CONFIG_TEGRA_BASEBAND)
 	dolak_tegra_bb_init();
 #endif
