@@ -1080,7 +1080,7 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.op_mode        = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = false,
+		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -1178,9 +1178,6 @@ static void cardhu_usb_init(void)
 		tegra_ehci2_device.dev.platform_data =
 						&tegra_ehci2_hsic_xmm_pdata;
 		/* ehci2 registration happens in baseband-xmm-power  */
-	} else {
-		tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
-		platform_device_register(&tegra_ehci2_device);
 	}
 
 	tegra_ehci3_device.dev.platform_data = &tegra_ehci3_utmi_pdata;
@@ -1257,6 +1254,8 @@ static void cardhu_modem_init(void)
 	struct board_info board_info;
 	int w_disable_gpio, ret;
 
+	int modem_id = tegra_get_modem_id();
+
 	tegra_get_board_info(&board_info);
 	switch (board_info.board_id) {
 	case BOARD_E1291:
@@ -1297,6 +1296,11 @@ static void cardhu_modem_init(void)
 		break;
 	default:
 		break;
+	}
+
+	if (modem_id == TEGRA_BB_TANGO) {
+		tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
+		platform_device_register(&tegra_ehci2_device);
 	}
 
 }
