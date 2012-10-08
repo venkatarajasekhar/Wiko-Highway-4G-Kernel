@@ -58,6 +58,9 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.wp_gpio = TEGRA_GPIO_PD4,
 	.power_gpio = TEGRA_GPIO_PN7,
 	.is_8bit = false,
+	.mmc_data = {
+		.ocr_mask = MMC_OCR_2V8_MASK,
+	}
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
