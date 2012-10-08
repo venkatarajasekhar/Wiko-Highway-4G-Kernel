@@ -229,9 +229,9 @@ static void dolak_i2c_init(void)
 
 	i2c_register_board_info(0, &wm8903_board_info, 1);
 
-	platform_device_register(&tegra11_i2c_device5);
-	platform_device_register(&tegra11_i2c_device4);
-	platform_device_register(&tegra11_i2c_device3);
+	/* platform_device_register(&tegra11_i2c_device5); */
+	/* platform_device_register(&tegra11_i2c_device4); */
+	/* platform_device_register(&tegra11_i2c_device3); */
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
 }
