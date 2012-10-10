@@ -35,7 +35,7 @@
 #include <mach/usb_phy.h>
 #include <mach/tegra_smmu.h>
 
-#ifdef CONFIG_PLATFORM_IOMMUABLE
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 #include <asm/dma-iommu.h>
 #endif
 
@@ -1660,7 +1660,7 @@ int tegra_smmu_window_count(void)
 	return ARRAY_SIZE(tegra_smmu);
 }
 
-#ifdef CONFIG_PLATFORM_IOMMUABLE
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 static void tegra_smmu_map_init(struct platform_device *pdev)
 {
 	struct dma_iommu_mapping *map;
@@ -1940,6 +1940,17 @@ struct platform_device tegra_kbc_device = {
 		.platform_data = 0,
 	},
 };
+
+#if defined(CONFIG_TEGRA_SKIN_THROTTLE)
+struct platform_device tegra_skin_therm_est_device = {
+	.name	= "therm_est",
+	.id	= -1,
+	.num_resources	= 0,
+	.dev = {
+		.platform_data = 0,
+	},
+};
+#endif
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static struct resource tegra_tsensor_resources[]= {

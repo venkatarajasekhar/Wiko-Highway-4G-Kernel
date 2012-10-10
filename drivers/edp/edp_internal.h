@@ -58,4 +58,15 @@ struct edp_governor *edp_find_governor_unlocked(const char *s);
 int edp_set_governor_unlocked(struct edp_manager *mgr,
 		struct edp_governor *gov);
 
+void edp_manager_add_kobject(struct edp_manager *mgr);
+void edp_manager_remove_kobject(struct edp_manager *mgr);
+void edp_client_add_kobject(struct edp_client *client);
+void edp_client_remove_kobject(struct edp_client *client);
+void edp_default_update_request(struct edp_client *client,
+		const unsigned int *req,
+		void (*throttle)(struct edp_client *));
+void edp_default_update_loans(struct edp_client *lender);
+unsigned int edp_throttling_point(struct edp_client *c, unsigned int deficit);
+unsigned int edp_promotion_point(struct edp_client *c, unsigned int step);
+
 #endif

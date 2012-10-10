@@ -461,10 +461,15 @@ int __init curacao_regulator_init(void)
 		return ret;
 
 	fill_reg_map();
-	tegra_cl_dvfs_set_plarform_data(&curacao_cl_dvfs_data);
+	tegra_cl_dvfs_set_platform_data(&curacao_cl_dvfs_data);
 
 	return platform_add_devices(gpio_regs_devices,
 			ARRAY_SIZE(gpio_regs_devices));
+}
+
+int __init tegra_get_cvb_alignment_uV(void)
+{
+	return 12500;
 }
 
 int __init curacao_suspend_init(void)

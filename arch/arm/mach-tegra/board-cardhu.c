@@ -1,8 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-cardhu.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.  All rights reserved.
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +40,7 @@
 #include <linux/spi-tegra.h>
 #include <linux/nfc/pn544.h>
 #include <linux/rfkill-gpio.h>
-
+#include <linux/of_platform.h>
 
 #include <sound/wm8903.h>
 #include <sound/max98095.h>
@@ -102,22 +101,6 @@ static struct balanced_throttle throttle_list[] = {
 			{1000000, 1100 },
 		},
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		.tegra_cdev = {
-			.id = CDEV_BTHROT_ID_SKIN,
-		},
-		.throt_tab_size = 6,
-		.throt_tab = {
-			{ 640000, 1200 },
-			{ 640000, 1200 },
-			{ 760000, 1200 },
-			{ 760000, 1200 },
-			{1000000, 1200 },
-			{1000000, 1200 },
-		},
-	},
-#endif
 };
 
 static struct tegra_thermal_bind thermal_binds[] = {
@@ -141,58 +124,10 @@ static struct tegra_thermal_bind thermal_binds[] = {
 		.get_trip_temp = tegra_edp_get_trip_temp,
 		.get_trip_size = tegra_edp_get_trip_size,
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	/* Skin Thermal Throttling */
-	{
-		.tdev_id = THERMAL_DEVICE_ID_SKIN,
-		.cdev_id = CDEV_BTHROT_ID_SKIN,
-		.type = THERMAL_TRIP_PASSIVE,
-		.passive = {
-			.trip_temp = 43000,
-			.tc1 = 10,
-			.tc2 = 1,
-			.passive_delay = 15000,
-		}
-	},
-#endif
 	{
 		.tdev_id = THERMAL_DEVICE_ID_NULL,
 	},
 };
-
-static struct tegra_skin_data skin_data = {
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	.skin_device_id = THERMAL_DEVICE_ID_THERM_EST_SKIN,
-	.skin_temp_offset = 9793,
-	.skin_period = 1100,
-	.skin_devs_size = 2,
-	.skin_devs = {
-		{
-			THERMAL_DEVICE_ID_NCT_EXT,
-			{
-				2, 1, 1, 1,
-				1, 1, 1, 1,
-				1, 1, 1, 0,
-				1, 1, 0, 0,
-				0, 0, -1, -7
-			}
-		},
-		{
-			THERMAL_DEVICE_ID_NCT_INT,
-			{
-				-11, -7, -5, -3,
-				-3, -2, -1, 0,
-				0, 0, 1, 1,
-				1, 2, 2, 3,
-				4, 6, 11, 18
-			}
-		},
-	},
-#else
-	.skin_device_id = THERMAL_DEVICE_ID_NULL,
-#endif
-};
-
 
 static struct rfkill_gpio_platform_data cardhu_bt_rfkill_pdata[] = {
 	{
@@ -1103,7 +1038,7 @@ static int hsic_reset_gpio = -1;
 
 void hsic_platform_open(void)
 {
-	int reset_gpio = 0, enable_gpio = 0;
+	int reset_gpio = -1, enable_gpio = -1;
 
 	if (hsic_enable_gpio != -1)
 		enable_gpio = gpio_request(hsic_enable_gpio, "uhsic_enable");
@@ -1231,7 +1166,6 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "vdd_vbus_typea_usb",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -1256,7 +1190,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "vdd_vbus_micro_usb",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -1438,12 +1371,21 @@ static void cardhu_sata_init(void)
 static void cardhu_sata_init(void) { }
 #endif
 
+/* This needs to be inialized later hand */
+static int __init cardhu_throttle_list_init(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(throttle_list); i++)
+		if (balanced_throttle_register(&throttle_list[i]))
+			return -ENODEV;
+
+	return 0;
+}
+late_initcall(cardhu_throttle_list_init);
+
 static void __init tegra_cardhu_init(void)
 {
-	tegra_thermal_init(thermal_binds,
-				&skin_data,
-				throttle_list,
-				ARRAY_SIZE(throttle_list));
+	tegra_thermal_init(thermal_binds);
 	tegra_clk_init_from_table(cardhu_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
@@ -1472,7 +1414,6 @@ static void __init tegra_cardhu_init(void)
 	cardhu_sensors_init();
 	cardhu_setup_bluesleep();
 	cardhu_sata_init();
-	//audio_wired_jack_init();
 	cardhu_pins_state_init();
 	cardhu_emc_init();
 	tegra_release_bootloader_fb();
@@ -1483,6 +1424,14 @@ static void __init tegra_cardhu_init(void)
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 }
 
+static void __init tegra_cardhu_dt_init(void)
+{
+	tegra_cardhu_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
+}
+
 static void __init tegra_cardhu_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
@@ -1491,7 +1440,6 @@ static void __init tegra_cardhu_reserve(void)
 #else
 	tegra_reserve(SZ_128M, SZ_8M, SZ_8M);
 #endif
-	tegra_ram_console_debug_reserve(SZ_1M);
 }
 
 static const char *cardhu_dt_board_compat[] = {
@@ -1508,7 +1456,7 @@ MACHINE_START(CARDHU, "cardhu")
 	.init_irq       = tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
-	.init_machine   = tegra_cardhu_init,
+	.init_machine   = tegra_cardhu_dt_init,
 	.restart	= tegra_assert_system_reset,
 	.dt_compat	= cardhu_dt_board_compat,
 MACHINE_END

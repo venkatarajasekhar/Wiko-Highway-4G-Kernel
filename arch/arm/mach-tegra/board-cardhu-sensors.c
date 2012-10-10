@@ -46,6 +46,7 @@
 #include <media/ov14810.h>
 #include <media/ov2710.h>
 #include <media/tps61050.h>
+#include <media/imx091.h>
 #include <generated/mach-types.h>
 #include "board.h"
 #include <linux/mpu.h>
@@ -59,6 +60,7 @@
 #include "gpio-names.h"
 #include "board-cardhu.h"
 #include "cpu-tegra.h"
+#include "devices.h"
 
 static struct regulator *cardhu_1v8_cam1 = NULL;
 static struct regulator *cardhu_1v8_cam2 = NULL;
@@ -272,6 +274,91 @@ static struct i2c_board_info cardhu_i2c_board_info_e1214[] = {
 	}
 };
 #endif
+
+#ifdef CONFIG_VIDEO_IMX091
+static int cardhu_imx091_power_on(void)
+{
+	/* Boards E1198 and E1291 are of Cardhu personality
+	* and donot have TCA6416 exp for camera */
+	if ((board_info.board_id == BOARD_E1198) ||
+		(board_info.board_id == BOARD_E1291)) {
+
+			if (cardhu_vdd_2v8_cam1 == NULL) {
+				cardhu_vdd_2v8_cam1 = regulator_get(NULL, "vdd_2v8_cam1");
+				if (WARN_ON(IS_ERR(cardhu_vdd_2v8_cam1))) {
+					pr_err("%s: couldn't get regulator vdd_2v8_cam1: %ld\n",
+							__func__, PTR_ERR(cardhu_vdd_2v8_cam1));
+						goto reg_alloc_fail;
+					}
+			}
+		regulator_enable(cardhu_vdd_2v8_cam1);
+		mdelay(5);
+	}
+
+	/* Enable VDD_1V8_Cam1 */
+	if (cardhu_1v8_cam1 == NULL) {
+			cardhu_1v8_cam1 = regulator_get(NULL, "vdd_1v8_cam1");
+			if (WARN_ON(IS_ERR(cardhu_1v8_cam1))) {
+					pr_err("%s: couldn't get regulator vdd_1v8_cam1: %ld\n",
+							__func__, PTR_ERR(cardhu_1v8_cam1));
+					goto reg_alloc_fail;
+			}
+	}
+	regulator_enable(cardhu_1v8_cam1);
+
+	mdelay(5);
+	if ((board_info.board_id == BOARD_E1198) ||
+			(board_info.board_id == BOARD_E1291)) {
+			gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
+			mdelay(20);
+	}
+	return 0;
+
+reg_alloc_fail:
+	if (cardhu_1v8_cam1) {
+			regulator_put(cardhu_1v8_cam1);
+			cardhu_1v8_cam1 = NULL;
+	}
+	if (cardhu_vdd_2v8_cam1) {
+			regulator_put(cardhu_vdd_2v8_cam1);
+			cardhu_vdd_2v8_cam1 = NULL;
+	}
+
+	return -ENODEV;
+
+}
+
+static int cardhu_imx091_power_off(void)
+{
+	/* Boards E1198 and E1291 are of Cardhu personality
+	 * and donot have TCA6416 exp for camera */
+	if ((board_info.board_id == BOARD_E1198) ||
+			(board_info.board_id == BOARD_E1291)) {
+			gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
+	}
+	if (cardhu_1v8_cam1)
+			regulator_disable(cardhu_1v8_cam1);
+	if (cardhu_vdd_2v8_cam1)
+			regulator_disable(cardhu_vdd_2v8_cam1);
+
+	return 0;
+}
+
+struct imx091_platform_data cardhu_imx091_data = {
+	.power_on = cardhu_imx091_power_on,
+	.power_off = cardhu_imx091_power_off,
+};
+
+
+static struct i2c_board_info cardhu_i2c_board_info_e1244[] = {
+	{
+		I2C_BOARD_INFO("imx091", 0x36),
+		.platform_data = &cardhu_imx091_data,
+	},
+};
+#endif /* CONFIG_VIDEO_IMX091 */
+
+
 
 static int cardhu_right_ov5650_power_on(void)
 {
@@ -744,12 +831,6 @@ static int nct_get_temp(void *_data, long *temp)
 	return nct1008_thermal_get_temp(data, temp);
 }
 
-static int nct_get_temp_low(void *_data, long *temp)
-{
-	struct nct1008_data *data = _data;
-	return nct1008_thermal_get_temp_low(data, temp);
-}
-
 static int nct_set_limits(void *_data,
 			long lo_limit_milli,
 			long hi_limit_milli)
@@ -766,12 +847,6 @@ static int nct_set_alert(void *_data,
 {
 	struct nct1008_data *data = _data;
 	return nct1008_thermal_set_alert(data, alert_func, alert_data);
-}
-
-static int nct_set_shutdown_temp(void *_data, long shutdown_temp)
-{
-	struct nct1008_data *data = _data;
-	return nct1008_thermal_set_shutdown_temp(data, shutdown_temp);
 }
 
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
@@ -796,12 +871,9 @@ static void nct1008_probe_callback(struct nct1008_data *data)
 	ext_nct->name = "nct_ext";
 	ext_nct->id = THERMAL_DEVICE_ID_NCT_EXT;
 	ext_nct->data = data;
-	ext_nct->offset = TDIODE_OFFSET;
 	ext_nct->get_temp = nct_get_temp;
-	ext_nct->get_temp_low = nct_get_temp_low;
 	ext_nct->set_limits = nct_set_limits;
 	ext_nct->set_alert = nct_set_alert;
-	ext_nct->set_shutdown_temp = nct_set_shutdown_temp;
 
 	tegra_thermal_device_register(ext_nct);
 
@@ -882,6 +954,85 @@ static int cardhu_nct1008_init(void)
 
 	return ret;
 }
+
+#ifdef CONFIG_TEGRA_SKIN_THROTTLE
+static int tegra_skin_match(struct thermal_zone_device *thz, void *data)
+{
+	return strcmp((char *)data, thz->type) == 0;
+}
+
+static int tegra_skin_get_temp(void *data, long *temp)
+{
+	struct thermal_zone_device *thz;
+
+	thz = thermal_zone_device_find(data, tegra_skin_match);
+
+	if (!thz || thz->ops->get_temp(thz, temp))
+		*temp = 25000;
+
+	return 0;
+}
+
+static struct therm_est_data skin_data = {
+	.toffset = 9793,
+	.polling_period = 1100,
+	.ndevs = 2,
+	.devs = {
+			{
+				.dev_data = "nct_ext",
+				.get_temp = tegra_skin_get_temp,
+				.coeffs = {
+					2, 1, 1, 1,
+					1, 1, 1, 1,
+					1, 1, 1, 0,
+					1, 1, 0, 0,
+					0, 0, -1, -7
+				},
+			},
+			{
+				.dev_data = "nct_int",
+				.get_temp = tegra_skin_get_temp,
+				.coeffs = {
+					-11, -7, -5, -3,
+					-3, -2, -1, 0,
+					0, 0, 1, 1,
+					1, 2, 2, 3,
+					4, 6, 11, 18
+				},
+			},
+	},
+	.trip_temp = 43000,
+	.tc1 = 1,
+	.tc2 = 15,
+	.passive_delay = 15000,
+};
+
+static struct balanced_throttle skin_throttle = {
+	.throt_tab_size = 6,
+	.throt_tab = {
+		{ 640000, 1200 },
+		{ 640000, 1200 },
+		{ 760000, 1200 },
+		{ 760000, 1200 },
+		{1000000, 1200 },
+		{1000000, 1200 },
+	},
+};
+
+static int __init cardhu_skin_init(void)
+{
+	struct thermal_cooling_device *skin_cdev;
+
+	skin_cdev = balanced_throttle_register(&skin_throttle);
+
+	skin_data.cdev = skin_cdev;
+	tegra_skin_therm_est_device.dev.platform_data = &skin_data;
+	platform_device_register(&tegra_skin_therm_est_device);
+
+	return 0;
+}
+late_initcall(cardhu_skin_init);
+#endif
 
 #if defined(CONFIG_GPIO_PCA953X)
 static struct pca953x_platform_data cardhu_pmu_tca6416_data = {
@@ -1065,6 +1216,11 @@ int __init cardhu_sensors_init(void)
 
 	cardhu_camera_init();
 	cam_tca6416_init();
+
+#ifdef CONFIG_VIDEO_IMX091
+	i2c_register_board_info(2, cardhu_i2c_board_info_e1244,
+		ARRAY_SIZE(cardhu_i2c_board_info_e1244));
+#endif
 
 	i2c_register_board_info(2, cardhu_i2c3_board_info,
 		ARRAY_SIZE(cardhu_i2c3_board_info));

@@ -77,7 +77,10 @@ static struct regulator_consumer_supply tps6591x_vddctrl_supply_0[] = {
 static struct regulator_consumer_supply tps6591x_vio_supply_0[] = {
 	REGULATOR_SUPPLY("vdd_gen1v8", NULL),
 	REGULATOR_SUPPLY("avdd_hdmi_pll", NULL),
-	REGULATOR_SUPPLY("avdd_usb_pll", NULL),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("avdd_osc", NULL),
 	REGULATOR_SUPPLY("vddio_sys", NULL),
 	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.3"),
@@ -322,12 +325,30 @@ static struct tps6591x_sleep_keepon_data tps_slp_keepon = {
 	.clkout32k_keepon = 1,
 };
 
+#define TPS_PUP_INIT_DATA(_pup_num, _pin_id, _pup_val)		\
+	[_pup_num]	=	{				\
+					.pin_id = _pin_id,	\
+					.pup_val = _pup_val,	\
+				}
+
+struct tps6591x_pup_init_data tps_pup_vals[] = {
+	TPS_PUP_INIT_DATA(0, TPS6591X_PUP_NRESPWRON2P, TPS6591X_PUP_DEFAULT),
+	TPS_PUP_INIT_DATA(1, TPS6591X_PUP_HDRSTP, TPS6591X_PUP_DEFAULT),
+	TPS_PUP_INIT_DATA(2, TPS6591X_PUP_PWRHOLDP, TPS6591X_PUP_DEFAULT),
+	TPS_PUP_INIT_DATA(3, TPS6591X_PUP_SLEEPP, TPS6591X_PUP_DIS),
+	TPS_PUP_INIT_DATA(4, TPS6591X_PUP_PWRONP, TPS6591X_PUP_DEFAULT),
+	TPS_PUP_INIT_DATA(5, TPS6591X_PUP_I2CSRP, TPS6591X_PUP_DEFAULT),
+	TPS_PUP_INIT_DATA(6, TPS6591X_PUP_I2CCTLP, TPS6591X_PUP_DEFAULT),
+};
+
 static struct tps6591x_platform_data tps_platform = {
 	.irq_base	= TPS6591X_IRQ_BASE,
 	.gpio_base	= TPS6591X_GPIO_BASE,
 	.dev_slp_en	= true,
 	.slp_keepon	= &tps_slp_keepon,
 	.use_power_off	= true,
+	.pup_data	= tps_pup_vals,
+	.num_pins	= ARRAY_SIZE(tps_pup_vals),
 };
 
 static struct i2c_board_info __initdata cardhu_regulators[] = {
@@ -538,7 +559,6 @@ static struct regulator_consumer_supply fixed_reg_en_3v3_sys_supply[] = {
 	REGULATOR_SUPPLY("pwrdet_pex_ctl", NULL),
 	REGULATOR_SUPPLY("hvdd_pex_pmu", NULL),
 	REGULATOR_SUPPLY("avdd_hdmi", NULL),
-	REGULATOR_SUPPLY("vpp_fuse", NULL),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.1"),
@@ -646,7 +666,7 @@ static struct regulator_consumer_supply fixed_reg_en_3v3_pex_hvdd_supply[] = {
 
 /* EN_3v3_FUSE from AP GPIO VI_D08 L06*/
 static struct regulator_consumer_supply fixed_reg_en_3v3_fuse_supply[] = {
-	REGULATOR_SUPPLY("vdd_fuse", NULL),
+	REGULATOR_SUPPLY("vpp_fuse", NULL),
 };
 
 /* EN_1V8_CAM from AP GPIO GPIO_PBB4 PBB04*/
@@ -667,12 +687,12 @@ static struct regulator_consumer_supply fixed_reg_en_vbrtr_supply[] = {
 
 /* EN_USB1_VBUS_OC*/
 static struct regulator_consumer_supply fixed_reg_en_usb1_vbus_oc_supply[] = {
-	REGULATOR_SUPPLY("vdd_vbus_micro_usb", NULL),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 };
 
 /*EN_USB3_VBUS_OC*/
 static struct regulator_consumer_supply fixed_reg_en_usb3_vbus_oc_supply[] = {
-	REGULATOR_SUPPLY("vdd_vbus_typea_usb", NULL),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.2"),
 };
 
 /* EN_VDDIO_VID_OC from AP GPIO VI_PCLK T00*/

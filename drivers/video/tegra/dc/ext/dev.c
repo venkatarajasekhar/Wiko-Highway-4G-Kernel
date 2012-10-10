@@ -235,6 +235,10 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		win->global_alpha = flip_win->attr.global_alpha;
 	else
 		win->global_alpha = 255;
+#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
+	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
+		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
+#endif
 	win->fmt = flip_win->attr.pixformat;
 	win->x.full = flip_win->attr.x;
 	win->y.full = flip_win->attr.y;
@@ -283,10 +287,8 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	if (timestamp_ns) {
 		/* XXX: Should timestamping be overridden by "no_vsync" flag */
 		tegra_dc_config_frame_end_intr(win->dc, true);
-		trace_printk("%s:Before timestamp wait\n", win->dc->ndev->name);
 		err = wait_event_interruptible(win->dc->timestamp_wq,
 				tegra_dc_is_within_n_vsync(win->dc, timestamp_ns));
-		trace_printk("%s:After timestamp wait\n", win->dc->ndev->name);
 		tegra_dc_config_frame_end_intr(win->dc, false);
 	}
 #endif
@@ -633,13 +635,11 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		u32 syncpt_max;
 		int index = args->win[i].index;
-		struct tegra_dc_win *win;
 		struct tegra_dc_ext_win *ext_win;
 
 		if (index < 0)
 			continue;
 
-		win = tegra_dc_get_window(ext->dc, index);
 		ext_win = &ext->win[index];
 
 		syncpt_max = tegra_dc_incr_syncpt_max(ext->dc, index);
@@ -940,6 +940,15 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 
 		return ret;
+	}
+
+	case TEGRA_DC_EXT_CURSOR_CLIP:
+	{
+		int args;
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		return tegra_dc_ext_cursor_clip(user, &args);
 	}
 
 	default:

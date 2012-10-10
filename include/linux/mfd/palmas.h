@@ -135,8 +135,28 @@ enum palmas_regulators {
 	PALMAS_REG_LDO9,
 	PALMAS_REG_LDOLN,
 	PALMAS_REG_LDOUSB,
+	/* External regulators */
+	PALMAS_REG_REGEN1,
+	PALMAS_REG_REGEN2,
+	PALMAS_REG_REGEN3,
+	PALMAS_REG_SYSEN1,
+	PALMAS_REG_SYSEN2,
 	/* Total number of regulators */
 	PALMAS_NUM_REGS,
+};
+
+enum PALMAS_CLOCK32K {
+	PALMAS_CLOCK32KG,
+	PALMAS_CLOCK32KG_AUDIO,
+
+	/* Last entry */
+	PALMAS_CLOCK32K_NR,
+};
+
+struct palmas_clk32k_init_data {
+	int clk32k_id;
+	bool enable;
+	int sleep_control;
 };
 
 struct palmas_pmic_platform_data {
@@ -152,6 +172,8 @@ struct palmas_pmic_platform_data {
 
 	/* use LDO6 for vibrator control */
 	int ldo6_vibrator;
+
+	bool enable_ldo8_tracking;
 
 
 };
@@ -171,6 +193,9 @@ struct palmas_platform_data {
 	u8 pad1, pad2;
 
 	struct palmas_pmic_platform_data *pmic_pdata;
+
+	struct palmas_clk32k_init_data  *clk32k_init_data;
+	int clk32k_init_data_size;
 };
 
 /* Define the palmas IRQ numbers */
@@ -2623,6 +2648,12 @@ struct palmas_pmic {
 #define PALMAS_GPADC_TRIM15					0xE
 #define PALMAS_GPADC_TRIM16					0xF
 
+enum {
+	PALMAS_EXT_CONTROL_ENABLE1	= 0x1,
+	PALMAS_EXT_CONTROL_ENABLE2	= 0x2,
+	PALMAS_EXT_CONTROL_NSLEEP	= 0x4,
+};
+
 /*
  *PALMAS GPIOs
  */
@@ -2638,4 +2669,41 @@ enum {
 
 	PALMAS_GPIO_NR,
 };
+
+/* Palma Sleep requestor IDs IDs */
+enum {
+	PALMAS_SLEEP_REQSTR_ID_REGEN1,
+	PALMAS_SLEEP_REQSTR_ID_REGEN2,
+	PALMAS_SLEEP_REQSTR_ID_SYSEN1,
+	PALMAS_SLEEP_REQSTR_ID_SYSEN2,
+	PALMAS_SLEEP_REQSTR_ID_CLK32KG,
+	PALMAS_SLEEP_REQSTR_ID_CLK32KGAUDIO,
+	PALMAS_SLEEP_REQSTR_ID_REGEN3,
+	PALMAS_SLEEP_REQSTR_ID_SMPS12,
+	PALMAS_SLEEP_REQSTR_ID_SMPS3,
+	PALMAS_SLEEP_REQSTR_ID_SMPS45,
+	PALMAS_SLEEP_REQSTR_ID_SMPS6,
+	PALMAS_SLEEP_REQSTR_ID_SMPS7,
+	PALMAS_SLEEP_REQSTR_ID_SMPS8,
+	PALMAS_SLEEP_REQSTR_ID_SMPS9,
+	PALMAS_SLEEP_REQSTR_ID_SMPS10,
+	PALMAS_SLEEP_REQSTR_ID_LDO1,
+	PALMAS_SLEEP_REQSTR_ID_LDO2,
+	PALMAS_SLEEP_REQSTR_ID_LDO3,
+	PALMAS_SLEEP_REQSTR_ID_LDO4,
+	PALMAS_SLEEP_REQSTR_ID_LDO5,
+	PALMAS_SLEEP_REQSTR_ID_LDO6,
+	PALMAS_SLEEP_REQSTR_ID_LDO7,
+	PALMAS_SLEEP_REQSTR_ID_LDO8,
+	PALMAS_SLEEP_REQSTR_ID_LDO9,
+	PALMAS_SLEEP_REQSTR_ID_LDOLN,
+	PALMAS_SLEEP_REQSTR_ID_LDOUSB,
+
+	/* Last entry */
+	PALMAS_SLEEP_REQSTR_ID_MAX,
+};
+
+extern int palmas_ext_power_req_config(struct palmas *palmas,
+		int id,  int ext_pwr_ctrl, bool enable);
+
 #endif /*  __LINUX_MFD_PALMAS_H */

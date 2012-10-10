@@ -253,6 +253,7 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-power.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-kbc.o
+obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sensors.o
 
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-memory.o
@@ -261,6 +262,7 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-power.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sdhci.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-panel.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-kbc.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sensors.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

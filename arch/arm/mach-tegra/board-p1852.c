@@ -51,6 +51,7 @@
 #include <asm/mach/flash.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <asm/hardware/gic.h>
 #include <asm/system.h>
 #include <mach/usb_phy.h>
 #include <mach/tegra_fiq_debugger.h>
@@ -367,6 +368,7 @@ static struct platform_device *p1852_devices[] __initdata = {
 	&tegra_avp_device,
 #endif
 	&tegra_camera,
+
 	&tegra_wdt0_device,
 	&tegra_wdt1_device,
 	&tegra_wdt2_device
@@ -508,7 +510,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = NULL,
 		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -535,7 +536,6 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = NULL,
 		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -561,7 +561,6 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = NULL,
 		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -688,4 +687,5 @@ MACHINE_START(P1852, "p1852")
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_p1852_reserve,
 	.timer          = &tegra_timer,
+	.handle_irq	= gic_handle_irq,
 MACHINE_END

@@ -28,6 +28,7 @@ struct regs_info {
 	u8	vsel_addr;
 	u8	ctrl_addr;
 	u8	tstep_addr;
+	int	sleep_id;
 };
 
 static const struct regs_info palmas_regs_info[] = {
@@ -36,110 +37,156 @@ static const struct regs_info palmas_regs_info[] = {
 		.vsel_addr	= PALMAS_SMPS12_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS12_CTRL,
 		.tstep_addr	= PALMAS_SMPS12_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS12,
 	},
 	{
 		.name		= "SMPS123",
 		.vsel_addr	= PALMAS_SMPS12_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS12_CTRL,
 		.tstep_addr	= PALMAS_SMPS12_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS12,
 	},
 	{
 		.name		= "SMPS3",
 		.vsel_addr	= PALMAS_SMPS3_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS3_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS3,
 	},
 	{
 		.name		= "SMPS45",
 		.vsel_addr	= PALMAS_SMPS45_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS45_CTRL,
 		.tstep_addr	= PALMAS_SMPS45_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS45,
 	},
 	{
 		.name		= "SMPS457",
 		.vsel_addr	= PALMAS_SMPS45_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS45_CTRL,
 		.tstep_addr	= PALMAS_SMPS45_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS45,
 	},
 	{
 		.name		= "SMPS6",
 		.vsel_addr	= PALMAS_SMPS6_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS6_CTRL,
 		.tstep_addr	= PALMAS_SMPS6_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS6,
 	},
 	{
 		.name		= "SMPS7",
 		.vsel_addr	= PALMAS_SMPS7_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS7_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS7,
 	},
 	{
 		.name		= "SMPS8",
 		.vsel_addr	= PALMAS_SMPS8_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS8_CTRL,
 		.tstep_addr	= PALMAS_SMPS8_TSTEP,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS8,
 	},
 	{
 		.name		= "SMPS9",
 		.vsel_addr	= PALMAS_SMPS9_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS9_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS9,
 	},
 	{
 		.name		= "SMPS10",
 		.ctrl_addr	= PALMAS_SMPS10_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS10,
 	},
 	{
 		.name		= "LDO1",
 		.vsel_addr	= PALMAS_LDO1_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO1_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO1,
 	},
 	{
 		.name		= "LDO2",
 		.vsel_addr	= PALMAS_LDO2_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO2_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO2,
 	},
 	{
 		.name		= "LDO3",
 		.vsel_addr	= PALMAS_LDO3_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO3_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO3,
 	},
 	{
 		.name		= "LDO4",
 		.vsel_addr	= PALMAS_LDO4_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO4_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO4,
 	},
 	{
 		.name		= "LDO5",
 		.vsel_addr	= PALMAS_LDO5_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO5_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO5,
 	},
 	{
 		.name		= "LDO6",
 		.vsel_addr	= PALMAS_LDO6_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO6_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO6,
 	},
 	{
 		.name		= "LDO7",
 		.vsel_addr	= PALMAS_LDO7_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO7_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO7,
 	},
 	{
 		.name		= "LDO8",
 		.vsel_addr	= PALMAS_LDO8_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO8_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO8,
 	},
 	{
 		.name		= "LDO9",
 		.vsel_addr	= PALMAS_LDO9_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDO9_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDO9,
 	},
 	{
 		.name		= "LDOLN",
 		.vsel_addr	= PALMAS_LDOLN_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDOLN_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDOLN,
 	},
 	{
 		.name		= "LDOUSB",
 		.vsel_addr	= PALMAS_LDOUSB_VOLTAGE,
 		.ctrl_addr	= PALMAS_LDOUSB_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_LDOUSB,
+	},
+	{
+		.name		= "REGEN1",
+		.ctrl_addr	= PALMAS_REGEN1_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_REGEN1,
+	},
+	{
+		.name		= "REGEN2",
+		.ctrl_addr	= PALMAS_REGEN2_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_REGEN2,
+	},
+	{
+		.name		= "REGEN3",
+		.ctrl_addr	= PALMAS_REGEN3_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_REGEN3,
+	},
+	{
+		.name		= "SYSEN1",
+		.ctrl_addr	= PALMAS_SYSEN1_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SYSEN1,
+	},
+	{
+		.name		= "SYSEN2",
+		.ctrl_addr	= PALMAS_SYSEN2_CTRL,
+		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SYSEN2,
 	},
 };
 
@@ -205,6 +252,26 @@ static int palmas_ldo_write(struct palmas *palmas, unsigned int reg,
 	return regmap_write(palmas->regmap[REGULATOR_SLAVE], addr, value);
 }
 
+static int palmas_resource_read(struct palmas *palmas, unsigned int reg,
+		unsigned int *dest)
+{
+	unsigned int addr;
+
+	addr = PALMAS_BASE_TO_REG(PALMAS_RESOURCE_BASE, reg);
+
+	return regmap_read(palmas->regmap[REGULATOR_SLAVE], addr, dest);
+}
+
+static int palmas_resource_write(struct palmas *palmas, unsigned int reg,
+		unsigned int value)
+{
+	unsigned int addr;
+
+	addr = PALMAS_BASE_TO_REG(PALMAS_RESOURCE_BASE, reg);
+
+	return regmap_write(palmas->regmap[REGULATOR_SLAVE], addr, value);
+}
+
 static int palmas_is_enabled_smps(struct regulator_dev *dev)
 {
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
@@ -258,8 +325,7 @@ static int palmas_set_mode_smps(struct regulator_dev *dev, unsigned int mode)
 	unsigned int reg;
 
 	palmas_smps_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
-	reg &= ~PALMAS_SMPS12_CTRL_STATUS_MASK;
-	reg >>= PALMAS_SMPS12_CTRL_STATUS_SHIFT;
+	reg &= ~PALMAS_SMPS12_CTRL_MODE_ACTIVE_MASK;
 
 	switch (mode) {
 	case REGULATOR_MODE_NORMAL:
@@ -436,7 +502,7 @@ static int palmas_enable_ldo(struct regulator_dev *dev)
 
 	reg |= SMPS_CTRL_MODE_ON;
 
-	palmas_smps_write(pmic->palmas, palmas_regs_info[id].ctrl_addr, reg);
+	palmas_ldo_write(pmic->palmas, palmas_regs_info[id].ctrl_addr, reg);
 
 	return 0;
 }
@@ -451,7 +517,7 @@ static int palmas_disable_ldo(struct regulator_dev *dev)
 
 	reg &= ~SMPS_CTRL_MODE_ON;
 
-	palmas_smps_write(pmic->palmas, palmas_regs_info[id].ctrl_addr, reg);
+	palmas_ldo_write(pmic->palmas, palmas_regs_info[id].ctrl_addr, reg);
 
 	return 0;
 }
@@ -530,6 +596,71 @@ static struct regulator_ops palmas_ops_ldo = {
 	.list_voltage		= palmas_list_voltage_ldo,
 };
 
+static int palmas_is_enabled_extreg(struct regulator_dev *dev)
+{
+	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
+	int id = rdev_get_id(dev);
+	unsigned int reg;
+	int ret;
+
+	ret = palmas_resource_read(pmic->palmas,
+			palmas_regs_info[id].ctrl_addr, &reg);
+	reg &= PALMAS_REGEN1_CTRL_STATUS;
+	if (ret < 0)
+		return ret;
+
+	return !!(reg);
+}
+
+static int palmas_enable_extreg(struct regulator_dev *dev)
+{
+	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
+	int id = rdev_get_id(dev);
+	unsigned int reg;
+	int ret;
+
+	ret = palmas_resource_read(pmic->palmas,
+			palmas_regs_info[id].ctrl_addr, &reg);
+	if (ret < 0)
+		return ret;
+
+	reg |= PALMAS_REGEN1_CTRL_MODE_ACTIVE;
+	ret = palmas_resource_write(pmic->palmas,
+			palmas_regs_info[id].ctrl_addr, reg);
+	return ret;
+}
+
+static int palmas_disable_extreg(struct regulator_dev *dev)
+{
+	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
+	int id = rdev_get_id(dev);
+	unsigned int reg;
+	int ret;
+
+	ret = palmas_resource_read(pmic->palmas,
+			palmas_regs_info[id].ctrl_addr, &reg);
+	if (ret < 0)
+		return ret;
+
+	reg &= ~PALMAS_REGEN1_CTRL_MODE_ACTIVE;
+	ret = palmas_resource_write(pmic->palmas,
+			palmas_regs_info[id].ctrl_addr, reg);
+	return ret;
+}
+
+static int palmas_getvoltage_extreg(struct regulator_dev *rdev)
+{
+	return 4300 * 1000;
+}
+
+
+static struct regulator_ops palmas_ops_extreg = {
+	.is_enabled		= palmas_is_enabled_extreg,
+	.enable			= palmas_enable_extreg,
+	.disable		= palmas_disable_extreg,
+	.get_voltage		= palmas_getvoltage_extreg,
+};
+
 /*
  * setup the hardware based sleep configuration of the SMPS/LDO regulators
  * from the platform data. This is different to the software based control
@@ -573,6 +704,17 @@ static int palmas_smps_init(struct palmas *palmas, int id,
 	if (ret)
 		return ret;
 
+	if ((id != PALMAS_REG_SMPS10) && reg_init->roof_floor) {
+		int sleep_id = palmas_regs_info[id].sleep_id;
+		ret = palmas_ext_power_req_config(palmas, sleep_id,
+					reg_init->roof_floor, true);
+		if (ret < 0) {
+			dev_err(palmas->dev,
+				"Error in configuring external control\n");
+			return ret;
+		}
+	}
+
 	if (palmas_regs_info[id].tstep_addr && reg_init->tstep) {
 		addr = palmas_regs_info[id].tstep_addr;
 
@@ -606,7 +748,7 @@ static int palmas_ldo_init(struct palmas *palmas, int id,
 
 	addr = palmas_regs_info[id].ctrl_addr;
 
-	ret = palmas_smps_read(palmas, addr, &reg);
+	ret = palmas_ldo_read(palmas, addr, &reg);
 	if (ret)
 		return ret;
 
@@ -616,11 +758,99 @@ static int palmas_ldo_init(struct palmas *palmas, int id,
 	if (reg_init->mode_sleep)
 		reg |= PALMAS_LDO1_CTRL_MODE_SLEEP;
 
-	ret = palmas_smps_write(palmas, addr, reg);
+	ret = palmas_ldo_write(palmas, addr, reg);
 	if (ret)
 		return ret;
 
+	if (reg_init->roof_floor) {
+		int sleep_id = palmas_regs_info[id].sleep_id;
+
+		ret = palmas_ext_power_req_config(palmas, sleep_id,
+			reg_init->roof_floor, true);
+		if (ret < 0) {
+			dev_err(palmas->dev,
+				"Error in configuring external control\n");
+			return ret;
+		}
+	}
+
 	return 0;
+}
+
+static int palmas_extreg_init(struct palmas *palmas, int id,
+		struct palmas_reg_init *reg_init)
+{
+	unsigned int reg;
+	unsigned int addr;
+	int ret;
+
+	addr = palmas_regs_info[id].ctrl_addr;
+
+	ret = palmas_resource_read(palmas, addr, &reg);
+	if (ret)
+		return ret;
+
+	if (reg_init->mode_sleep)
+		reg |= PALMAS_REGEN1_CTRL_MODE_SLEEP;
+	else
+		reg &= ~PALMAS_REGEN1_CTRL_MODE_SLEEP;
+
+	ret = palmas_resource_write(palmas, addr, reg);
+	if (ret < 0)
+		return ret;
+
+	if (reg_init->roof_floor) {
+		int sleep_id = palmas_regs_info[id].sleep_id;
+
+		ret = palmas_ext_power_req_config(palmas, sleep_id,
+			reg_init->roof_floor, true);
+		if (ret < 0) {
+			dev_err(palmas->dev,
+				"Error in configuring external control\n");
+			return ret;
+		}
+	}
+	return 0;
+}
+
+static void palmas_enable_ldo8_track(struct palmas *palmas)
+{
+	unsigned int reg;
+	unsigned int addr;
+	int ret;
+
+	addr = palmas_regs_info[PALMAS_REG_LDO8].ctrl_addr;
+
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret) {
+		dev_err(palmas->dev, "Error in reading ldo8 control reg\n");
+		return;
+	}
+
+	reg |= PALMAS_LDO8_CTRL_LDO_TRACKING_EN;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in enabling tracking mode\n");
+		return;
+	}
+	/*
+	 * When SMPS4&5 is set to off and LDO8 tracking is enabled, the LDO8
+	 * output is defined by the LDO8_VOLTAGE.VSEL register divided by two,
+	 * and can be set from 0.45 to 1.65 V.
+	 */
+	addr = palmas_regs_info[PALMAS_REG_LDO8].vsel_addr;
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret) {
+		dev_err(palmas->dev, "Error in reading ldo8 voltage reg\n");
+		return;
+	}
+
+	reg = (reg << 1) & PALMAS_LDO8_VOLTAGE_VSEL_MASK;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0)
+		dev_err(palmas->dev, "Error in setting ldo8 voltage reg\n");
+
+	return;
 }
 
 static __devinit int palmas_probe(struct platform_device *pdev)
@@ -755,14 +985,20 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 		/* Register the regulators */
 		pmic->desc[id].name = palmas_regs_info[id].name;
 		pmic->desc[id].id = id;
-		pmic->desc[id].n_voltages = PALMAS_LDO_NUM_VOLTAGES;
-
-		pmic->desc[id].ops = &palmas_ops_ldo;
-
 		pmic->desc[id].type = REGULATOR_VOLTAGE;
 		pmic->desc[id].owner = THIS_MODULE;
-		pmic->desc[id].enable_reg = palmas_regs_info[id].ctrl_addr;
-		pmic->desc[id].enable_mask = PALMAS_LDO1_CTRL_MODE_ACTIVE;
+
+		if (id < PALMAS_REG_REGEN1) {
+			pmic->desc[id].n_voltages = PALMAS_LDO_NUM_VOLTAGES;
+			pmic->desc[id].ops = &palmas_ops_ldo;
+			pmic->desc[id].enable_reg =
+					palmas_regs_info[id].ctrl_addr;
+			pmic->desc[id].enable_mask =
+					PALMAS_LDO1_CTRL_MODE_ACTIVE;
+		} else {
+			pmic->desc[id].n_voltages = 1;
+			pmic->desc[id].ops = &palmas_ops_extreg;
+		}
 
 		rdev = regulator_register(&pmic->desc[id],
 			palmas->dev, reg_data, pmic, NULL);
@@ -782,12 +1018,21 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 		if (pdata->reg_init) {
 			reg_init = pdata->reg_init[id];
 			if (reg_init) {
-				ret = palmas_ldo_init(palmas, id, reg_init);
+				if (id < PALMAS_REG_REGEN1)
+					ret = palmas_ldo_init(palmas, id,
+								reg_init);
+				else
+					ret = palmas_extreg_init(palmas, id,
+								reg_init);
 				if (ret)
 					goto err_unregister_regulator;
 			}
 		}
 	}
+
+	/* Check if LDO8 is in tracking mode or not */
+	if (pdata->enable_ldo8_tracking)
+		palmas_enable_ldo8_track(palmas);
 
 	return 0;
 

@@ -610,19 +610,25 @@ static int utmi_phy_irq(struct tegra_usb_phy *phy)
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 
 	usb_phy_fence_read(phy);
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		val = readl(base + USB_SUSP_CTRL);
 		if ((val  & USB_PHY_CLK_VALID_INT_STS)) {
 			val &= ~USB_PHY_CLK_VALID_INT_ENB |
 					USB_PHY_CLK_VALID_INT_STS;
 			writel(val , (base + USB_SUSP_CTRL));
-			pr_info("%s: usb device plugged-in\n", __func__);
+
 			val = readl(base + USB_USBSTS);
 			if (!(val  & USB_USBSTS_PCI))
 				return IRQ_NONE;
+
 			val = readl(base + USB_PORTSC);
-			val &= ~(USB_PORTSC_WKCN | USB_PORTSC_RWC_BITS);
+			if (val & USB_PORTSC_CCS)
+				val &= ~USB_PORTSC_WKCN;
+			else
+				val &= ~USB_PORTSC_WKDS;
+			val &= ~USB_PORTSC_RWC_BITS;
 			writel(val , (base + USB_PORTSC));
+
 		} else if (!phy->phy_clk_on) {
 			return IRQ_NONE;
 		}
@@ -691,7 +697,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 		writel(val, base + UTMIP_BAT_CHRG_CFG0);
 	}
 
-	if (!phy->pdata->u_data.host.hot_plug) {
+	if (!phy->hot_plug) {
 		val = readl(base + UTMIP_XCVR_UHSIC_HSRX_CFG0);
 		val |= (UTMIP_FORCE_PD_POWERDOWN | UTMIP_FORCE_PD2_POWERDOWN |
 			 UTMIP_FORCE_PDZI_POWERDOWN);
@@ -712,7 +718,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 	phy->port_speed = (readl(base + USB_PORTSC) >> 26) &
 			USB_PORTSC_PSPD_MASK;
 
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		bool enable_hotplug = true;
 		/* if it is OTG port then make sure to enable hot-plug feature
 		   only if host adaptor is connected, i.e id is low */
@@ -721,8 +727,12 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 			enable_hotplug = (val & USB_ID_STATUS) ? false : true;
 		}
 		if (enable_hotplug) {
+			/* Enable wakeup event of device plug-in/plug-out */
 			val = readl(base + USB_PORTSC);
-			val |= USB_PORTSC_WKCN;
+			if (val & USB_PORTSC_CCS)
+				val |= USB_PORTSC_WKDS;
+			else
+				val |= USB_PORTSC_WKCN;
 			writel(val, base + USB_PORTSC);
 
 			val = readl(base + USB_SUSP_CTRL);
@@ -737,6 +747,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 		}
 	}
 
+	/* Disable PHY clock */
 	if (phy->inst == 2) {
 		val = readl(base + USB_PORTSC);
 		val |= USB_PORTSC_PHCD;

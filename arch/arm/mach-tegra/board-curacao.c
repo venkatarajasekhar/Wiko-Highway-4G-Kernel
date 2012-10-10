@@ -35,6 +35,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
+#include <linux/of_platform.h>
 
 #include <mach/clk.h>
 #include <mach/gpio-tegra.h>
@@ -131,11 +132,11 @@ static inline void curacao_bt_rfkill(void) { }
 
 static __initdata struct tegra_clk_init_table curacao_clk_init_table[] = {
 	/* name		parent		rate		enabled */
-	{ "uarta",	"clk_m",	13000000,	true},
-	{ "uartb",	"clk_m",	13000000,	true},
-	{ "uartc",	"clk_m",	13000000,	true},
-	{ "uartd",	"clk_m",	13000000,	true},
-	{ "uarte",	"clk_m",	13000000,	true},
+	{ "uarta_dbg",	"clk_m",	13000000,	true},
+	{ "uartb_dbg",	"clk_m",	13000000,	true},
+	{ "uartc_dbg",	"clk_m",	13000000,	true},
+	{ "uartd_dbg",	"clk_m",	13000000,	true},
+	{ "uarte_dbg",	"clk_m",	13000000,	true},
 	{ "sdmmc1",	"clk_m",	13000000,	false},
 	{ "sdmmc3",	"clk_m",	13000000,	false},
 	{ "sdmmc4",	"clk_m",	13000000,	false},
@@ -439,7 +440,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "vdd_vbus_micro_usb",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -480,7 +480,6 @@ static struct tegra_usb_platform_data tegra_ehci2_ulpi_link_pdata = {
 	.op_mode	= TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = NULL,
 		.hot_plug = false,
 		.remote_wakeup_supported = false,
 		.power_off_on_suspend = true,
@@ -608,6 +607,14 @@ static void __init tegra_curacao_init(void)
 	curacao_soctherm_init();
 }
 
+static void __init tegra_curacao_dt_init(void)
+{
+	tegra_curacao_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
+}
+
 static void __init tegra_curacao_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
@@ -616,6 +623,11 @@ static void __init tegra_curacao_reserve(void)
 	tegra_reserve(SZ_32M, SZ_4M, 0);
 #endif
 }
+
+static const char * const curacao_dt_board_compat[] = {
+	"nvidia,curacao",
+	NULL
+};
 
 MACHINE_START(CURACAO, CURACAO_BOARD_NAME)
 	.atag_offset    = 0x80000100,
@@ -626,5 +638,6 @@ MACHINE_START(CURACAO, CURACAO_BOARD_NAME)
 	.init_irq       = tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
-	.init_machine   = tegra_curacao_init,
+	.init_machine   = tegra_curacao_dt_init,
+	.dt_compat	= curacao_dt_board_compat,
 MACHINE_END

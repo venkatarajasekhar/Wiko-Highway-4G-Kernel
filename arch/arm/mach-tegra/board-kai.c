@@ -43,6 +43,7 @@
 #include <linux/max17048_battery.h>
 #include <linux/leds.h>
 #include <linux/i2c/at24.h>
+#include <linux/of_platform.h>
 
 #include <asm/hardware/gic.h>
 
@@ -93,22 +94,6 @@ static struct balanced_throttle throttle_list[] = {
 			{1000000, 1100 },
 		},
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		.tegra_cdev = {
-			.id = CDEV_BTHROT_ID_SKIN,
-		},
-		.throt_tab_size = 6,
-		.throt_tab = {
-			{ 640000, 1200 },
-			{ 640000, 1200 },
-			{ 760000, 1200 },
-			{ 760000, 1200 },
-			{1000000, 1200 },
-			{1000000, 1200 },
-		},
-	},
-#endif
 };
 
 /* All units are in millicelsius */
@@ -124,30 +109,9 @@ static struct tegra_thermal_bind thermal_binds[] = {
 			.passive_delay = 2000,
 		}
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		.tdev_id = THERMAL_DEVICE_ID_SKIN,
-		.cdev_id = CDEV_BTHROT_ID_SKIN,
-		.type = THERMAL_TRIP_PASSIVE,
-		.passive = {
-			.trip_temp = 43000,
-			.tc1 = 10,
-			.tc2 = 1,
-			.passive_delay = 15000,
-		}
-	},
-#endif
 	{
 		.tdev_id = THERMAL_DEVICE_ID_NULL,
 	},
-};
-
-static struct tegra_skin_data skin_data = {
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	.skin_device_id = THERMAL_DEVICE_ID_SKIN,
-#else
-	.skin_device_id = THERMAL_DEVICE_ID_NULL,
-#endif
 };
 
 /* wl128x BT, FM, GPS connectivity chip */
@@ -330,7 +294,7 @@ static struct regulator_consumer_supply smb349_vbus_supply[] = {
 };
 
 static struct regulator_consumer_supply smb349_otg_vbus_supply[] = {
-	REGULATOR_SUPPLY("usb_vbus_otg", NULL),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 };
 
 static struct smb349_charger_platform_data smb349_charger_pdata = {
@@ -606,8 +570,7 @@ static struct tegra_asoc_platform_data kai_audio_pdata = {
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
-	.cdc_regulator_id	= "cdc_en",
-	.spk_regulator_id	= "vdd_spk_amp",
+	.gpio_ldo1_en		= TEGRA_GPIO_PX2,
 	.i2s_param[HIFI_CODEC]	= {
 		.audio_port_id	= 0,
 		.is_i2s_master	= 1,
@@ -779,7 +742,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "usb_vbus_otg",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -805,7 +767,6 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.op_mode	= TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = NULL,
 		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -891,12 +852,21 @@ static void kai_audio_init(void)
 	}
 }
 
+/* This needs to be inialized later hand */
+static int __init kai_throttle_list_init(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(throttle_list); i++)
+		if (balanced_throttle_register(&throttle_list[i]))
+			return -ENODEV;
+
+	return 0;
+}
+late_initcall(kai_throttle_list_init);
+
 static void __init tegra_kai_init(void)
 {
-	tegra_thermal_init(thermal_binds,
-				&skin_data,
-				throttle_list,
-				ARRAY_SIZE(throttle_list));
+	tegra_thermal_init(thermal_binds);
 	tegra_clk_init_from_table(kai_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
@@ -936,6 +906,14 @@ static void __init kai_ramconsole_reserve(unsigned long size)
 	tegra_ram_console_debug_reserve(SZ_1M);
 }
 
+static void __init tegra_kai_dt_init(void)
+{
+	tegra_kai_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
+}
+
 static void __init tegra_kai_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
@@ -947,6 +925,11 @@ static void __init tegra_kai_reserve(void)
 	kai_ramconsole_reserve(SZ_1M);
 }
 
+static const char * const kai_dt_board_compat[] = {
+	"nvidia,kai",
+	NULL
+};
+
 MACHINE_START(KAI, "kai")
 	.atag_offset	= 0x100,
 	.soc		= &tegra_soc_desc,
@@ -956,6 +939,7 @@ MACHINE_START(KAI, "kai")
 	.init_irq	= tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer		= &tegra_timer,
-	.init_machine	= tegra_kai_init,
+	.init_machine	= tegra_kai_dt_init,
 	.restart	= tegra_assert_system_reset,
+	.dt_compat	= kai_dt_board_compat,
 MACHINE_END

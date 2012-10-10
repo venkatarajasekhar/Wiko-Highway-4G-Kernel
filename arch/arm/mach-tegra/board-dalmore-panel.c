@@ -22,6 +22,8 @@
 #include <linux/nvmap.h>
 #include <linux/nvhost.h>
 #include <linux/init.h>
+#include <linux/delay.h>
+#include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
 
@@ -32,30 +34,56 @@
 #include "board.h"
 #include "devices.h"
 #include "gpio-names.h"
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#include "tegra3_host1x_devices.h"
+#else
 #include "tegra11_host1x_devices.h"
+#endif
 
-#define TEGRA_PANEL_ENABLE 0
+#define TEGRA_PANEL_ENABLE	1
 
 #if TEGRA_PANEL_ENABLE
 
-#define TEGRA_DSI_GANGED_MODE 0
-#define IS_EXTERNAL_PWM	0
+#define TEGRA_DSI_GANGED_MODE	0
+#define IS_EXTERNAL_PWM		0
 
 /* PANEL_<diagonal length in inches>_<vendor name>_<resolution> */
-#define PANEL_10_1_PANASONIC_1920_1200 1
-#define PANEL_11_6_AUO_1920_1080 0
-#define PANEL_10_1_SHARP_2560_1600 0
+#define PANEL_10_1_PANASONIC_1920_1200	1
+#define PANEL_11_6_AUO_1920_1080	0
+#define PANEL_10_1_SHARP_2560_1600	0
 
-#define DSI_PANEL_RESET	1
+#define DSI_PANEL_RESET		1
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
+#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
+/* HDMI Hotplug detection pin */
+#define dalmore_hdmi_hpd	TEGRA_GPIO_PN7
+
 static atomic_t sd_brightness = ATOMIC_INIT(255);
-/* regulators */
-#if PANEL_10_1_PANASONIC_1920_1200 || \
-	PANEL_11_6_AUO_1920_1080 || \
-	PANEL_10_1_SHARP_2560_1600
+
+static bool reg_requested;
+static bool gpio_requested;
+
+/* for PANEL_10_1_PANASONIC_1920_1200, PANEL_11_6_AUO_1920_1080
+ * and PANEL_10_1_SHARP_2560_1600
+ */
 static struct regulator *avdd_lcd_3v3;
 static struct regulator *vdd_lcd_bl_12v;
+
+/* for PANEL_11_6_AUO_1920_1080 and PANEL_10_1_SHARP_2560_1600 */
+static struct regulator *dvdd_lcd_1v8;
+
+/* for PANEL_11_6_AUO_1920_1080 */
+static struct regulator *vdd_ds_1v8;
+#define en_vdd_bl	TEGRA_GPIO_PG0
+#define lvds_en		TEGRA_GPIO_PG3
+
+#ifdef CONFIG_TEGRA_DC
+static struct regulator *dalmore_hdmi_reg;
+static struct regulator *dalmore_hdmi_pll;
+static struct regulator *dalmore_hdmi_vddio;
 #endif
 
 static struct resource dalmore_disp1_resources[] __initdata = {
@@ -132,7 +160,7 @@ static struct tegra_dsi_cmd dsi_init_cmd[] = {
 	/* no init command required */
 #endif
 #if PANEL_11_6_AUO_1920_1080
-	/* TODO */
+	/* no init command required */
 #endif
 #if PANEL_10_1_SHARP_2560_1600
 	/* TODO */
@@ -140,34 +168,171 @@ static struct tegra_dsi_cmd dsi_init_cmd[] = {
 };
 
 static struct tegra_dsi_out dalmore_dsi = {
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	.n_data_lanes = 2,
+	.controller_vs = DSI_VS_0,
+#else
 	.n_data_lanes = 4,
+	.controller_vs = DSI_VS_1,
+#endif
+#if PANEL_11_6_AUO_1920_1080
+	.dsi2edp_bridge_enable = true,
+#endif
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 	.refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
-	.dsi_instance = 0,
-	.controller_vs = DSI_VS_1,
+	.dsi_instance = DSI_INSTANCE_0,
 
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
-
+#else
+	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
+	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS,
+	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END,
+#endif
 	.dsi_init_cmd = dsi_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_init_cmd),
 };
+
+static int dalmore_dsi_regulator_get(void)
+{
+	int err = 0;
+
+	if (reg_requested)
+		return 0;
+
+#if PANEL_11_6_AUO_1920_1080 || \
+	PANEL_10_1_SHARP_2560_1600
+	dvdd_lcd_1v8 = regulator_get(NULL, "dvdd_lcd");
+	if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
+		pr_err("dvdd_lcd regulator get failed\n");
+		err = PTR_ERR(dvdd_lcd_1v8);
+		dvdd_lcd_1v8 = NULL;
+		goto fail;
+	}
+#endif
+#if PANEL_11_6_AUO_1920_1080
+	vdd_ds_1v8 = regulator_get(NULL, "vdd_ds_1v8");
+	if (IS_ERR_OR_NULL(vdd_ds_1v8)) {
+		pr_err("vdd_ds_1v8 regulator get failed\n");
+		err = PTR_ERR(vdd_ds_1v8);
+		vdd_ds_1v8 = NULL;
+		goto fail;
+	}
+#endif
+#if PANEL_10_1_PANASONIC_1920_1200 || \
+	PANEL_11_6_AUO_1920_1080 || \
+	PANEL_10_1_SHARP_2560_1600
+	avdd_lcd_3v3 = regulator_get(NULL, "avdd_lcd");
+	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
+		pr_err("avdd_lcd regulator get failed\n");
+		err = PTR_ERR(avdd_lcd_3v3);
+		avdd_lcd_3v3 = NULL;
+		goto fail;
+	}
+
+	vdd_lcd_bl_12v = regulator_get(NULL, "vdd_lcd_bl");
+	if (IS_ERR_OR_NULL(vdd_lcd_bl_12v)) {
+		pr_err("vdd_lcd_bl regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_bl_12v);
+		vdd_lcd_bl_12v = NULL;
+		goto fail;
+	}
+#endif
+	reg_requested = true;
+	return 0;
+fail:
+	return err;
+}
+
+static int dalmore_dsi_gpio_get(void)
+{
+	int err = 0;
+
+	if (gpio_requested)
+		return 0;
+
+	err = gpio_request(DSI_PANEL_RST_GPIO, "panel rst");
+	if (err < 0) {
+		pr_err("panel reset gpio request failed\n");
+		goto fail;
+	}
+
+	err = gpio_request(DSI_PANEL_BL_EN_GPIO, "panel backlight");
+	if (err < 0) {
+		pr_err("panel backlight gpio request failed\n");
+		goto fail;
+	}
+
+#if PANEL_11_6_AUO_1920_1080
+	err = gpio_request(en_vdd_bl, "edp bridge 1v2 enable");
+	if (err < 0) {
+		pr_err("edp bridge 1v2 enable gpio request failed\n");
+		goto fail;
+	}
+
+	err = gpio_request(lvds_en, "edp bridge 1v8 enable");
+	if (err < 0) {
+		pr_err("edp bridge 1v8 enable gpio request failed\n");
+		goto fail;
+	}
+#endif
+	gpio_requested = true;
+	return 0;
+fail:
+	return err;
+}
 
 static int dalmore_dsi_panel_enable(void)
 {
 	int err = 0;
 
-#if PANEL_10_1_PANASONIC_1920_1200 || \
-	PANEL_11_6_AUO_1920_1080 || \
-	PANEL_10_1_SHARP_2560_1600
+	err = dalmore_dsi_regulator_get();
+	if (err < 0) {
+		pr_err("dsi regulator get failed\n");
+		goto fail;
+	}
+	err = dalmore_dsi_gpio_get();
+	if (err < 0) {
+		pr_err("dsi gpio request failed\n");
+		goto fail;
+	}
+
+#if DSI_PANEL_RESET
+	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	usleep_range(1000, 5000);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
+	usleep_range(1000, 5000);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
+	msleep(20);
+#endif
+
+	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
+
+	if (vdd_ds_1v8) {
+		err = regulator_enable(vdd_ds_1v8);
+		if (err < 0) {
+			pr_err("vdd_ds_1v8 regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (dvdd_lcd_1v8) {
+		err = regulator_enable(dvdd_lcd_1v8);
+		if (err < 0) {
+			pr_err("dvdd_lcd regulator enable failed\n");
+			goto fail;
+		}
+	}
+
 	if (avdd_lcd_3v3) {
 		err = regulator_enable(avdd_lcd_3v3);
 		if (err < 0) {
 			pr_err("avdd_lcd regulator enable failed\n");
-			return err;
+			goto fail;
 		}
 	}
 
@@ -175,31 +340,47 @@ static int dalmore_dsi_panel_enable(void)
 		err = regulator_enable(vdd_lcd_bl_12v);
 		if (err < 0) {
 			pr_err("vdd_lcd_bl regulator enable failed\n");
-			return err;
+			goto fail;
 		}
 	}
+
+#if PANEL_11_6_AUO_1920_1080
+	gpio_direction_output(en_vdd_bl, 1);
+	msleep(100);
+	gpio_direction_output(lvds_en, 1);
 #endif
+	return 0;
+fail:
 	return err;
 }
 
 static int dalmore_dsi_panel_disable(void)
 {
-#if PANEL_10_1_PANASONIC_1920_1200 || \
-	PANEL_11_6_AUO_1920_1080 || \
-	PANEL_10_1_SHARP_2560_1600
+	gpio_set_value(DSI_PANEL_BL_EN_GPIO, 0);
+
+#if PANEL_11_6_AUO_1920_1080
+	gpio_set_value(lvds_en, 0);
+	msleep(100);
+	gpio_set_value(en_vdd_bl, 0);
+#endif
 	if (vdd_lcd_bl_12v)
 		regulator_disable(vdd_lcd_bl_12v);
 
 	if (avdd_lcd_3v3)
 		regulator_disable(avdd_lcd_3v3);
-#endif
+
+	if (dvdd_lcd_1v8)
+		regulator_disable(dvdd_lcd_1v8);
+
+	if (vdd_ds_1v8)
+		regulator_disable(vdd_ds_1v8);
+
 	return 0;
 }
 
 static int dalmore_dsi_panel_postsuspend(void)
 {
-	/* TODO */
-	return -EPERM;
+	return 0;
 }
 
 static struct tegra_dc_mode dalmore_dsi_modes[] = {
@@ -219,7 +400,19 @@ static struct tegra_dc_mode dalmore_dsi_modes[] = {
 	},
 #endif
 #if PANEL_11_6_AUO_1920_1080
-	/* TODO */
+	{
+		.pclk = 10000000,
+		.h_ref_to_sync = 4,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 28,
+		.v_sync_width = 5,
+		.h_back_porch = 148,
+		.v_back_porch = 23,
+		.h_active = 1920,
+		.v_active = 1080,
+		.h_front_porch = 66,
+		.v_front_porch = 4,
+	},
 #endif
 #if PANEL_10_1_SHARP_2560_1600
 	{
@@ -267,26 +460,79 @@ static struct tegra_dc_out dalmore_disp1_out = {
 
 static int dalmore_hdmi_enable(void)
 {
-	/* TODO */
-	return -EPERM;
+	int ret;
+	if (!dalmore_hdmi_reg) {
+			dalmore_hdmi_reg = regulator_get(NULL, "avdd_hdmi");
+			if (IS_ERR_OR_NULL(dalmore_hdmi_reg)) {
+				pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
+				dalmore_hdmi_reg = NULL;
+				return PTR_ERR(dalmore_hdmi_reg);
+			}
+	}
+	ret = regulator_enable(dalmore_hdmi_reg);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi\n");
+		return ret;
+	}
+	if (!dalmore_hdmi_pll) {
+		dalmore_hdmi_pll = regulator_get(NULL, "avdd_hdmi_pll");
+		if (IS_ERR_OR_NULL(dalmore_hdmi_pll)) {
+			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
+			dalmore_hdmi_pll = NULL;
+			regulator_put(dalmore_hdmi_reg);
+			dalmore_hdmi_reg = NULL;
+			return PTR_ERR(dalmore_hdmi_pll);
+		}
+	}
+	ret = regulator_enable(dalmore_hdmi_pll);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi_pll\n");
+		return ret;
+	}
+	return 0;
 }
 
 static int dalmore_hdmi_disable(void)
 {
-	/* TODO */
-	return -EPERM;
+	if (dalmore_hdmi_reg) {
+		regulator_disable(dalmore_hdmi_reg);
+		regulator_put(dalmore_hdmi_reg);
+		dalmore_hdmi_reg = NULL;
+	}
+
+	if (dalmore_hdmi_pll) {
+		regulator_disable(dalmore_hdmi_pll);
+		regulator_put(dalmore_hdmi_pll);
+		dalmore_hdmi_pll = NULL;
+	}
+
+	return 0;
 }
 
 static int dalmore_hdmi_postsuspend(void)
 {
-	/* TODO */
-	return -EPERM;
+	if (dalmore_hdmi_vddio) {
+		regulator_disable(dalmore_hdmi_vddio);
+		regulator_put(dalmore_hdmi_vddio);
+		dalmore_hdmi_vddio = NULL;
+	}
+	return 0;
 }
 
 static int dalmore_hdmi_hotplug_init(void)
 {
-	/* TODO */
-	return -EPERM;
+	if (!dalmore_hdmi_vddio) {
+		dalmore_hdmi_vddio = regulator_get(NULL, "vdd_hdmi_5v0");
+		if (WARN_ON(IS_ERR(dalmore_hdmi_vddio))) {
+			pr_err("%s: couldn't get regulator vdd_hdmi_5v0: %ld\n",
+				__func__, PTR_ERR(dalmore_hdmi_vddio));
+				dalmore_hdmi_vddio = NULL;
+		} else {
+			regulator_enable(dalmore_hdmi_vddio);
+		}
+	}
+
+	return 0;
 }
 
 static struct tegra_dc_out dalmore_disp2_out = {
@@ -295,8 +541,12 @@ static struct tegra_dc_out dalmore_disp2_out = {
 	.parent_clk	= "pll_d2_out0",
 
 	.dcc_bus	= 3,
+	.hotplug_gpio	= dalmore_hdmi_hpd,
 
 	.max_pixclock	= KHZ2PICOS(148500),
+
+	.align		= TEGRA_DC_ALIGN_MSB,
+	.order		= TEGRA_DC_ORDER_RED_BLUE,
 
 	.enable		= dalmore_hdmi_enable,
 	.disable	= dalmore_hdmi_disable,
@@ -331,6 +581,8 @@ static struct tegra_dc_platform_data dalmore_disp1_pdata = {
 
 static struct tegra_fb_data dalmore_disp2_fb_data = {
 	.win		= 0,
+	.xres		= 1024,
+	.yres		= 600,
 	.bits_per_pixel = 32,
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
@@ -424,7 +676,7 @@ static int dalmore_disp1_check_fb(struct device *dev, struct fb_info *info)
 static struct platform_tegra_pwm_backlight_data dalmore_disp1_bl_data = {
 	.which_dc		= 0,
 	.which_pwm		= TEGRA_PWM_PM1,
-	.gpio_conf_to_sfio	= TEGRA_GPIO_PW1,
+	.gpio_conf_to_sfio	= TEGRA_GPIO_PH1,
 	.max_brightness		= 255,
 	.dft_brightness		= 224,
 	.notify			= dalmore_disp1_bl_notify,
@@ -443,31 +695,11 @@ static struct platform_device dalmore_disp1_bl_device __initdata = {
 	},
 };
 
-static int dalmore_dsi_regulator_get(void)
-{
-	int err = 0;
-
-#if PANEL_10_1_PANASONIC_1920_1200 || \
-	PANEL_11_6_AUO_1920_1080 || \
-	PANEL_10_1_SHARP_2560_1600
-	avdd_lcd_3v3 = regulator_get(NULL, "avdd_lcd");
-	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
-		pr_err("avdd_lcd regulator get failed\n");
-		err = PTR_ERR(avdd_lcd_3v3);
-		avdd_lcd_3v3 = NULL;
-		return err;
-	}
-
-	vdd_lcd_bl_12v = regulator_get(NULL, "vdd_lcd_bl");
-	if (IS_ERR_OR_NULL(vdd_lcd_bl_12v)) {
-		pr_err("vdd_lcd_bl regulator get failed\n");
-		err = PTR_ERR(vdd_lcd_bl_12v);
-		vdd_lcd_bl_12v = NULL;
-		return err;
-	}
+#if PANEL_11_6_AUO_1920_1080
+static struct i2c_board_info dalmore_tc358770_dsi2edp_board_info __initdata = {
+		I2C_BOARD_INFO("tc358770_dsi2edp", 0x68),
+};
 #endif
-	return err;
-}
 
 int __init dalmore_panel_init(void)
 {
@@ -487,8 +719,15 @@ int __init dalmore_panel_init(void)
 	}
 #endif
 
+	gpio_request(dalmore_hdmi_hpd, "hdmi_hpd");
+	gpio_direction_input(dalmore_hdmi_hpd);
+
 #ifdef CONFIG_TEGRA_GRHOST
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	err = tegra3_register_host1x_devices();
+#else
 	err = tegra11_register_host1x_devices();
+#endif
 	if (err) {
 		pr_err("host1x devices registration failed\n");
 		return err;
@@ -524,12 +763,9 @@ int __init dalmore_panel_init(void)
 		return err;
 	}
 #endif
-
-	err = dalmore_dsi_regulator_get();
-	if (err < 0) {
-		pr_err("regulator get failed\n");
-		return err;
-	}
+#if PANEL_11_6_AUO_1920_1080
+	i2c_register_board_info(0, &dalmore_tc358770_dsi2edp_board_info, 1);
+#endif
 #endif
 
 #ifdef CONFIG_TEGRA_NVAVP

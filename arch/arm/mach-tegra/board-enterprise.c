@@ -42,6 +42,7 @@
 #include <linux/mfd/tlv320aic3262-core.h>
 
 #include <linux/nfc/pn544.h>
+#include <linux/of_platform.h>
 
 #include <sound/max98088.h>
 
@@ -95,22 +96,6 @@ static struct balanced_throttle throttle_list[] = {
 			{1000000, 1100 },
 		},
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		.tegra_cdev = {
-			.id = CDEV_BTHROT_ID_SKIN,
-		},
-		.throt_tab_size = 6,
-		.throt_tab = {
-			{ 640000, 1200 },
-			{ 640000, 1200 },
-			{ 760000, 1200 },
-			{ 760000, 1200 },
-			{1000000, 1200 },
-			{1000000, 1200 },
-		},
-	},
-#endif
 };
 
 /* All units are in millicelsius */
@@ -126,30 +111,9 @@ static struct tegra_thermal_bind thermal_binds[] = {
 			.passive_delay = 2000,
 		}
 	},
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		.tdev_id = THERMAL_DEVICE_ID_SKIN,
-		.cdev_id = CDEV_BTHROT_ID_SKIN,
-		.type = THERMAL_TRIP_PASSIVE,
-		.passive = {
-			.trip_temp = 43000,
-			.tc1 = 10,
-			.tc2 = 1,
-			.passive_delay = 15000,
-		}
-	},
-#endif
 	{
 		.tdev_id = THERMAL_DEVICE_ID_NULL,
 	},
-};
-
-static struct tegra_skin_data skin_data = {
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	.skin_device_id = THERMAL_DEVICE_ID_SKIN,
-#else
-	.skin_device_id = THERMAL_DEVICE_ID_NULL,
-#endif
 };
 
 static struct rfkill_gpio_platform_data enterprise_bt_rfkill_pdata[] = {
@@ -430,6 +394,7 @@ static struct pn544_i2c_platform_data nfc_pdata = {
 static struct i2c_board_info __initdata max98088_board_info = {
 	I2C_BOARD_INFO("max98088", 0x10),
 	.platform_data = &enterprise_max98088_pdata,
+	.irq = TEGRA_GPIO_HP_DET,
 };
 
 static struct i2c_board_info __initdata enterprise_codec_aic326x_info = {
@@ -548,6 +513,17 @@ static void __init enterprise_uart_init(void)
 	platform_add_devices(enterprise_uart_devices,
 				ARRAY_SIZE(enterprise_uart_devices));
 }
+/* add vibrator for enterprise */
+static struct platform_device vibrator_device = {
+	.name = "tegra-vibrator",
+	.id = -1,
+};
+
+static noinline void __init enterprise_vibrator_init(void)
+{
+	platform_device_register(&vibrator_device);
+}
+
 
 static struct resource tegra_rtc_resources[] = {
 	[0] = {
@@ -584,7 +560,7 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 	/*defaults for Enterprise board*/
 	.i2s_param[HIFI_CODEC]	= {
 		.audio_port_id	= 0,
-		.is_i2s_master	= 1,
+		.is_i2s_master	= 0,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
 	},
@@ -771,6 +747,14 @@ static void enterprise_usb_hsic_preresume(void)
 #endif
 }
 
+static void enterprise_usb_hsic_post_resume(void)
+{
+	pr_debug("%s\n", __func__);
+#ifdef CONFIG_TEGRA_BB_XMM_POWER
+	baseband_xmm_set_power_status(BBXMM_PS_L0);
+#endif
+}
+
 static void enterprise_usb_hsic_phy_power(void)
 {
 	pr_debug("%s\n", __func__);
@@ -791,7 +775,7 @@ static struct tegra_usb_phy_platform_ops hsic_xmm_plat_ops = {
 	.post_suspend = enterprise_usb_hsic_postsupend,
 	.pre_resume = enterprise_usb_hsic_preresume,
 	.port_power = enterprise_usb_hsic_phy_power,
-	.post_phy_on = enterprise_usb_hsic_phy_power,
+	.post_resume = enterprise_usb_hsic_post_resume,
 	.post_phy_off = enterprise_usb_hsic_post_phy_off,
 };
 
@@ -843,7 +827,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "usb_vbus",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -1084,6 +1067,18 @@ static void enterprise_nfc_init(void)
 	}
 }
 
+/* This needs to be inialized later hand */
+static int __init enterprise_throttle_list_init(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(throttle_list); i++)
+		if (balanced_throttle_register(&throttle_list[i]))
+			return -ENODEV;
+
+	return 0;
+}
+late_initcall(enterprise_throttle_list_init);
+
 static void __init tegra_enterprise_init(void)
 {
 	struct board_info board_info;
@@ -1093,10 +1088,7 @@ static void __init tegra_enterprise_init(void)
 	else
 		tegra_clk_init_from_table(enterprise_clk_i2s2_table);
 
-	tegra_thermal_init(thermal_binds,
-				&skin_data,
-				throttle_list,
-				ARRAY_SIZE(throttle_list));
+	tegra_thermal_init(thermal_binds);
 	tegra_clk_init_from_table(enterprise_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
@@ -1128,6 +1120,15 @@ static void __init tegra_enterprise_init(void)
 	enterprise_bpc_mgmt_init();
 	tegra_release_bootloader_fb();
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
+	enterprise_vibrator_init();
+}
+
+static void __init tegra_enterprise_dt_init(void)
+{
+	tegra_enterprise_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
 }
 
 static void __init tegra_enterprise_reserve(void)
@@ -1154,7 +1155,7 @@ MACHINE_START(TEGRA_ENTERPRISE, "tegra_enterprise")
 	.init_irq       = tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
-	.init_machine   = tegra_enterprise_init,
+	.init_machine   = tegra_enterprise_dt_init,
 	.restart	= tegra_assert_system_reset,
 	.dt_compat	= enterprise_dt_board_compat,
 MACHINE_END

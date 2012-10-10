@@ -21,13 +21,16 @@
 
 #include "board.h"
 #include "board-pluto.h"
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 #include "tegra3_emc.h"
+#endif
 #include "fuse.h"
 
 
 int pluto_emc_init(void)
 {
-	tegra_init_emc(NULL, 0);
-
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	tegra30_init_emc();
+#endif
 	return 0;
 }

@@ -22,6 +22,7 @@
 #include <linux/nvmap.h>
 #include <linux/nvhost.h>
 #include <linux/init.h>
+#include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
@@ -33,29 +34,48 @@
 #include "board.h"
 #include "devices.h"
 #include "gpio-names.h"
-#include "tegra11_host1x_devices.h"
 
-#define TEGRA_PANEL_ENABLE 0
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#include "tegra3_host1x_devices.h"
+#else
+#include "tegra11_host1x_devices.h"
+#endif
+
+#define TEGRA_PANEL_ENABLE	1
 
 #if TEGRA_PANEL_ENABLE
-
-#define IS_EXTERNAL_PWM	0
+#define IS_EXTERNAL_PWM		0
 
 /* PANEL_<diagonal length in inches>_<vendor name>_<resolution> */
-#define PANEL_5_LG_720_1280 1
+#define PANEL_5_LG_720_1280	1
+#define PANEL_4_7_JDI_720_1280	0
 
-#define DSI_PANEL_RESET	1
+#define DSI_PANEL_RESET		1
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH5
+#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
 static atomic_t sd_brightness = ATOMIC_INIT(255);
 
-/* regulators */
-#if PANEL_5_LG_720_1280
-static struct regulator *avdd_lcd_2v8;
-static struct regulator *vdd_lcd_1v8;
-#define EN_VDD_LCD_1V8	PMU_TPS65913_GPIO_PORT04
-#endif
+static bool dsi_reg_requested;
+static bool dsi_gpio_requested;
 
+/* for PANEL_5_LG_720_1280 and PANEL_4_7_JDI_720_1280 */
+static struct regulator *vdd_lcd_s_1v8;
+static struct regulator *vdd_sys_bl_3v7;
+static struct regulator *avdd_lcd_3v0_2v8;
+
+/* for PANEL_5_LG_720_1280 */
+static struct regulator *avdd_ts_3v0;
+
+/* hdmi pins for hotplug */
+#define pluto_hdmi_hpd		TEGRA_GPIO_PN7
+
+/* hdmi related regulators */
+#ifdef CONFIG_TEGRA_DC
+static struct regulator *pluto_hdmi_vddio;
+#endif
 
 static struct resource pluto_disp1_resources[] __initdata = {
 	{
@@ -111,6 +131,7 @@ static struct resource pluto_disp2_resources[] __initdata = {
 	},
 };
 
+#if PANEL_5_LG_720_1280
 static u8 panel_dsi_config[] = {0xe0, 0x43, 0x0, 0x80, 0x0, 0x0};
 static u8 panel_disp_ctrl1[] = {0xb5, 0x34, 0x20, 0x40, 0x0, 0x20};
 static u8 panel_disp_ctrl2[] = {0xb6, 0x04, 0x74, 0x0f, 0x16, 0x13};
@@ -143,6 +164,7 @@ static u8 panel_ce10[] =
 static u8 panel_ce11[] = {0x7a, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 static u8 panel_ce12[] = {0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 static u8 panel_ce13[] = {0x7c, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+#endif
 
 static struct tegra_dsi_cmd dsi_init_cmd[] = {
 #if PANEL_5_LG_720_1280
@@ -204,67 +226,210 @@ static struct tegra_dsi_cmd dsi_init_cmd[] = {
 
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
 #endif
+#if PANEL_4_7_JDI_720_1280
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x00),
+	DSI_DLY_MS(15),
+	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x00),
+#endif
 };
 
 static struct tegra_dsi_out pluto_dsi = {
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	.n_data_lanes = 2,
+	.controller_vs = DSI_VS_0,
+	.dsi_instance = DSI_INSTANCE_0,
+#else
+#if PANEL_4_7_JDI_720_1280
+	.n_data_lanes = 3,
+	.dsi_instance = DSI_INSTANCE_1,
+#else
 	.n_data_lanes = 4,
+	.dsi_instance = DSI_INSTANCE_0,
+#endif
+	.controller_vs = DSI_VS_1,
+#endif
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 	.refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
-	.dsi_instance = 0,
-	.controller_vs = DSI_VS_1,
-
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
-
+#else
+	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
+	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS,
+	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END,
+#endif
 	.dsi_init_cmd = dsi_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_init_cmd),
 };
+
+static int pluto_dsi_regulator_get(void)
+{
+	int err = 0;
+
+	if (dsi_reg_requested)
+		return 0;
+
+#if PANEL_5_LG_720_1280
+	avdd_ts_3v0 = regulator_get(NULL, "avdd_ts_3v0");
+	if (IS_ERR_OR_NULL(avdd_ts_3v0)) {
+		pr_err("avdd_ts_3v0 regulator get failed\n");
+		err = PTR_ERR(avdd_ts_3v0);
+		avdd_ts_3v0 = NULL;
+		goto fail;
+	}
+#endif
+#if PANEL_5_LG_720_1280 || PANEL_4_7_JDI_720_1280
+	avdd_lcd_3v0_2v8 = regulator_get(NULL, "avdd_lcd");
+	if (IS_ERR_OR_NULL(avdd_lcd_3v0_2v8)) {
+		pr_err("avdd_lcd regulator get failed\n");
+		err = PTR_ERR(avdd_lcd_3v0_2v8);
+		avdd_lcd_3v0_2v8 = NULL;
+		goto fail;
+	}
+
+	vdd_lcd_s_1v8 = regulator_get(NULL, "vdd_lcd_1v8_s");
+	if (IS_ERR_OR_NULL(vdd_lcd_s_1v8)) {
+		pr_err("vdd_lcd_1v8_s regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_s_1v8);
+		vdd_lcd_s_1v8 = NULL;
+		goto fail;
+	}
+
+	vdd_sys_bl_3v7 = regulator_get(NULL, "vdd_sys_bl");
+	if (IS_ERR_OR_NULL(vdd_sys_bl_3v7)) {
+		pr_err("vdd_sys_bl regulator get failed\n");
+		err = PTR_ERR(vdd_sys_bl_3v7);
+		vdd_sys_bl_3v7 = NULL;
+		goto fail;
+	}
+#endif
+	dsi_reg_requested = true;
+	return 0;
+fail:
+	return err;
+}
+
+static int pluto_dsi_gpio_get(void)
+{
+	int err = 0;
+
+	if (dsi_gpio_requested)
+		return 0;
+
+	err = gpio_request(DSI_PANEL_RST_GPIO, "panel rst");
+	if (err < 0) {
+		pr_err("panel reset gpio request failed\n");
+		goto fail;
+	}
+
+	err = gpio_request(DSI_PANEL_BL_EN_GPIO, "panel backlight");
+	if (err < 0) {
+		pr_err("panel backlight gpio request failed\n");
+		goto fail;
+	}
+
+	dsi_gpio_requested = true;
+	return 0;
+fail:
+	return err;
+}
 
 static int pluto_dsi_panel_enable(void)
 {
 	int err = 0;
 
-#if PANEL_5_LG_720_1280
-	if (avdd_lcd_2v8) {
-		err = regulator_enable(avdd_lcd_2v8);
+	err = pluto_dsi_regulator_get();
+	if (err < 0) {
+		pr_err("dsi regulator get failed\n");
+		goto fail;
+	}
+
+	err = pluto_dsi_gpio_get();
+	if (err < 0) {
+		pr_err("dsi gpio request failed\n");
+		goto fail;
+	}
+
+#if DSI_PANEL_RESET
+	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	usleep_range(1000, 5000);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
+	usleep_range(1000, 5000);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
+	msleep(20);
+#endif
+
+	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
+
+	if (avdd_lcd_3v0_2v8) {
+		err = regulator_enable(avdd_lcd_3v0_2v8);
 		if (err < 0) {
 			pr_err("avdd_lcd regulator enable failed\n");
-			return err;
+			goto fail;
 		}
-	}
-
-	if (vdd_lcd_1v8) {
-		err = regulator_enable(vdd_lcd_1v8);
-		if (err < 0) {
-			pr_err("vdd_lcd_1v8 regulator enable failed\n");
-			return err;
-		}
-	}
-
-	gpio_direction_output(EN_VDD_LCD_1V8, 1);
+#if PANEL_5_LG_720_1280
+		regulator_set_voltage(avdd_lcd_3v0_2v8, 2800, 2800);
 #endif
+#if PANEL_4_7_JDI_720_1280
+		regulator_set_voltage(avdd_lcd_3v0_2v8, 3000, 3000);
+#endif
+	}
+
+	if (avdd_ts_3v0) {
+		err = regulator_enable(avdd_ts_3v0);
+		if (err < 0) {
+			pr_err("avdd_ts_3v0 regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (vdd_lcd_s_1v8) {
+		err = regulator_enable(vdd_lcd_s_1v8);
+		if (err < 0) {
+			pr_err("vdd_lcd_1v8_s regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (vdd_sys_bl_3v7) {
+		err = regulator_enable(vdd_sys_bl_3v7);
+		if (err < 0) {
+			pr_err("vdd_sys_bl regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	return 0;
+fail:
 	return err;
 }
 
 static int pluto_dsi_panel_disable(void)
 {
-#if PANEL_5_LG_720_1280
-	if (vdd_lcd_1v8)
-		regulator_disable(vdd_lcd_1v8);
+	gpio_set_value(DSI_PANEL_BL_EN_GPIO, 0);
 
-	if (avdd_lcd_2v8)
-		regulator_disable(avdd_lcd_2v8);
-#endif
+	if (vdd_sys_bl_3v7)
+		regulator_disable(vdd_sys_bl_3v7);
+
+	if (vdd_lcd_s_1v8)
+		regulator_disable(vdd_lcd_s_1v8);
+
+	if (avdd_ts_3v0)
+		regulator_disable(avdd_ts_3v0);
+
+	if (avdd_lcd_3v0_2v8)
+		regulator_disable(avdd_lcd_3v0_2v8);
+
 	return 0;
 }
 
 static int pluto_dsi_panel_postsuspend(void)
 {
 	/* TODO */
-	return -EPERM;
+	return 0;
 }
 
 static struct tegra_dc_mode pluto_dsi_modes[] = {
@@ -283,6 +448,21 @@ static struct tegra_dc_mode pluto_dsi_modes[] = {
 		.v_front_porch = 20,
 	},
 #endif
+#if PANEL_4_7_JDI_720_1280
+	{
+		.pclk = 10000000,
+		.h_ref_to_sync = 4,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 16,
+		.v_sync_width = 4,
+		.h_back_porch = 32,
+		.v_back_porch = 4,
+		.h_active = 720,
+		.v_active = 1280,
+		.h_front_porch = 48,
+		.v_front_porch = 4,
+	},
+#endif
 };
 
 static struct tegra_dc_out pluto_disp1_out = {
@@ -299,32 +479,57 @@ static struct tegra_dc_out pluto_disp1_out = {
 	.postsuspend	= pluto_dsi_panel_postsuspend,
 
 #if PANEL_5_LG_720_1280
-	/* TODO: active area width and height in mm */
+	.width		= 62,
+	.height		= 110,
+#endif
+#if PANEL_4_7_JDI_720_1280
+	.width = 58,
+	.height = 103,
 #endif
 };
 
 static int pluto_hdmi_enable(void)
 {
 	/* TODO */
-	return -EPERM;
+	return 0;
 }
 
 static int pluto_hdmi_disable(void)
 {
 	/* TODO */
-	return -EPERM;
+	return 0;
 }
 
 static int pluto_hdmi_postsuspend(void)
 {
-	/* TODO */
-	return -EPERM;
+	if (pluto_hdmi_vddio) {
+		regulator_disable(pluto_hdmi_vddio);
+		regulator_put(pluto_hdmi_vddio);
+		pluto_hdmi_vddio = NULL;
+	}
+	return 0;
 }
 
 static int pluto_hdmi_hotplug_init(void)
 {
-	/* TODO */
-	return -EPERM;
+	int ret = 0;
+	if (!pluto_hdmi_vddio) {
+		pluto_hdmi_vddio = regulator_get(NULL, "vddio_hdmi");
+		if (IS_ERR_OR_NULL(pluto_hdmi_vddio)) {
+			ret = PTR_ERR(pluto_hdmi_vddio);
+			pr_err("hdmi: couldn't get regulator vddio_hdmi\n");
+			pluto_hdmi_vddio = NULL;
+			return ret;
+		}
+	}
+	ret = regulator_enable(pluto_hdmi_vddio);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator vddio_hdmi\n");
+		regulator_put(pluto_hdmi_vddio);
+		pluto_hdmi_vddio = NULL;
+		return ret;
+	}
+	return ret;
 }
 
 static struct tegra_dc_out pluto_disp2_out = {
@@ -333,6 +538,7 @@ static struct tegra_dc_out pluto_disp2_out = {
 	.parent_clk	= "pll_d2_out0",
 
 	.dcc_bus	= 3,
+	.hotplug_gpio	= pluto_hdmi_hpd,
 
 	.max_pixclock	= KHZ2PICOS(148500),
 
@@ -346,7 +552,7 @@ static struct tegra_fb_data pluto_disp1_fb_data = {
 	.win		= 0,
 	.bits_per_pixel = 32,
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
-#if PANEL_5_LG_720_1280
+#if PANEL_5_LG_720_1280 || PANEL_4_7_JDI_720_1280
 	.xres		= 720,
 	.yres		= 1280,
 #endif
@@ -361,6 +567,8 @@ static struct tegra_dc_platform_data pluto_disp1_pdata = {
 
 static struct tegra_fb_data pluto_disp2_fb_data = {
 	.win		= 0,
+	.xres		= 1024,
+	.yres		= 600,
 	.bits_per_pixel = 32,
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
@@ -454,7 +662,7 @@ static int pluto_disp1_check_fb(struct device *dev, struct fb_info *info)
 static struct platform_tegra_pwm_backlight_data pluto_disp1_bl_data = {
 	.which_dc		= 0,
 	.which_pwm		= TEGRA_PWM_PM1,
-	.gpio_conf_to_sfio	= TEGRA_GPIO_PW1,
+	.gpio_conf_to_sfio	= TEGRA_GPIO_PH1,
 	.max_brightness		= 255,
 	.dft_brightness		= 224,
 	.notify			= pluto_disp1_bl_notify,
@@ -473,44 +681,6 @@ static struct platform_device pluto_disp1_bl_device __initdata = {
 	},
 };
 
-static int pluto_dsi_regulator_get(void)
-{
-	int err = 0;
-
-#if PANEL_5_LG_720_1280
-	avdd_lcd_2v8 = regulator_get(NULL, "avdd_lcd_ld02");
-	if (IS_ERR_OR_NULL(avdd_lcd_2v8)) {
-		pr_err("avdd_lcd regulator get failed\n");
-		err = PTR_ERR(avdd_lcd_2v8);
-		avdd_lcd_2v8 = NULL;
-		return err;
-	}
-
-	vdd_lcd_1v8 = regulator_get(NULL, "vdd_1v8_smps8");
-	if (IS_ERR_OR_NULL(vdd_lcd_1v8)) {
-		pr_err("vdd_lcd_1v8 regulator get failed\n");
-		err = PTR_ERR(vdd_lcd_1v8);
-		vdd_lcd_1v8 = NULL;
-		return err;
-	}
-#endif
-	return err;
-}
-
-static int pluto_dsi_gpio_get(void)
-{
-	int err = 0;
-
-#if PANEL_5_LG_720_1280
-	err = gpio_request(EN_VDD_LCD_1V8, "panel regulator enable");
-	if (err < 0) {
-		pr_err("panel regulator enable gpio request failed\n");
-		return err;
-	}
-#endif
-	return err;
-}
-
 int __init pluto_panel_init(void)
 {
 	int err = 0;
@@ -528,9 +698,15 @@ int __init pluto_panel_init(void)
 		return err;
 	}
 #endif
+	gpio_request(pluto_hdmi_hpd, "hdmi_hpd");
+	gpio_direction_input(pluto_hdmi_hpd);
 
 #ifdef CONFIG_TEGRA_GRHOST
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	err = tegra3_register_host1x_devices();
+#else
 	err = tegra11_register_host1x_devices();
+#endif
 	if (err) {
 		pr_err("host1x devices registration failed\n");
 		return err;
@@ -566,18 +742,6 @@ int __init pluto_panel_init(void)
 		return err;
 	}
 #endif
-
-	err = pluto_dsi_regulator_get();
-	if (err < 0) {
-		pr_err("panel regulator get failed\n");
-		return err;
-	}
-
-	err = pluto_dsi_gpio_get();
-	if (err < 0) {
-		pr_err("panel gpio get failed\n");
-		return err;
-	}
 #endif
 
 #ifdef CONFIG_TEGRA_NVAVP

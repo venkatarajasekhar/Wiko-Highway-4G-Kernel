@@ -23,6 +23,7 @@
 #define __MACH_TEGRA_BOARD_H
 
 #include <linux/types.h>
+#include <linux/errno.h>
 #include <linux/power_supply.h>
 #include <linux/memory.h>
 
@@ -68,6 +69,15 @@
 	}
 #endif
 
+/* This information is passed by bootloader */
+#define COMMCHIP_DEFAULT		0
+#define COMMCHIP_NOCHIP			1
+#define COMMCHIP_BROADCOM_BCM4329	2
+#define COMMCHIP_BROADCOM_BCM4330	3
+#define COMMCHIP_MARVELL_SD8797		4
+#define COMMCHIP_BROADCOM_BCM43241	6
+
+
 struct memory_accessor;
 
 void tegra_assert_system_reset(char mode, const char *cmd);
@@ -82,8 +92,6 @@ void __init tegra_init_irq(void);
 void __init tegra_dt_init_irq(void);
 void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	unsigned long fb2_size);
-void __init tegra_ram_console_debug_reserve(unsigned long ram_console_size);
-void __init tegra_ram_console_debug_init(void);
 void __init tegra_release_bootloader_fb(void);
 void __init tegra_protected_aperture_init(unsigned long aperture);
 int  __init tegra_init_board_info(void);
@@ -96,6 +104,16 @@ void tegra_move_framebuffer(unsigned long to, unsigned long from,
 bool is_tegra_debug_uartport_hs(void);
 int get_tegra_uart_debug_port_id(void);
 int arb_lost_recovery(int scl_gpio, int sda_gpio);
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+void __init tegra_ram_console_debug_reserve(unsigned long ram_console_size);
+void __init tegra_ram_console_debug_init(void);
+#else
+static inline void __init tegra_ram_console_debug_reserve(unsigned long ram_console_size)
+{}
+static inline void __init tegra_ram_console_debug_init(void)
+{}
+#endif
 
 extern unsigned long tegra_bootloader_fb_start;
 extern unsigned long tegra_bootloader_fb_size;
@@ -154,10 +172,12 @@ void tegra_get_camera_board_info(struct board_info *bi);
 int get_core_edp(void);
 enum panel_type get_panel_type(void);
 int tegra_get_modem_id(void);
+int tegra_get_commchip_id(void);
 enum power_supply_type get_power_supply_type(void);
 enum audio_codec_type get_audio_codec_type(void);
 int get_maximum_cpu_current_supported(void);
 void tegra_enable_pinmux(void);
 enum image_type get_tegra_image_type(void);
+int tegra_get_cvb_alignment_uV(void);
 
 #endif

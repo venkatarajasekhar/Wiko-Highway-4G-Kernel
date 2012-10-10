@@ -206,6 +206,7 @@ struct tegra_dsi_out {
 	bool		te_polarity_low;
 	bool		power_saving_suspend;
 	bool		dsi2lvds_bridge_enable;
+	bool		dsi2edp_bridge_enable;
 
 	u32		max_panel_freq_khz;
 	u32		lp_cmd_mode_freq_khz;
@@ -536,6 +537,7 @@ struct tegra_dc_win {
 #define TEGRA_WIN_FLAG_TILED		(1 << 5)
 #define TEGRA_WIN_FLAG_H_FILTER		(1 << 6)
 #define TEGRA_WIN_FLAG_V_FILTER		(1 << 7)
+#define TEGRA_WIN_FLAG_SCAN_COLUMN	(1 << 9)
 
 
 #define TEGRA_WIN_BLEND_FLAGS_MASK \

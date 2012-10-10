@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/common.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (C) 2010-2012 NVIDIA Corporation. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@android.com>
@@ -31,11 +31,14 @@
 #include <linux/sched.h>
 #include <linux/cpufreq.h>
 #include <linux/of.h>
+#include <linux/persistent_ram.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/soc.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/hardware/gic.h>
 #include <asm/system.h>
+#include <asm/dma-mapping.h>
 
 #include <mach/hardware.h>
 #include <mach/iomap.h>
@@ -184,6 +187,7 @@ void tegra_assert_system_reset(char mode, const char *cmd)
 #endif
 }
 static int modem_id;
+static int commchip_id;
 static int sku_override;
 static int debug_uart_port_id;
 static enum audio_codec_type audio_codec_name;
@@ -226,7 +230,6 @@ static __initdata struct tegra_clk_init_table tegra20_clk_init_table[] = {
 	{ "sclk",	"pll_p_out4",	108000000,	true },
 	{ "hclk",	"sclk",		108000000,	true },
 	{ "pclk",	"hclk",		54000000,	true },
-	{ "wake.sclk",  NULL,           250000000,	true },
 #endif
 	{ "sbc1.sclk",	NULL,		40000000,	false},
 	{ "sbc2.sclk",	NULL,		40000000,	false},
@@ -294,7 +297,6 @@ static __initdata struct tegra_clk_init_table tegra30_clk_init_table[] = {
 	{ "sbc4.sclk",	NULL,		40000000,	false},
 	{ "sbc5.sclk",	NULL,		40000000,	false},
 	{ "sbc6.sclk",	NULL,		40000000,	false},
-	{ "wake.sclk",	NULL,		40000000,	true },
 	{ "cbus",	"pll_c",	416000000,	false },
 	{ "pll_c_out1",	"pll_c",	208000000,	false },
 	{ "mselect",	"pll_p",	102000000,	true },
@@ -320,7 +322,6 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "pll_p_out4",	 "pll_p",	204000000,	true },
 	{ "hclk",	"sclk",		102000000,	true },
 	{ "pclk",	"hclk",		51000000,	true },
-	{ "wake.sclk",	NULL,		40000000,	true },
 	{ "mselect",	"pll_p",	102000000,	true },
 	{ "host1x",	"pll_p",	102000000,	false },
 	{ "cl_dvfs_ref", "pll_p",       54000000,       false },
@@ -332,7 +333,6 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "pll_p_out4",	"pll_p",	216000000,	true },
 	{ "hclk",	"sclk",		108000000,	true },
 	{ "pclk",	"hclk",		54000000,	true },
-	{ "wake.sclk",  NULL,           250000000,	true },
 	{ "mselect",	"pll_p",	108000000,	true },
 	{ "host1x",	"pll_p",	108000000,	false },
 	{ "cl_dvfs_ref", "clk_m",	13000000,	false },
@@ -425,61 +425,13 @@ static __initdata struct tegra_clk_init_table tegra14x_clk_init_table[] = {
 };
 #endif
 
-#ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-static void tegra_cache_smc(bool enable, u32 arg)
+#define CACHE_LINE_SIZE		32
+static inline void tegra_l2x0_disable_tz(void)
 {
-	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
-	bool need_affinity_switch;
-	bool can_switch_affinity;
-	bool l2x0_enabled;
-	cpumask_t local_cpu_mask;
-	cpumask_t saved_cpu_mask;
-	unsigned long flags;
-	long ret;
-
-	/*
-	 * ISSUE : Some registers of PL310 controler must be written
-	 *              from Secure context (and from CPU0)!
-	 *
-	 * When called form Normal we obtain an abort or do nothing.
-	 * Instructions that must be called in Secure:
-	 *      - Write to Control register (L2X0_CTRL==0x100)
-	 *      - Write in Auxiliary controler (L2X0_AUX_CTRL==0x104)
-	 *      - Invalidate all entries (L2X0_INV_WAY==0x77C),
-	 *              mandatory at boot time.
-	 *      - Tag and Data RAM Latency Control Registers
-	 *              (0x108 & 0x10C) must be written in Secure.
-	 */
-	need_affinity_switch = (smp_processor_id() != 0);
-	can_switch_affinity = !irqs_disabled();
-
-	WARN_ON(need_affinity_switch && !can_switch_affinity);
-	if (need_affinity_switch && can_switch_affinity) {
-		cpu_set(0, local_cpu_mask);
-		sched_getaffinity(0, &saved_cpu_mask);
-		ret = sched_setaffinity(0, &local_cpu_mask);
-		WARN_ON(ret != 0);
-	}
-
-	local_irq_save(flags);
-	l2x0_enabled = readl_relaxed(p + L2X0_CTRL) & 1;
-	if (enable && !l2x0_enabled)
-		tegra_generic_smc(0xFFFFF100, 0x00000001, arg);
-	else if (!enable && l2x0_enabled)
-		tegra_generic_smc(0xFFFFF100, 0x00000002, arg);
-	local_irq_restore(flags);
-
-	if (need_affinity_switch && can_switch_affinity) {
-		ret = sched_setaffinity(0, &saved_cpu_mask);
-		WARN_ON(ret != 0);
-	}
-}
-
-static void tegra_l2x0_disable(void)
-{
-	unsigned long flags;
 	static u32 l2x0_way_mask;
+
+	BUG_ON(smp_processor_id() != 0);
 
 	if (!l2x0_way_mask) {
 		void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
@@ -491,33 +443,65 @@ static void tegra_l2x0_disable(void)
 		l2x0_way_mask = (1 << ways) - 1;
 	}
 
-	local_irq_save(flags);
-	tegra_cache_smc(false, l2x0_way_mask);
-	local_irq_restore(flags);
-}
-#endif	/* CONFIG_TRUSTED_FOUNDATIONS  */
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
+	/* flush all ways on disable */
+	tegra_generic_smc_uncached(0xFFFFF100, 0x00000002, l2x0_way_mask);
+#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	if (tegra_is_cpu_in_lp2(0)) {
+		register unsigned long sp asm ("sp");
+		/* flush only the stack, if entering LP2 */
+		__cpuc_flush_dcache_area((void *)sp, (CACHE_LINE_SIZE * 2));
+		outer_flush_range(__pa(sp), __pa(sp) + (CACHE_LINE_SIZE * 2));
 
-void tegra_init_cache(bool init)
+		/* pass zero arg, so secureos flushes only its workspace */
+		tegra_generic_smc_uncached(0xFFFFF100, 0x00000002,
+			l2x0_way_mask);
+	} else {
+		/* flush all ways on disable, if entering LP0/LP1 */
+		tegra_generic_smc_uncached(0xFFFFF100, 0x00000002,
+			l2x0_way_mask);
+	}
+#endif
+}
+
+static inline void tegra_init_cache_tz(bool init)
 {
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
 	u32 aux_ctrl;
-#ifndef CONFIG_TRUSTED_FOUNDATIONS
-	u32 cache_type;
-	u32 tag_latency, data_latency;
+
+	BUG_ON(smp_processor_id() != 0);
+
+	if (init) {
+		/* init L2 from secureos */
+		tegra_generic_smc(0xFFFFF100, 0x00000001, 0x0);
+
+		/* common init called for outer call hookup */
+		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+		l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
+
+#ifdef CONFIG_OUTER_CACHE
+		/* use our outer_disable() routine */
+		outer_cache.disable = tegra_l2x0_disable_tz;
 #endif
+	} else {
+		/* reenable L2 in secureos */
+		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+		tegra_generic_smc_uncached(0xFFFFF100, 0x00000004, aux_ctrl);
+	}
+}
+#endif	/* CONFIG_TRUSTED_FOUNDATIONS  */
 
+#ifdef CONFIG_CACHE_L2X0
+void tegra_init_cache(bool init)
+{
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-	/* issue the SMC to enable the L2 */
-	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-	tegra_cache_smc(true, aux_ctrl);
-
-	/* after init, reread aux_ctrl and register handlers */
-	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-	l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
-
-	/* override outer_disable() with our disable */
-	outer_cache.disable = tegra_l2x0_disable;
+	/* enable/re-enable of L2 handled by secureos */
+	tegra_init_cache_tz(init);
 #else
+	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
+	u32 aux_ctrl;
+	u32 cache_type;
+	u32 tag_latency = 0x770, data_latency = 0x770;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	tag_latency = 0x331;
 	data_latency = 0x441;
@@ -540,9 +524,6 @@ void tegra_init_cache(bool init)
 			data_latency = 0x551;
 		}
 	}
-#else
-	tag_latency = 0x770;
-	data_latency = 0x770;
 #endif
 #endif
 	writel_relaxed(tag_latency, p + L2X0_TAG_LATENCY_CTRL);
@@ -571,9 +552,9 @@ void tegra_init_cache(bool init)
 		writel(aux_ctrl, p + L2X0_AUX_CTRL);
 	}
 	l2x0_enable();
-#endif
+#endif /* CONFIG_TRUSTED_FOUNDATIONS */
 }
-#endif
+#endif /* CONFIG_CACHE_L2X0 */
 
 static void __init tegra_init_power(void)
 {
@@ -666,6 +647,7 @@ void __init tegra20_init_early(void)
 	tegra_init_ahb_gizmo_settings();
 	tegra_init_debug_uart_rate();
 	tegra_gpio_resume_init();
+	tegra_ram_console_debug_reserve(SZ_1M);
 }
 #endif
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
@@ -689,6 +671,9 @@ void __init tegra30_init_early(void)
 	tegra_init_ahb_gizmo_settings();
 	tegra_init_debug_uart_rate();
 	tegra_gpio_resume_init();
+	tegra_ram_console_debug_reserve(SZ_1M);
+
+	init_dma_coherent_pool_size(SZ_1M);
 }
 #endif
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -706,13 +691,14 @@ void __init tegra11x_init_early(void)
 	tegra_common_init_clock();
 	tegra_clk_init_from_table(tegra11x_clk_init_table);
 	tegra11x_clk_init_la();
-	tegra_init_cache(true);
 	tegra_pmc_init();
 	tegra_powergate_init();
 	tegra_init_power();
 	tegra_init_ahb_gizmo_settings();
 	tegra_init_debug_uart_rate();
 	tegra_gpio_resume_init();
+
+	init_dma_coherent_pool_size(SZ_1M);
 }
 #endif
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
@@ -1058,6 +1044,22 @@ int tegra_get_modem_id(void)
 
 __setup("modem_id=", tegra_modem_id);
 
+static int __init tegra_commchip_id(char *id)
+{
+	char *p = id;
+
+	if (get_option(&p, &commchip_id) != 1)
+		return 0;
+	return 1;
+}
+
+int tegra_get_commchip_id(void)
+{
+	return commchip_id;
+}
+
+__setup("commchip_id=", tegra_commchip_id);
+
 /*
  * Tegra has a protected aperture that prevents access by most non-CPU
  * memory masters to addresses above the aperture value.  Enabling it
@@ -1271,6 +1273,36 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	}
 }
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct persistent_ram_descriptor desc = {
+	.name = "ram_console",
+};
+
+static struct persistent_ram ram = {
+	.descs = &desc,
+	.num_descs = 1,
+};
+
+void __init tegra_ram_console_debug_reserve(unsigned long ram_console_size)
+{
+	int ret;
+
+	ram.start = memblock_end_of_DRAM() - ram_console_size;
+	ram.size = ram_console_size;
+	ram.descs->size = ram_console_size;
+
+	INIT_LIST_HEAD(&ram.node);
+
+	ret = persistent_ram_early_init(&ram);
+	if (ret)
+		goto fail;
+
+	return;
+
+fail:
+	pr_err("Failed to reserve memory block for ram console\n");
+}
+
 static struct resource ram_console_resources[] = {
 	{
 		.flags = IORESOURCE_MEM,
@@ -1284,28 +1316,6 @@ static struct platform_device ram_console_device = {
 	.resource	= ram_console_resources,
 };
 
-void __init tegra_ram_console_debug_reserve(unsigned long ram_console_size)
-{
-	struct resource *res;
-	long ret;
-
-	res = platform_get_resource(&ram_console_device, IORESOURCE_MEM, 0);
-	if (!res)
-		goto fail;
-	res->start = memblock_end_of_DRAM() - ram_console_size;
-	res->end = res->start + ram_console_size - 1;
-	ret = memblock_remove(res->start, ram_console_size);
-	if (ret)
-		goto fail;
-
-	return;
-
-fail:
-	ram_console_device.resource = NULL;
-	ram_console_device.num_resources = 0;
-	pr_err("Failed to reserve memory block for ram console\n");
-}
-
 void __init tegra_ram_console_debug_init(void)
 {
 	int err;
@@ -1315,6 +1325,7 @@ void __init tegra_ram_console_debug_init(void)
 		pr_err("%s: ram console registration failed (%d)!\n",
 			__func__, err);
 }
+#endif
 
 void __init tegra_release_bootloader_fb(void)
 {

@@ -25,9 +25,10 @@
 
 #include <linux/device.h>
 #include <linux/types.h>
+#include <linux/devfreq.h>
 
 struct nvhost_master;
-
+struct nvhost_hwctx;
 struct nvhost_device_power_attr;
 
 #define NVHOST_MODULE_MAX_CLOCKS		3
@@ -72,7 +73,9 @@ struct nvhost_device_id {
 
 struct nvhost_clock {
 	char *name;
-	long default_rate;
+	unsigned long default_rate;
+	u32 moduleid;
+	unsigned long devfreq_rate;
 };
 
 enum nvhost_device_powerstate_t {
@@ -123,6 +126,7 @@ struct nvhost_device {
 	struct nvhost_channel *channel;	/* Channel assigned for the module */
 	struct kobject *power_kobj;	/* kobject to hold power sysfs entries */
 	struct nvhost_device_power_attr *power_attrib;	/* sysfs attributes */
+	struct devfreq	*power_manager;	/* Device power management */
 	struct dentry *debugfs;		/* debugfs directory */
 };
 
@@ -130,6 +134,13 @@ struct nvhost_device_power_attr {
 	struct nvhost_device *ndev;
 	struct kobj_attribute power_attr[NVHOST_POWER_SYSFS_ATTRIB_MAX];
 };
+
+struct nvhost_devfreq_ext_stat {
+	int		busy;
+	unsigned long	max_freq;
+	unsigned long	min_freq;
+};
+
 
 /* Register devices to nvhost bus */
 extern int nvhost_add_devices(struct nvhost_device **, int num);
@@ -180,6 +191,13 @@ struct nvhost_driver {
 	/* Clock gating callbacks */
 	int (*prepare_clockoff)(struct nvhost_device *dev);
 	void (*finalize_clockon)(struct nvhost_device *dev);
+
+	/* Read module register into memory */
+	int (*read_reg)(struct nvhost_device *dev,
+			struct nvhost_channel *ch,
+			struct nvhost_hwctx *hwctx,
+			u32 offset,
+			u32 *value);
 };
 
 extern int nvhost_driver_register(struct nvhost_driver *);

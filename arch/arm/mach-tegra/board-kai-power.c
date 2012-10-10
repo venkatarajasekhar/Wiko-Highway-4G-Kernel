@@ -57,7 +57,10 @@ static struct regulator_consumer_supply max77663_sd1_supply[] = {
 static struct regulator_consumer_supply max77663_sd2_supply[] = {
 	REGULATOR_SUPPLY("vdd_gen1v8", NULL),
 	REGULATOR_SUPPLY("avdd_hdmi_pll", NULL),
-	REGULATOR_SUPPLY("avdd_usb_pll", NULL),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("avdd_osc", NULL),
 	REGULATOR_SUPPLY("vddio_sys", NULL),
 	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.3"),
@@ -389,11 +392,7 @@ static struct regulator_consumer_supply fixed_reg_en_vdd_sdmmc1_supply[] = {
 };
 
 static struct regulator_consumer_supply fixed_reg_en_3v3_fuse_supply[] = {
-	REGULATOR_SUPPLY("vdd_fuse", NULL),
-};
-
-static struct regulator_consumer_supply fixed_reg_cdc_en_supply[] = {
-	REGULATOR_SUPPLY("cdc_en", NULL),
+	REGULATOR_SUPPLY("vpp_fuse", NULL),
 };
 
 /* Macro for defining fixed regulator sub device data */
@@ -455,8 +454,6 @@ FIXED_REG(9,  en_vdd_sdmmc1_a00, en_vdd_sdmmc1,		FIXED_SUPPLY(en_3v3_sys_a00),
 	0,	0,	TEGRA_GPIO_PC6,				true,	0,	3300);
 FIXED_REG(10, en_3v3_fuse_a00,	en_3v3_fuse,		FIXED_SUPPLY(en_3v3_sys_a00),
 	0,	0,	TEGRA_GPIO_PC1,				true,	0,	3300);
-FIXED_REG(11, cdc_en_a00,	cdc_en,			max77663_rails(sd2),
-	0,	1,	TEGRA_GPIO_PX2,				true,	0,	1200);
 
 /* A01 specific */
 FIXED_REG(1, en_3v3_sys_a01,	en_3v3_sys_a01,		NULL,
@@ -479,8 +476,6 @@ FIXED_REG(9,  en_vdd_sdmmc1_a01, en_vdd_sdmmc1,		FIXED_SUPPLY(en_3v3_sys_a01),
 	0,	0,	TEGRA_GPIO_PC6,				true,	0,	3300);
 FIXED_REG(10, en_3v3_fuse_a01,	en_3v3_fuse,		FIXED_SUPPLY(en_3v3_sys_a01),
 	0,	0,	TEGRA_GPIO_PC1,				true,	0,	3300);
-FIXED_REG(11, cdc_en_a01,	cdc_en,			max77663_rails(sd2),
-	0,	1,	TEGRA_GPIO_PX2,				true,	0,	1200);
 
 /*
  * Creating the fixed regulator device tables
@@ -500,7 +495,6 @@ FIXED_REG(11, cdc_en_a01,	cdc_en,			max77663_rails(sd2),
 	ADD_FIXED_REG(en_vdd_com_a00),		\
 	ADD_FIXED_REG(en_vdd_sdmmc1_a00),	\
 	ADD_FIXED_REG(en_3v3_fuse_a00),		\
-	ADD_FIXED_REG(cdc_en_a00),		\
 
 /* A01 specific */
 #define E1565_A01_FIXED_REG \
@@ -514,7 +508,6 @@ FIXED_REG(11, cdc_en_a01,	cdc_en,			max77663_rails(sd2),
 	ADD_FIXED_REG(en_vdd_com_a01),		\
 	ADD_FIXED_REG(en_vdd_sdmmc1_a01),	\
 	ADD_FIXED_REG(en_3v3_fuse_a01),		\
-	ADD_FIXED_REG(cdc_en_a01),		\
 
 /* Gpio switch regulator platform data for Kai A00 */
 static struct platform_device *fixed_reg_devs_a00[] = {

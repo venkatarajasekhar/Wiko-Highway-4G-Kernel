@@ -21,13 +21,20 @@
 
 #include "board.h"
 #include "board-dalmore.h"
-#include "tegra3_emc.h"
-#include "fuse.h"
 
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+#include "tegra3_emc.h"
+#endif
+
+#include "fuse.h"
+#include "devices.h"
 
 int dalmore_emc_init(void)
 {
-	tegra_init_emc(NULL, 0);
+	platform_device_register(&tegra_emc_device);
 
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	tegra30_init_emc();
+#endif
 	return 0;
 }

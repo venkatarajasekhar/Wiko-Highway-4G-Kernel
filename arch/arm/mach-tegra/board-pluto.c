@@ -36,6 +36,7 @@
 #include <linux/memblock.h>
 #include <linux/spi-tegra.h>
 #include <linux/nfc/pn544.h>
+#include <linux/rfkill-gpio.h>
 #include <linux/skbuff.h>
 #include <linux/ti_wilink_st.h>
 #include <linux/regulator/consumer.h>
@@ -43,6 +44,8 @@
 #include <linux/max17048_battery.h>
 #include <linux/leds.h>
 #include <linux/i2c/at24.h>
+#include <linux/mfd/max8831.h>
+#include <linux/of_platform.h>
 
 #include <asm/hardware/gic.h>
 
@@ -61,6 +64,7 @@
 #include <mach/usb_phy.h>
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
+#include <mach/edp.h>
 
 #include "board.h"
 #include "clock.h"
@@ -71,6 +75,64 @@
 #include "pm.h"
 #include "common.h"
 
+static struct rfkill_gpio_platform_data pluto_bt_rfkill_pdata = {
+	.name           = "bt_rfkill",
+	.shutdown_gpio  = TEGRA_GPIO_PQ7,
+	.type           = RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device pluto_bt_rfkill_device = {
+	.name = "rfkill_gpio",
+	.id             = -1,
+	.dev = {
+		.platform_data = &pluto_bt_rfkill_pdata,
+	},
+};
+
+static noinline void __init pluto_setup_bt_rfkill(void)
+{
+	if ((tegra_get_commchip_id() == COMMCHIP_BROADCOM_BCM43241) ||
+				(tegra_get_commchip_id() == COMMCHIP_DEFAULT))
+		pluto_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_INVALID;
+	else
+		pluto_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_PU6;
+	platform_device_register(&pluto_bt_rfkill_device);
+}
+
+static struct resource pluto_bluesleep_resources[] = {
+	[0] = {
+		.name = "gpio_host_wake",
+			.start  = TEGRA_GPIO_PU6,
+			.end    = TEGRA_GPIO_PU6,
+			.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "gpio_ext_wake",
+			.start  = TEGRA_GPIO_PEE1,
+			.end    = TEGRA_GPIO_PEE1,
+			.flags  = IORESOURCE_IO,
+	},
+	[2] = {
+		.name = "host_wake",
+			.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+};
+
+static struct platform_device pluto_bluesleep_device = {
+	.name           = "bluesleep",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(pluto_bluesleep_resources),
+	.resource       = pluto_bluesleep_resources,
+};
+
+static noinline void __init pluto_setup_bluesleep(void)
+{
+	pluto_bluesleep_resources[2].start =
+		pluto_bluesleep_resources[2].end =
+			gpio_to_irq(TEGRA_GPIO_PU6);
+	platform_device_register(&pluto_bluesleep_device);
+	return;
+}
 static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
@@ -143,6 +205,55 @@ static struct tegra_i2c_platform_data pluto_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
+static struct led_info pluto_max8831_leds[] = {
+	[MAX8831_ID_LED3] = {
+		.name = "max8831:red:pluto",
+	},
+	[MAX8831_ID_LED4] = {
+		.name = "max8831:green:pluto",
+	},
+	[MAX8831_ID_LED5] = {
+		.name = "max8831:blue:pluto",
+	},
+	[MAX8831_BL_LEDS] = {
+		.name = "pluto_display_bl",
+	},
+};
+
+static struct max8831_subdev_info pluto_max8831_subdevs[] = {
+	{
+		.id = MAX8831_ID_LED3,
+		.name = "max8831_led_bl",
+		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED3],
+		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED3]),
+	}, {
+		.id = MAX8831_ID_LED4,
+		.name = "max8831_led_bl",
+		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED4],
+		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED4]),
+	}, {
+		.id = MAX8831_ID_LED5,
+		.name = "max8831_led_bl",
+		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED5],
+		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED5]),
+	}, {
+		.id = MAX8831_BL_LEDS,
+		.name = "max8831_display_bl",
+		.platform_data = &pluto_max8831_leds[MAX8831_BL_LEDS],
+		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_BL_LEDS]),
+	},
+};
+
+static struct max8831_platform_data pluto_max8831 = {
+	.num_subdevs = ARRAY_SIZE(pluto_max8831_subdevs),
+	.subdevs = pluto_max8831_subdevs,
+};
+
+static struct i2c_board_info pluto_i2c_led_info = {
+	.type		= "max8831",
+	.addr		= 0x4d,
+	.platform_data	= &pluto_max8831,
+};
 
 
 static void pluto_i2c_init(void)
@@ -157,6 +268,8 @@ static void pluto_i2c_init(void)
 	tegra_i2c_device4.dev.platform_data = &pluto_i2c4_platform_data;
 	tegra_i2c_device5.dev.platform_data = &pluto_i2c5_platform_data;
 
+	i2c_register_board_info(1, &pluto_i2c_led_info, 1);
+
 	platform_device_register(&tegra_i2c_device5);
 	platform_device_register(&tegra_i2c_device4);
 	platform_device_register(&tegra_i2c_device3);
@@ -168,6 +281,8 @@ static void pluto_i2c_init(void)
 	tegra11_i2c_device3.dev.platform_data = &pluto_i2c3_platform_data;
 	tegra11_i2c_device4.dev.platform_data = &pluto_i2c4_platform_data;
 	tegra11_i2c_device5.dev.platform_data = &pluto_i2c5_platform_data;
+
+	i2c_register_board_info(1, &pluto_i2c_led_info, 1);
 
 	platform_device_register(&tegra11_i2c_device5);
 	platform_device_register(&tegra11_i2c_device4);
@@ -360,9 +475,11 @@ static struct platform_device *pluto_devices[] __initdata = {
 #endif
 };
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
 	.op_mode	= TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -372,6 +489,7 @@ static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 		.power_off_on_suspend = true,
 	},
 };
+#endif
 
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
@@ -400,11 +518,11 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "usb_vbus_otg",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -436,9 +554,11 @@ static void pluto_usb_init(void)
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	tegra_ehci2_device.dev.platform_data =
 		&tegra_ehci2_hsic_smsc_hub_pdata;
 	platform_device_register(&tegra_ehci2_device);
+#endif
 }
 
 static void pluto_modem_init(void)
@@ -487,6 +607,7 @@ static void pluto_audio_init(void)
 
 static void __init tegra_pluto_init(void)
 {
+	tegra_battery_edp_init(2500);
 	tegra_clk_init_from_table(pluto_clk_init_table);
 	tegra_enable_pinmux();
 	pluto_pinmux_init();
@@ -502,8 +623,12 @@ static void __init tegra_pluto_init(void)
 	pluto_suspend_init();
 	pluto_emc_init();
 	pluto_panel_init();
+	pluto_kbc_init();
+	pluto_setup_bluesleep();
+	pluto_setup_bt_rfkill();
 	tegra_release_bootloader_fb();
 	pluto_modem_init();
+	pluto_sensors_init();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
 	tegra_wdt_recovery_init();
 #endif
@@ -513,6 +638,14 @@ static void __init tegra_pluto_init(void)
 static void __init pluto_ramconsole_reserve(unsigned long size)
 {
 	tegra_ram_console_debug_reserve(SZ_1M);
+}
+
+static void __init tegra_pluto_dt_init(void)
+{
+	tegra_pluto_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
 }
 
 static void __init tegra_pluto_reserve(void)
@@ -526,15 +659,25 @@ static void __init tegra_pluto_reserve(void)
 	pluto_ramconsole_reserve(SZ_1M);
 }
 
+static const char * const pluto_dt_board_compat[] = {
+	"nvidia,pluto",
+	NULL
+};
+
 MACHINE_START(TEGRA_PLUTO, "tegra_pluto")
 	.atag_offset	= 0x100,
 	.soc		= &tegra_soc_desc,
 	.map_io		= tegra_map_common_io,
 	.reserve	= tegra_pluto_reserve,
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
 	.init_early	= tegra30_init_early,
+#else
+	.init_early     = tegra11x_init_early,
+#endif
 	.init_irq	= tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer		= &tegra_timer,
-	.init_machine	= tegra_pluto_init,
+	.init_machine	= tegra_pluto_dt_init,
 	.restart	= tegra_assert_system_reset,
+	.dt_compat	= pluto_dt_board_compat,
 MACHINE_END

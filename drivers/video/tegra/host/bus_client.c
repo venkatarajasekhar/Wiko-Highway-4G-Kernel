@@ -196,6 +196,10 @@ static int set_submit(struct nvhost_channel_userctx *ctx)
 		return -EFAULT;
 	}
 
+	if (ctx->job) {
+		dev_warn(&ndev->dev, "performing channel submit when a job already exists\n");
+		nvhost_job_put(ctx->job);
+	}
 	ctx->job = nvhost_job_alloc(ctx->ch,
 			ctx->hwctx,
 			&ctx->hdr,
@@ -367,7 +371,7 @@ static int nvhost_ioctl_channel_flush(
 	err = nvhost_job_pin(ctx->job, &nvhost_get_host(ndev)->syncpt);
 	if (err) {
 		dev_warn(&ndev->dev, "nvhost_job_pin failed: %d\n", err);
-		return err;
+		goto fail;
 	}
 
 	if (nvhost_debug_null_kickoff_pid == current->tgid)
@@ -382,6 +386,8 @@ static int nvhost_ioctl_channel_flush(
 	/* context switch if needed, and submit user's gathers to the channel */
 	err = nvhost_channel_submit(ctx->job);
 	args->value = ctx->job->syncpt_end;
+
+fail:
 	if (err)
 		nvhost_job_unpin(ctx->job);
 
@@ -394,9 +400,39 @@ static int nvhost_ioctl_channel_flush(
 static int nvhost_ioctl_channel_read_3d_reg(struct nvhost_channel_userctx *ctx,
 	struct nvhost_read_3d_reg_args *args)
 {
-	BUG_ON(!channel_op().read3dreg);
-	return channel_op().read3dreg(ctx->ch, ctx->hwctx,
+	return nvhost_channel_read_reg(ctx->ch, ctx->hwctx,
 			args->offset, &args->value);
+}
+
+static int moduleid_to_index(struct nvhost_device *dev, u32 moduleid)
+{
+	int i;
+
+	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
+		if (dev->clocks[i].moduleid == moduleid)
+			return i;
+	}
+
+	/* Old user space is sending a random number in args. Return clock
+	 * zero in these cases. */
+	return 0;
+}
+
+static int nvhost_ioctl_channel_set_rate(struct nvhost_channel_userctx *ctx,
+	u32 moduleid, u32 rate)
+{
+	int index = moduleid ? moduleid_to_index(ctx->ch->dev, moduleid) : 0;
+
+	return nvhost_module_set_rate(ctx->ch->dev, ctx, rate, index);
+}
+
+static int nvhost_ioctl_channel_get_rate(struct nvhost_channel_userctx *ctx,
+	u32 moduleid, u32 *rate)
+{
+	int index = moduleid ? moduleid_to_index(ctx->ch->dev, moduleid) : 0;
+
+	return nvhost_module_get_rate(ctx->ch->dev,
+			(unsigned long *)rate, index);
 }
 
 static long nvhost_channelctl(struct file *filp,
@@ -492,22 +528,20 @@ static long nvhost_channelctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CHANNEL_GET_CLK_RATE:
 	{
-		unsigned long rate;
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
 
-		err = nvhost_module_get_rate(priv->ch->dev, &rate, 0);
-		if (err == 0)
-			arg->rate = rate;
+		err = nvhost_ioctl_channel_get_rate(priv,
+				arg->moduleid, &arg->rate);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_CLK_RATE:
 	{
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
-		unsigned long rate = (unsigned long)arg->rate;
 
-		err = nvhost_module_set_rate(priv->ch->dev, priv, rate, 0);
+		err = nvhost_ioctl_channel_set_rate(priv,
+			arg->moduleid, arg->rate);
 		break;
 	}
 	case NVHOST_IOCTL_CHANNEL_SET_TIMEOUT:

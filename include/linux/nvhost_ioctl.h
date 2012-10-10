@@ -101,7 +101,8 @@ struct nvhost_read_3d_reg_args {
 };
 
 struct nvhost_clk_rate_args {
-	__u64 rate;
+	__u32 rate;
+	__u32 moduleid;
 };
 
 struct nvhost_set_timeout_args {
@@ -207,8 +208,11 @@ struct nvhost_ctrl_module_regrdwr_args {
 #define NVHOST_IOCTL_CTRL_GET_VERSION	\
 	_IOR(NVHOST_IOCTL_MAGIC, 7, struct nvhost_get_param_args)
 
+#define NVHOST_IOCTL_CTRL_SYNCPT_READ_MAX	\
+	_IOWR(NVHOST_IOCTL_MAGIC, 8, struct nvhost_ctrl_syncpt_read_args)
+
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_GET_VERSION)
+	_IOC_NR(NVHOST_IOCTL_CTRL_SYNCPT_READ_MAX)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_module_regrdwr_args)
 

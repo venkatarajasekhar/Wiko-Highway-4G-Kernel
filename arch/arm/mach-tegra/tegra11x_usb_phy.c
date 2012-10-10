@@ -50,8 +50,8 @@
 #define   USB_USBSTS_HCH	(1 << 12)
 
 #define USB_TXFILLTUNING        0x154
-#define USB_FIFO_TXFILL_THRES(x)   (((x) & 0x1f) << 16)
-#define USB_FIFO_TXFILL_MASK    0x1f0000
+#define   USB_FIFO_TXFILL_THRES(x)   (((x) & 0x1f) << 16)
+#define   USB_FIFO_TXFILL_MASK    0x1f0000
 
 #define ULPI_VIEWPORT           0x170
 #define   ULPI_WAKEUP           (1 << 31)
@@ -232,12 +232,14 @@
 #define   FUSE_ATERM_SEL		(1 << 4)
 
 #define UTMIP_PMC_WAKEUP0		0x84c
+#define UHSIC_PMC_WAKEUP0		0xc34
 #define   EVENT_INT_ENB			(1 << 0)
 
-#define UHSIC_PMC_WAKEUP0		0xc34
 #define UTMIP_BIAS_STS0			0x840
 #define   UTMIP_RCTRL_VAL(x)		(((x) & 0xffff) << 0)
 #define   UTMIP_TCTRL_VAL(x)		(((x) & (0xffff << 16)) >> 16)
+
+#define UHSIC_INST(inst, x, y)	((inst == 1) ? x : y)
 
 #define UHSIC_PLL_CFG1				0xc04
 #define   UHSIC_XTAL_FREQ_COUNT(x)		(((x) & 0xfff) << 0)
@@ -252,12 +254,14 @@
 #define   UHSIC_HS_SYNC_START_DLY(x)		(((x) & 0x1f) << 1)
 
 #define UHSIC_TX_CFG0				0xc10
-#define UHSIC_HS_READY_WAIT_FOR_VALID	(1 << 9)
+#define   UHSIC_HS_READY_WAIT_FOR_VALID	(1 << 9)
+
 #define UHSIC_MISC_CFG0				0xc14
 #define   UHSIC_SUSPEND_EXIT_ON_EDGE		(1 << 7)
 #define   UHSIC_DETECT_SHORT_CONNECT		(1 << 8)
 #define   UHSIC_FORCE_XCVR_MODE			(1 << 15)
 #define   UHSIC_DISABLE_BUSRESET		(1 << 20)
+
 #define UHSIC_MISC_CFG1				0xc18
 #define   UHSIC_PLLU_STABLE_COUNT(x)		(((x) & 0xfff) << 2)
 
@@ -279,60 +283,68 @@
 #define   UHSIC_RPU_DATA			(1 << 11)
 #define   UHSIC_RPU_STROBE			(1 << 12)
 
-#define UHSIC_STAT_CFG0		0xc28
-#define UHSIC_CONNECT_DETECT			(1 << 0)
+#define UHSIC_STAT_CFG0			0xc28
+#define   UHSIC_CONNECT_DETECT		(1 << 0)
 
-#define UHSIC_CMD_CFG0					0xc24
-#define UHSIC_PRETEND_CONNECT_DETECT	(1 << 5)
-#define UHSIC_PMC_WAKEUP0				0xc34
-#define UHSIC_WAKE_ALARM				(1 << 19)
-#define UHSIC_CLR_WAKE_ALARM_P0			(1 << 15)
-#define UHSIC_MASTER_ENABLE				(1 << 24)
-#define UHSIC_WAKE_VAL(x)				(((x) & 0xf) << 28)
-#define UHSIC_MASTER_ENABLE_P0			(1 << 24)
-#define UHSIC_WAKE_VAL_P0(x)			(((x) & 0xf) << 28)
-#define UHSIC_WAKE_WALK_EN_P0			(1 << 30)
-#define UHSIC_LINEVAL_WALK_EN			(1 << 31)
-#define UHSIC_CLR_WALK_PTR_P0			(1 << 3)
-#define UHSIC_CLR_WAKE_ALARM_P0			(1 << 15)
+#define PMC_UHSIC_TRIGGERS(inst)	UHSIC_INST(inst, 0x1ec, 0x27c)
+#define   UHSIC_CLR_WALK_PTR(inst)	(1 << UHSIC_INST(inst, 3, 0))
+#define   UHSIC_CLR_WAKE_ALARM(inst)	(1 << UHSIC_INST(inst, 15, 3))
+
+#define PMC_UHSIC_SLEEPWALK_CFG(inst)	UHSIC_INST(inst, 0x200, 0x288)
+#define   UHSIC_LINEVAL_WALK_EN(inst)	(1 << UHSIC_INST(inst, 31, 7))
+
+#define UHSIC_STATUS(inst)		UHSIC_INST(inst, 0x214, 0x290)
+#define   UHSIC_WAKE_ALARM(inst)	(1 << UHSIC_INST(inst, 19, 4))
+#define   UHSIC_WALK_PTR_VAL(inst)	(0x3 << UHSIC_INST(inst, 6, 0))
+#define   UHSIC_DATA_VAL(inst)		(1 << UHSIC_INST(inst, 15, 3))
+#define   UHSIC_STROBE_VAL(inst)	(1 << UHSIC_INST(inst, 14, 2))
+
+#define UHSIC_CMD_CFG0			0xc24
+#define   UHSIC_PRETEND_CONNECT_DETECT	(1 << 5)
+
+#define PMC_UHSIC_SLEEP_CFG(inst)	UHSIC_INST(inst, 0x1fc, 0x284)
+#define   UHSIC_MASTER_ENABLE(inst)	(1 << UHSIC_INST(inst, 24, 0))
+#define   UHSIC_WAKE_VAL(inst, x)	(((x) & 0xf) << UHSIC_INST(inst, 28, 4))
+#define   WAKE_VAL_SD10			0x2
+
 #define USB_USBINTR						0x138
-#define UHSIC_WALK_PTR_VAL				(0x3 << 6)
-#define UHSIC_DATA_VAL_P0				(1 << 15)
-#define UHSIC_STROBE_VAL_P0				(1 << 14)
-#define HSIC_RESERVED_P0				(3 << 14)
-#define STROBE_VAL_PD_P0				(1 << 12)
-#define DATA_VAL_PD_P0					(1 << 13)
-#define UHSIC_PWR						(1 << 3)
-#define PMC_SLEEPWALK_UHSIC				0x210
-#define UHSIC_STROBE_RPD_A				(1 << 0)
-#define UHSIC_DATA_RPD_A				(1 << 1)
-#define UHSIC_STROBE_RPU_A				(1 << 2)
-#define UHSIC_DATA_RPU_A				(1 << 3)
-#define UHSIC_STROBE_RPD_B				(1 << 8)
-#define UHSIC_DATA_RPD_B				(1 << 9)
-#define UHSIC_STROBE_RPU_B				(1 << 10)
-#define UHSIC_DATA_RPU_B				(1 << 11)
-#define UHSIC_STROBE_RPD_C				(1 << 16)
-#define UHSIC_DATA_RPD_C				(1 << 17)
-#define UHSIC_STROBE_RPU_C				(1 << 18)
-#define UHSIC_DATA_RPU_C				(1 << 19)
-#define UHSIC_STROBE_RPD_D				(1 << 24)
-#define UHSIC_DATA_RPD_D				(1 << 25)
-#define UHSIC_STROBE_RPU_D				(1 << 26)
-#define UHSIC_DATA_RPU_D				(1 << 27)
-#define UHSIC_LINE_DEB_CNT(x)			(((x) & 0xf) << 20)
-#define   WAKE_VAL_SD10					0x2
+
+#define PMC_UHSIC_MASTER_CONFIG(inst)	UHSIC_INST(inst, 0x274, 0x29c)
+#define   UHSIC_PWR(inst)		(1 << UHSIC_INST(inst, 3, 0))
+
+#define PMC_UHSIC_FAKE(inst)		UHSIC_INST(inst, 0x218, 0x294)
+#define   UHSIC_FAKE_STROBE_VAL(inst)		(1 << UHSIC_INST(inst, 12, 0))
+#define   UHSIC_FAKE_DATA_VAL(inst)		(1 << UHSIC_INST(inst, 13, 1))
+
+#define PMC_SLEEPWALK_UHSIC(inst)	UHSIC_INST(inst, 0x210, 0x28c)
+#define   UHSIC_STROBE_RPD_A				(1 << 0)
+#define   UHSIC_DATA_RPD_A				(1 << 1)
+#define   UHSIC_STROBE_RPU_A				(1 << 2)
+#define   UHSIC_DATA_RPU_A				(1 << 3)
+#define   UHSIC_STROBE_RPD_B				(1 << 8)
+#define   UHSIC_DATA_RPD_B				(1 << 9)
+#define   UHSIC_STROBE_RPU_B				(1 << 10)
+#define   UHSIC_DATA_RPU_B				(1 << 11)
+#define   UHSIC_STROBE_RPD_C				(1 << 16)
+#define   UHSIC_DATA_RPD_C				(1 << 17)
+#define   UHSIC_STROBE_RPU_C				(1 << 18)
+#define   UHSIC_DATA_RPU_C				(1 << 19)
+#define   UHSIC_STROBE_RPD_D				(1 << 24)
+#define   UHSIC_DATA_RPD_D				(1 << 25)
+#define   UHSIC_STROBE_RPU_D				(1 << 26)
+#define   UHSIC_DATA_RPU_D				(1 << 27)
+#define   UHSIC_LINE_DEB_CNT(x)			(((x) & 0xf) << 20)
 
 #define PMC_USB_DEBOUNCE			0xec
 #define   UTMIP_LINE_DEB_CNT(x)			(((x) & 0xf) << 16)
 
 #define PMC_USB_AO				0xf0
-#define PMC_POWER_DOWN_MASK			0xffff
-#define HSIC_RESERVED_P0			(3 << 14)
-#define HSIC_STOBE_VAL_PD_P0			(1 << 13)
-#define HSIC_DATA_VAL_PD_P0			(1 << 12)
-#define USB_ID_PD(inst)				(1 << ((4*(inst))+3))
-#define VBUS_WAKEUP_PD(inst)			(1 << ((4*(inst))+2))
+#define   HSIC_RESERVED(inst)			(3 << UHSIC_INST(inst, 14, 18))
+#define   STROBE_VAL_PD(inst)			(1 << UHSIC_INST(inst, 12, 16))
+#define   DATA_VAL_PD(inst)			(1 << UHSIC_INST(inst, 13, 17))
+#define   PMC_POWER_DOWN_MASK			0xffff
+#define   USB_ID_PD(inst)				(1 << ((4*(inst))+3))
+#define   VBUS_WAKEUP_PD(inst)			(1 << ((4*(inst))+2))
 #define   USBON_VAL_PD(inst)			(1 << ((4*(inst))+1))
 #define   USBON_VAL_PD_P2			(1 << 9)
 #define   USBON_VAL_PD_P1			(1 << 5)
@@ -363,16 +375,6 @@
 #define   PMC_TCTRL_VAL(x)	(((x) & 0x1f) << 5)
 #define   PMC_RCTRL_VAL(x)	(((x) & 0x1f) << 0)
 
-#define UHSIC_SLEEPWALK_REG		0x210
-#define UHSIC_DATA_RPD_D		(1 << 25)
-#define UHSIC_STRB_RPD_D		(1 << 24)
-#define UHSIC_DATA_RPD_C		(1 << 17)
-#define UHSIC_STRB_RPD_C		(1 << 16)
-#define UHSIC_DATA_RPD_B		(1 << 9)
-#define UHSIC_STRB_RPD_B		(1 << 8)
-#define UHSIC_DATA_RPD_A		(1 << 1)
-#define UHSIC_STRB_RPD_A		(1 << 0)
-
 #define PMC_SLEEP_CFG			0x1fc
 #define   UTMIP_TCTRL_USE_PMC(inst) (1 << ((8*(inst))+3))
 #define   UTMIP_TCTRL_USE_PMC_P2		(1 << 19)
@@ -390,8 +392,6 @@
 #define   UTMIP_MASTER_ENABLE_P2		(1 << 16)
 #define   UTMIP_MASTER_ENABLE_P1		(1 << 8)
 #define   UTMIP_MASTER_ENABLE_P0		(1 << 0)
-#define UHSIC_MASTER_ENABLE_P0		(1 << 24)
-#define UHSIC_WAKE_VAL_P0(x)		(((x) & 0xf) << 28)
 
 #define PMC_SLEEPWALK_CFG		0x200
 #define   UTMIP_LINEVAL_WALK_EN(inst) (1 << ((8*(inst))+7))
@@ -430,7 +430,7 @@
 #define   UTMIP_AN_D		(1 << 29)
 #define   UTMIP_HIGHZ_D		(1 << 30)
 
-#define UTMIP_UHSIC_STATUS		0x214
+#define UTMIP_STATUS		0x214
 #define   UTMIP_WALK_PTR_VAL(inst)	(0x3 << ((inst)*2))
 #define   UTMIP_USBOP_VAL(inst)		(1 << ((2*(inst)) + 8))
 #define   UTMIP_USBOP_VAL_P2		(1 << 12)
@@ -453,11 +453,7 @@
 #define USB2_PREFETCH_ID               18
 #define USB3_PREFETCH_ID               17
 
-#define PMC_UTMIP_UHSIC_FAKE		0x218
-
-#define UHSIC_STROBE_VAL		(1 << 12)
-#define UHSIC_DATA_VAL			(1 << 13)
-
+#define PMC_UTMIP_FAKE		0x218
 #define   USBON_VAL(inst)	(1 << ((4*(inst))+1))
 #define   USBON_VAL_P2			(1 << 9)
 #define   USBON_VAL_P1			(1 << 5)
@@ -474,7 +470,10 @@
 #define   UTMIP_PWR(inst)		(1 << (inst))
 
 #define FUSE_USB_CALIB_0		0x1F0
-#define   FUSE_USB_CALIB_XCVR_SETUP(x)	(((x) & 0x7F) << 0)
+#define   XCVR_SETUP(x)	(((x) & 0x7F) << 0)
+#define   XCVR_SETUP_LSB_MASK	0xF
+#define   XCVR_SETUP_MSB_MASK	0x70
+#define   XCVR_SETUP_LSB_MAX_VAL	0xF
 
 #define APB_MISC_GP_OBSCTRL_0	0x818
 #define APB_MISC_GP_OBSDATA_0	0x81c
@@ -499,6 +498,12 @@
 #define DBG(stuff...)	pr_info("tegra11x_usb_phy: " stuff)
 #else
 #define DBG(stuff...)	do {} while (0)
+#endif
+
+#if 0
+#define PHY_DBG(stuff...)	pr_info("tegra11x_usb_phy: " stuff)
+#else
+#define PHY_DBG(stuff...)	do {} while (0)
 #endif
 
 /* define HSIC phy params */
@@ -676,10 +681,10 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	writel(val, pmc_base + PMC_USB_DEBOUNCE);
 
 	/* Make sure nothing is happening on the line with respect to PMC */
-	val = readl(pmc_base + PMC_UTMIP_UHSIC_FAKE);
+	val = readl(pmc_base + PMC_UTMIP_FAKE);
 	val &= ~USBOP_VAL(inst);
 	val &= ~USBON_VAL(inst);
-	writel(val, pmc_base + PMC_UTMIP_UHSIC_FAKE);
+	writel(val, pmc_base + PMC_UTMIP_FAKE);
 
 	/* Make sure wake value for line is none */
 	val = readl(pmc_base + PMC_SLEEPWALK_CFG);
@@ -696,28 +701,16 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	writel(val, pmc_base + PMC_USB_AO);
 
 	/* Remove fake values and make synchronizers work a bit */
-	val = readl(pmc_base + PMC_UTMIP_UHSIC_FAKE);
+	val = readl(pmc_base + PMC_UTMIP_FAKE);
 	val &= ~USBOP_VAL(inst);
 	val &= ~USBON_VAL(inst);
-	writel(val, pmc_base + PMC_UTMIP_UHSIC_FAKE);
-
-	/* Enable which type of event can trigger a walk,
-	in this case usb_line_wake */
-	val = readl(pmc_base + PMC_SLEEPWALK_CFG);
-	val |= UTMIP_LINEVAL_WALK_EN(inst);
-	writel(val, pmc_base + PMC_SLEEPWALK_CFG);
+	writel(val, pmc_base + PMC_UTMIP_FAKE);
 
 	/* Enable which type of event can trigger a walk,
 	* in this case usb_line_wake */
 	val = readl(pmc_base + PMC_SLEEPWALK_CFG);
 	val |= UTMIP_LINEVAL_WALK_EN(inst);
 	writel(val, pmc_base + PMC_SLEEPWALK_CFG);
-
-	/* Clear the walk pointers and wake alarm */
-	val = readl(pmc_base + PMC_TRIGGERS);
-	val |= UTMIP_CLR_WAKE_ALARM(inst) | UTMIP_CLR_WALK_PTR(inst);
-	writel(val, pmc_base + PMC_TRIGGERS);
-
 
 	/* Capture FS/LS pad configurations */
 	pmc_pad_cfg_val = readl(pmc_base + PMC_PAD_CFG);
@@ -780,6 +773,7 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val = readl(base + UTMIP_PMC_WAKEUP0);
 	val |= EVENT_INT_ENB;
 	writel(val, base + UTMIP_PMC_WAKEUP0);
+	PHY_DBG("%s ENABLE_PMC inst = %d\n", __func__, inst);
 }
 
 static void utmip_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
@@ -795,10 +789,6 @@ static void utmip_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
 	val &= ~UTMIP_WAKE_VAL(inst, 0xF);
 	val |= UTMIP_WAKE_VAL(inst, WAKE_VAL_NONE);
 	writel(val, pmc_base + PMC_SLEEP_CFG);
-
-	val = readl(pmc_base + PMC_TRIGGERS);
-	val |= UTMIP_CLR_WAKE_ALARM(inst) | UTMIP_CLR_WALK_PTR(inst);
-	writel(val, pmc_base + PMC_TRIGGERS);
 
 	val = readl(base + UTMIP_PMC_WAKEUP0);
 	val &= ~EVENT_INT_ENB;
@@ -819,7 +809,13 @@ static void utmip_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
 	val |= (USBOP_VAL_PD(inst) | USBON_VAL_PD(inst));
 	writel(val, pmc_base + PMC_USB_AO);
 
+	val = readl(pmc_base + PMC_TRIGGERS);
+	val |= UTMIP_CLR_WALK_PTR(inst);
+	val |= UTMIP_CLR_WAKE_ALARM(inst);
+	writel(val, pmc_base + PMC_TRIGGERS);
+
 	phy->remote_wakeup = false;
+	PHY_DBG("%s DISABLE_PMC inst = %d\n", __func__, inst);
 }
 
 static bool utmi_phy_remotewake_detected(struct tegra_usb_phy *phy)
@@ -832,7 +828,7 @@ static bool utmi_phy_remotewake_detected(struct tegra_usb_phy *phy)
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 	val = readl(base + UTMIP_PMC_WAKEUP0);
 	if (val & EVENT_INT_ENB) {
-		val = readl(pmc_base + UTMIP_UHSIC_STATUS);
+		val = readl(pmc_base + UTMIP_STATUS);
 		if (UTMIP_WAKE_ALARM(inst) & val) {
 			val = readl(pmc_base + PMC_SLEEP_CFG);
 			val &= ~UTMIP_WAKE_VAL(inst, 0xF);
@@ -840,8 +836,7 @@ static bool utmi_phy_remotewake_detected(struct tegra_usb_phy *phy)
 			writel(val, pmc_base + PMC_SLEEP_CFG);
 
 			val = readl(pmc_base + PMC_TRIGGERS);
-			val |= UTMIP_CLR_WAKE_ALARM(inst) |
-				UTMIP_CLR_WALK_PTR(inst);
+			val |= UTMIP_CLR_WAKE_ALARM(inst);
 			writel(val, pmc_base + PMC_TRIGGERS);
 
 			val = readl(base + UTMIP_PMC_WAKEUP0);
@@ -952,6 +947,7 @@ static void utmip_powerdown_pmc_wake_detect(struct tegra_usb_phy *phy)
 		UTMIP_RCTRL_USE_PMC(inst) | UTMIP_TCTRL_USE_PMC(inst) |
 		UTMIP_FSLS_USE_PMC(inst) | UTMIP_MASTER_ENABLE(inst);
 	writel(val, pmc_base + PMC_SLEEP_CFG);
+	PHY_DBG("%s ENABLE_PMC inst = %d\n", __func__, inst);
 }
 
 static void utmip_powerup_pmc_wake_detect(struct tegra_usb_phy *phy)
@@ -966,7 +962,60 @@ static void utmip_powerup_pmc_wake_detect(struct tegra_usb_phy *phy)
 			UTMIP_FSLS_USE_PMC(inst) | UTMIP_MASTER_ENABLE(inst));
 	writel(val, pmc_base + PMC_SLEEP_CFG);
 	mdelay(1);
+	PHY_DBG("%s DISABLE_PMC inst = %d\n", __func__, inst);
 }
+
+
+#ifdef KERNEL_WARNING
+static void usb_phy_power_down_pmc(void)
+{
+	unsigned long val;
+	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+
+	/* power down all 3 UTMIP interfaces */
+	val = readl(pmc_base + PMC_UTMIP_MASTER_CONFIG);
+	val |= UTMIP_PWR(0) | UTMIP_PWR(1) | UTMIP_PWR(2);
+	writel(val, pmc_base + PMC_UTMIP_MASTER_CONFIG);
+
+	/* turn on pad detectors */
+	writel(PMC_POWER_DOWN_MASK, pmc_base + PMC_USB_AO);
+
+	/* setup sleep walk fl all 3 usb controllers */
+	val = UTMIP_USBOP_RPD_A | UTMIP_USBON_RPD_A | UTMIP_HIGHZ_A |
+		UTMIP_USBOP_RPD_B | UTMIP_USBON_RPD_B | UTMIP_HIGHZ_B |
+		UTMIP_USBOP_RPD_C | UTMIP_USBON_RPD_C | UTMIP_HIGHZ_C |
+		UTMIP_USBOP_RPD_D | UTMIP_USBON_RPD_D | UTMIP_HIGHZ_D;
+	writel(val, pmc_base + PMC_SLEEPWALK_REG(0));
+	writel(val, pmc_base + PMC_SLEEPWALK_REG(1));
+	writel(val, pmc_base + PMC_SLEEPWALK_REG(2));
+
+	/* enable pull downs on HSIC PMC */
+	val = UHSIC_STROBE_RPD_A | UHSIC_DATA_RPD_A | UHSIC_STROBE_RPD_B |
+		UHSIC_DATA_RPD_B | UHSIC_STROBE_RPD_C | UHSIC_DATA_RPD_C |
+		UHSIC_STROBE_RPD_D | UHSIC_DATA_RPD_D;
+	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC);
+
+	/* Turn over pad configuration to PMC */
+	val = readl(pmc_base + PMC_SLEEP_CFG);
+	val &= ~UTMIP_WAKE_VAL(0, ~0);
+	val &= ~UTMIP_WAKE_VAL(1, ~0);
+	val &= ~UTMIP_WAKE_VAL(2, ~0);
+	val &= ~UHSIC_WAKE_VAL_P0(~0);
+	val |= UTMIP_WAKE_VAL(0, WAKE_VAL_NONE) |
+	UHSIC_WAKE_VAL_P0(WAKE_VAL_NONE) |
+	UTMIP_WAKE_VAL(1, WAKE_VAL_NONE) | UTMIP_WAKE_VAL(2, WAKE_VAL_NONE) |
+	UTMIP_RCTRL_USE_PMC(0) | UTMIP_RCTRL_USE_PMC(1) |
+	UTMIP_RCTRL_USE_PMC(2) |
+	UTMIP_TCTRL_USE_PMC(0) | UTMIP_TCTRL_USE_PMC(1) |
+	UTMIP_TCTRL_USE_PMC(2) |
+	UTMIP_FSLS_USE_PMC(0) | UTMIP_FSLS_USE_PMC(1) |
+	UTMIP_FSLS_USE_PMC(2) |
+	UTMIP_MASTER_ENABLE(0) | UTMIP_MASTER_ENABLE(1) |
+	UTMIP_MASTER_ENABLE(2) |
+	UHSIC_MASTER_ENABLE_P0;
+	writel(val, pmc_base + PMC_SLEEP_CFG);
+}
+#endif
 
 static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 {
@@ -974,9 +1023,33 @@ static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 	void __iomem *base = phy->regs;
 
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
-	DBG("USB_USBSTS[0x%x] USB_PORTSC[0x%x] port_speed[%d]\n",
-		readl(base + USB_USBSTS), readl(base + USB_PORTSC),
+	PHY_DBG("[%d] USB_USBSTS[0x%x] USB_PORTSC[0x%x] port_speed[%d]\n",
+	__LINE__, readl(base + USB_USBSTS), readl(base + USB_PORTSC),
 							phy->port_speed);
+
+	/* Device is plugged in when system is in LP0 */
+	/* Bring up the controller from LP0*/
+	val = readl(base + USB_USBCMD);
+	val |= USB_CMD_RESET;
+	writel(val, base + USB_USBCMD);
+
+	if (usb_phy_reg_status_wait(base + USB_USBCMD,
+		USB_CMD_RESET, 0, 2500) < 0) {
+		pr_err("%s: timeout waiting for reset\n", __func__);
+	}
+
+	val = readl(base + USB_USBMODE);
+	val &= ~USB_USBMODE_MASK;
+	val |= USB_USBMODE_HOST;
+	writel(val, base + USB_USBMODE);
+	val = readl(base + HOSTPC1_DEVLC);
+	val &= ~HOSTPC1_DEVLC_PTS(~0);
+
+	if (phy->pdata->phy_intf == TEGRA_USB_PHY_INTF_HSIC)
+		val |= HOSTPC1_DEVLC_PTS(HOSTPC1_DEVLC_PTS_HSIC);
+	else
+		val |= HOSTPC1_DEVLC_STS;
+	writel(val, base + HOSTPC1_DEVLC);
 
 	/* Enable Port Power */
 	val = readl(base + USB_PORTSC);
@@ -990,7 +1063,8 @@ static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 		/* Program the field PTC based on the saved speed mode */
 		val = readl(base + USB_PORTSC);
 		val &= ~USB_PORTSC_PTC(~0);
-		if (phy->port_speed == USB_PHY_PORT_SPEED_HIGH)
+		if ((phy->port_speed == USB_PHY_PORT_SPEED_HIGH) ||
+			(phy->pdata->phy_intf == TEGRA_USB_PHY_INTF_HSIC))
 			val |= USB_PORTSC_PTC(5);
 		else if (phy->port_speed == USB_PHY_PORT_SPEED_FULL)
 			val |= USB_PORTSC_PTC(6);
@@ -1023,21 +1097,28 @@ static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 	val |= USB_USBSTS_PCI;
 	writel(val, base + USB_USBSTS);
 
-	/* Put controller in suspend mode by writing 1 to SUSP bit of PORTSC */
-	val = readl(base + USB_PORTSC);
-	if ((val & USB_PORTSC_PP) && (val & USB_PORTSC_PE)) {
-		val |= USB_PORTSC_SUSP;
-		writel(val, base + USB_PORTSC);
-		/* Need a 4ms delay before the controller goes to suspend */
-		mdelay(4);
+	if (!phy->remote_wakeup) {
+		/* Put controller in suspend mode by writing 1
+		 * to SUSP bit of PORTSC */
+		val = readl(base + USB_PORTSC);
+		if ((val & USB_PORTSC_PP) && (val & USB_PORTSC_PE)) {
+			val |= USB_PORTSC_SUSP;
+			writel(val, base + USB_PORTSC);
+			/* Need a 4ms delay
+			 * before the controller goes to suspend */
+			mdelay(4);
 
-		/* Wait until port suspend completes */
-		if (usb_phy_reg_status_wait(base + USB_PORTSC, USB_PORTSC_SUSP,
-						 USB_PORTSC_SUSP, 1000)) {
-			pr_err("%s: timeout waiting for PORT_SUSPEND\n",
-								__func__);
+			/* Wait until port suspend completes */
+			if (usb_phy_reg_status_wait(base + USB_PORTSC,
+				USB_PORTSC_SUSP, USB_PORTSC_SUSP, 1000)) {
+				pr_err("%s: timeout waiting for PORT_SUSPEND\n",
+					__func__);
+			}
 		}
 	}
+	PHY_DBG("[%d] USB_USBSTS[0x%x] USB_PORTSC[0x%x] port_speed[%d]\n",
+		__LINE__, readl(base + USB_USBSTS), readl(base + USB_PORTSC),
+		phy->port_speed);
 
 	DBG("USB_USBSTS[0x%x] USB_PORTSC[0x%x]\n",
 			readl(base + USB_USBSTS), readl(base + USB_PORTSC));
@@ -1079,19 +1160,25 @@ static unsigned int utmi_phy_xcvr_setup_value(struct tegra_usb_phy *phy)
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 
 	if (cfg->xcvr_use_fuses) {
-		val = FUSE_USB_CALIB_XCVR_SETUP(
-				tegra_fuse_readl(FUSE_USB_CALIB_0));
-		if (cfg->xcvr_setup_offset <= UTMIP_XCVR_MAX_OFFSET)
-			val = val + cfg->xcvr_setup_offset;
+		val = XCVR_SETUP(tegra_fuse_readl(FUSE_USB_CALIB_0));
+		if (cfg->xcvr_use_lsb) {
+			val = min((unsigned int) ((val & XCVR_SETUP_LSB_MASK)
+				+ cfg->xcvr_setup_offset),
+				(unsigned int) XCVR_SETUP_LSB_MAX_VAL);
+			val |= (cfg->xcvr_setup & XCVR_SETUP_MSB_MASK);
+		} else {
+			if (cfg->xcvr_setup_offset <= UTMIP_XCVR_MAX_OFFSET)
+				val = val + cfg->xcvr_setup_offset;
 
-		if (val > UTMIP_XCVR_SETUP_MAX_VALUE) {
-			val = UTMIP_XCVR_SETUP_MAX_VALUE;
-			pr_info("%s: reset XCVR_SETUP to max value\n",
-				 __func__);
-		} else if (val < UTMIP_XCVR_SETUP_MIN_VALUE) {
-			val = UTMIP_XCVR_SETUP_MIN_VALUE;
-			pr_info("%s: reset XCVR_SETUP to min value\n",
-				 __func__);
+			if (val > UTMIP_XCVR_SETUP_MAX_VALUE) {
+				val = UTMIP_XCVR_SETUP_MAX_VALUE;
+				pr_info("%s: reset XCVR_SETUP to max value\n",
+						__func__);
+			} else if (val < UTMIP_XCVR_SETUP_MIN_VALUE) {
+				val = UTMIP_XCVR_SETUP_MIN_VALUE;
+				pr_info("%s: reset XCVR_SETUP to min value\n",
+						__func__);
+			}
 		}
 	} else {
 		val = cfg->xcvr_setup;
@@ -1146,15 +1233,11 @@ static void utmi_phy_close(struct tegra_usb_phy *phy)
 	DBG("%s inst:[%d]\n", __func__, phy->inst);
 
 	/* Disable PHY clock valid interrupts while going into suspend*/
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		val = readl(base + USB_SUSP_CTRL);
 		val &= ~USB_PHY_CLK_VALID_INT_ENB;
 		writel(val, base + USB_SUSP_CTRL);
 	}
-
-	val = readl(base + USB_PORTSC);
-	val |= USB_PORTSC_WKCN;
-	writel(val, base + USB_PORTSC);
 
 	clk_put(phy->utmi_pad_clk);
 }
@@ -1216,6 +1299,8 @@ static int utmi_phy_irq(struct tegra_usb_phy *phy)
 {
 	void __iomem *base = phy->regs;
 	unsigned long val = 0;
+	bool remote_wakeup = false;
+	int irq_status = IRQ_HANDLED;
 
 	if (phy->phy_clk_on) {
 		DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
@@ -1226,28 +1311,48 @@ static int utmi_phy_irq(struct tegra_usb_phy *phy)
 	}
 
 	/* check if there is any remote wake event */
-	if (utmi_phy_remotewake_detected(phy))
+	if (utmi_phy_remotewake_detected(phy)) {
 		pr_info("%s: utmip remote wake detected\n", __func__);
+		remote_wakeup = true;
+	}
 
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		val = readl(base + USB_SUSP_CTRL);
 		if ((val  & USB_PHY_CLK_VALID_INT_STS)) {
 			val &= ~USB_PHY_CLK_VALID_INT_ENB |
 					USB_PHY_CLK_VALID_INT_STS;
 			writel(val , (base + USB_SUSP_CTRL));
-			pr_info("%s: usb device plugged-in\n", __func__);
-			val = readl(base + USB_USBSTS);
-			if (!(val  & USB_USBSTS_PCI))
-				return IRQ_NONE;
-			val = readl(base + USB_PORTSC);
-			val &= ~(USB_PORTSC_WKCN | USB_PORTSC_RWC_BITS);
-			writel(val , (base + USB_PORTSC));
+
+			/* In case of remote wakeup PHY clock will not up
+			 * immediately, so should not access any controller
+			 * register but normal plug-in/plug-out should be
+			 * executed
+			 */
+			if (!remote_wakeup) {
+				val = readl(base + USB_USBSTS);
+				if (!(val  & USB_USBSTS_PCI)) {
+					irq_status = IRQ_NONE;
+					goto exit;
+				}
+
+				val = readl(base + USB_PORTSC);
+				if (val & USB_PORTSC_CCS)
+					val &= ~USB_PORTSC_WKCN;
+				else
+					val &= ~USB_PORTSC_WKDS;
+				val &= ~USB_PORTSC_RWC_BITS;
+				writel(val , (base + USB_PORTSC));
+			}
 		} else if (!phy->phy_clk_on) {
-			return IRQ_NONE;
+			if (remote_wakeup)
+				irq_status = IRQ_HANDLED;
+			else
+				irq_status = IRQ_NONE;
+			goto exit;
 		}
 	}
-
-	return IRQ_HANDLED;
+exit:
+	return irq_status;
 }
 
 static int utmi_phy_post_resume(struct tegra_usb_phy *phy)
@@ -1287,9 +1392,9 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 	unsigned long val;
 	void __iomem *base = phy->regs;
 
-	DBG("%s(%d) inst:[%d] BEGIN\n", __func__, __LINE__, phy->inst);
+	PHY_DBG("%s(%d) inst:[%d] BEGIN\n", __func__, __LINE__, phy->inst);
 	if (!phy->phy_clk_on) {
-		DBG("%s(%d) inst:[%d] phy clk is already off\n",
+		PHY_DBG("%s(%d) inst:[%d] phy clk is already off\n",
 					__func__, __LINE__, phy->inst);
 		return 0;
 	}
@@ -1309,7 +1414,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 		utmip_setup_pmc_wake_detect(phy);
 	}
 
-	if (!phy->pdata->u_data.host.hot_plug) {
+	if (!phy->hot_plug) {
 		val = readl(base + UTMIP_XCVR_CFG0);
 		val |= (UTMIP_FORCE_PD_POWERDOWN | UTMIP_FORCE_PD2_POWERDOWN |
 			 UTMIP_FORCE_PDZI_POWERDOWN);
@@ -1327,10 +1432,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 
 	utmi_phy_pad_power_off(phy);
 
-	phy->port_speed = (readl(base + HOSTPC1_DEVLC) >> 25) &
-			HOSTPC1_DEVLC_PSPD_MASK;
-
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		bool enable_hotplug = true;
 		/* if it is OTG port then make sure to enable hot-plug feature
 		   only if host adaptor is connected, i.e id is low */
@@ -1339,8 +1441,12 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 			enable_hotplug = (val & USB_ID_STATUS) ? false : true;
 		}
 		if (enable_hotplug) {
+			/* Enable wakeup event of device plug-in/plug-out */
 			val = readl(base + USB_PORTSC);
-			val |= USB_PORTSC_WKCN;
+			if (val & USB_PORTSC_CCS)
+				val |= USB_PORTSC_WKDS;
+			else
+				val |= USB_PORTSC_WKCN;
 			writel(val, base + USB_PORTSC);
 
 			val = readl(base + USB_SUSP_CTRL);
@@ -1354,24 +1460,21 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 		}
 	}
 
-	if (phy->inst == 0) {
-			val = readl(base + USB_SUSP_CTRL);
-			val |= UTMIP_RESET;
-			writel(val, base + USB_SUSP_CTRL);
-	}
-
+	/* Disable PHY clock */
 	val = readl(base + HOSTPC1_DEVLC);
 	val |= HOSTPC1_DEVLC_PHCD;
 	writel(val, base + HOSTPC1_DEVLC);
 
-	if (usb_phy_reg_status_wait(base + USB_SUSP_CTRL, USB_PHY_CLK_VALID,
-								0, 2500))
-		pr_warn("%s: timeout waiting for phy to stabilize\n", __func__);
+	if (!phy->hot_plug) {
+		val = readl(base + USB_SUSP_CTRL);
+		val |= UTMIP_RESET;
+		writel(val, base + USB_SUSP_CTRL);
+	}
 
 	phy->phy_clk_on = false;
 	phy->hw_accessible = false;
 
-	DBG("%s(%d) inst:[%d] END\n", __func__, __LINE__, phy->inst);
+	PHY_DBG("%s(%d) inst:[%d] END\n", __func__, __LINE__, phy->inst);
 
 	return 0;
 }
@@ -1383,9 +1486,9 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	void __iomem *base = phy->regs;
 	struct tegra_utmi_config *config = &phy->pdata->u_cfg.utmi;
 
-	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
+	PHY_DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 	if (phy->phy_clk_on) {
-		DBG("%s(%d) inst:[%d] phy clk is already On\n",
+		PHY_DBG("%s(%d) inst:[%d] phy clk is already On\n",
 					__func__, __LINE__, phy->inst);
 		return 0;
 	}
@@ -1442,7 +1545,8 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	val |= UTMIP_XCVR_SETUP_MSB(XCVR_SETUP_MSB_CALIB(phy->utmi_xcvr_setup));
 	val |= UTMIP_XCVR_LSFSLEW(config->xcvr_lsfslew);
 	val |= UTMIP_XCVR_LSRSLEW(config->xcvr_lsrslew);
-	val |= UTMIP_XCVR_HSSLEW_MSB(0x8);
+	if (!config->xcvr_use_lsb)
+		val |= UTMIP_XCVR_HSSLEW_MSB(0x8);
 	writel(val, base + UTMIP_XCVR_CFG0);
 
 	val = readl(base + UTMIP_XCVR_CFG1);
@@ -1499,8 +1603,7 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 		utmip_powerup_pmc_wake_detect(phy);
 	phy->phy_clk_on = true;
 	phy->hw_accessible = true;
-	DBG("%s(%d) End\n", __func__, __LINE__);
-
+	PHY_DBG("%s(%d) End inst:[%d]\n", __func__, __LINE__, phy->inst);
 	return 0;
 }
 
@@ -1511,15 +1614,22 @@ static void utmi_phy_restore_start(struct tegra_usb_phy *phy)
 	int inst = phy->inst;
 
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
-	val = readl(pmc_base + UTMIP_UHSIC_STATUS);
-	/* check whether we wake up from the remote resume */
+	val = readl(pmc_base + UTMIP_STATUS);
+	/* Check whether we wake up from the remote resume.
+	   For lp1 case, pmc is not responsible for waking the
+	   system, it's the flow controller and hence
+	   UTMIP_WALK_PTR_VAL(inst) will return 0.
+	   Also, for lp1 case phy->remote_wakeup will already be set
+	   to true by utmi_phy_irq() when the remote wakeup happens.
+	   Hence change the logic in the else part to enter only
+	   if phy->remote_wakeup is not set to true by the
+	   utmi_phy_irq(). */
 	if (UTMIP_WALK_PTR_VAL(inst) & val) {
 		phy->remote_wakeup = true;
-	} else {
-		if (!((UTMIP_USBON_VAL(phy->inst) |
-			UTMIP_USBOP_VAL(phy->inst)) & val)) {
-				utmip_phy_disable_pmc_bus_ctrl(phy);
-		}
+	} else if (!phy->remote_wakeup) {
+		val = readl(pmc_base + PMC_SLEEP_CFG);
+		if (val & UTMIP_MASTER_ENABLE(inst))
+			utmip_phy_disable_pmc_bus_ctrl(phy);
 	}
 }
 
@@ -1527,19 +1637,26 @@ static void utmi_phy_restore_end(struct tegra_usb_phy *phy)
 {
 	unsigned long val;
 	void __iomem *base = phy->regs;
-	int wait_time_us = 3000; /* FPR should be set by this time */
+	int wait_time_us = 25000; /* FPR should be set by this time */
 
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 	/* check whether we wake up from the remote resume */
 	if (phy->remote_wakeup) {
-		/* wait until FPR bit is set automatically on remote resume */
+		/* wait until SUSPEND and RESUME bit
+		 * is cleared on remote resume */
 		do {
 			val = readl(base + USB_PORTSC);
 			udelay(1);
-			if (wait_time_us == 0)
+			if (wait_time_us == 0) {
+				PHY_DBG("%s PMC FPR" \
+				"timeout val = 0x%x instance = %d\n", \
+				__func__, val, phy->inst);
+				utmi_phy_post_resume(phy);
 				return;
+			}
 			wait_time_us--;
-		} while (!(val & USB_PORTSC_RESUME));
+		} while (val & (USB_PORTSC_RESUME | USB_PORTSC_SUSP));
+
 		/* wait for 25 ms to port resume complete */
 		msleep(25);
 		/* disable PMC master control */
@@ -1660,18 +1777,19 @@ static void uhsic_powerup_pmc_wake_detect(struct tegra_usb_phy *phy)
 {
 	unsigned long val;
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+	unsigned int inst = phy->inst;
 
 	DBG("%s:%d\n", __func__, __LINE__);
 
 	/* turn on pad detectors for HSIC*/
 	val = readl(pmc_base + PMC_USB_AO);
-	val &= ~(HSIC_RESERVED_P0 | STROBE_VAL_PD_P0 | DATA_VAL_PD_P0);
+	val &= ~(HSIC_RESERVED(inst) | STROBE_VAL_PD(inst) | DATA_VAL_PD(inst));
 	writel(val, pmc_base + PMC_USB_AO);
 
 	/* Disable PMC master mode by clearing MASTER_EN */
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~(UHSIC_MASTER_ENABLE_P0);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~(UHSIC_MASTER_ENABLE(inst));
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 	mdelay(1);
 }
 
@@ -1679,25 +1797,26 @@ static void uhsic_powerdown_pmc_wake_detect(struct tegra_usb_phy *phy)
 {
 	unsigned long val;
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+	unsigned int inst = phy->inst;
 
 	DBG("%s:%d\n", __func__, __LINE__);
 
 	/* turn off pad detectors for HSIC*/
 	val = readl(pmc_base + PMC_USB_AO);
-	val |= (HSIC_RESERVED_P0 | STROBE_VAL_PD_P0 | DATA_VAL_PD_P0);
+	val |= (HSIC_RESERVED(inst) | STROBE_VAL_PD(inst) | DATA_VAL_PD(inst));
 	writel(val, pmc_base + PMC_USB_AO);
 
 	/* enable pull downs on HSIC PMC */
 	val = UHSIC_STROBE_RPD_A | UHSIC_DATA_RPD_A | UHSIC_STROBE_RPD_B |
 		UHSIC_DATA_RPD_B | UHSIC_STROBE_RPD_C | UHSIC_DATA_RPD_C |
 		UHSIC_STROBE_RPD_D | UHSIC_DATA_RPD_D;
-	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC);
+	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC(inst));
 
 	/* Turn over pad configuration to PMC */
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_WAKE_VAL_P0(~0);
-	val |= UHSIC_WAKE_VAL_P0(WAKE_VAL_NONE) | UHSIC_MASTER_ENABLE_P0;
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_WAKE_VAL(inst, ~0);
+	val |= UHSIC_WAKE_VAL(inst, WAKE_VAL_NONE) | UHSIC_MASTER_ENABLE(inst);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 }
 
 static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
@@ -1706,6 +1825,7 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	void __iomem *base = phy->regs;
 	bool port_connected;
+	unsigned int inst = phy->inst;
 
 	DBG("%s:%d\n", __func__, __LINE__);
 
@@ -1725,35 +1845,35 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	*/
 
 	/* disable master enable in PMC */
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_MASTER_ENABLE_P0;
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_MASTER_ENABLE(inst);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	/* UTMIP_PWR_PX=1 for power savings mode */
-	val = readl(pmc_base + PMC_UTMIP_MASTER_CONFIG);
-	val |= UHSIC_PWR;
-	writel(val, pmc_base + PMC_UTMIP_MASTER_CONFIG);
+	val = readl(pmc_base + PMC_UHSIC_MASTER_CONFIG(inst));
+	val |= UHSIC_PWR(inst);
+	writel(val, pmc_base + PMC_UHSIC_MASTER_CONFIG(inst));
 
 	/* Make sure nothing is happening on the line with respect to PMC */
-	val = readl(pmc_base + PMC_UTMIP_UHSIC_FAKE);
-	val &= ~UHSIC_STROBE_VAL;
-	val &= ~UHSIC_DATA_VAL;
-	writel(val, pmc_base + PMC_UTMIP_UHSIC_FAKE);
+	val = readl(pmc_base + PMC_UHSIC_FAKE(inst));
+	val &= ~UHSIC_FAKE_STROBE_VAL(inst);
+	val &= ~UHSIC_FAKE_DATA_VAL(inst);
+	writel(val, pmc_base + PMC_UHSIC_FAKE(inst));
 
 	/* Clear walk enable */
-	val = readl(pmc_base + PMC_SLEEPWALK_CFG);
-	val &= ~UHSIC_LINEVAL_WALK_EN;
-	writel(val, pmc_base + PMC_SLEEPWALK_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEPWALK_CFG(inst));
+	val &= ~UHSIC_LINEVAL_WALK_EN(inst);
+	writel(val, pmc_base + PMC_UHSIC_SLEEPWALK_CFG(inst));
 
 	/* Make sure wake value for line is none */
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_WAKE_VAL(WAKE_VAL_ANY);
-	val |= UHSIC_WAKE_VAL(WAKE_VAL_NONE);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_WAKE_VAL(inst, WAKE_VAL_ANY);
+	val |= UHSIC_WAKE_VAL(inst, WAKE_VAL_NONE);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	/* turn on pad detectors */
 	val = readl(pmc_base + PMC_USB_AO);
-	val &= ~(STROBE_VAL_PD_P0 | DATA_VAL_PD_P0);
+	val &= ~(STROBE_VAL_PD(inst) | DATA_VAL_PD(inst));
 	writel(val, pmc_base + PMC_USB_AO);
 
 	/* Add small delay before usb detectors provide stable line values */
@@ -1761,14 +1881,14 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 
 	/* Enable which type of event can trigger a walk,
 	* in this case usb_line_wake */
-	val = readl(pmc_base + PMC_SLEEPWALK_CFG);
-	val |= UHSIC_LINEVAL_WALK_EN;
-	writel(val, pmc_base + PMC_SLEEPWALK_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEPWALK_CFG(inst));
+	val |= UHSIC_LINEVAL_WALK_EN(inst);
+	writel(val, pmc_base + PMC_UHSIC_SLEEPWALK_CFG(inst));
 
 	/* program walk sequence, maintain a J, followed by a driven K
 	* to signal a resume once an wake event is detected */
 
-	val = readl(pmc_base + PMC_SLEEPWALK_UHSIC);
+	val = readl(pmc_base + PMC_SLEEPWALK_UHSIC(inst));
 
 	val &= ~UHSIC_DATA_RPU_A;
 	val |=  UHSIC_DATA_RPD_A;
@@ -1789,25 +1909,25 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val |=  UHSIC_DATA_RPU_D;
 	val &= ~UHSIC_STROBE_RPU_D;
 	val |=  UHSIC_STROBE_RPD_D;
-	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC);
+	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC(inst));
 
 	phy->remote_wakeup = false;
 
 	/* Setting Wake event*/
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_WAKE_VAL(WAKE_VAL_ANY);
-	val |= UHSIC_WAKE_VAL(WAKE_VAL_SD10);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_WAKE_VAL(inst, WAKE_VAL_ANY);
+	val |= UHSIC_WAKE_VAL(inst, WAKE_VAL_SD10);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	/* Clear the walk pointers and wake alarm */
-	val = readl(pmc_base + PMC_TRIGGERS);
-	val |= UHSIC_CLR_WAKE_ALARM_P0 | UHSIC_CLR_WALK_PTR_P0;
-	writel(val, pmc_base + PMC_TRIGGERS);
+	val = readl(pmc_base + PMC_UHSIC_TRIGGERS(inst));
+	val |= UHSIC_CLR_WAKE_ALARM(inst) | UHSIC_CLR_WALK_PTR(inst);
+	writel(val, pmc_base + PMC_UHSIC_TRIGGERS(inst));
 
 	/* Turn over pad configuration to PMC  for line wake events*/
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val |= UHSIC_MASTER_ENABLE;
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val |= UHSIC_MASTER_ENABLE(inst);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	val = readl(base + UHSIC_PMC_WAKEUP0);
 	val |= EVENT_INT_ENB;
@@ -1821,30 +1941,31 @@ static void uhsic_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
 	unsigned long val;
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	void __iomem *base = phy->regs;
+	unsigned int inst = phy->inst;
 
 	DBG("%s (%d)\n", __func__, __LINE__);
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_WAKE_VAL(WAKE_VAL_ANY);
-	val |= UHSIC_WAKE_VAL(WAKE_VAL_NONE);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_WAKE_VAL(inst, WAKE_VAL_ANY);
+	val |= UHSIC_WAKE_VAL(inst, WAKE_VAL_NONE);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	val = readl(base + UHSIC_PMC_WAKEUP0);
 	val &= ~EVENT_INT_ENB;
 	writel(val, base + UHSIC_PMC_WAKEUP0);
 
 	/* Disable PMC master mode by clearing MASTER_EN */
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~(UHSIC_MASTER_ENABLE);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~(UHSIC_MASTER_ENABLE(inst));
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
 	/* turn off pad detectors */
 	val = readl(pmc_base + PMC_USB_AO);
-	val |= (STROBE_VAL_PD_P0 | DATA_VAL_PD_P0);
+	val |= (STROBE_VAL_PD(inst) | DATA_VAL_PD(inst));
 	writel(val, pmc_base + PMC_USB_AO);
 
-	val = readl(pmc_base + PMC_TRIGGERS);
-	val |= (UHSIC_CLR_WALK_PTR_P0 | UHSIC_CLR_WAKE_ALARM_P0);
-	writel(val, pmc_base + PMC_TRIGGERS);
+	val = readl(pmc_base + PMC_UHSIC_TRIGGERS(inst));
+	val |= (UHSIC_CLR_WALK_PTR(inst) | UHSIC_CLR_WAKE_ALARM(inst));
+	writel(val, pmc_base + PMC_UHSIC_TRIGGERS(inst));
 
 	phy->remote_wakeup = false;
 }
@@ -1854,21 +1975,22 @@ static bool uhsic_phy_remotewake_detected(struct tegra_usb_phy *phy)
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	void __iomem *base = phy->regs;
 	u32 val;
+	unsigned int inst = phy->inst;
 
 	val = readl(base + UHSIC_PMC_WAKEUP0);
 	if (!(val & EVENT_INT_ENB))
 		return false;
-	val = readl(pmc_base + UTMIP_UHSIC_STATUS);
-	if (!(UHSIC_WAKE_ALARM & val))
+	val = readl(pmc_base + UHSIC_STATUS(inst));
+	if (!(UHSIC_WAKE_ALARM(inst) & val))
 		return false;
-	val = readl(pmc_base + PMC_SLEEP_CFG);
-	val &= ~UHSIC_WAKE_VAL(WAKE_VAL_ANY);
-	val |= UHSIC_WAKE_VAL(WAKE_VAL_NONE);
-	writel(val, pmc_base + PMC_SLEEP_CFG);
+	val = readl(pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
+	val &= ~UHSIC_WAKE_VAL(inst, WAKE_VAL_ANY);
+	val |= UHSIC_WAKE_VAL(inst, WAKE_VAL_NONE);
+	writel(val, pmc_base + PMC_UHSIC_SLEEP_CFG(inst));
 
-	val = readl(pmc_base + PMC_TRIGGERS);
-	val |= UHSIC_CLR_WAKE_ALARM_P0;
-	writel(val, pmc_base + PMC_TRIGGERS);
+	val = readl(pmc_base + PMC_UHSIC_TRIGGERS(inst));
+	val |= UHSIC_CLR_WAKE_ALARM(inst);
+	writel(val, pmc_base + PMC_UHSIC_TRIGGERS(inst));
 
 	val = readl(base + UHSIC_PMC_WAKEUP0);
 	val &= ~EVENT_INT_ENB;
@@ -1908,15 +2030,16 @@ static void uhsic_phy_restore_start(struct tegra_usb_phy *phy)
 	unsigned long val;
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	void __iomem *base = phy->regs;
+	unsigned int inst = phy->inst;
 
-	val = readl(pmc_base + UTMIP_UHSIC_STATUS);
+	val = readl(pmc_base + UHSIC_STATUS(inst));
 
 	/* check whether we wake up from the remote resume */
-	if (UHSIC_WALK_PTR_VAL & val) {
+	if (UHSIC_WALK_PTR_VAL(inst) & val) {
 		phy->remote_wakeup = true;
 		pr_info("%s: uhsic remote wakeup detected\n", __func__);
 	} else {
-		if (!((UHSIC_STROBE_VAL_P0 | UHSIC_DATA_VAL_P0) & val)) {
+		if (!((UHSIC_STROBE_VAL(inst) | UHSIC_DATA_VAL(inst)) & val)) {
 				uhsic_phy_disable_pmc_bus_ctrl(phy);
 		} else {
 			DBG("%s(%d): setting pretend connect\n", __func__, __LINE__);
@@ -1977,21 +2100,6 @@ static void uhsic_phy_restore_end(struct tegra_usb_phy *phy)
 		return;
 	}
 }
-
-
-static void usb_phy_fence_read(struct tegra_usb_phy *phy)
-{
-	/* Fence read for coherency of AHB master intiated writes */
-	if (phy->inst == 0)
-		readb(IO_ADDRESS(IO_PPCS_PHYS + USB1_PREFETCH_ID));
-	else if (phy->inst == 1)
-		readb(IO_ADDRESS(IO_PPCS_PHYS + USB2_PREFETCH_ID));
-	else if (phy->inst == 2)
-		readb(IO_ADDRESS(IO_PPCS_PHYS + USB3_PREFETCH_ID));
-
-	return;
-}
-
 
 static int uhsic_rail_enable(struct tegra_usb_phy *phy)
 {
@@ -2078,7 +2186,6 @@ static void uhsic_phy_close(struct tegra_usb_phy *phy)
 
 static int uhsic_phy_irq(struct tegra_usb_phy *phy)
 {
-	usb_phy_fence_read(phy);
 	/* check if there is any remote wake event */
 	if (uhsic_phy_remotewake_detected(phy))
 		pr_info("%s: uhsic remote wake detected\n", __func__);
@@ -2130,8 +2237,6 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
 
 	val = readl(base + UHSIC_MISC_CFG0);
 	val |= UHSIC_SUSPEND_EXIT_ON_EDGE;
-	/* Disable generic bus reset, to allow AP30 specific bus reset*/
-	val |= UHSIC_DISABLE_BUSRESET;
 	writel(val, base + UHSIC_MISC_CFG0);
 
 	val = readl(base + UHSIC_MISC_CFG1);
@@ -2264,34 +2369,12 @@ static int uhsic_phy_bus_port_power(struct tegra_usb_phy *phy)
 	val |= UHSIC_DETECT_SHORT_CONNECT;
 	writel(val, base + UHSIC_MISC_CFG0);
 	udelay(1);
-
-	val = readl(base + UHSIC_MISC_CFG0);
-	val |= UHSIC_FORCE_XCVR_MODE;
-	writel(val, base + UHSIC_MISC_CFG0);
-
-	val = readl(base + UHSIC_PADS_CFG1);
-	val &= ~UHSIC_RPD_STROBE;
-	writel(val, base + UHSIC_PADS_CFG1);
-
 	if (phy->pdata->ops && phy->pdata->ops->port_power)
 		phy->pdata->ops->port_power();
 
-	if (usb_phy_reg_status_wait(base + UHSIC_STAT_CFG0,
-			UHSIC_CONNECT_DETECT, UHSIC_CONNECT_DETECT, 25000)) {
-		pr_err("%s: timeout waiting for UHSIC_CONNECT_DETECT\n",
-								__func__);
-		return -ETIMEDOUT;
-	}
-
 	return 0;
 }
 
-static int uhsic_phy_resume(struct tegra_usb_phy *phy)
-{
-	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
-
-	return 0;
-}
 static void ulpi_set_trimmer(struct tegra_usb_phy *phy)
 {
 	struct tegra_ulpi_config *config = &phy->pdata->u_cfg.ulpi;
@@ -2964,7 +3047,6 @@ static struct tegra_usb_phy_ops uhsic_phy_ops = {
 	.power_on	= uhsic_phy_power_on,
 	.power_off	= uhsic_phy_power_off,
 	.pre_resume = uhsic_phy_pre_resume,
-	.resume = uhsic_phy_resume,
 	.post_resume = uhsic_phy_post_resume,
 	.port_power = uhsic_phy_bus_port_power,
 };

@@ -45,7 +45,8 @@ static void promote(struct work_struct *work)
 {
 	struct edp_manager *m = container_of(work, struct edp_manager, work);
 	mutex_lock(&edp_lock);
-	m->gov->promote(m);
+	if (m->num_denied && m->remaining)
+		m->gov->promote(m);
 	mutex_unlock(&edp_lock);
 }
 
@@ -54,6 +55,8 @@ int edp_register_manager(struct edp_manager *mgr)
 	int r = -EEXIST;
 
 	if (!mgr)
+		return -EINVAL;
+	if (!mgr->imax)
 		return -EINVAL;
 
 	mutex_lock(&edp_lock);
@@ -64,6 +67,8 @@ int edp_register_manager(struct edp_manager *mgr)
 		mgr->gov = NULL;
 		INIT_LIST_HEAD(&mgr->clients);
 		INIT_WORK(&mgr->work, promote);
+		mgr->kobj = NULL;
+		edp_manager_add_kobject(mgr);
 		r = 0;
 	}
 	mutex_unlock(&edp_lock);
@@ -122,6 +127,7 @@ int edp_unregister_manager(struct edp_manager *mgr)
 	} else if (!list_empty(&mgr->clients)) {
 		r = -EBUSY;
 	} else {
+		edp_manager_remove_kobject(mgr);
 		edp_set_governor_unlocked(mgr, NULL);
 		list_del(&mgr->link);
 		mgr->registered = false;
@@ -180,10 +186,10 @@ static bool states_ok(struct edp_client *client)
 
 	/* state array should be sorted in descending order */
 	for (i = 1; i < client->num_states; i++)
-		if (client->states[i] >= client->states[i - 1])
+		if (client->states[i] > client->states[i - 1])
 			return false;
 
-	return true;
+	return client->states[0] ? true : false;
 }
 
 /* Keep the list sorted on priority */
@@ -228,6 +234,8 @@ static int register_client(struct edp_manager *mgr, struct edp_client *client)
 	client->num_borrowers = 0;
 	client->num_loans = 0;
 	client->ithreshold = client->states[0];
+	client->kobj = NULL;
+	edp_client_add_kobject(client);
 
 	return 0;
 }
@@ -249,9 +257,83 @@ static void update_loans(struct edp_client *client)
 	struct edp_governor *gov;
 	gov = client->manager ? client->manager->gov : NULL;
 	if (gov && client->cur && !list_empty(&client->borrowers)) {
-		if (gov->update_loans)
+		if (gov->update_loans && *client->cur > client->ithreshold)
 			gov->update_loans(client);
 	}
+}
+
+/* generic default implementation */
+void edp_default_update_request(struct edp_client *client,
+		const unsigned int *req,
+		void (*throttle)(struct edp_client *))
+{
+	struct edp_manager *m = client->manager;
+	unsigned int old = cur_level(client);
+	unsigned int new = req ? *req : 0;
+	bool was_denied = client->cur != client->req;
+
+	client->req = req;
+
+	if (new < old) {
+		client->cur = req;
+		m->remaining += old - new;
+	} else if (new - old <= m->remaining) {
+		client->cur = req;
+		m->remaining -= new - old;
+	} else {
+		throttle(client);
+	}
+
+	if (was_denied && client->cur == client->req)
+		m->num_denied--;
+	else if (!was_denied && client->cur != client->req)
+		m->num_denied++;
+}
+
+/* generic default implementation */
+void edp_default_update_loans(struct edp_client *lender)
+{
+	unsigned int size = *lender->cur - lender->ithreshold;
+	struct loan_client *p;
+
+	list_for_each_entry(p, &lender->borrowers, link) {
+		if (size != p->size) {
+			p->size = p->client->notify_loan_update(size, lender);
+			WARN_ON(p->size > size);
+		}
+
+		size -= min(p->size, size);
+		if (!size)
+			return;
+	}
+}
+
+unsigned int edp_throttling_point(struct edp_client *c, unsigned int deficit)
+{
+	unsigned int lim;
+	unsigned int i;
+
+	if (cur_level(c) - e0_level(c) <= deficit)
+		return c->e0_index;
+
+	lim = cur_level(c) - deficit;
+	i = cur_index(c);
+	while (i < c->e0_index && c->states[i] > lim)
+		i++;
+
+	return i;
+}
+
+unsigned int edp_promotion_point(struct edp_client *c, unsigned int step)
+{
+	unsigned int limit = cur_level(c) + step;
+	unsigned int ci = cur_index(c);
+	unsigned int i = req_index(c);
+
+	while (i < ci && c->states[i] > limit)
+		i++;
+
+	return i;
 }
 
 static int mod_request(struct edp_client *client, const unsigned int *req)
@@ -305,6 +387,7 @@ static int unregister_client(struct edp_client *client)
 	if (client->num_loans)
 		return -EBUSY;
 
+	edp_client_remove_kobject(client);
 	close_all_loans(client);
 	mod_request(client, NULL);
 	list_del(&client->link);

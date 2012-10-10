@@ -43,6 +43,7 @@
 #include <linux/max17048_battery.h>
 #include <linux/leds.h>
 #include <linux/i2c/at24.h>
+#include <linux/of_platform.h>
 
 #include <asm/hardware/gic.h>
 
@@ -61,6 +62,7 @@
 #include <mach/usb_phy.h>
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
+#include <mach/edp.h>
 
 #include "board.h"
 #include "clock.h"
@@ -88,7 +90,9 @@ static __initdata struct tegra_clk_init_table dalmore_clk_init_table[] = {
 	{ "dam2",	"clk_m",	12000000,	false},
 	{ "audio1",	"i2s1_sync",	0,		false},
 	{ "audio3",	"i2s3_sync",	0,		false},
-	{ "vi_sensor",	"pll_p",	150000000,	false},
+	/* Setting vi_sensor-clk to true for validation purpose, will imapact
+	 * power, later set to be false.*/
+	{ "vi_sensor",	"pll_p",	150000000,	true},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
 	{ "i2c3",	"pll_p",	3200000,	false},
@@ -143,9 +147,11 @@ static struct tegra_i2c_platform_data dalmore_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static struct i2c_board_info __initdata rt5640_board_info = {
 	I2C_BOARD_INFO("rt5640", 0x1c),
 };
+#endif
 
 static void dalmore_i2c_init(void)
 {
@@ -332,7 +338,6 @@ static struct tegra_asoc_platform_data dalmore_audio_pdata = {
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
 	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
-	.spk_regulator_id	= "vdd_spk",
 	.i2s_param[HIFI_CODEC]	= {
 		.audio_port_id	= 1,
 		.is_i2s_master	= 1,
@@ -348,6 +353,10 @@ static struct platform_device dalmore_audio_device = {
 	},
 };
 
+static struct platform_device tegra_camera = {
+	.name = "tegra_camera",
+	.id = -1,
+};
 
 static struct platform_device *dalmore_devices[] __initdata = {
 	&tegra_pmu_device,
@@ -359,6 +368,7 @@ static struct platform_device *dalmore_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
 #endif
+	&tegra_camera,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra_se_device,
 #endif
@@ -380,6 +390,7 @@ static struct platform_device *dalmore_devices[] __initdata = {
 static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
 	.op_mode	= TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -417,11 +428,11 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.vbus_reg = "usb_vbus_otg",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
@@ -432,6 +443,31 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.idle_wait_delay = 17,
 		.term_range_adj = 6,
 		.xcvr_setup = 15,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_setup_offset = 0,
+		.xcvr_use_fuses = 1,
+	},
+};
+
+static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = true,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+	.hssync_start_delay = 0,
+		.elastic_limit = 16,
+		.idle_wait_delay = 17,
+		.term_range_adj = 6,
+		.xcvr_setup = 8,
 		.xcvr_lsfslew = 2,
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
@@ -456,6 +492,9 @@ static void dalmore_usb_init(void)
 	tegra_ehci2_device.dev.platform_data =
 		&tegra_ehci2_hsic_smsc_hub_pdata;
 	platform_device_register(&tegra_ehci2_device);
+
+	tegra_ehci3_device.dev.platform_data = &tegra_ehci3_utmi_pdata;
+	platform_device_register(&tegra_ehci3_device);
 }
 
 static void dalmore_modem_init(void)
@@ -504,6 +543,7 @@ static void dalmore_audio_init(void)
 
 static void __init tegra_dalmore_init(void)
 {
+	tegra_battery_edp_init(2500);
 	tegra_clk_init_from_table(dalmore_clk_init_table);
 	tegra_enable_pinmux();
 	dalmore_pinmux_init();
@@ -519,17 +559,27 @@ static void __init tegra_dalmore_init(void)
 	dalmore_suspend_init();
 	dalmore_emc_init();
 	dalmore_panel_init();
+	dalmore_kbc_init();
 	tegra_release_bootloader_fb();
 	dalmore_modem_init();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
 	tegra_wdt_recovery_init();
 #endif
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
+	dalmore_sensors_init();
 }
 
 static void __init dalmore_ramconsole_reserve(unsigned long size)
 {
 	tegra_ram_console_debug_reserve(SZ_1M);
+}
+
+static void __init tegra_dalmore_dt_init(void)
+{
+	tegra_dalmore_init();
+
+	of_platform_populate(NULL,
+		of_default_bus_match_table, NULL, NULL);
 }
 
 static void __init tegra_dalmore_reserve(void)
@@ -543,15 +593,25 @@ static void __init tegra_dalmore_reserve(void)
 	dalmore_ramconsole_reserve(SZ_1M);
 }
 
+static const char * const dalmore_dt_board_compat[] = {
+	"nvidia,dalmore",
+	NULL
+};
+
 MACHINE_START(DALMORE, "dalmore")
 	.atag_offset	= 0x100,
 	.soc		= &tegra_soc_desc,
 	.map_io		= tegra_map_common_io,
 	.reserve	= tegra_dalmore_reserve,
-	.init_early	= tegra30_init_early,
+#ifdef CONFIG_ARCH_TEGRA_3x_SOC
+	.init_early     = tegra30_init_early,
+#else
+	.init_early	= tegra11x_init_early,
+#endif
 	.init_irq	= tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer		= &tegra_timer,
-	.init_machine	= tegra_dalmore_init,
+	.init_machine	= tegra_dalmore_dt_init,
 	.restart	= tegra_assert_system_reset,
+	.dt_compat	= dalmore_dt_board_compat,
 MACHINE_END

@@ -34,6 +34,7 @@
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
 #include "host1x/host1x_syncpt.h"
+#include "gr3d/pod_scaling.h"
 
 #define NVMODMUTEX_2D_FULL	(1)
 #define NVMODMUTEX_2D_SIMPLE	(2)
@@ -124,9 +125,9 @@ static struct nvhost_device tegra_gr3d02_device = {
 	.waitbases	= BIT(NVWAITBASE_3D),
 	.modulemutexes	= BIT(NVMODMUTEX_3D),
 	.class		= NV_GRAPHICS_3D_CLASS_ID,
-	.clocks		= { {"gr3d", UINT_MAX},
+	.clocks		= { {"gr3d", UINT_MAX, 8},
 			    {"gr3d2", UINT_MAX},
-			    {"emc", UINT_MAX} },
+			    {"emc", UINT_MAX, 75} },
 	.powergate_ids = { TEGRA_POWERGATE_3D,
 			   TEGRA_POWERGATE_3D1 },
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -144,9 +145,9 @@ static struct nvhost_device tegra_gr2d02_device = {
 	.waitbases	= BIT(NVWAITBASE_2D_0) | BIT(NVWAITBASE_2D_1),
 	.modulemutexes	= BIT(NVMODMUTEX_2D_FULL) | BIT(NVMODMUTEX_2D_SIMPLE) |
 			  BIT(NVMODMUTEX_2D_SB_A) | BIT(NVMODMUTEX_2D_SB_B),
-	.clocks		= { {"gr2d", 0},
-			  {"epp", 0},
-			  {"emc", 300000000} },
+	.clocks		= { {"gr2d", 0, 7},
+			  {"epp", 0, 10},
+			  {"emc", 300000000, 75} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 	.clockgate_delay = 0,
 	.moduleid	= NVHOST_MODULE_NONE,
@@ -170,7 +171,7 @@ static struct nvhost_device tegra_isp01_device = {
 	.index		= 3,
 	.syncpts	= BIT(NVSYNCPT_VI_ISP_2) | BIT(NVSYNCPT_VI_ISP_3) |
 			  BIT(NVSYNCPT_VI_ISP_4),
-	.clocks		= { {"epp", 0}
+	.clocks		= { {"epp", 0, 10}
 			  },
 	.keepalive	= true,
 	NVHOST_MODULE_NO_POWERGATE_IDS,
@@ -226,8 +227,8 @@ static struct nvhost_device tegra_mpe02_device = {
 	.class		= NV_VIDEO_ENCODE_MPEG_CLASS_ID,
 	.waitbasesync	= true,
 	.keepalive	= true,
-	.clocks		= { {"mpe", UINT_MAX},
-			    {"emc", UINT_MAX} },
+	.clocks		= { {"mpe", UINT_MAX, 29},
+			    {"emc", 400000000, 75} },
 	.powergate_ids	= {TEGRA_POWERGATE_MPE, -1},
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate	= true,
@@ -290,7 +291,6 @@ int nvhost_init_t30_support(struct nvhost_master *host,
 	op->cdma = host1x_cdma_ops;
 	op->push_buffer = host1x_pushbuffer_ops;
 	op->debug = host1x_debug_ops;
-	op->debug.debug_init = nvhost_scale3d_debug_init;
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;

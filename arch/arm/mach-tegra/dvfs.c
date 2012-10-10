@@ -45,6 +45,9 @@
 #define DVFS_RAIL_STATS_RANGE   ((DVFS_RAIL_STATS_TOP_BIN - 1) * \
 				 DVFS_RAIL_STATS_BIN / DVFS_RAIL_STATS_SCALE)
 
+struct dvfs_rail *tegra_cpu_rail;
+struct dvfs_rail *tegra_core_rail;
+
 static LIST_HEAD(dvfs_rail_list);
 static DEFINE_MUTEX(dvfs_lock);
 static DEFINE_MUTEX(rail_disable_lock);
@@ -83,6 +86,11 @@ int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
 			rails[i]->step = rails[i]->max_millivolts;
 
 		list_add_tail(&rails[i]->node, &dvfs_rail_list);
+
+		if (!strcmp("vdd_cpu", rails[i]->reg_id))
+			tegra_cpu_rail = rails[i];
+		else if (!strcmp("vdd_core", rails[i]->reg_id))
+			tegra_core_rail = rails[i];
 	}
 
 	mutex_unlock(&dvfs_lock);
@@ -181,6 +189,13 @@ static int dvfs_rail_set_voltage(struct dvfs_rail *rail, int millivolts)
 			return -EINVAL;
 	}
 
+	/* DFLL adjusts rail voltage automatically - only update stats */
+	if (rail->dfll_mode) {
+		rail->millivolts = rail->new_millivolts;
+		dvfs_rail_stats_update(rail, rail->millivolts, ktime_get());
+		return 0;
+	}
+
 	if (rail->disabled)
 		return 0;
 
@@ -275,6 +290,15 @@ static int dvfs_rail_update(struct dvfs_rail *rail)
 	list_for_each_entry(d, &rail->dvfs, reg_node)
 		millivolts = max(d->cur_millivolts, millivolts);
 
+	/* Apply offset if any clock is requesting voltage */
+	if (millivolts) {
+		millivolts += rail->offs_millivolts;
+		if (millivolts > rail->max_millivolts)
+			millivolts = rail->max_millivolts;
+		else if (millivolts < rail->min_millivolts)
+			millivolts = rail->min_millivolts;
+	}
+
 	/* retry update if limited by from-relationship to account for
 	   circular dependencies */
 	steps = DIV_ROUND_UP(abs(millivolts - rail->millivolts), rail->step);
@@ -333,14 +357,22 @@ static inline unsigned long *dvfs_get_freqs(struct dvfs *d)
 	return d->alt_freqs ? : &d->freqs[0];
 }
 
+static inline const int *dvfs_get_millivolts(struct dvfs *d)
+{
+	if (d->dvfs_rail && d->dvfs_rail->dfll_mode)
+		return d->dfll_millivolts;
+	return d->millivolts;
+}
+
 static int
 __tegra_dvfs_set_rate(struct dvfs *d, unsigned long rate)
 {
 	int i = 0;
 	int ret;
 	unsigned long *freqs = dvfs_get_freqs(d);
+	const int *millivolts = dvfs_get_millivolts(d);
 
-	if (freqs == NULL || d->millivolts == NULL)
+	if (freqs == NULL || millivolts == NULL)
 		return -ENODEV;
 
 	if (rate > freqs[d->num_freqs - 1]) {
@@ -356,12 +388,12 @@ __tegra_dvfs_set_rate(struct dvfs *d, unsigned long rate)
 			i++;
 
 		if ((d->max_millivolts) &&
-		    (d->millivolts[i] > d->max_millivolts)) {
+		    (millivolts[i] > d->max_millivolts)) {
 			pr_warn("tegra_dvfs: voltage %d too high for dvfs on"
-				" %s\n", d->millivolts[i], d->clk_name);
+				" %s\n", millivolts[i], d->clk_name);
 			return -EINVAL;
 		}
-		d->cur_millivolts = d->millivolts[i];
+		d->cur_millivolts = millivolts[i];
 	}
 
 	d->cur_rate = rate;
@@ -392,11 +424,13 @@ int tegra_dvfs_alt_freqs_set(struct dvfs *d, unsigned long *alt_freqs)
 int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate)
 {
 	int i;
+	const int *millivolts;
 
 	if (!rate || !c->dvfs)
 		return 0;
 
-	if (!c->dvfs->millivolts)
+	millivolts = dvfs_get_millivolts(c->dvfs);
+	if (!millivolts)
 		return -ENODEV;
 
 	/*
@@ -415,7 +449,7 @@ int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate)
 	if (i == c->dvfs->num_freqs)
 		return -EINVAL;
 
-	return c->dvfs->millivolts[i];
+	return millivolts[i];
 }
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
@@ -594,6 +628,10 @@ static void __tegra_dvfs_rail_disable(struct dvfs_rail *rail)
 {
 	int ret;
 
+	/* don't set voltage in DFLL mode - won't work, but break stats */
+	if (rail->dfll_mode)
+		return;
+
 	ret = dvfs_rail_set_voltage(rail, rail->nominal_millivolts);
 	if (ret)
 		pr_info("dvfs: failed to set regulator %s to disable "
@@ -680,6 +718,26 @@ bool tegra_dvfs_rail_updating(struct clk *clk)
 		  (clk->dvfs->dvfs_rail->updating))));
 }
 
+#ifdef CONFIG_OF
+int __init of_tegra_dvfs_init(const struct of_device_id *matches)
+{
+	int ret;
+	struct device_node *np;
+
+	for_each_matching_node(np, matches) {
+		const struct of_device_id *match = of_match_node(matches, np);
+		of_tegra_dvfs_init_cb_t dvfs_init_cb = match->data;
+		ret = dvfs_init_cb(np);
+		if (ret) {
+			pr_err("dt: Failed to read %s tables from DT\n",
+							match->compatible);
+			return ret;
+		}
+	}
+	return 0;
+}
+#endif
+
 /*
  * Iterate through all the dvfs regulators, finding the regulator exported
  * by the regulator api for each one.  Must be called in late init, after
@@ -757,6 +815,7 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 				rel->from->millivolts,
 				dvfs_solve_relationship(rel));
 		}
+		seq_printf(s, "   offset     %-7d mV\n", rail->offs_millivolts);
 
 		list_sort(NULL, &rail->dvfs, dvfs_tree_sort_cmp);
 
@@ -830,6 +889,50 @@ static const struct file_operations rail_stats_fops = {
 	.release	= single_release,
 };
 
+static int cpu_offs_get(void *data, u64 *val)
+{
+	if (tegra_cpu_rail) {
+		*val = (u64)tegra_cpu_rail->offs_millivolts;
+		return 0;
+	}
+	*val = 0;
+	return -ENOENT;
+}
+static int cpu_offs_set(void *data, u64 val)
+{
+	if (tegra_cpu_rail) {
+		mutex_lock(&dvfs_lock);
+		tegra_cpu_rail->offs_millivolts = (int)val;
+		dvfs_rail_update(tegra_cpu_rail);
+		mutex_unlock(&dvfs_lock);
+		return 0;
+	}
+	return -ENOENT;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cpu_offs_fops, cpu_offs_get, cpu_offs_set, "%lld\n");
+
+static int core_offs_get(void *data, u64 *val)
+{
+	if (tegra_core_rail) {
+		*val = (u64)tegra_core_rail->offs_millivolts;
+		return 0;
+	}
+	*val = 0;
+	return -ENOENT;
+}
+static int core_offs_set(void *data, u64 val)
+{
+	if (tegra_core_rail) {
+		mutex_lock(&dvfs_lock);
+		tegra_core_rail->offs_millivolts = (int)val;
+		dvfs_rail_update(tegra_core_rail);
+		mutex_unlock(&dvfs_lock);
+		return 0;
+	}
+	return -ENOENT;
+}
+DEFINE_SIMPLE_ATTRIBUTE(core_offs_fops, core_offs_get, core_offs_set, "%lld\n");
+
 int __init dvfs_debugfs_init(struct dentry *clk_debugfs_root)
 {
 	struct dentry *d;
@@ -841,6 +944,16 @@ int __init dvfs_debugfs_init(struct dentry *clk_debugfs_root)
 
 	d = debugfs_create_file("rails", S_IRUGO, clk_debugfs_root, NULL,
 		&rail_stats_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("vdd_cpu_offs", S_IRUGO | S_IWUSR,
+		clk_debugfs_root, NULL, &cpu_offs_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("vdd_core_offs", S_IRUGO | S_IWUSR,
+		clk_debugfs_root, NULL, &core_offs_fops);
 	if (!d)
 		return -ENOMEM;
 
