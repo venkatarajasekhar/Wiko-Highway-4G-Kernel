@@ -169,7 +169,7 @@ enum {
 
 #define SMMU_ADDR_TO_PFN(addr)	((addr) >> 12)
 #define SMMU_ADDR_TO_PDN(addr)	((addr) >> 22)
-#define SMMU_PDN_TO_ADDR(addr)	((pdn) << 22)
+#define SMMU_PDN_TO_ADDR(pdn)	((pdn) << 22)
 
 #define _READABLE	(1 << SMMU_PTB_DATA_ASID_READABLE_SHIFT)
 #define _WRITABLE	(1 << SMMU_PTB_DATA_ASID_WRITABLE_SHIFT)
@@ -1211,8 +1211,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 fail:
 	if (smmu->avp_vector_page)
 		__free_page(smmu->avp_vector_page);
-	if (smmu->regs)
-		devm_iounmap(dev, smmu->regs);
+	devm_iounmap(dev, smmu->regs);
 	if (smmu->regs_ahbarb)
 		devm_iounmap(dev, smmu->regs_ahbarb);
 	if (smmu && smmu->as) {

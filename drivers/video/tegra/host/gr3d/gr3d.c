@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/export.h>
 #include <linux/module.h>
+#include <linux/scatterlist.h>
 #include <mach/gpufuse.h>
 
 #include "t20/t20.h"
@@ -31,12 +32,14 @@
 #include "gr3d_t20.h"
 #include "gr3d_t30.h"
 #include "gr3d_t114.h"
+#include "scale3d_actmon.h"
 #include "scale3d.h"
 #include "bus_client.h"
 #include "nvhost_channel.h"
 #include "nvhost_memmgr.h"
 #include "chip_support.h"
 #include "pod_scaling.h"
+#include "class_ids.h"
 
 void nvhost_3dctx_restore_begin(struct host1x_hwctx_handler *p, u32 *ptr)
 {
@@ -84,17 +87,20 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->restore = mem_op().alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
 			    : mem_mgr_flag_uncacheable);
-	if (IS_ERR_OR_NULL(ctx->restore)) {
-		ctx->restore = NULL;
-		goto fail;
-	}
+	if (IS_ERR_OR_NULL(ctx->restore))
+		goto fail_alloc;
 
 	if (map_restore) {
 		ctx->restore_virt = mem_op().mmap(ctx->restore);
-		if (!ctx->restore_virt)
-			goto fail;
+		if (IS_ERR_OR_NULL(ctx->restore_virt))
+			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
+
+	ctx->restore_sgt = mem_op().pin(memmgr, ctx->restore);
+	if (IS_ERR_OR_NULL(ctx->restore_sgt))
+		goto fail_pin;
+	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
 
 	kref_init(&ctx->hwctx.ref);
 	ctx->hwctx.h = &p->h;
@@ -103,21 +109,17 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx->save_incrs = p->save_incrs;
 	ctx->save_thresh = p->save_thresh;
 	ctx->save_slots = p->save_slots;
-	ctx->restore_phys = mem_op().pin(memmgr, ctx->restore);
-	if (IS_ERR_VALUE(ctx->restore_phys))
-		goto fail;
 
 	ctx->restore_size = p->restore_size;
 	ctx->restore_incrs = p->restore_incrs;
 	return ctx;
 
-fail:
-	if (map_restore && ctx->restore_virt) {
+fail_pin:
+	if (map_restore)
 		mem_op().munmap(ctx->restore, ctx->restore_virt);
-		ctx->restore_virt = NULL;
-	}
+fail_mmap:
 	mem_op().put(memmgr, ctx->restore);
-	ctx->restore = NULL;
+fail_alloc:
 	kfree(ctx);
 	return NULL;
 }
@@ -133,14 +135,11 @@ void nvhost_3dctx_free(struct kref *ref)
 	struct host1x_hwctx *ctx = to_host1x_hwctx(nctx);
 	struct mem_mgr *memmgr = nvhost_get_host(nctx->channel->dev)->memmgr;
 
-	if (ctx->restore_virt) {
+	if (ctx->restore_virt)
 		mem_op().munmap(ctx->restore, ctx->restore_virt);
-		ctx->restore_virt = NULL;
-	}
-	mem_op().unpin(memmgr, ctx->restore);
-	ctx->restore_phys = 0;
+
+	mem_op().unpin(memmgr, ctx->restore, ctx->restore_sgt);
 	mem_op().put(memmgr, ctx->restore);
-	ctx->restore = NULL;
 	kfree(ctx);
 }
 
@@ -198,8 +197,8 @@ static const struct gr3d_desc gr3d[] = {
 		.read_reg = nvhost_gr3d_t30_read_reg,
 	},
 	[gr3d_03] = {
-		.busy = nvhost_scale3d_notify_busy,
-		.idle = nvhost_scale3d_notify_idle,
+		.busy = nvhost_scale3d_actmon_notify_busy,
+		.idle = nvhost_scale3d_actmon_notify_idle,
 		.suspend_ndev = nvhost_scale3d_suspend,
 		.init = nvhost_gr3d_t114_init,
 		.deinit = nvhost_gr3d_t114_deinit,

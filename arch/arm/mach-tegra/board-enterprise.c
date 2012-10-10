@@ -57,6 +57,7 @@
 #include <mach/io_dpd.h>
 #include <mach/usb_phy.h>
 #include <mach/i2s.h>
+#include <mach/tegra_aic326x_pdata.h>
 #include <mach/tegra_asoc_pdata.h>
 #include <mach/thermal.h>
 #include <mach/tegra-bb-power.h>
@@ -615,6 +616,14 @@ static struct tegra_asoc_platform_data enterprise_audio_aic326x_pdata = {
 		.is_i2s_master	= 1,
 		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
 	},
+	.i2s_param[VOICE_CODEC]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.rate		= 8000,
+		.channels	= 2,
+	},
 };
 
 static struct platform_device enterprise_audio_aic326x_device = {
@@ -1092,6 +1101,7 @@ static void __init tegra_enterprise_init(void)
 	tegra_clk_init_from_table(enterprise_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
+	tegra_soc_device_init("tegra_enterprise");
 	enterprise_pinmux_init();
 	enterprise_i2c_init();
 	enterprise_uart_init();
@@ -1146,6 +1156,11 @@ static const char *enterprise_dt_board_compat[] = {
 	NULL
 };
 
+static const char *tai_dt_board_compat[] = {
+	"nvidia,tai",
+	NULL
+};
+
 MACHINE_START(TEGRA_ENTERPRISE, "tegra_enterprise")
 	.atag_offset	= 0x100,
 	.soc		= &tegra_soc_desc,
@@ -1158,4 +1173,18 @@ MACHINE_START(TEGRA_ENTERPRISE, "tegra_enterprise")
 	.init_machine   = tegra_enterprise_dt_init,
 	.restart	= tegra_assert_system_reset,
 	.dt_compat	= enterprise_dt_board_compat,
+MACHINE_END
+
+MACHINE_START(TAI, "tai")
+	.atag_offset	= 0x100,
+	.soc		= &tegra_soc_desc,
+	.map_io         = tegra_map_common_io,
+	.reserve        = tegra_enterprise_reserve,
+	.init_early	= tegra30_init_early,
+	.init_irq       = tegra_init_irq,
+	.handle_irq	= gic_handle_irq,
+	.timer          = &tegra_timer,
+	.init_machine   = tegra_enterprise_dt_init,
+	.restart	= tegra_assert_system_reset,
+	.dt_compat	= tai_dt_board_compat,
 MACHINE_END

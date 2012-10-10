@@ -62,7 +62,6 @@ static struct regulator_consumer_supply palmas_smps8_supply[] = {
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
-	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("avdd_osc", NULL),
 	REGULATOR_SUPPLY("vddio_sys", NULL),
 	REGULATOR_SUPPLY("vddio_bb", NULL),
@@ -97,6 +96,7 @@ static struct regulator_consumer_supply palmas_smps8_supply[] = {
 	REGULATOR_SUPPLY("dvdd_audio", NULL),
 	REGULATOR_SUPPLY("avdd_audio", NULL),
 	REGULATOR_SUPPLY("vdd_com_1v8", NULL),
+	REGULATOR_SUPPLY("vdd_bt_1v8", NULL),
 	REGULATOR_SUPPLY("vdd_ts_1v8", NULL),
 	REGULATOR_SUPPLY("avdd_pll_bb", NULL),
 };
@@ -178,6 +178,7 @@ static struct regulator_consumer_supply palmas_ldoln_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_ldousb_supply[] = {
+	REGULATOR_SUPPLY("avdd_usb", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.1"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.2"),
@@ -356,6 +357,9 @@ static struct platform_device pluto_pda_power_device = {
 static struct regulator_consumer_supply fixed_reg_en_battery_supply[] = {
 		REGULATOR_SUPPLY("vdd_sys_cam", NULL),
 		REGULATOR_SUPPLY("vdd_sys_bl", NULL),
+		REGULATOR_SUPPLY("vdd_sys_com", NULL),
+		REGULATOR_SUPPLY("vdd_sys_gps", NULL),
+		REGULATOR_SUPPLY("vdd_sys_bt", NULL),
 };
 
 static struct regulator_consumer_supply fixed_reg_en_vdd_1v8_cam_supply[] = {
@@ -468,7 +472,7 @@ FIXED_REG(7,	vdd_1v8_mic,	vdd_1v8_mic,
 	-1,	false,	true,	0,	1800);
 
 FIXED_REG(8,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
-	palmas_rails(smps10),	0,	0,
+	NULL,	0,	0,
 	TEGRA_GPIO_PK6,	true,	true,	0,	5000);
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC

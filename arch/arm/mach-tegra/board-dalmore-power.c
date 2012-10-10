@@ -186,7 +186,6 @@ static struct regulator_consumer_supply max77663_sd2_supply[] = {
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
-	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("vddio_cam", "tegrra_camera"),
 	REGULATOR_SUPPLY("pwrdet_cam", NULL),
 	REGULATOR_SUPPLY("avdd_osc", NULL),
@@ -529,6 +528,7 @@ static struct regulator_consumer_supply palmas_smps12_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_smps3_supply[] = {
+	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
 	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.0"),
@@ -620,6 +620,7 @@ static struct regulator_consumer_supply palmas_ldoln_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_ldousb_supply[] = {
+	REGULATOR_SUPPLY("avdd_usb", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.1"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.2"),
@@ -787,6 +788,7 @@ static struct i2c_board_info palma_device[] = {
 /* EN_AVDD_USB_HDMI From PMU GP1 */
 static struct regulator_consumer_supply fixed_reg_avdd_usb_hdmi_supply[] = {
 	REGULATOR_SUPPLY("avdd_hdmi", "tegradc.1"),
+	REGULATOR_SUPPLY("avdd_usb", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.1"),
 	REGULATOR_SUPPLY("avdd_usb", "tegra-ehci.2"),
@@ -974,7 +976,7 @@ static struct platform_device dalmore_pda_power_device = {
 static struct tegra_suspend_platform_data dalmore_suspend_data = {
 	.cpu_timer	= 2000,
 	.cpu_off_timer	= 0,
-	.suspend_mode	= TEGRA_SUSPEND_NONE,
+	.suspend_mode	= TEGRA_SUSPEND_LP0,
 	.core_timer	= 0x7e7e,
 	.core_off_timer = 0,
 	.corereq_high	= true,
@@ -1060,14 +1062,15 @@ int __init dalmore_regulator_init(void)
 	struct board_info board_info;
 	i2c_register_board_info(4, tps65090_regulators,
 			ARRAY_SIZE(tps65090_regulators));
+
+	fill_reg_map();
+	tegra_cl_dvfs_set_platform_data(&dalmore_dfll_cpu_data);
+
 	tegra_get_board_info(&board_info);
 	if (board_info.board_id == BOARD_E1611)
 		dalmore_palmas_regulator_init();
 	else
 		dalmore_max77663_regulator_init();
-
-	fill_reg_map();
-	tegra_cl_dvfs_set_platform_data(&dalmore_dfll_cpu_data);
 
 	i2c_register_board_info(4, tps51632_boardinfo, 1);
 	platform_device_register(&dalmore_pda_power_device);

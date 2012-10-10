@@ -320,6 +320,10 @@ void machine_halt(void)
 void machine_power_off(void)
 {
 	machine_shutdown();
+
+#ifdef CONFIG_SMP
+	preempt_enable();
+#endif
 	if (pm_power_off)
 		pm_power_off();
 }
@@ -335,10 +339,6 @@ void machine_restart(char *cmd)
 	local_fiq_disable();
 
 	machine_shutdown();
-
-	/* Flush the console to make sure all the relevant messages make it
-	 * out to the console drivers */
-	arm_machine_flush_console();
 
 	arm_pm_restart(reboot_mode, cmd);
 

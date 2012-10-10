@@ -9,16 +9,22 @@ config TEGRA_GRHOST
 
 config TEGRA_GRHOST_USE_NVMAP
 	bool "Use nvmap as graphics memory manager"
-	default y
+	default y if TEGRA_NVMAP
 	help
-	  Use nvmap as the graphics memory manager. This is the only
-	  choice at the moment.
+	  Use nvmap as the graphics memory manager.
+
+config TEGRA_GRHOST_USE_DMABUF
+	bool "Support dmabuf buffers"
+	default y
+	select DMA_SHARED_BUFFER
+	help
+	  Support dmabuf buffers.
 
 config TEGRA_GRHOST_DEFAULT_TIMEOUT
 	depends on TEGRA_GRHOST
 	int "Default timeout for submits"
 	default 0 if TEGRA_SIMULATION_PLATFORM
-	default 30000
+	default 10000
 	help
 	  Default timeout for jobs in milliseconds. Set to zero for no timeout.
 

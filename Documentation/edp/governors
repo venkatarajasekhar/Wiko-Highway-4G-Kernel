@@ -39,8 +39,38 @@ minimum guarantee E-state.
 
 3. Overage
 
-Overage governor uses a propotional allocation based on the difference
+Overage governor uses a proportional allocation based on the difference
 between the current E-state level and E0 (named the 'overage'). This
 causes all clients to increase or decrease in their E-state some what
 simultaneously. Hence this is fare allocation policy and ensures that no
 client is throttled too much.
+
+4. Fair
+
+Fair governor policy is similar to overage policy, but the proportion is
+based on E0-state level of clients.
+
+5. Best Fit
+
+This policy searches for a best-fit solution where the number of
+throttles and remaining current is minimum. If the optimal solution
+includes an E-state which is less than what is requested, then that will
+be approved (subject to the general EDP rules).
+
+Since the perfect solution would involve several passes across all
+clients, a trade-off is made to approximate the optimum so that the
+algorithm complexity remains linear.
+
+6. Least Recently Requested (LRR)
+
+An arrival-queue based policy where the least recently requested client
+is throttled first.
+
+7. Most Recently Requested (MRR)
+
+Another arrival-queue based policy where the most recently requested
+client is throttled first.
+
+8. Round Robin (RR)
+
+In this policy, clients are throttled in a round-robin fashion.

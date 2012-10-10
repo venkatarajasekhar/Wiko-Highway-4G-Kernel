@@ -1389,6 +1389,7 @@ static void __init tegra_cardhu_init(void)
 	tegra_clk_init_from_table(cardhu_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
+	tegra_soc_device_init("cardhu");
 	cardhu_pinmux_init();
 	cardhu_i2c_init();
 	cardhu_spi_init();
@@ -1436,9 +1437,9 @@ static void __init tegra_cardhu_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	/* support 1920X1200 with 24bpp */
-	tegra_reserve(0, SZ_8M + SZ_1M, SZ_8M + SZ_1M);
+	tegra_reserve(0, SZ_8M + SZ_1M, SZ_16M);
 #else
-	tegra_reserve(SZ_128M, SZ_8M, SZ_8M);
+	tegra_reserve(SZ_128M, SZ_8M, SZ_16M);
 #endif
 }
 

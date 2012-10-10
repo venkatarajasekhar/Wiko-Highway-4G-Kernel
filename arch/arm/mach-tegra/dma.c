@@ -160,6 +160,7 @@ struct tegra_dma_channel {
 	dma_callback		callback;
 	struct tegra_dma_req	*cb_req;
 	dma_isr_handler		isr_handler;
+	bool	dma_is_paused;
 };
 
 #define  NV_DMA_MAX_CHANNELS  32
@@ -498,6 +499,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 
 	/* Pause dma before checking the queue status */
 	pause_dma(true);
+	ch->dma_is_paused = true;
 	status = readl(ch->addr + APB_DMA_CHAN_STA);
 	word_transfer = get_word_transferred(ch, status);
 
@@ -523,6 +525,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 	}
 
 	resume_dma();
+	ch->dma_is_paused = false;
 
 	spin_unlock_irqrestore(&ch->lock, irq_flags);
 
@@ -727,6 +730,7 @@ struct tegra_dma_channel *tegra_dma_allocate_channel(int mode,
 	ch = &dma_channels[channel];
 	ch->mode = mode;
 	ch->isr_handler = isr_handler;
+	ch->dma_is_paused = false;
 	va_start(args, namefmt);
 	vsnprintf(ch->client_name, sizeof(ch->client_name),
 		namefmt, args);
@@ -791,7 +795,9 @@ static bool tegra_dma_update_hw_partial(struct tegra_dma_channel *ch,
 	 * If there is already IEC status then interrupt handle need to
 	 * load new configuration after aborting current dma.
 	 */
-	pause_dma(false);
+	/* Dont pause again if channel has already paused it*/
+	if (!ch->dma_is_paused)
+		pause_dma(false);
 	status  = readl(ch->addr + APB_DMA_CHAN_STA);
 
 	/*
@@ -835,7 +841,8 @@ static bool tegra_dma_update_hw_partial(struct tegra_dma_channel *ch,
 	configure = true;
 
 exit_config:
-	resume_dma();
+	if (!ch->dma_is_paused)
+		resume_dma();
 	return configure;
 }
 

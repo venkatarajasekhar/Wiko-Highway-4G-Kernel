@@ -65,6 +65,7 @@ int edp_register_manager(struct edp_manager *mgr)
 		mgr->registered = true;
 		mgr->remaining = mgr->imax;
 		mgr->gov = NULL;
+		mgr->gov_data = NULL;
 		INIT_LIST_HEAD(&mgr->clients);
 		INIT_WORK(&mgr->work, promote);
 		mgr->kobj = NULL;
@@ -333,6 +334,7 @@ unsigned int edp_promotion_point(struct edp_client *c, unsigned int step)
 	while (i < ci && c->states[i] > limit)
 		i++;
 
+	WARN_ON(i >= c->num_states);
 	return i;
 }
 

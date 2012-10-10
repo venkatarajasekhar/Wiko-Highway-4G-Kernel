@@ -27,8 +27,10 @@
 #include "nvhost_memmgr.h"
 #include "nvhost_job.h"
 #include "nvhost_acm.h"
+#include "class_ids.h"
 
 #include <linux/slab.h>
+#include <linux/scatterlist.h>
 
 static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	HWCTX_REGINFO(0xe00,    4, DIRECT),
@@ -167,8 +169,9 @@ static void save_begin_v0(struct host1x_hwctx_handler *h, u32 *ptr)
 static void save_direct_v0(u32 *ptr, u32 start_reg, u32 count)
 {
 	ptr[0] = nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1);
-	ptr[1] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						start_reg, true);
+	ptr[1] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			start_reg, true);
 	ptr[2] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
@@ -180,8 +183,9 @@ static void save_indirect_v0(u32 *ptr, u32 offset_reg, u32 offset,
 	ptr[1] = offset;
 	ptr[2] = nvhost_opcode_setclass(NV_HOST1X_CLASS_ID,
 					host1x_uclass_indoff_r(), 1);
-	ptr[3] = nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
-						data_reg, false);
+	ptr[3] = nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
+			data_reg, false);
 	ptr[4] = nvhost_opcode_nonincr(host1x_uclass_inddata_r(), count);
 }
 
@@ -373,24 +377,23 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 
 	p->save_buf = mem_op().alloc(memmgr, p->save_size * sizeof(u32), 32,
 				mem_mgr_flag_write_combine);
-	if (IS_ERR_OR_NULL(p->save_buf)) {
-		p->save_buf = NULL;
-		return NULL;
-	}
-
-	p->save_slots = 1;
+	if (IS_ERR_OR_NULL(p->save_buf))
+		goto fail_alloc;
 
 	save_ptr = mem_op().mmap(p->save_buf);
-	if (!save_ptr) {
-		mem_op().put(memmgr, p->save_buf);
-		p->save_buf = NULL;
-		return NULL;
-	}
+	if (IS_ERR_OR_NULL(save_ptr))
+		goto fail_mmap;
 
-	p->save_phys = mem_op().pin(memmgr, p->save_buf);
+	p->save_sgt = mem_op().pin(memmgr, p->save_buf);
+	if (IS_ERR_OR_NULL(p->save_sgt))
+		goto fail_pin;
+	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 
 	setup_save(p, save_ptr);
 
+	mem_op().munmap(p->save_buf, save_ptr);
+
+	p->save_slots = 1;
 	p->h.alloc = ctx3d_alloc_v0;
 	p->h.save_push = save_push_v0;
 	p->h.save_service = ctx3d_save_service;
@@ -398,6 +401,14 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t20_ctxhandler_init(
 	p->h.put = nvhost_3dctx_put;
 
 	return &p->h;
+
+fail_pin:
+	mem_op().munmap(p->save_buf, save_ptr);
+fail_mmap:
+	mem_op().put(memmgr, p->save_buf);
+fail_alloc:
+	kfree(p);
+	return NULL;
 }
 
 int nvhost_gr3d_t20_read_reg(
@@ -420,7 +431,7 @@ int nvhost_gr3d_t20_read_reg(
 	u32 syncval;
 	int err;
 
-	if (hwctx && hwctx->has_timedout)
+	if (hwctx->has_timedout)
 		return -ETIMEDOUT;
 
 	ctx_waiter = nvhost_intr_alloc_waiter();
@@ -501,7 +512,8 @@ int nvhost_gr3d_t20_read_reg(
 	/*  Tell 3D to send register value to FIFO */
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_nonincr(host1x_uclass_indoff_r(), 1),
-		nvhost_class_host_indoff_reg_read(NV_HOST_MODULE_GR3D,
+		nvhost_class_host_indoff_reg_read(
+			host1x_uclass_indoff_indmodid_gr3d_v(),
 			offset, false));
 	nvhost_cdma_push(&channel->cdma,
 		nvhost_opcode_imm(host1x_uclass_inddata_r(), 0),

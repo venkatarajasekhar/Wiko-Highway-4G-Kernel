@@ -126,7 +126,7 @@ struct nvhost_intr_ops {
 	void (*disable_all_syncpt_intrs)(struct nvhost_intr *);
 	int  (*request_host_general_irq)(struct nvhost_intr *);
 	void (*free_host_general_irq)(struct nvhost_intr *);
-	int (*request_syncpt_irq)(struct nvhost_intr_syncpt *syncpt);
+	int (*free_syncpt_irq)(struct nvhost_intr *);
 };
 
 struct nvhost_dev_ops {
@@ -143,10 +143,11 @@ struct nvhost_mem_ops {
 	struct mem_handle *(*alloc)(struct mem_mgr *,
 			size_t size, size_t align,
 			int flags);
-	struct mem_handle *(*get)(struct mem_mgr *, u32 id);
+	struct mem_handle *(*get)(struct mem_mgr *,
+			u32 id, struct nvhost_device *);
 	void (*put)(struct mem_mgr *, struct mem_handle *);
-	phys_addr_t (*pin)(struct mem_mgr *, struct mem_handle *);
-	void (*unpin)(struct mem_mgr *, struct mem_handle *);
+	struct sg_table *(*pin)(struct mem_mgr *, struct mem_handle *);
+	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
 	void *(*mmap)(struct mem_handle *);
 	void (*munmap)(struct mem_handle *, void *);
 };
@@ -158,6 +159,14 @@ struct nvhost_actmon_ops {
 	int (*above_wmark_count)(struct nvhost_master *host);
 	int (*below_wmark_count)(struct nvhost_master *host);
 	int (*isr)(u32 hintstatus, void __iomem *sync_regs);
+	int (*read_avg_norm)(struct nvhost_master *host, u32 *val);
+	void (*update_sample_period)(struct nvhost_master *host);
+	void (*set_sample_period_norm)(struct nvhost_master *host, long usecs);
+	long (*get_sample_period_norm)(struct nvhost_master *host);
+	long (*get_sample_period)(struct nvhost_master *host);
+	void (*set_k)(struct nvhost_master *host, u32 k);
+	u32 (*get_k)(struct nvhost_master *host);
+
 };
 
 struct nvhost_tickctrl_ops {

@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/workqueue.h>
+#include <linux/console.h>
 
 #include <asm/atomic.h>
 
@@ -94,6 +95,7 @@ static int tegra_fb_set_par(struct fb_info *info)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
 	struct fb_var_screeninfo *var = &info->var;
+	struct tegra_dc *dc = tegra_fb->win->dc;
 
 	if (var->bits_per_pixel) {
 		/* we only support RGB ordering for now */
@@ -159,7 +161,12 @@ static int tegra_fb_set_par(struct fb_info *info)
 					FB_VMODE_STEREO_LEFT_RIGHT);
 #endif
 
-		tegra_dc_set_fb_mode(tegra_fb->win->dc, info->mode, stereo);
+		tegra_dc_set_fb_mode(dc, info->mode, stereo);
+
+		/* Reflect mode chnage on DC HW */
+		if (dc->enabled)
+			tegra_dc_disable(dc);
+		tegra_dc_enable(dc);
 
 		tegra_fb->win->w.full = dfixed_const(info->mode->xres);
 		tegra_fb->win->h.full = dfixed_const(info->mode->yres);
@@ -469,7 +476,13 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	}
 
 	event.info = fb_info->info;
+#ifdef CONFIG_FRAMEBUFFER_CONSOLE
+	console_lock();
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+	console_unlock();
+#else
+	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+#endif
 	mutex_unlock(&fb_info->info->lock);
 }
 

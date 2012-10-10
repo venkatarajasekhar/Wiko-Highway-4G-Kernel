@@ -139,8 +139,6 @@ static struct imx091_reg mode_4208x3120[] = {
 	{0x3342, 0x0F},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
-
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -247,7 +245,6 @@ static struct imx091_reg mode_2104x1560[] = {
 	{0x3342, 0x0F},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -354,7 +351,6 @@ static struct imx091_reg mode_524x390[] = {
 	{0x3342, 0x00},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -461,7 +457,6 @@ static struct imx091_reg mode_348x260[] = {
 	{0x3342, 0x00},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -568,7 +563,6 @@ static struct imx091_reg mode_1948x1096[] = {
 	{0x3342, 0x0F},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -675,7 +669,6 @@ static struct imx091_reg mode_1308x736[] = {
 	{0x3342, 0x0F},
 	{0x3348, 0xE0},
 
-	{0x0101, 0x03},
 	/* stream on */
 	{0x0100, 0x01},
 
@@ -1207,6 +1200,7 @@ imx091_remove(struct i2c_client *client)
 
 static const struct i2c_device_id imx091_id[] = {
 	{ "imx091", 0 },
+	{ }
 };
 
 MODULE_DEVICE_TABLE(i2c, imx091_id);
@@ -1221,15 +1215,13 @@ static struct i2c_driver imx091_i2c_driver = {
 	.id_table = imx091_id,
 };
 
-static int __init
-imx091_init(void)
+static int __init imx091_init(void)
 {
 	pr_info("[IMX091] sensor driver loading\n");
 	return i2c_add_driver(&imx091_i2c_driver);
 }
 
-static void __exit
-imx091_exit(void)
+static void __exit imx091_exit(void)
 {
 	i2c_del_driver(&imx091_i2c_driver);
 }

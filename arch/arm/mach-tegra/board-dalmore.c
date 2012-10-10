@@ -92,7 +92,10 @@ static __initdata struct tegra_clk_init_table dalmore_clk_init_table[] = {
 	{ "audio3",	"i2s3_sync",	0,		false},
 	/* Setting vi_sensor-clk to true for validation purpose, will imapact
 	 * power, later set to be false.*/
-	{ "vi_sensor",	"pll_p",	150000000,	true},
+	{ "vi_sensor",	"pll_p",	150000000,	false},
+	{ "cilab",	"pll_p",	150000000,	false},
+	{ "cilcd",	"pll_p",	150000000,	false},
+	{ "cile",	"pll_p",	150000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
 	{ "i2c3",	"pll_p",	3200000,	false},
@@ -545,6 +548,7 @@ static void __init tegra_dalmore_init(void)
 {
 	tegra_battery_edp_init(2500);
 	tegra_clk_init_from_table(dalmore_clk_init_table);
+	tegra_soc_device_init("dalmore");
 	tegra_enable_pinmux();
 	dalmore_pinmux_init();
 	dalmore_i2c_init();
