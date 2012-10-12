@@ -574,10 +574,7 @@ static void dolak_usb_init(void)
 }
 
 static struct platform_device *dolak_hs_uart_devices[] __initdata = {
-	&tegra_uartb_device,
 	&tegra_uartc_device,
-	&tegra_uartd_device,
-	&tegra_uarte_device,
 };
 
 static struct uart_clk_parent uart_parent_clk[] = {
