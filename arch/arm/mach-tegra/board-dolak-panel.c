@@ -46,6 +46,8 @@
 #define DSI_PANEL_RESET	1
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
+static atomic_t __maybe_unused sd_brightness = ATOMIC_INIT(255);
+
 static int dolak_backlight_init(struct device *dev)
 {
 #if DSI_PANEL_218
@@ -63,10 +65,18 @@ static void dolak_backlight_exit(struct device *dev)
 
 static int dolak_backlight_notify(struct device *unused, int brightness)
 {
-#if DSI_PANEL_218
-	/* TODO: Backlight notify for dsi panel */
-#endif
-	return -ENODEV;
+	int cur_sd_brightness = atomic_read(&sd_brightness);
+
+	/* SD brightness is a percentage */
+	brightness = (brightness * cur_sd_brightness) / 255;
+
+	/* Apply any backlight response curve */
+	if (brightness > 255)
+		pr_info("Error: Brightness > 255!\n");
+
+	/* TODO: add bl_out table here if needed */
+
+	return brightness;
 }
 
 static struct platform_pwm_backlight_data dolak_backlight_data = {
@@ -256,11 +266,62 @@ static struct tegra_dsi_out dolak_dsi = {
 	.lp_read_cmd_mode_freq_khz = 200000,
 };
 
+static struct tegra_dc_sd_settings dolak_sd_settings = {
+	.enable = 0, /* disabled by default */
+	.use_auto_pwm = false,
+	.hw_update_delay = 0,
+	.bin_width = 4,
+	.aggressiveness = 1,
+	.use_vid_luma = false,
+	.phase_in_adjustments = false,
+	.k_limit_enable = false,
+	/* Aggressive k_limit */
+	.k_limit = 180,
+	.sd_window_enable = false,
+	.soft_clipping_enable = false,
+	/* Low soft clipping threshold to compensate for aggressive k_limit */
+	.soft_clipping_threshold = 128,
+	.smooth_k_enable = false,
+	.smooth_k_incr = 64,
+	/* Default video coefficients */
+	.coeff = {5, 9, 2},
+	.fc = {0, 0},
+	/* Immediate backlight changes */
+	.blp = {1024, 255},
+	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
+	/* Default BL TF */
+	.bltf = {
+			{
+				{57, 65, 73, 82},
+				{92, 103, 114, 125},
+				{138, 150, 164, 178},
+				{193, 208, 224, 241},
+			},
+		},
+	/* Default LUT */
+	.lut = {
+			{
+				{255, 255, 255},
+				{199, 199, 199},
+				{153, 153, 153},
+				{116, 116, 116},
+				{85, 85, 85},
+				{59, 59, 59},
+				{36, 36, 36},
+				{17, 17, 17},
+				{0, 0, 0},
+			},
+		},
+	.sd_brightness = &sd_brightness,
+	.bl_device = &dolak_backlight_device,
+};
+
 static struct tegra_dc_out dolak_disp1_out = {
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 	.type		= TEGRA_DC_OUT_RGB,
 #else
 	.type		= TEGRA_DC_OUT_DSI,
+	.sd_settings	= &dolak_sd_settings,
 #endif
 	.dsi		= &dolak_dsi,
 
