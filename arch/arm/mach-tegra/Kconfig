@@ -284,6 +284,12 @@ config MACH_DOLAK
        help
          Support for NVIDIA Dolak FPGA development platform
 
+config MACH_CERES
+       bool "Ceres board"
+       depends on ARCH_TEGRA_14x_SOC
+       help
+         Support for NVIDIA Ceres Development platform
+
 config MACH_CARDHU
        bool "Cardhu board"
        depends on ARCH_TEGRA_3x_SOC
