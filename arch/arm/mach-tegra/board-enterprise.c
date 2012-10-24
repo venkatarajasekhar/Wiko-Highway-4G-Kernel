@@ -619,11 +619,11 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 	.i2s_param[BASEBAND]	= {
 		.audio_port_id	= 2,
 		.is_i2s_master	= 1,
-		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
-		.rate		= 8000,
-		.channels	= 1,
-		.bit_clk    = 2048000,
+		.rate		= 16000,
+		.channels	= 2,
+		.bit_clk        = 768000,
 	},
 	.i2s_param[BT_SCO]	= {
 		.audio_port_id	= 3,
