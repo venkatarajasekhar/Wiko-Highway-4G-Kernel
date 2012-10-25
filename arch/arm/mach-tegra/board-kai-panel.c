@@ -199,10 +199,10 @@ static int kai_panel_postpoweron(void)
 	return 0;
 }
 
-static int kai_panel_enable(void)
+static int kai_panel_enable(struct device *dev)
 {
 	if (kai_lvds_vdd_panel == NULL) {
-		kai_lvds_vdd_panel = regulator_get(NULL, "vdd_lcd_panel");
+		kai_lvds_vdd_panel = regulator_get(dev, "vdd_lcd_panel");
 		if (WARN_ON(IS_ERR(kai_lvds_vdd_panel)))
 			pr_err("%s: couldn't get regulator vdd_lcd_panel: %ld\n",
 			       __func__, PTR_ERR(kai_lvds_vdd_panel));
@@ -241,11 +241,11 @@ static int kai_panel_prepoweroff(void)
 }
 
 #ifdef CONFIG_TEGRA_DC
-static int kai_hdmi_vddio_enable(void)
+static int kai_hdmi_vddio_enable(struct device *dev)
 {
 	int ret;
 	if (!kai_hdmi_vddio) {
-		kai_hdmi_vddio = regulator_get(NULL, "vdd_hdmi_con");
+		kai_hdmi_vddio = regulator_get(dev, "vdd_hdmi_con");
 		if (IS_ERR_OR_NULL(kai_hdmi_vddio)) {
 			ret = PTR_ERR(kai_hdmi_vddio);
 			pr_err("hdmi: couldn't get regulator vdd_hdmi_con\n");
@@ -273,11 +273,11 @@ static int kai_hdmi_vddio_disable(void)
 	return 0;
 }
 
-static int kai_hdmi_enable(void)
+static int kai_hdmi_enable(struct device *dev)
 {
 	int ret;
 	if (!kai_hdmi_reg) {
-		kai_hdmi_reg = regulator_get(NULL, "avdd_hdmi");
+		kai_hdmi_reg = regulator_get(dev, "avdd_hdmi");
 		if (IS_ERR_OR_NULL(kai_hdmi_reg)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
 			kai_hdmi_reg = NULL;
@@ -290,7 +290,7 @@ static int kai_hdmi_enable(void)
 		return ret;
 	}
 	if (!kai_hdmi_pll) {
-		kai_hdmi_pll = regulator_get(NULL, "avdd_hdmi_pll");
+		kai_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
 		if (IS_ERR_OR_NULL(kai_hdmi_pll)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
 			kai_hdmi_pll = NULL;
@@ -626,31 +626,116 @@ int __init kai_panel_init(void)
 	kai_carveouts[1].base = tegra_carveout_start;
 	kai_carveouts[1].size = tegra_carveout_size;
 #endif
-	gpio_request(kai_lvds_avdd_en, "lvds_avdd_en");
-	gpio_direction_output(kai_lvds_avdd_en, 1);
-
-	gpio_request(kai_lvds_stdby, "lvds_stdby");
-	gpio_direction_output(kai_lvds_stdby, 1);
-
-	gpio_request(kai_lvds_rst, "lvds_rst");
-	gpio_direction_output(kai_lvds_rst, 1);
-
+	err = gpio_request(kai_lvds_avdd_en, "lvds_avdd_en");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_output(kai_lvds_avdd_en, 1);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_output failed %d\n",
+			__func__, err);
+			gpio_free(kai_lvds_avdd_en);
+		return err;
+	}
+	err = gpio_request(kai_lvds_stdby, "lvds_stdby");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_output(kai_lvds_stdby, 1);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_output failed %d\n",
+			__func__, err);
+			gpio_free(kai_lvds_stdby);
+		return err;
+	}
+	err = gpio_request(kai_lvds_rst, "lvds_rst");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_output(kai_lvds_rst, 1);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_output failed %d\n",
+			__func__, err);
+			gpio_free(kai_lvds_rst);
+		return err;
+	}
 	if (board_info.fab == BOARD_FAB_A00) {
-		gpio_request(kai_lvds_rs_a00, "lvds_rs");
-		gpio_direction_output(kai_lvds_rs_a00, 0);
+		err = gpio_request(kai_lvds_rs_a00, "lvds_rs");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n",
+				__func__, err);
+			return err;
+		}
+		err = gpio_direction_output(kai_lvds_rs_a00, 0);
+		if (err < 0) {
+			pr_err("%s: gpio_direction_output failed %d\n",
+				__func__, err);
+			gpio_free(kai_lvds_rs_a00);
+			return err;
+		}
 	} else {
-		gpio_request(kai_lvds_rs, "lvds_rs");
-		gpio_direction_output(kai_lvds_rs, 0);
+		err = gpio_request(kai_lvds_rs, "lvds_rs");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n",
+				__func__, err);
+			return err;
+		}
+		err = gpio_direction_output(kai_lvds_rs, 0);
+		if (err < 0) {
+			pr_err("%s: gpio_direction_output failed %d\n",
+				__func__, err);
+			gpio_free(kai_lvds_rs);
+			return err;
+		}
 	}
 
-	gpio_request(kai_lvds_lr, "lvds_lr");
-	gpio_direction_output(kai_lvds_lr, 1);
+	err = gpio_request(kai_lvds_lr, "lvds_lr");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_output(kai_lvds_lr, 1);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_output failed %d\n",
+			__func__, err);
+		gpio_free(kai_lvds_lr);
+		return err;
+	}
 
-	gpio_request(kai_lvds_shutdown, "lvds_shutdown");
-	gpio_direction_output(kai_lvds_shutdown, 1);
+	err = gpio_request(kai_lvds_shutdown, "lvds_shutdown");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_output(kai_lvds_shutdown, 1);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_output failed %d\n",
+			__func__, err);
+		gpio_free(kai_lvds_shutdown);
+		return err;
+	}
 
-	gpio_request(kai_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(kai_hdmi_hpd);
+	err = gpio_request(kai_hdmi_hpd, "hdmi_hpd");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, err);
+		return err;
+	}
+	err = gpio_direction_input(kai_hdmi_hpd);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, err);
+		gpio_free(kai_hdmi_hpd);
+		return err;
+	}
 
 #ifdef CONFIG_TEGRA_GRHOST
 	err = tegra3_register_host1x_devices();

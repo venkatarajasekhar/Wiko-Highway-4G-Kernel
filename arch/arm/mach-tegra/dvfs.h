@@ -58,6 +58,7 @@ struct dvfs_rail {
 	const char *reg_id;
 	int min_millivolts;
 	int max_millivolts;
+	int reg_max_millivolts;
 	int nominal_millivolts;
 	int step;
 	bool jmp_to_zero;
@@ -78,6 +79,15 @@ struct dvfs_rail {
 	struct rail_stats stats;
 };
 
+struct dvfs_dfll_data {
+	u32		tune0;
+	u32		tune1;
+	unsigned long	droop_rate_min;
+	unsigned long	out_rate_min;
+	unsigned long	max_rate_boost;
+	int min_millivolts;
+};
+
 struct dvfs {
 	/* Used only by tegra2_clock.c */
 	const char *clk_name;
@@ -96,6 +106,7 @@ struct dvfs {
 	/* Filled in by tegra_dvfs_init */
 	int max_millivolts;
 	int num_freqs;
+	struct dvfs_dfll_data dfll_data;
 
 	int cur_millivolts;
 	unsigned long cur_rate;
@@ -105,21 +116,25 @@ struct dvfs {
 };
 
 struct cpu_cvb_dvfs_parameters {
-	unsigned long freq;
 	int	c0;
 	int	c1;
 	int	c2;
 };
 
+struct cpu_cvb_dvfs_table {
+	unsigned long freq;
+	struct cpu_cvb_dvfs_parameters cvb_dfll_param;
+	struct cpu_cvb_dvfs_parameters cvb_pll_param;
+};
+
 struct cpu_cvb_dvfs {
 	int speedo_id;
 	int max_mv;
-	int min_mv;
-	int margin;
+	int min_dfll_mv;
 	int freqs_mult;
 	int speedo_scale;
 	int voltage_scale;
-	struct cpu_cvb_dvfs_parameters cvb_table[MAX_DVFS_FREQS];
+	struct cpu_cvb_dvfs_table cvb_table[MAX_DVFS_FREQS];
 };
 
 extern struct dvfs_rail *tegra_cpu_rail;
@@ -162,6 +177,8 @@ void tegra_dvfs_core_cap_level_set(int level);
 int tegra_dvfs_alt_freqs_set(struct dvfs *d, unsigned long *alt_freqs);
 int tegra_cpu_dvfs_alter(int edp_thermal_index, const cpumask_t *cpus,
 			 bool before_clk_update, int cpu_event);
+int tegra_dvfs_dfll_mode_set(struct dvfs *d, unsigned long rate);
+int tegra_dvfs_dfll_mode_clear(struct dvfs *d, unsigned long rate);
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 int tegra_dvfs_rail_disable_prepare(struct dvfs_rail *rail);
@@ -179,6 +196,9 @@ static inline void tegra_dvfs_age_cpu(int cur_linear_age)
 { return; }
 #endif
 
-
+static inline bool tegra_dvfs_rail_is_dfll_mode(struct dvfs_rail *rail)
+{
+	return rail->dfll_mode;
+}
 
 #endif

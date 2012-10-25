@@ -46,6 +46,7 @@ struct clk;
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 #define PLL_POST_LOCK_DELAY 50	/* Safety delay after lock is detected */
 #else
+#define USE_PLLE_SWCTL 1	/* Use s/w controls for PLLE */
 #define PLL_POST_LOCK_DELAY 10	/* Safety delay after lock is detected */
 #endif
 #endif
@@ -78,8 +79,6 @@ struct clk;
 #define ENABLE_ON_INIT		(1 << 28)
 #define PERIPH_ON_APB		(1 << 29)
 #define PERIPH_ON_CBUS		(1 << 30)
-
-struct tegra_cl_dvfs;
 
 struct clk_mux_sel {
 	struct clk	*input;
@@ -192,7 +191,7 @@ struct clk {
 			u32	(*round_p_to_pdiv)(u32 p, u32 *pdiv);
 		} pll;
 		struct {
-			struct tegra_cl_dvfs		*cl_dvfs;
+			void				*cl_dvfs;
 		} dfll;
 		struct {
 			unsigned long			default_rate;

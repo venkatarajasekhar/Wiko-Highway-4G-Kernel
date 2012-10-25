@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/common.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2010-2012 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2010-2012 NVIDIA Corporation
  *
  * Author:
  *	Colin Cross <ccross@android.com>
@@ -315,7 +315,7 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "sclk",	NULL,		0,		true },
 	{ "pll_p",	NULL,		0,		true },
 	{ "pll_p_out1",	"pll_p",	0,		false },
-	{ "pll_p_out3",	"pll_p",	0,		true },
+	{ "pll_p_out3",	"pll_p",	0,		false },
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	{ "pll_m_out1",	"pll_m",	275000000,	false },
 	{ "pll_p_out2",	 "pll_p",	102000000,	false },
@@ -325,8 +325,8 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "pclk",	"hclk",		51000000,	true },
 	{ "mselect",	"pll_p",	102000000,	true },
 	{ "host1x",	"pll_p",	102000000,	false },
-	{ "cl_dvfs_ref", "pll_p",       54000000,       false },
-	{ "cl_dvfs_soc", "pll_p",       54000000,       false },
+	{ "cl_dvfs_ref", "pll_p",       51000000,       true },
+	{ "cl_dvfs_soc", "pll_p",       51000000,       true },
 #else
 	{ "pll_m_out1",	"pll_m",	275000000,	true },
 	{ "pll_p_out2",	"pll_p",	108000000,	false },
@@ -344,9 +344,10 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 #else
 	{ "csite",      NULL,           0,              true },
 #endif
-	{ "pll_u",	NULL,		480000000,	false },
+	{ "pll_u",	NULL,		480000000,	true },
+	{ "pll_re_vco",	NULL,		312000000,	false },
 	{ "sdmmc1",	"pll_p",	48000000,	false},
-	{ "sdmmc3",	"pll_p",	48000000,	false},
+	{ "sdmmc3",	"pll_p",	48000000,	true},
 	{ "sdmmc4",	"pll_p",	48000000,	false},
 	{ "sbc1.sclk",	NULL,		40000000,	false},
 	{ "sbc2.sclk",	NULL,		40000000,	false},
@@ -355,12 +356,13 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "sbc5.sclk",	NULL,		40000000,	false},
 	{ "sbc6.sclk",	NULL,		40000000,	false},
 #ifdef CONFIG_TEGRA_DUAL_CBUS
-	{ "c2bus",	"pll_c2",	300000000,	false },
-	{ "c3bus",	"pll_c3",	300000000,	false },
+	{ "c2bus",	"pll_c2",	250000000,	false },
+	{ "c3bus",	"pll_c3",	250000000,	false },
+	{ "pll_c",	NULL,		250000000,	false },
 #else
-	{ "cbus",	"pll_c",	416000000,	false },
-	{ "pll_c_out1",	"pll_c",	208000000,	false },
+	{ "cbus",	"pll_c",	250000000,	false },
 #endif
+	{ "pll_c_out1",	"pll_c",	150000000,	false },
 	{ NULL,		NULL,		0,		0},
 };
 #endif
@@ -426,13 +428,62 @@ static __initdata struct tegra_clk_init_table tegra14x_clk_init_table[] = {
 };
 #endif
 
+#ifdef CONFIG_CACHE_L2X0
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-#define CACHE_LINE_SIZE		32
-static inline void tegra_l2x0_disable_tz(void)
+static void tegra_cache_smc(bool enable, u32 arg)
 {
-	static u32 l2x0_way_mask;
+	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
+	bool need_affinity_switch;
+	bool can_switch_affinity;
+	bool l2x0_enabled;
+	cpumask_t local_cpu_mask;
+	cpumask_t saved_cpu_mask;
+	unsigned long flags;
+	long ret;
 
-	BUG_ON(smp_processor_id() != 0);
+	/*
+	 * ISSUE : Some registers of PL310 controler must be written
+	 *              from Secure context (and from CPU0)!
+	 *
+	 * When called form Normal we obtain an abort or do nothing.
+	 * Instructions that must be called in Secure:
+	 *      - Write to Control register (L2X0_CTRL==0x100)
+	 *      - Write in Auxiliary controler (L2X0_AUX_CTRL==0x104)
+	 *      - Invalidate all entries (L2X0_INV_WAY==0x77C),
+	 *              mandatory at boot time.
+	 *      - Tag and Data RAM Latency Control Registers
+	 *              (0x108 & 0x10C) must be written in Secure.
+	 */
+	need_affinity_switch = (smp_processor_id() != 0);
+	can_switch_affinity = !irqs_disabled();
+
+	WARN_ON(need_affinity_switch && !can_switch_affinity);
+	if (need_affinity_switch && can_switch_affinity) {
+		cpu_set(0, local_cpu_mask);
+		sched_getaffinity(0, &saved_cpu_mask);
+		ret = sched_setaffinity(0, &local_cpu_mask);
+		WARN_ON(ret != 0);
+	}
+
+	local_irq_save(flags);
+	l2x0_enabled = readl_relaxed(p + L2X0_CTRL) & 1;
+	if (enable && !l2x0_enabled)
+		tegra_generic_smc(0xFFFFF100, 0x00000001, arg);
+	else if (!enable && l2x0_enabled)
+		tegra_generic_smc(0xFFFFF100, 0x00000002, arg);
+	local_irq_restore(flags);
+
+	if (need_affinity_switch && can_switch_affinity) {
+		ret = sched_setaffinity(0, &saved_cpu_mask);
+		WARN_ON(ret != 0);
+	}
+}
+
+static void tegra_l2x0_disable(void)
+{
+	unsigned long flags;
+	static u32 l2x0_way_mask;
 
 	if (!l2x0_way_mask) {
 		void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
@@ -444,65 +495,33 @@ static inline void tegra_l2x0_disable_tz(void)
 		l2x0_way_mask = (1 << ways) - 1;
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
-	/* flush all ways on disable */
-	tegra_generic_smc_uncached(0xFFFFF100, 0x00000002, l2x0_way_mask);
-#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	if (tegra_is_cpu_in_lp2(0)) {
-		register unsigned long sp asm ("sp");
-		/* flush only the stack, if entering LP2 */
-		__cpuc_flush_dcache_area((void *)sp, (CACHE_LINE_SIZE * 2));
-		outer_flush_range(__pa(sp), __pa(sp) + (CACHE_LINE_SIZE * 2));
-
-		/* pass zero arg, so secureos flushes only its workspace */
-		tegra_generic_smc_uncached(0xFFFFF100, 0x00000002,
-			l2x0_way_mask);
-	} else {
-		/* flush all ways on disable, if entering LP0/LP1 */
-		tegra_generic_smc_uncached(0xFFFFF100, 0x00000002,
-			l2x0_way_mask);
-	}
-#endif
-}
-
-static inline void tegra_init_cache_tz(bool init)
-{
-	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
-	u32 aux_ctrl;
-
-	BUG_ON(smp_processor_id() != 0);
-
-	if (init) {
-		/* init L2 from secureos */
-		tegra_generic_smc(0xFFFFF100, 0x00000001, 0x0);
-
-		/* common init called for outer call hookup */
-		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-		l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
-
-#ifdef CONFIG_OUTER_CACHE
-		/* use our outer_disable() routine */
-		outer_cache.disable = tegra_l2x0_disable_tz;
-#endif
-	} else {
-		/* reenable L2 in secureos */
-		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-		tegra_generic_smc_uncached(0xFFFFF100, 0x00000004, aux_ctrl);
-	}
+	local_irq_save(flags);
+	tegra_cache_smc(false, l2x0_way_mask);
+	local_irq_restore(flags);
 }
 #endif	/* CONFIG_TRUSTED_FOUNDATIONS  */
 
-#ifdef CONFIG_CACHE_L2X0
 void tegra_init_cache(bool init)
 {
-#ifdef CONFIG_TRUSTED_FOUNDATIONS
-	/* enable/re-enable of L2 handled by secureos */
-	tegra_init_cache_tz(init);
-#else
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
 	u32 aux_ctrl;
+#ifndef CONFIG_TRUSTED_FOUNDATIONS
 	u32 cache_type;
-	u32 tag_latency = 0x770, data_latency = 0x770;
+	u32 tag_latency, data_latency;
+#endif
+
+#ifdef CONFIG_TRUSTED_FOUNDATIONS
+	/* issue the SMC to enable the L2 */
+	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+	tegra_cache_smc(true, aux_ctrl);
+
+	/* after init, reread aux_ctrl and register handlers */
+	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+	l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
+
+	/* override outer_disable() with our disable */
+	outer_cache.disable = tegra_l2x0_disable;
+#else
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	tag_latency = 0x331;
 	data_latency = 0x441;
@@ -525,6 +544,9 @@ void tegra_init_cache(bool init)
 			data_latency = 0x551;
 		}
 	}
+#else
+	tag_latency = 0x770;
+	data_latency = 0x770;
 #endif
 #endif
 	writel_relaxed(tag_latency, p + L2X0_TAG_LATENCY_CTRL);
@@ -553,9 +575,14 @@ void tegra_init_cache(bool init)
 		writel(aux_ctrl, p + L2X0_AUX_CTRL);
 	}
 	l2x0_enable();
-#endif /* CONFIG_TRUSTED_FOUNDATIONS */
+#endif
 }
-#endif /* CONFIG_CACHE_L2X0 */
+#else
+void tegra_init_cache(bool init)
+{
+}
+#endif
+#endif
 
 static void __init tegra_init_power(void)
 {

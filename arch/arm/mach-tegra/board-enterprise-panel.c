@@ -233,7 +233,7 @@ static struct platform_device external_pwm_disp1_backlight_device = {
 	},
 };
 #ifdef CONFIG_TEGRA_DC
-static int enterprise_hdmi_vddio_enable(void)
+static int enterprise_hdmi_vddio_enable(struct device *dev)
 {
 	int ret;
 	struct board_info board_info;
@@ -241,7 +241,7 @@ static int enterprise_hdmi_vddio_enable(void)
 	tegra_get_board_info(&board_info);
 
 	if (!enterprise_hdmi_vddio) {
-		enterprise_hdmi_vddio = regulator_get(NULL, "hdmi_5v0");
+		enterprise_hdmi_vddio = regulator_get(dev, "hdmi_5v0");
 		if (IS_ERR_OR_NULL(enterprise_hdmi_vddio)) {
 			ret = PTR_ERR(enterprise_hdmi_vddio);
 			pr_err("hdmi: couldn't get regulator hdmi_5v0\n");
@@ -293,11 +293,11 @@ static int enterprise_hdmi_vddio_disable(void)
 	return 0;
 }
 
-static int enterprise_hdmi_enable(void)
+static int enterprise_hdmi_enable(struct device *dev)
 {
 	int ret;
 	if (!enterprise_hdmi_reg) {
-		enterprise_hdmi_reg = regulator_get(NULL, "avdd_hdmi");
+		enterprise_hdmi_reg = regulator_get(dev, "avdd_hdmi");
 		if (IS_ERR_OR_NULL(enterprise_hdmi_reg)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
 			enterprise_hdmi_reg = NULL;
@@ -310,7 +310,7 @@ static int enterprise_hdmi_enable(void)
 		return ret;
 	}
 	if (!enterprise_hdmi_pll) {
-		enterprise_hdmi_pll = regulator_get(NULL, "avdd_hdmi_pll");
+		enterprise_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
 		if (IS_ERR_OR_NULL(enterprise_hdmi_pll)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
 			enterprise_hdmi_pll = NULL;
@@ -565,7 +565,7 @@ static int avdd_dsi_csi_rail_disable(void)
 	return 0;
 }
 
-static int enterprise_dsi_panel_enable(void)
+static int enterprise_dsi_panel_enable(struct device *dev)
 {
 	int ret;
 	struct board_info board_info;
@@ -581,7 +581,7 @@ static int enterprise_dsi_panel_enable(void)
 	if ((board_info.fab >= BOARD_FAB_A03) ||
 		(board_info.board_id == BOARD_E1239)) {
 		if (enterprise_lcd_reg == NULL) {
-			enterprise_lcd_reg = regulator_get(NULL, "lcd_vddio_en");
+			enterprise_lcd_reg = regulator_get(dev, "lcd_vddio_en");
 			if (IS_ERR_OR_NULL(enterprise_lcd_reg)) {
 				pr_err("Could not get regulator lcd_vddio_en\n");
 				ret = PTR_ERR(enterprise_lcd_reg);
@@ -604,8 +604,13 @@ static int enterprise_dsi_panel_enable(void)
 			return ret;
 		kernel_1st_panel_init = false;
 	} else {
-		gpio_direction_output(enterprise_dsi_panel_reset, 0);
-
+		ret = gpio_direction_output(enterprise_dsi_panel_reset, 0);
+		if (ret < 0) {
+			pr_err("%s: gpio_direction_ouput failed %d\n",
+				__func__, ret);
+			gpio_free(enterprise_dsi_panel_reset);
+			return ret;
+		}
 		gpio_set_value(enterprise_dsi_panel_reset, 0);
 		udelay(2000);
 		gpio_set_value(enterprise_dsi_panel_reset, 1);
@@ -618,11 +623,20 @@ static int enterprise_dsi_panel_enable(void)
 
 static int enterprise_dsi_panel_disable(void)
 {
+#if DSI_PANEL_RESET
+	int ret;
+#endif
 	if (enterprise_lcd_reg != NULL)
 		regulator_disable(enterprise_lcd_reg);
 
 #if DSI_PANEL_RESET
-	gpio_direction_output(enterprise_dsi_panel_reset, 0);
+	ret = gpio_direction_output(enterprise_dsi_panel_reset, 0);
+	if (ret < 0) {
+		pr_err("%s: gpio_direction_ouput failed %d\n",
+			__func__, ret);
+		gpio_free(enterprise_dsi_panel_reset);
+		return ret;
+	}
 #endif
 	return 0;
 }
@@ -908,32 +922,80 @@ int __init enterprise_panel_init(void)
 	enterprise_carveouts[1].size = tegra_carveout_size;
 #endif
 
-	gpio_request(enterprise_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(enterprise_hdmi_hpd);
+	err = gpio_request(enterprise_hdmi_hpd, "hdmi_hpd");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, err);
+		return err;
+	}
+	err = gpio_direction_input(enterprise_hdmi_hpd);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, err);
+		gpio_free(enterprise_hdmi_hpd);
+		return err;
+	}
 
 	if (board_info.board_id != BOARD_E1239) {
-		gpio_request(enterprise_lcd_2d_3d, "lcd_2d_3d");
-		gpio_direction_output(enterprise_lcd_2d_3d, 0);
+		err = gpio_request(enterprise_lcd_2d_3d, "lcd_2d_3d");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n", __func__, err);
+			return err;
+		}
+		err = gpio_direction_output(enterprise_lcd_2d_3d, 0);
+		if (err < 0) {
+			pr_err("%s: gpio_direction_ouput failed %d\n",
+				__func__, err);
+			gpio_free(enterprise_lcd_2d_3d);
+			return err;
+		}
 		enterprise_stereo_set_mode(enterprise_stereo.mode_2d_3d);
 
-		gpio_request(enterprise_lcd_swp_pl, "lcd_swp_pl");
-		gpio_direction_output(enterprise_lcd_swp_pl, 0);
+		err = gpio_request(enterprise_lcd_swp_pl, "lcd_swp_pl");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n", __func__, err);
+			return err;
+		}
+		err = gpio_direction_output(enterprise_lcd_swp_pl, 0);
+		if (err < 0) {
+			pr_err("%s: gpio_direction_ouput failed %d\n",
+				__func__, err);
+			gpio_free(enterprise_lcd_swp_pl);
+			return err;
+		}
 		enterprise_stereo_set_orientation(
 						enterprise_stereo.orientation);
 #if IS_EXTERNAL_PWM
-		gpio_request(enterprise_bl_pwm, "bl_pwm");
+		err = gpio_request(enterprise_bl_pwm, "bl_pwm");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n", __func__, err);
+			return err;
+		}
 		gpio_free(enterprise_bl_pwm);
 #endif
 	} else {
 		/* External pwm is used but do not use IS_EXTERNAL_PWM
 		compiler switch for TAI */
-		gpio_request(enterprise_bl_pwm, "bl_pwm");
+		err = gpio_request(enterprise_bl_pwm, "bl_pwm");
+		if (err < 0) {
+			pr_err("%s: gpio_request failed %d\n", __func__, err);
+			return err;
+		}
 		gpio_free(enterprise_bl_pwm);
 	}
 
 #if !(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
-	gpio_request(enterprise_lcd_swp_pl, "lcd_te");
-	gpio_direction_input(enterprise_lcd_te);
+	err = gpio_request(enterprise_lcd_swp_pl, "lcd_te");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, err);
+		return err;
+	}
+	err = gpio_direction_input(enterprise_lcd_te);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, err);
+		gpio_free(enterprise_lcd_te);
+		return err;
+	}
 #endif
 
 #ifdef CONFIG_TEGRA_GRHOST

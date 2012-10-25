@@ -34,6 +34,8 @@
 #include "pm.h"
 #include "board.h"
 #include "board-pluto.h"
+#include "tegra_cl_dvfs.h"
+#include "devices.h"
 
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)
@@ -136,8 +138,8 @@ static struct regulator_consumer_supply palmas_ldo3_supply[] = {
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.0"),
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.1"),
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegra_camera"),
-	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.1"),
+	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("pwrdet_mipi", NULL),
 	REGULATOR_SUPPLY("vddio_hsic_bb", NULL),
 	REGULATOR_SUPPLY("vddio_hsic_modem2", NULL),
@@ -185,6 +187,7 @@ static struct regulator_consumer_supply palmas_ldousb_supply[] = {
 	REGULATOR_SUPPLY("hvdd_usb", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("avdd_hdmi", "tegradc.1"),
 	REGULATOR_SUPPLY("vddio_hv", "tegradc.1"),
+	REGULATOR_SUPPLY("pwrdet_hv", NULL),
 	REGULATOR_SUPPLY("vdd_dtv_3v3", NULL),
 
 };
@@ -221,14 +224,14 @@ static struct regulator_consumer_supply palmas_regen2_supply[] = {
 
 PALMAS_PDATA_INIT(smps123, 900,  1300, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps45, 900,  1400, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps6, 1000,  3300, NULL, 0, 0, 0);
+PALMAS_PDATA_INIT(smps6, 850,  850, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(smps7, 1200,  1200, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(smps8, 1800,  1800, NULL, 0, 1, 1);
 PALMAS_PDATA_INIT(smps9, 2800,  2800, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(smps10, 5000,  5000, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(ldo1, 1050,  1050, palmas_rails(smps7), 0, 0, 1);
 PALMAS_PDATA_INIT(ldo2, 2800,  3000, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(ldo3, 1200,  1200, palmas_rails(smps8), 0, 0, 1);
+PALMAS_PDATA_INIT(ldo3, 1200,  1200, palmas_rails(smps8), 0, 1, 1);
 PALMAS_PDATA_INIT(ldo4, 900,  3300, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(ldo5, 2700,  2700, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(ldo6, 3000,  3000, NULL, 0, 0, 1);
@@ -242,7 +245,7 @@ PALMAS_PDATA_INIT(regen2, 4300,  4300, palmas_rails(smps8), 0, 0, 0);
 
 #define PALMAS_REG_PDATA(_sname) &reg_idata_##_sname
 
-static struct regulator_init_data *pluto_reg_data[] = {
+static struct regulator_init_data *pluto_reg_data[PALMAS_NUM_REGS] = {
 	NULL,
 	PALMAS_REG_PDATA(smps123),
 	NULL,
@@ -286,7 +289,7 @@ PALMAS_REG_INIT(smps123, 0, PALMAS_EXT_CONTROL_ENABLE1, 0, 0, 0);
 PALMAS_REG_INIT(smps3, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps45, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(smps457, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps6, 0, 0, 0, 0, 0);
+PALMAS_REG_INIT(smps6, 0, PALMAS_EXT_CONTROL_ENABLE2, 0, 0, 0);
 PALMAS_REG_INIT(smps7, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps8, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps9, 0, 0, 0, 0, 0);
@@ -304,7 +307,7 @@ PALMAS_REG_INIT(ldoln, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(ldousb, 0, 0, 0, 0, 0);
 
 #define PALMAS_REG_INIT_DATA(_sname) &reg_init_data_##_sname
-static struct palmas_reg_init *pluto_reg_init[] = {
+static struct palmas_reg_init *pluto_reg_init[PALMAS_NUM_REGS] = {
 	PALMAS_REG_INIT_DATA(smps12),
 	PALMAS_REG_INIT_DATA(smps123),
 	PALMAS_REG_INIT_DATA(smps3),
@@ -404,7 +407,8 @@ static struct regulator_consumer_supply fixed_reg_en_vpp_fuse_supply[] = {
 /* Macro for defining fixed regulator sub device data */
 #define FIXED_SUPPLY(_name) "fixed_reg_en"#_name
 #define FIXED_REG(_id, _var, _name, _in_supply, _always_on, _boot_on,	\
-	_gpio_nr, _open_drain, _active_high, _boot_state, _millivolts)	\
+	_gpio_nr, _open_drain, _active_high, _boot_state, _millivolts,	\
+	_sdelay)							\
 	static struct regulator_init_data ri_data_##_var =		\
 	{								\
 		.supply_regulator = _in_supply,				\
@@ -430,6 +434,7 @@ static struct regulator_consumer_supply fixed_reg_en_vpp_fuse_supply[] = {
 		.enable_high = _active_high,				\
 		.enabled_at_boot = _boot_state,				\
 		.init_data = &ri_data_##_var,				\
+		.startup_delay = _sdelay				\
 	};								\
 	static struct platform_device fixed_reg_en_##_var##_dev = {	\
 		.name = "reg-fixed-voltage",				\
@@ -441,48 +446,51 @@ static struct regulator_consumer_supply fixed_reg_en_vpp_fuse_supply[] = {
 
 FIXED_REG(0,	battery,	battery,
 	NULL,	0,	0,
-	-1,	false, true,	0,	3300);
+	-1,	false, true,	0,	3300,	0);
 
 FIXED_REG(1,	vdd_1v8_cam,	vdd_1v8_cam,
 	palmas_rails(smps8),	0,	0,
-	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO1,	false, true,	0,	1800);
+	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO1,	false, true,	0,	1800,
+	0);
 
 FIXED_REG(2,	vdd_1v2_cam,	vdd_1v2_cam,
 	palmas_rails(smps7),	0,	0,
-	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO2,	false, true,	0,	1200);
+	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO2,	false, true,	0,	1200,
+	0);
 
 FIXED_REG(3,	avdd_usb3_1v05,	avdd_usb3_1v05,
 	palmas_rails(smps8),	0,	0,
-	TEGRA_GPIO_PK5,	false,	true,	0,	1050);
+	TEGRA_GPIO_PK5,	false,	true,	0,	1050,	0);
 
 FIXED_REG(4,	vdd_mmc_sdmmc3,	vdd_mmc_sdmmc3,
 	palmas_rails(smps9),	0,	0,
-	TEGRA_GPIO_PK1,	false,	true,	0,	3300);
+	TEGRA_GPIO_PK1,	false,	true,	0,	3300,	0);
 
 FIXED_REG(5,	vdd_lcd_1v8,	vdd_lcd_1v8,
 	palmas_rails(smps8),	0,	0,
-	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO4,	false,	true,	0,	1800);
+	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO4,	false,	true,	0,	1800,
+	0);
 
 FIXED_REG(6,	vdd_lcd_mmc,	vdd_lcd_mmc,
 	palmas_rails(smps9),	0,	0,
-	TEGRA_GPIO_PI4,	false,	true,	0,	1800);
+	TEGRA_GPIO_PI4,	false,	true,	0,	1800,	0);
 
 FIXED_REG(7,	vdd_1v8_mic,	vdd_1v8_mic,
 	palmas_rails(smps8),	0,	0,
-	-1,	false,	true,	0,	1800);
+	-1,	false,	true,	0,	1800,	0);
 
 FIXED_REG(8,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
 	NULL,	0,	0,
-	TEGRA_GPIO_PK6,	true,	true,	0,	5000);
+	TEGRA_GPIO_PK6,	true,	true,	0,	5000,	5000);
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 FIXED_REG(9,	vpp_fuse,	vpp_fuse,
 	palmas_rails(smps8),	0,	0,
-	TEGRA_GPIO_PX4,	false,	true,	0,	1800);
+	TEGRA_GPIO_PX4,	false,	true,	0,	1800,	0);
 #else
 FIXED_REG(9,	vpp_fuse,	vpp_fuse,
 	palmas_rails(smps8),	0,	0,
-	TEGRA_GPIO_PX0,	false,	true,	0,	1800);
+	TEGRA_GPIO_PX0,	false,	true,	0,	1800,	0);
 #endif
 
 /*
@@ -522,9 +530,60 @@ static struct platform_device *pfixed_reg_devs[] = {
 #endif
 };
 
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+/* board parameters for cpu dfll */
+static struct tegra_cl_dvfs_cfg_param pluto_cl_dvfs_param = {
+	.sample_rate = 12500,
+
+	.force_mode = TEGRA_CL_DVFS_FORCE_FIXED,
+	.cf = 10,
+	.ci = 0,
+	.cg = 2,
+
+	.droop_cut_value = 0xF,
+	.droop_restore_ramp = 0x0,
+	.scale_out_ramp = 0x0,
+};
+#endif
+
+/* palmas: fixed 10mV steps from 600mV to 1400mV, with offset 0x10 */
+#define PMU_CPU_VDD_MAP_SIZE ((1400000 - 600000) / 10000 + 1)
+static struct voltage_reg_map pmu_cpu_vdd_map[PMU_CPU_VDD_MAP_SIZE];
+static inline void fill_reg_map(void)
+{
+	int i;
+	for (i = 0; i < PMU_CPU_VDD_MAP_SIZE; i++) {
+		pmu_cpu_vdd_map[i].reg_value = i + 0x10;
+		pmu_cpu_vdd_map[i].reg_uV = 600000 + 10000 * i;
+	}
+}
+
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+static struct tegra_cl_dvfs_platform_data pluto_cl_dvfs_data = {
+	.dfll_clk_name = "dfll_cpu",
+	.pmu_if = TEGRA_CL_DVFS_PMU_I2C,
+	.u.pmu_i2c = {
+		.fs_rate = 400000,
+		.slave_addr = 0xb0,
+		.reg = 0x23,
+	},
+	.vdd_map = pmu_cpu_vdd_map,
+	.vdd_map_size = PMU_CPU_VDD_MAP_SIZE,
+
+	.cfg_param = &pluto_cl_dvfs_param,
+};
+
+static int __init pluto_cl_dvfs_init(void)
+{
+	fill_reg_map();
+	tegra_cl_dvfs_device.dev.platform_data = &pluto_cl_dvfs_data;
+	platform_device_register(&tegra_cl_dvfs_device);
+
+	return 0;
+}
+#endif
+
 static struct palmas_pmic_platform_data pmic_platform = {
-	.reg_data = pluto_reg_data,
-	.reg_init = pluto_reg_init,
 	.enable_ldo8_tracking = true,
 };
 
@@ -562,6 +621,11 @@ int __init pluto_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
+	int i;
+
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+	pluto_cl_dvfs_init();
+#endif
 
 	/* TPS65913: Normal state of INT request line is LOW.
 	 * configure the power management controller to trigger PMU
@@ -569,6 +633,11 @@ int __init pluto_regulator_init(void)
 	 */
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl & ~PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+
+	for (i = 0; i < PALMAS_NUM_REGS ; i++) {
+		pmic_platform.reg_data[i] = pluto_reg_data[i];
+		pmic_platform.reg_init[i] = pluto_reg_init[i];
+	}
 
 	platform_device_register(&pluto_pda_power_device);
 	i2c_register_board_info(4, palma_device,
@@ -588,10 +657,10 @@ subsys_initcall_sync(pluto_fixed_regulator_init);
 
 static struct tegra_suspend_platform_data pluto_suspend_data = {
 	.cpu_timer	= 2000,
-	.cpu_off_timer	= 0,
+	.cpu_off_timer	= 2000,
 	.suspend_mode	= TEGRA_SUSPEND_LP0,
 	.core_timer	= 0x7e7e,
-	.core_off_timer = 0,
+	.core_off_timer = 2000,
 	.corereq_high	= false,
 	.sysclkreq_high	= true,
 };

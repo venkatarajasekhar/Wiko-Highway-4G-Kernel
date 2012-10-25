@@ -32,6 +32,7 @@
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/rm31080a_ts.h>
 #include <linux/tegra_uart.h>
 #include <linux/memblock.h>
 #include <linux/spi-tegra.h>
@@ -46,6 +47,7 @@
 #include <linux/i2c/at24.h>
 #include <linux/mfd/max8831.h>
 #include <linux/of_platform.h>
+#include <linux/a2220.h>
 
 #include <asm/hardware/gic.h>
 
@@ -58,7 +60,7 @@
 #include <mach/io.h>
 #include <mach/io_dpd.h>
 #include <mach/i2s.h>
-#include <mach/tegra_rt5640_pdata.h>
+#include <mach/tegra_asoc_pdata.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
@@ -67,6 +69,7 @@
 #include <mach/edp.h>
 
 #include "board.h"
+#include "board-touch-raydium.h"
 #include "clock.h"
 #include "board-pluto.h"
 #include "devices.h"
@@ -159,6 +162,7 @@ static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	{ "i2c3",	"pll_p",	3200000,	false},
 	{ "i2c4",	"pll_p",	3200000,	false},
 	{ "i2c5",	"pll_p",	3200000,	false},
+	{ "extern3",	"clk_m",	12000000,	false},
 	{ NULL,		NULL,		0,		0},
 };
 
@@ -258,6 +262,14 @@ static struct i2c_board_info pluto_i2c_led_info = {
 	.platform_data	= &pluto_max8831,
 };
 
+static struct i2c_board_info __initdata cs42l73_board_info = {
+	I2C_BOARD_INFO("cs42l73", 0x4a),
+};
+
+static struct i2c_board_info __initdata pluto_codec_a2220_info = {
+	I2C_BOARD_INFO("audience_a2220", 0x3E),
+};
+
 
 static void pluto_i2c_init(void)
 {
@@ -278,6 +290,7 @@ static void pluto_i2c_init(void)
 	platform_device_register(&tegra_i2c_device3);
 	platform_device_register(&tegra_i2c_device2);
 	platform_device_register(&tegra_i2c_device1);
+
 #else
 	tegra11_i2c_device1.dev.platform_data = &pluto_i2c1_platform_data;
 	tegra11_i2c_device2.dev.platform_data = &pluto_i2c2_platform_data;
@@ -292,7 +305,11 @@ static void pluto_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device3);
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
+
 #endif
+
+	i2c_register_board_info(0, &pluto_codec_a2220_info, 1);
+	i2c_register_board_info(0, &cs42l73_board_info, 1);
 }
 
 static struct platform_device *pluto_uart_devices[] __initdata = {
@@ -439,17 +456,23 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
-static struct tegra_rt5640_platform_data pluto_audio_pdata = {
+static struct tegra_asoc_platform_data pluto_audio_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
+	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
 };
 
 static struct platform_device pluto_audio_device = {
-	.name	= "tegra-snd-rt5640",
-	.id	= 0,
+	.name	= "tegra-snd-cs42l73",
+	.id	= 2,
 	.dev	= {
 		.platform_data = &pluto_audio_pdata,
 	},
@@ -472,10 +495,16 @@ static struct platform_device *pluto_devices[] __initdata = {
 #endif
 	&tegra_camera,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
-	&tegra_se_device,
+	&tegra11_se_device,
 #endif
 	&tegra_ahub_device,
 	&tegra_pcm_device,
+	&tegra_dam_device0,
+	&tegra_dam_device1,
+	&tegra_dam_device2,
+	&tegra_i2s_device1,
+	&tegra_i2s_device3,
+	&tegra_i2s_device4,
 	&pluto_audio_device,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_AES)
@@ -483,8 +512,8 @@ static struct platform_device *pluto_devices[] __initdata = {
 #endif
 };
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
+#ifdef CONFIG_USB_SUPPORT
+static struct tegra_usb_platform_data tegra_ehci3_hsic_smsc_hub_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
 	.unaligned_dma_buf_supported = true,
@@ -497,7 +526,6 @@ static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 		.power_off_on_suspend = true,
 	},
 };
-#endif
 
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
@@ -553,7 +581,6 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
 };
 
-#if CONFIG_USB_SUPPORT
 static void pluto_usb_init(void)
 {
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
@@ -562,11 +589,9 @@ static void pluto_usb_init(void)
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	tegra_ehci2_device.dev.platform_data =
-		&tegra_ehci2_hsic_smsc_hub_pdata;
-	platform_device_register(&tegra_ehci2_device);
-#endif
+	tegra_ehci3_device.dev.platform_data =
+		&tegra_ehci3_hsic_smsc_hub_pdata;
+	platform_device_register(&tegra_ehci3_device);
 }
 
 static void pluto_modem_init(void)
@@ -609,8 +634,98 @@ static void pluto_audio_init(void)
 
 	tegra_get_board_info(&board_info);
 
-	pluto_audio_pdata.codec_name = "rt5640.4-001c";
-	pluto_audio_pdata.codec_dai_name = "rt5640-aif1";
+	pluto_audio_pdata.codec_name = "cs42l73.0-004a";
+	pluto_audio_pdata.codec_dai_name = "cs42l73-vsp";
+}
+
+static struct platform_device *pluto_spi_devices[] __initdata = {
+        &tegra11_spi_device4,
+};
+
+struct spi_clk_parent spi_parent_clk_pluto[] = {
+        [0] = {.name = "pll_p"},
+#ifndef CONFIG_TEGRA_PLLM_RESTRICTED
+        [1] = {.name = "pll_m"},
+        [2] = {.name = "clk_m"},
+#else
+        [1] = {.name = "clk_m"},
+#endif
+};
+
+static struct tegra_spi_platform_data pluto_spi_pdata = {
+	.is_dma_based           = false,
+	.max_dma_buffer         = 16 * 1024,
+        .is_clkon_always        = false,
+        .max_rate               = 25000000,
+};
+
+static void __init pluto_spi_init(void)
+{
+        int i;
+        struct clk *c;
+        struct board_info board_info, display_board_info;
+
+        tegra_get_board_info(&board_info);
+        tegra_get_display_board_info(&display_board_info);
+
+        for (i = 0; i < ARRAY_SIZE(spi_parent_clk_pluto); ++i) {
+                c = tegra_get_clock_by_name(spi_parent_clk_pluto[i].name);
+                if (IS_ERR_OR_NULL(c)) {
+                        pr_err("Not able to get the clock for %s\n",
+                                                spi_parent_clk_pluto[i].name);
+                        continue;
+                }
+                spi_parent_clk_pluto[i].parent_clk = c;
+                spi_parent_clk_pluto[i].fixed_clk_rate = clk_get_rate(c);
+        }
+        pluto_spi_pdata.parent_clk_list = spi_parent_clk_pluto;
+        pluto_spi_pdata.parent_clk_count = ARRAY_SIZE(spi_parent_clk_pluto);
+	tegra11_spi_device4.dev.platform_data = &pluto_spi_pdata;
+        platform_add_devices(pluto_spi_devices,
+                                ARRAY_SIZE(pluto_spi_devices));
+}
+
+static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
+	/* name         parent          rate            enabled */
+	{ "extern2",    "pll_p",        41000000,       true},
+	{ "clk_out_2",  "extern2",      40800000,       true},
+	{ NULL,         NULL,           0,              0},
+};
+
+struct rm_spi_ts_platform_data rm31080ts_pluto_data = {
+	.gpio_reset = 0,
+	.config = 0,
+};
+
+static struct tegra_spi_device_controller_data dev_cdata = {
+	.rx_clk_tap_delay = 0,
+	.tx_clk_tap_delay = 0,
+};
+
+struct spi_board_info rm31080a_pluto_spi_board[1] = {
+	{
+	 .modalias = "rm_ts_spidev",
+	 .bus_num = 3,
+	 .chip_select = 2,
+	 .max_speed_hz = 12 * 1000 * 1000,
+	 .mode = SPI_MODE_0,
+	 .controller_data = &dev_cdata,
+	 .platform_data = &rm31080ts_pluto_data,
+	 },
+};
+
+static int __init pluto_touch_init(void)
+{
+	tegra_clk_init_from_table(touch_clk_init_table);
+	clk_enable(tegra_get_clock_by_name("clk_out_2"));
+	rm31080ts_pluto_data.platform_id = RM_PLATFORM_P005;
+	rm31080a_pluto_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+				TOUCH_GPIO_RST_RAYDIUM_SPI,
+				&rm31080ts_pluto_data,
+				&rm31080a_pluto_spi_board[0],
+				ARRAY_SIZE(rm31080a_pluto_spi_board));
+	return 0;
 }
 
 static void __init tegra_pluto_init(void)
@@ -621,6 +736,7 @@ static void __init tegra_pluto_init(void)
 	tegra_enable_pinmux();
 	pluto_pinmux_init();
 	pluto_i2c_init();
+	pluto_spi_init();
 	pluto_usb_init();
 	pluto_uart_init();
 	pluto_audio_init();
@@ -630,6 +746,7 @@ static void __init tegra_pluto_init(void)
 	pluto_sdhci_init();
 	pluto_regulator_init();
 	pluto_suspend_init();
+	pluto_touch_init();
 	pluto_emc_init();
 	pluto_panel_init();
 	pluto_kbc_init();
@@ -660,10 +777,10 @@ static void __init tegra_pluto_dt_init(void)
 static void __init tegra_pluto_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
-	/* support 1920X1200 with 24bpp */
-	tegra_reserve(0, SZ_8M + SZ_1M, SZ_8M + SZ_1M);
+	/* for PANEL_5_SHARP_1080p: 1920*1080*4*2 = 16588800 bytes */
+	tegra_reserve(0, SZ_16M, SZ_4M);
 #else
-	tegra_reserve(SZ_128M, SZ_8M, SZ_8M);
+	tegra_reserve(SZ_128M, SZ_16M, SZ_4M);
 #endif
 	pluto_ramconsole_reserve(SZ_1M);
 }

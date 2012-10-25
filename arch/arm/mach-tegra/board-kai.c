@@ -32,6 +32,7 @@
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/rm31080a_ts.h>
 #include <linux/tegra_uart.h>
 #include <linux/memblock.h>
 #include <linux/spi-tegra.h>
@@ -65,9 +66,10 @@
 #include <mach/tegra_fiq_debugger.h>
 
 #include "board.h"
+#include "board-common.h"
 #include "clock.h"
 #include "board-kai.h"
-#include "board-touch.h"
+#include "board-touch-raydium.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
@@ -380,65 +382,12 @@ static void __init uart_debug_init(void)
 {
 	int debug_port_id;
 
-	debug_port_id = get_tegra_uart_debug_port_id();
+	debug_port_id = uart_console_debug_init(3);
 	if (debug_port_id < 0)
-		debug_port_id = 3;
+		return;
+	kai_uart_devices[debug_port_id] = uart_console_debug_device;
 
-	switch (debug_port_id) {
-	case 0:
-		/* UARTA is the debug port. */
-		pr_info("Selecting UARTA as the debug console\n");
-		kai_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-
-	case 1:
-		/* UARTB is the debug port. */
-		pr_info("Selecting UARTB as the debug console\n");
-		kai_uart_devices[1] = &debug_uartb_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartb");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartb_device.dev.platform_data))->mapbase;
-		break;
-
-	case 2:
-		/* UARTC is the debug port. */
-		pr_info("Selecting UARTC as the debug console\n");
-		kai_uart_devices[2] = &debug_uartc_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartc");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartc_device.dev.platform_data))->mapbase;
-		break;
-
-	case 3:
-		/* UARTD is the debug port. */
-		pr_info("Selecting UARTD as the debug console\n");
-		kai_uart_devices[3] = &debug_uartd_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartd");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartd_device.dev.platform_data))->mapbase;
-		break;
-
-	case 4:
-		/* UARTE is the debug port. */
-		pr_info("Selecting UARTE as the debug console\n");
-		kai_uart_devices[4] = &debug_uarte_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarte");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarte_device.dev.platform_data))->mapbase;
-		break;
-
-	default:
-		pr_info("The debug console id %d is invalid, Assuming UARTA",
-			debug_port_id);
-		kai_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-	}
+	return;
 }
 
 static void __init kai_uart_init(void)
@@ -470,25 +419,8 @@ static void __init kai_uart_init(void)
 	tegra_uarte_device.dev.platform_data = &kai_loopback_uart_pdata;
 
 	/* Register low speed only if it is selected */
-	if (!is_tegra_debug_uartport_hs()) {
+	if (!is_tegra_debug_uartport_hs())
 		uart_debug_init();
-		/* Clock enable for the debug channel */
-		if (!IS_ERR_OR_NULL(debug_uart_clk)) {
-			pr_info("The debug console clock name is %s\n",
-						debug_uart_clk->name);
-			c = tegra_get_clock_by_name("pll_p");
-			if (IS_ERR_OR_NULL(c))
-				pr_err("Not getting the parent clock pll_p\n");
-			else
-				clk_set_parent(debug_uart_clk, c);
-
-			clk_enable(debug_uart_clk);
-			clk_set_rate(debug_uart_clk, clk_get_rate(c));
-		} else {
-			pr_err("Not getting the clock %s for debug console\n",
-					debug_uart_clk->name);
-		}
-	}
 
 	platform_add_devices(kai_uart_devices,
 				ARRAY_SIZE(kai_uart_devices));
@@ -664,15 +596,52 @@ static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
 	{ NULL,         NULL,           0,              0},
 };
 
+
+struct rm_spi_ts_platform_data rm31080ts_kai_data = {
+	.gpio_reset = 0,
+	.config = 0,
+};
+
+struct spi_board_info rm31080a_kai_spi_board[1] = {
+	{
+	 .modalias = "rm_ts_spidev",
+	 .bus_num = 0,
+	 .chip_select = 0,
+	 .max_speed_hz = 13 * 1000 * 1000,
+	 .mode = SPI_MODE_0,
+	 .platform_data = &rm31080ts_kai_data,
+	 },
+};
+
 static int __init kai_touch_init(void)
 {
 	int touch_id;
 
-	gpio_request(KAI_TS_ID1, "touch-id1");
-	gpio_direction_input(KAI_TS_ID1);
+	touch_id = gpio_request(KAI_TS_ID1, "touch-id1");
+	if (touch_id < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, touch_id);
+		return touch_id;
+	}
+	touch_id = gpio_direction_input(KAI_TS_ID1);
+	if (touch_id < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, touch_id);
+		gpio_free(KAI_TS_ID1);
+	}
 
-	gpio_request(KAI_TS_ID2, "touch-id2");
-	gpio_direction_input(KAI_TS_ID2);
+	touch_id = gpio_request(KAI_TS_ID2, "touch-id2");
+	if (touch_id < 0) {
+		pr_err("%s: gpio_request failed %d\n",
+			__func__, touch_id);
+		return touch_id;
+	}
+	touch_id = gpio_direction_input(KAI_TS_ID2);
+	if (touch_id < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, touch_id);
+		gpio_free(KAI_TS_ID2);
+	}
 
 	touch_id = gpio_get_value(KAI_TS_ID1) << 1;
 	touch_id |= gpio_get_value(KAI_TS_ID2);
@@ -691,15 +660,26 @@ static int __init kai_touch_init(void)
 	case 0:
 		pr_info("Raydium PCB based touch init\n");
 		tegra_clk_init_from_table(spi_clk_init_table);
-		touch_init_raydium(TEGRA_GPIO_PZ3, TEGRA_GPIO_PN5, 0);
+		rm31080ts_kai_data.platform_id = RM_PLATFORM_K007;
+		rm31080a_kai_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+					TOUCH_GPIO_RST_RAYDIUM_SPI,
+					&rm31080ts_kai_data,
+					&rm31080a_kai_spi_board[0],
+					ARRAY_SIZE(rm31080a_kai_spi_board));
 		break;
 	case 1:
 		pr_info("Raydium On-Board touch init\n");
 		tegra_clk_init_from_table(spi_clk_init_table);
 		tegra_clk_init_from_table(touch_clk_init_table);
 		clk_enable(tegra_get_clock_by_name("clk_out_3"));
-
-		touch_init_raydium(TEGRA_GPIO_PZ3, TEGRA_GPIO_PN5, 1);
+		rm31080ts_kai_data.platform_id = RM_PLATFORM_K107;
+		rm31080a_kai_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+					TOUCH_GPIO_RST_RAYDIUM_SPI,
+					&rm31080ts_kai_data,
+					&rm31080a_kai_spi_board[0],
+					ARRAY_SIZE(rm31080a_kai_spi_board));
 		break;
 	case 3:
 		pr_info("Synaptics PCB based touch init\n");
@@ -811,24 +791,41 @@ static void kai_modem_init(void)
 	if (ret < 0)
 		pr_err("%s: gpio_request failed for gpio %d\n",
 			__func__, TEGRA_GPIO_W_DISABLE);
-	else
-		gpio_direction_output(TEGRA_GPIO_W_DISABLE, 1);
-
+	else {
+		ret = gpio_direction_output(TEGRA_GPIO_W_DISABLE, 1);
+		if (ret < 0) {
+			pr_err("%s: gpio_direction_output failed %d\n",
+				__func__, ret);
+			gpio_free(TEGRA_GPIO_W_DISABLE);
+		}
+	}
 
 	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD1, "Port_V_PIN_0");
 	if (ret < 0)
 		pr_err("%s: gpio_request failed for gpio %d\n",
 			__func__, TEGRA_GPIO_MODEM_RSVD1);
-	else
-		gpio_direction_input(TEGRA_GPIO_MODEM_RSVD1);
+	else {
+		ret = gpio_direction_input(TEGRA_GPIO_MODEM_RSVD1);
+		if (ret < 0) {
+			pr_err("%s: gpio_direction_output failed %d\n",
+				__func__, ret);
+			gpio_free(TEGRA_GPIO_MODEM_RSVD1);
+		}
+	}
 
 
 	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD2, "Port_H_PIN_7");
 	if (ret < 0)
 		pr_err("%s: gpio_request failed for gpio %d\n",
 			__func__, TEGRA_GPIO_MODEM_RSVD2);
-	else
-		gpio_direction_output(TEGRA_GPIO_MODEM_RSVD2, 1);
+	else {
+		ret = gpio_direction_output(TEGRA_GPIO_MODEM_RSVD2, 1);
+		if (ret < 0) {
+			pr_err("%s: gpio_direction_output failed %d\n",
+				__func__, ret);
+			gpio_free(TEGRA_GPIO_MODEM_RSVD2);
+		}
+	}
 
 }
 

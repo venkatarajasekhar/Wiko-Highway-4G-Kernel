@@ -19,7 +19,4 @@
 #ifndef _MACH_TEGRA_BOARD_TOUCH_H
 #define _MACH_TEGRA_BOARD_TOUCH_H
 
-
-int __init touch_init_raydium(int irq_gpio, int reset_gpio, int platform);
-
 #endif

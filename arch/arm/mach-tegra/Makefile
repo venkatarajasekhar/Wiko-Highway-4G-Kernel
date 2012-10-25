@@ -112,7 +112,8 @@ obj-$(CONFIG_TEGRA_SYSTEM_DMA)		+= dma.o apbio.o
 obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
 ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
-obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpuquiet.o
+obj-$(CONFIG_ARCH_TEGRA_3x_SOC)		+= cpuquiet.o
+obj-$(CONFIG_ARCH_TEGRA_11x_SOC)	+= cpuquiet.o
 else
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpu-tegra3.o
 endif
@@ -138,6 +139,7 @@ obj-$(CONFIG_TEGRA_DYNAMIC_PWRDET)      += powerdetect.o
 obj-$(CONFIG_TEGRA_USB_MODEM_POWER)     += tegra_usb_modem_power.o
 obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS)    += tegra_cl_dvfs.o
 
+obj-y					+= board-common.o
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony-kbc.o
@@ -270,3 +272,5 @@ obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
 obj-${CONFIG_TEGRA_BASEBAND}            += tegra_bb.o
+
+obj-${CONFIG_TEGRA_ISOMGR}		+= isomgr.o

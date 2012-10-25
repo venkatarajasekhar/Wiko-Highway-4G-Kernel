@@ -58,6 +58,8 @@
 #define	DRIVER_VERSION	"Apr 30, 2012"
 #define USB1_PREFETCH_ID	6
 
+#define AHB_PREFETCH_BUFFER	SZ_128
+
 #define get_ep_by_pipe(udc, pipe)	((pipe == 1) ? &udc->eps[0] : \
 						&udc->eps[pipe])
 #define get_pipe_by_windex(windex)	((windex & USB_ENDPOINT_NUMBER_MASK) \
@@ -168,11 +170,17 @@ static void done(struct tegra_ep *ep, struct tegra_req *req, int status)
 	}
 
 	if (req->mapped) {
-		dma_unmap_single(ep->udc->gadget.dev.parent,
-			req->req.dma, req->req.length,
-			ep_is_in(ep)
-				? DMA_TO_DEVICE
-				: DMA_FROM_DEVICE);
+		DEFINE_DMA_ATTRS(attrs);
+		struct device *dev = ep->udc->gadget.dev.parent;
+		size_t orig = req->req.length;
+		size_t ext = orig + AHB_PREFETCH_BUFFER;
+		enum dma_data_direction dir =
+			ep_is_in(ep) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+		dma_sync_single_for_cpu(dev, req->req.dma, orig, dir);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_unmap_single_attrs(dev, req->req.dma, ext, dir, &attrs);
+
 		req->req.dma = DMA_ADDR_INVALID;
 		req->mapped = 0;
 	} else
@@ -649,7 +657,7 @@ static int tegra_ep_disable(struct usb_ep *_ep)
 	ep_num = ep_index(ep);
 
 	/* Touch the registers if cable is connected and phy is on */
-	if (vbus_enabled(udc)) {
+	if (udc->vbus_active) {
 		epctrl = udc_readl(udc, EP_CONTROL_REG_OFFSET + (ep_num * 4));
 		if (ep_is_in(ep))
 			epctrl &= ~EPCTRL_TX_ENABLE;
@@ -937,8 +945,16 @@ tegra_ep_queue(struct usb_ep *_ep, struct usb_request *_req, gfp_t gfp_flags)
 
 	/* map virtual address to hardware */
 	if (req->req.dma == DMA_ADDR_INVALID) {
-		req->req.dma = dma_map_single(udc->gadget.dev.parent,
-					req->req.buf, req->req.length, dir);
+		DEFINE_DMA_ATTRS(attrs);
+		struct device *dev = udc->gadget.dev.parent;
+		size_t orig = req->req.length;
+		size_t ext = orig + AHB_PREFETCH_BUFFER;
+
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		req->req.dma = dma_map_single_attrs(dev, req->req.buf, ext, dir,
+						    &attrs);
+		dma_sync_single_for_device(dev, req->req.dma, orig, dir);
+
 		req->mapped = 1;
 	} else {
 		dma_sync_single_for_device(udc->gadget.dev.parent,
@@ -972,16 +988,22 @@ tegra_ep_queue(struct usb_ep *_ep, struct usb_request *_req, gfp_t gfp_flags)
 		udc->ep0_state = DATA_STATE_XMIT;
 
 	/* irq handler advances the queue */
-	if (req != NULL)
-		list_add_tail(&req->queue, &ep->queue);
+	list_add_tail(&req->queue, &ep->queue);
 	spin_unlock_irqrestore(&udc->lock, flags);
 
 	return 0;
 
 err_unmap:
 	if (req->mapped) {
-		dma_unmap_single(udc->gadget.dev.parent,
-			req->req.dma, req->req.length, dir);
+		DEFINE_DMA_ATTRS(attrs);
+		struct device *dev = udc->gadget.dev.parent;
+		size_t orig = req->req.length;
+		size_t ext = orig + AHB_PREFETCH_BUFFER;
+
+		dma_sync_single_for_cpu(dev, req->req.dma, orig, dir);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_unmap_single_attrs(dev, req->req.dma, ext, dir, &attrs);
+
 		req->req.dma = DMA_ADDR_INVALID;
 		req->mapped = 0;
 	}
@@ -1009,7 +1031,7 @@ static int tegra_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	ep_num = ep_index(ep);
 
 	/* Touch the registers if cable is connected and phy is on */
-	if (vbus_enabled(udc)) {
+	if (udc->vbus_active) {
 		epctrl = udc_readl(udc, EP_CONTROL_REG_OFFSET + (ep_num * 4));
 		if (ep_is_in(ep))
 			epctrl &= ~EPCTRL_TX_ENABLE;
@@ -1060,7 +1082,7 @@ static int tegra_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	/* Enable EP */
 out:
 	/* Touch the registers if cable is connected and phy is on */
-	if (vbus_enabled(udc)) {
+	if (udc->vbus_active) {
 		epctrl = udc_readl(udc, EP_CONTROL_REG_OFFSET + (ep_num * 4));
 		if (ep_is_in(ep))
 			epctrl |= EPCTRL_TX_ENABLE;
@@ -1182,7 +1204,7 @@ static void tegra_ep_fifo_flush(struct usb_ep *_ep)
 		bits = 1 << ep_num;
 
 	/* Touch the registers if cable is connected and phy is on */
-	if (!vbus_enabled(udc))
+	if (!udc->vbus_active)
 		return;
 
 	timeout = jiffies + UDC_FLUSH_TIMEOUT_MS;
@@ -1536,7 +1558,7 @@ static void udc_reset_ep_queue(struct tegra_udc *udc, u8 pipe)
 {
 	struct tegra_ep *ep = get_ep_by_pipe(udc, pipe);
 
-	if (ep->name)
+	if (ep->name[0])
 		nuke(ep, -ESHUTDOWN);
 }
 
@@ -1599,11 +1621,18 @@ static void ch9getstatus(struct tegra_udc *udc, u8 request_type, u16 value,
 
 	/* map virtual address to hardware */
 	if (req->req.dma == DMA_ADDR_INVALID) {
-		req->req.dma = dma_map_single(ep->udc->gadget.dev.parent,
-					req->req.buf,
-					req->req.length, ep_is_in(ep)
-						? DMA_TO_DEVICE
-						: DMA_FROM_DEVICE);
+		DEFINE_DMA_ATTRS(attrs);
+		struct device *dev = ep->udc->gadget.dev.parent;
+		size_t orig = req->req.length;
+		size_t ext = orig + AHB_PREFETCH_BUFFER;
+		enum dma_data_direction dir =
+			ep_is_in(ep) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		req->req.dma = dma_map_single_attrs(dev, req->req.buf, ext, dir,
+						    &attrs);
+		dma_sync_single_for_device(dev, req->req.dma, orig, dir);
+
 		req->mapped = 1;
 	} else {
 		dma_sync_single_for_device(ep->udc->gadget.dev.parent,
@@ -2023,7 +2052,7 @@ static void dtd_complete_irq(struct tegra_udc *udc)
 		curr_ep = get_ep_by_pipe(udc, i);
 
 		/* If the ep is configured */
-		if (curr_ep->name == NULL) {
+		if (curr_ep->name[0] == '\0') {
 			WARNING("Invalid EP?");
 			continue;
 		}
@@ -2390,14 +2419,13 @@ static int tegra_udc_start(struct usb_gadget_driver *driver,
 		goto out;
 	}
 
-
 	/* Enable DR IRQ reg and Set usbcmd reg  Run bit */
 	if (vbus_enabled(udc)) {
 		dr_controller_run(udc);
 		udc->usb_state = USB_STATE_ATTACHED;
 		udc->ep0_state = WAIT_FOR_SETUP;
 		udc->ep0_dir = 0;
-		udc->vbus_active = vbus_enabled(udc);
+		udc->vbus_active = 1;
 	}
 
 	printk(KERN_INFO "%s: bind to driver %s\n",

@@ -1399,7 +1399,7 @@ static int utmi_phy_power_off(struct tegra_usb_phy *phy)
 
 	utmi_phy_pad_power_off(phy);
 
-	if (phy->pdata->u_data.host.hot_plug) {
+	if (phy->hot_plug) {
 		bool enable_hotplug = true;
 		/* if it is OTG port then make sure to enable hot-plug feature
 		   only if host adaptor is connected, i.e id is low */
@@ -2086,17 +2086,18 @@ static int uhsic_rail_enable(struct tegra_usb_phy *phy)
 	int ret;
 
 	if (phy->hsic_reg == NULL) {
-		phy->hsic_reg = regulator_get(NULL, "avdd_hsic");
+		phy->hsic_reg = regulator_get(&phy->pdev->dev, "vddio_hsic");
 		if (IS_ERR_OR_NULL(phy->hsic_reg)) {
-			pr_err("UHSIC: Could not get regulator avdd_hsic\n");
+			pr_err("UHSIC: Could not get regulator vddio_hsic\n");
+			ret = PTR_ERR(phy->hsic_reg);
 			phy->hsic_reg = NULL;
-			return PTR_ERR(phy->hsic_reg);
+			return ret;
 		}
 	}
 
 	ret = regulator_enable(phy->hsic_reg);
 	if (ret < 0) {
-		pr_err("%s avdd_hsic could not be enabled\n", __func__);
+		pr_err("%s vddio_hsic could not be enabled\n", __func__);
 		return ret;
 	}
 
@@ -2114,10 +2115,11 @@ static int uhsic_rail_disable(struct tegra_usb_phy *phy)
 
 	ret = regulator_disable(phy->hsic_reg);
 	if (ret < 0) {
-		pr_err("HSIC regulator avdd_hsic cannot be disabled\n");
+		pr_err("HSIC regulator vddio_hsic cannot be disabled\n");
 		return ret;
 	}
-
+	regulator_put(phy->hsic_reg);
+	phy->hsic_reg = NULL;
 	return 0;
 }
 
@@ -2130,7 +2132,7 @@ static int uhsic_phy_open(struct tegra_usb_phy *phy)
 	phy->hsic_reg = NULL;
 	ret = uhsic_rail_enable(phy);
 	if (ret < 0) {
-		pr_err("%s avdd_hsic could not be enabled\n", __func__);
+		pr_err("%s vddio_hsic could not be enabled\n", __func__);
 		return ret;
 	}
 
@@ -2161,7 +2163,7 @@ static void uhsic_phy_close(struct tegra_usb_phy *phy)
 
 	ret = uhsic_rail_disable(phy);
 	if (ret < 0)
-		pr_err("%s avdd_hsic could not be disabled\n", __func__);
+		pr_err("%s vddio_hsic could not be disabled\n", __func__);
 }
 
 static int uhsic_phy_irq(struct tegra_usb_phy *phy)

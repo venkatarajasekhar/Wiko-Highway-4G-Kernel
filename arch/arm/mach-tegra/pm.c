@@ -3,7 +3,7 @@
  *
  * CPU complex suspend & resume functions for Tegra SoCs
  *
- * Copyright (c) 2009-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2012, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,7 +105,6 @@ struct suspend_context {
 };
 
 #ifdef CONFIG_PM_SLEEP
-void *tegra_cpu_context;        /* non-cacheable page for CPU context */
 phys_addr_t tegra_pgd_phys;	/* pgd used by hotplug & LP2 bootup */
 static pgd_t *tegra_pgd;
 static DEFINE_SPINLOCK(tegra_lp2_lock);
@@ -190,6 +189,9 @@ struct suspend_context tegra_sctx;
 #define AWAKE_CPU_FREQ_MIN	51000
 static struct pm_qos_request awake_cpu_freq_req;
 
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+static struct clk *tegra_dfll;
+#endif
 static struct clk *tegra_pclk;
 static const struct tegra_suspend_platform_data *pdata;
 static enum tegra_suspend_mode current_suspend_mode = TEGRA_SUSPEND_NONE;
@@ -254,6 +256,26 @@ unsigned long tegra_cpu_lp2_min_residency(void)
 	return pdata->cpu_lp2_min_residency;
 }
 
+static void suspend_cpu_dfll_mode(void)
+{
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+	/* If DFLL is used as CPU clock source go to open loop mode */
+	if (!is_lp_cluster() && tegra_dfll &&
+	    tegra_dvfs_rail_is_dfll_mode(tegra_cpu_rail))
+		tegra_clk_cfg_ex(tegra_dfll, TEGRA_CLK_DFLL_LOCK, 0);
+#endif
+}
+
+static void resume_cpu_dfll_mode(void)
+{
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+	/* If DFLL is used as CPU clock source restore closed loop mode */
+	if (!is_lp_cluster() && tegra_dfll &&
+	    tegra_dvfs_rail_is_dfll_mode(tegra_cpu_rail))
+		tegra_clk_cfg_ex(tegra_dfll, TEGRA_CLK_DFLL_LOCK, 1);
+#endif
+}
+
 /*
  * create_suspend_pgtable
  *
@@ -276,37 +298,6 @@ static __init int create_suspend_pgtable(void)
 	tegra_pgd_phys = (virt_to_phys(tegra_pgd) & PAGE_MASK) | 0x4A;
 
 	return 0;
-}
-/*
- * alloc_suspend_context
- *
- * Allocate a non-cacheable page to hold the CPU contexts.
- * The standard ARM CPU context save functions don't work if there's
- * an external L2 cache controller (like a PL310) in system.
- */
-static __init int alloc_suspend_context(void)
-{
-	pgprot_t prot = __pgprot_modify(pgprot_kernel, L_PTE_MT_MASK,
-					L_PTE_MT_BUFFERABLE | L_PTE_XN);
-	struct page *ctx_page;
-
-	ctx_page = alloc_pages(GFP_KERNEL, 0);
-	if (IS_ERR_OR_NULL(ctx_page))
-		goto fail;
-
-	tegra_cpu_context = vm_map_ram(&ctx_page, 1, -1, prot);
-	if (IS_ERR_OR_NULL(tegra_cpu_context))
-		goto fail;
-
-	return 0;
-
-fail:
-	if (!IS_ERR(ctx_page) && ctx_page)
-		__free_page(ctx_page);
-	if (!IS_ERR(tegra_cpu_context) && tegra_cpu_context)
-		vm_unmap_ram((void *)tegra_cpu_context, 1);
-	tegra_cpu_context = NULL;
-	return -ENOMEM;
 }
 
 /* ensures that sufficient time is passed for a register write to
@@ -553,25 +544,15 @@ bool tegra_set_cpu_in_lp2(int cpu)
 	return last_cpu;
 }
 
-bool tegra_is_cpu_in_lp2(int cpu)
-{
-	bool in_lp2;
-
-	spin_lock(&tegra_lp2_lock);
-	in_lp2 = cpumask_test_cpu(cpu, &tegra_in_lp2);
-	spin_unlock(&tegra_lp2_lock);
-	return in_lp2;
-}
-
 static void tegra_sleep_core(enum tegra_suspend_mode mode,
 			     unsigned long v2p)
 {
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
 	if (mode == TEGRA_SUSPEND_LP0) {
-		tegra_generic_smc_uncached(0xFFFFFFFC, 0xFFFFFFE3,
+		tegra_generic_smc(0xFFFFFFFC, 0xFFFFFFE3,
 				  virt_to_phys(tegra_resume));
 	} else {
-		tegra_generic_smc_uncached(0xFFFFFFFC, 0xFFFFFFE6,
+		tegra_generic_smc(0xFFFFFFFC, 0xFFFFFFE6,
 				  (TEGRA_RESET_HANDLER_BASE +
 				   tegra_cpu_reset_handler_offset));
 	}
@@ -586,7 +567,7 @@ static void tegra_sleep_core(enum tegra_suspend_mode mode,
 static inline void tegra_sleep_cpu(unsigned long v2p)
 {
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-	tegra_generic_smc_uncached(0xFFFFFFFC, 0xFFFFFFE4,
+	tegra_generic_smc(0xFFFFFFFC, 0xFFFFFFE4,
 			  (TEGRA_RESET_HANDLER_BASE +
 			   tegra_cpu_reset_handler_offset));
 #endif
@@ -597,7 +578,9 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 {
 	u32 reg;
 	unsigned int remain;
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	pgd_t *pgd;
+#endif
 
 	/* Only the last cpu down does the final suspend steps */
 	reg = readl(pmc + PMC_CTRL);
@@ -617,11 +600,8 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 	 * are in LP2 state and irqs are disabled
 	 */
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
-		if (is_idle_task(current))
-			trace_cpu_cluster_rcuidle(POWER_CPU_CLUSTER_START);
-		else
-			trace_cpu_cluster(POWER_CPU_CLUSTER_START);
-		set_power_timers(pdata->cpu_timer, 0,
+		trace_cpu_cluster(POWER_CPU_CLUSTER_START);
+		set_power_timers(pdata->cpu_timer, 2,
 			clk_get_rate_all_locked(tegra_pclk));
 		if (flags & TEGRA_POWER_CLUSTER_G) {
 			/*
@@ -635,6 +615,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 		}
 		tegra_cluster_switch_prolog(flags);
 	} else {
+		suspend_cpu_dfll_mode();
 		set_power_timers(pdata->cpu_timer, pdata->cpu_off_timer,
 			clk_get_rate_all_locked(tegra_pclk));
 #if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
@@ -664,6 +645,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 	cpu_cluster_pm_enter();
 	suspend_cpu_complex(flags);
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_prolog);
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	flush_cache_all();
 	/*
 	 * No need to flush complete L2. Cleaning kernel and IO mappings
@@ -674,7 +656,7 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 	outer_clean_range(__pa(pgd + USER_PTRS_PER_PGD),
 			  __pa(pgd + PTRS_PER_PGD));
 	outer_disable();
-
+#endif
 	tegra_sleep_cpu(PHYS_OFFSET - PAGE_OFFSET);
 
 	tegra_init_cache(false);
@@ -692,6 +674,8 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 			trace_cpu_cluster_rcuidle(POWER_CPU_CLUSTER_DONE);
 		else
 			trace_cpu_cluster(POWER_CPU_CLUSTER_DONE);
+	} else {
+		resume_cpu_dfll_mode();
 	}
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_epilog);
 
@@ -963,6 +947,18 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 
 	suspend_cpu_complex(flags);
 
+#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
+	/* In case of LP0, program external power gating accordinly */
+	if (mode == TEGRA_SUSPEND_LP0) {
+		reg = readl(FLOW_CTRL_CPU_CSR(0));
+		if (is_lp_cluster())
+			reg |= FLOW_CTRL_CSR_ENABLE_EXT_NCPU; /* Non CPU */
+		else
+			reg |= FLOW_CTRL_CSR_ENABLE_EXT_CRAIL;  /* CRAIL */
+		flowctrl_writel(reg, FLOW_CTRL_CPU_CSR(0));
+	}
+#endif
+
 	flush_cache_all();
 	outer_flush_all();
 	outer_disable();
@@ -1106,6 +1102,7 @@ static struct kobject *suspend_kobj;
 static int tegra_pm_enter_suspend(void)
 {
 	pr_info("Entering suspend state %s\n", lp_state[current_suspend_mode]);
+	suspend_cpu_dfll_mode();
 	if (current_suspend_mode == TEGRA_SUSPEND_LP0)
 		tegra_lp0_cpu_mode(true);
 	return 0;
@@ -1115,6 +1112,7 @@ static void tegra_pm_enter_resume(void)
 {
 	if (current_suspend_mode == TEGRA_SUSPEND_LP0)
 		tegra_lp0_cpu_mode(false);
+	resume_cpu_dfll_mode();
 	pr_info("Exited suspend state %s\n", lp_state[current_suspend_mode]);
 }
 
@@ -1139,6 +1137,10 @@ void __init tegra_init_suspend(struct tegra_suspend_platform_data *plat)
 	pm_qos_add_request(&awake_cpu_freq_req, PM_QOS_CPU_FREQ_MIN,
 			   AWAKE_CPU_FREQ_MIN);
 
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+	tegra_dfll = clk_get_sys(NULL, "dfll_cpu");
+	BUG_ON(IS_ERR(tegra_dfll));
+#endif
 	tegra_pclk = clk_get_sys(NULL, "pclk");
 	BUG_ON(IS_ERR(tegra_pclk));
 	pdata = plat;
@@ -1157,13 +1159,6 @@ void __init tegra_init_suspend(struct tegra_suspend_platform_data *plat)
 #else
 	if (create_suspend_pgtable() < 0) {
 		pr_err("%s: PGD memory alloc failed -- LP0/LP1/LP2 unavailable\n",
-				__func__);
-		plat->suspend_mode = TEGRA_SUSPEND_NONE;
-		goto fail;
-	}
-
-	if (alloc_suspend_context() < 0) {
-		pr_err("%s: alloc_suspend_context failed -- LP0/LP1/LP2 unavailable\n",
 				__func__);
 		plat->suspend_mode = TEGRA_SUSPEND_NONE;
 		goto fail;

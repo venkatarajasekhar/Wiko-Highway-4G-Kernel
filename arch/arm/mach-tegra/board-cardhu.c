@@ -34,6 +34,7 @@
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/rm31080a_ts.h>
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/tegra_uart.h>
 #include <linux/memblock.h>
@@ -71,9 +72,10 @@
 #include <asm/mach/arch.h>
 
 #include "board.h"
+#include "board-common.h"
 #include "clock.h"
 #include "board-cardhu.h"
-#include "board-touch.h"
+#include "board-touch-raydium.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
@@ -437,28 +439,29 @@ static struct uart_clk_parent uart_parent_clk[] = {
 static struct tegra_uart_platform_data cardhu_uart_pdata;
 static struct tegra_uart_platform_data cardhu_loopback_uart_pdata;
 
-static void __init uart_debug_init(void)
+static int __init uart_debug_init(void)
 {
 	struct board_info board_info;
 	int debug_port_id;
+	int default_debug_port = 0;
 
 	tegra_get_board_info(&board_info);
 
-	debug_port_id = get_tegra_uart_debug_port_id();
-	if (debug_port_id < 0) {
-		debug_port_id = 0;
-			/* UARTB is debug port
-			 *       for SLT - E1186/E1187/PM269
-			 *       for E1256/E1257
-			 */
-		if (((board_info.sku & SKU_SLT_ULPI_SUPPORT) &&
-			((board_info.board_id == BOARD_E1186) ||
-			(board_info.board_id == BOARD_E1187) ||
-			(board_info.board_id == BOARD_PM269))) ||
-			(board_info.board_id == BOARD_E1256) ||
-			(board_info.board_id == BOARD_E1257))
-				debug_port_id = 1;
-	}
+	/* UARTB is debug port
+	 *       for SLT - E1186/E1187/PM269
+	 *       for E1256/E1257
+	 */
+	if (((board_info.sku & SKU_SLT_ULPI_SUPPORT) &&
+		((board_info.board_id == BOARD_E1186) ||
+		(board_info.board_id == BOARD_E1187) ||
+		(board_info.board_id == BOARD_PM269))) ||
+		(board_info.board_id == BOARD_E1256) ||
+		(board_info.board_id == BOARD_E1257))
+			default_debug_port = 1;
+
+	debug_port_id = uart_console_debug_init(default_debug_port);
+	if (debug_port_id < 0)
+		return debug_port_id;
 
 #ifdef CONFIG_TEGRA_IRDA
 	if ((board_info.board_id == BOARD_E1186) ||
@@ -469,62 +472,8 @@ static void __init uart_debug_init(void)
 		}
 	}
 #endif
-
-	switch (debug_port_id) {
-	case 0:
-		/* UARTA is the debug port. */
-		pr_info("Selecting UARTA as the debug console\n");
-		cardhu_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-
-	case 1:
-		/* UARTB is the debug port. */
-		pr_info("Selecting UARTB as the debug console\n");
-		cardhu_uart_devices[1] = &debug_uartb_device;
-		debug_uart_clk =  clk_get_sys("serial8250.0", "uartb");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartb_device.dev.platform_data))->mapbase;
-		break;
-
-	case 2:
-		/* UARTC is the debug port. */
-		pr_info("Selecting UARTC as the debug console\n");
-		cardhu_uart_devices[2] = &debug_uartc_device;
-		debug_uart_clk =  clk_get_sys("serial8250.0", "uartc");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartc_device.dev.platform_data))->mapbase;
-		break;
-
-	case 3:
-		/* UARTD is the debug port. */
-		pr_info("Selecting UARTD as the debug console\n");
-		cardhu_uart_devices[3] = &debug_uartd_device;
-		debug_uart_clk =  clk_get_sys("serial8250.0", "uartd");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartd_device.dev.platform_data))->mapbase;
-		break;
-
-	case 4:
-		/* UARTE is the debug port. */
-		pr_info("Selecting UARTE as the debug console\n");
-		cardhu_uart_devices[4] = &debug_uarte_device;
-		debug_uart_clk =  clk_get_sys("serial8250.0", "uarte");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarte_device.dev.platform_data))->mapbase;
-		break;
-
-	default:
-		pr_info("The debug console id %d is invalid, Assuming UARTA", debug_port_id);
-		cardhu_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-	}
-	return;
+	cardhu_uart_devices[debug_port_id] = uart_console_debug_device;
+	return debug_port_id;
 }
 
 static void __init cardhu_uart_init(void)
@@ -559,25 +508,8 @@ static void __init cardhu_uart_init(void)
 	tegra_uarte_device.dev.platform_data = &cardhu_loopback_uart_pdata;
 
 	/* Register low speed only if it is selected */
-	if (!is_tegra_debug_uartport_hs()) {
+	if (!is_tegra_debug_uartport_hs())
 		uart_debug_init();
-		/* Clock enable for the debug channel */
-		if (!IS_ERR_OR_NULL(debug_uart_clk)) {
-			pr_info("The debug console clock name is %s\n",
-						debug_uart_clk->name);
-			c = tegra_get_clock_by_name("pll_p");
-			if (IS_ERR_OR_NULL(c))
-				pr_err("Not getting the parent clock pll_p\n");
-			else
-				clk_set_parent(debug_uart_clk, c);
-
-			clk_enable(debug_uart_clk);
-			clk_set_rate(debug_uart_clk, clk_get_rate(c));
-		} else {
-			pr_err("Not getting the clock %s for debug console\n",
-					debug_uart_clk->name);
-		}
-	}
 
 #ifdef CONFIG_TEGRA_IRDA
 	if (((board_info.board_id == BOARD_E1186) ||
@@ -603,6 +535,15 @@ static struct platform_device tegra_camera = {
 static struct platform_device *cardhu_spi_devices[] __initdata = {
 	&tegra_spi_device4,
 };
+
+/*-----------------------------------------------------*/
+/* Force Cardhu Direct Touch:
+	Valid Choices:
+	0 : Do not force Direct Touch
+	2 : RM_PLATFORM_C210 : Cardhu 10" J-Touch Panel
+	4 : RM_PLATFORM_P005 ; Pluto 5" J-Touch Panel
+*/
+#define CARDHU_DT_PLATFORM	0 /* RM_PLATFORM_C210 */
 
 static struct platform_device *touch_spi_device[] __initdata = {
 	&tegra_spi_device1,
@@ -650,10 +591,12 @@ static void __init cardhu_spi_init(void)
 	platform_add_devices(cardhu_spi_devices,
 				ARRAY_SIZE(cardhu_spi_devices));
 
-	if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
+	if ((display_board_info.board_id == BOARD_DISPLAY_PM313)
+						|| CARDHU_DT_PLATFORM) {
 		platform_add_devices(touch_spi_device,
 				ARRAY_SIZE(touch_spi_device));
 	}
+
 	if (board_info.board_id == BOARD_E1198) {
 		tegra_spi_device2.dev.platform_data = &cardhu_spi_pdata;
 		platform_device_register(&tegra_spi_device2);
@@ -938,28 +881,78 @@ static struct i2c_board_info __initdata e1506_atmel_i2c_info[] = {
 	}
 };
 
+/* Raydium touchscreen                     Driver data */
 static __initdata struct tegra_clk_init_table spi_clk_init_table[] = {
 	/* name         parent          rate            enabled */
 	{ "sbc1",       "pll_p",        52000000,       true},
 	{ NULL,         NULL,           0,              0},
 };
 
+static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
+	/* name         parent          rate            enabled */
+	{ "extern3",    "pll_p",        41000000,       true},
+	{ "clk_out_3",  "extern3",      40800000,       true},
+	{ NULL,         NULL,           0,              0},
+};
+
+struct rm_spi_ts_platform_data rm31080ts_cardhu_data = {
+	.gpio_reset = 0,
+	.config = 0,
+};
+
+struct spi_board_info rm31080a_cardhu_spi_board[1] = {
+	{
+	 .modalias = "rm_ts_spidev",
+	 .bus_num = 0,
+	 .chip_select = 0,
+	 .max_speed_hz = 13 * 1000 * 1000,
+	 .mode = SPI_MODE_0,
+	 .platform_data = &rm31080ts_cardhu_data,
+	 },
+};
+
 static int __init cardhu_touch_init(void)
 {
 	struct board_info BoardInfo, DisplayBoardInfo;
+	int ret;
 
 	tegra_get_board_info(&BoardInfo);
 	tegra_get_display_board_info(&DisplayBoardInfo);
-	if (DisplayBoardInfo.board_id == BOARD_DISPLAY_PM313) {
+	if ((DisplayBoardInfo.board_id == BOARD_DISPLAY_PM313)
+						|| CARDHU_DT_PLATFORM) {
 		tegra_clk_init_from_table(spi_clk_init_table);
-
-		touch_init_raydium(TEGRA_GPIO_PH4, TEGRA_GPIO_PH6, 2);
+		tegra_clk_init_from_table(touch_clk_init_table);
+		clk_enable(tegra_get_clock_by_name("clk_out_3"));
+		rm31080ts_cardhu_data.platform_id = CARDHU_DT_PLATFORM;
+		rm31080a_cardhu_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+					TOUCH_GPIO_RST_RAYDIUM_SPI,
+					&rm31080ts_cardhu_data,
+					&rm31080a_cardhu_spi_board[0],
+					ARRAY_SIZE(rm31080a_cardhu_spi_board));
 	} else {
-		gpio_request(TEGRA_GPIO_PH4, "atmel-irq");
-		gpio_direction_input(TEGRA_GPIO_PH4);
-
-		gpio_request(TEGRA_GPIO_PH6, "atmel-reset");
-		gpio_direction_output(TEGRA_GPIO_PH6, 0);
+		ret = gpio_request(TEGRA_GPIO_PH4, "atmel-irq");
+		if (ret < 0) {
+			pr_err("%s() Error in gpio_request() for gpio %d\n",
+					__func__, ret);
+		}
+		ret = gpio_direction_input(TEGRA_GPIO_PH4);
+		if (ret < 0) {
+			pr_err("%s() Error in setting gpio %d to in/out\n",
+					 __func__, ret);
+			gpio_free(TEGRA_GPIO_PH4);
+		}
+		ret = gpio_request(TEGRA_GPIO_PH6, "atmel-reset");
+		if (ret < 0) {
+			pr_err("%s() Error in gpio_request() for gpio %d\n",
+					__func__, ret);
+		}
+		ret = gpio_direction_output(TEGRA_GPIO_PH6, 0);
+		if (ret < 0) {
+			pr_err("%s() Error in setting gpio %d to in/out\n",
+					 __func__, ret);
+			gpio_free(TEGRA_GPIO_PH6);
+		}
 		msleep(1);
 		gpio_set_value(TEGRA_GPIO_PH6, 1);
 		msleep(100);
@@ -1391,6 +1384,7 @@ static void __init tegra_cardhu_init(void)
 	tegra_smmu_init();
 	tegra_soc_device_init("cardhu");
 	cardhu_pinmux_init();
+	cardhu_gpio_init();
 	cardhu_i2c_init();
 	cardhu_spi_init();
 	cardhu_usb_init();
@@ -1423,6 +1417,7 @@ static void __init tegra_cardhu_init(void)
 	tegra_wdt_recovery_init();
 #endif
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
+	tegra_vibrator_init();
 }
 
 static void __init tegra_cardhu_dt_init(void)

@@ -43,6 +43,8 @@
 
 #include <linux/nfc/pn544.h>
 #include <linux/of_platform.h>
+#include <linux/skbuff.h>
+#include <linux/ti_wilink_st.h>
 
 #include <sound/max98088.h>
 
@@ -69,6 +71,7 @@
 #include <asm/mach/arch.h>
 
 #include "board.h"
+#include "board-common.h"
 #include "clock.h"
 #include "board-enterprise.h"
 #include "baseband-xmm-power.h"
@@ -117,6 +120,32 @@ static struct tegra_thermal_bind thermal_binds[] = {
 	},
 };
 
+/* wl128x BT, FM, GPS connectivity chip */
+struct ti_st_plat_data enterprise_wilink_pdata = {
+	.nshutdown_gpio = TEGRA_GPIO_PE6,
+	.dev_name = BLUETOOTH_UART_DEV_NAME,
+	.flow_cntrl = 1,
+	.baud_rate = 3000000,
+};
+
+static struct platform_device wl128x_device = {
+	.name		= "kim",
+	.id		= -1,
+	.dev.platform_data = &enterprise_wilink_pdata,
+};
+
+static struct platform_device btwilink_device = {
+	.name = "btwilink",
+	.id = -1,
+};
+
+static noinline void __init enterprise_bt_st(void)
+{
+	pr_info("enterprise_bt_st");
+
+	platform_device_register(&wl128x_device);
+	platform_device_register(&btwilink_device);
+}
 static struct rfkill_gpio_platform_data enterprise_bt_rfkill_pdata[] = {
 	{
 		.name           = "bt_rfkill",
@@ -133,8 +162,19 @@ static struct platform_device enterprise_bt_rfkill_device = {
 		.platform_data = &enterprise_bt_rfkill_pdata,
 	},
 };
-
-static struct resource enterprise_bluesleep_resources[] = {
+static struct resource enterprise_ti_bluesleep_resources[] = {
+	[0] = {
+		.name = "gpio_host_wake",
+			.start  = TEGRA_GPIO_PS2,
+			.end    = TEGRA_GPIO_PS2,
+			.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+			.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+};
+static struct resource enterprise_brcm_bluesleep_resources[] = {
 	[0] = {
 		.name = "gpio_host_wake",
 			.start  = TEGRA_GPIO_PS2,
@@ -153,19 +193,38 @@ static struct resource enterprise_bluesleep_resources[] = {
 	},
 };
 
-static struct platform_device enterprise_bluesleep_device = {
+static struct platform_device enterprise_ti_bluesleep_device = {
 	.name           = "bluesleep",
 	.id             = -1,
-	.num_resources  = ARRAY_SIZE(enterprise_bluesleep_resources),
-	.resource       = enterprise_bluesleep_resources,
+	.num_resources  = ARRAY_SIZE(enterprise_ti_bluesleep_resources),
+	.resource       = enterprise_ti_bluesleep_resources,
 };
 
+static struct platform_device enterprise_brcm_bluesleep_device = {
+	.name           = "bluesleep",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(enterprise_brcm_bluesleep_resources),
+	.resource       = enterprise_brcm_bluesleep_resources,
+};
+static void __init enterprise_bt_rfkill(void)
+{
+	platform_device_register(&enterprise_bt_rfkill_device);
+	return;
+}
 static void __init enterprise_setup_bluesleep(void)
 {
-	enterprise_bluesleep_resources[2].start =
-		enterprise_bluesleep_resources[2].end =
+	if (tegra_get_commchip_id() == COMMCHIP_TI_WL18XX) {
+		enterprise_ti_bluesleep_resources[1].start =
+		enterprise_ti_bluesleep_resources[1].end =
 			gpio_to_irq(TEGRA_GPIO_PS2);
-	platform_device_register(&enterprise_bluesleep_device);
+		platform_device_register(&enterprise_ti_bluesleep_device);
+	}
+	else {
+		enterprise_brcm_bluesleep_resources[2].start =
+		enterprise_brcm_bluesleep_resources[2].end =
+			gpio_to_irq(TEGRA_GPIO_PS2);
+		platform_device_register(&enterprise_brcm_bluesleep_device);
+	}
 	return;
 }
 
@@ -449,34 +508,15 @@ static struct tegra_uart_platform_data enterprise_loopback_uart_pdata;
 
 static void __init uart_debug_init(void)
 {
-	unsigned long rate;
-	struct clk *c;
+	int debug_port_id;
 
 	/* UARTD is the debug port. */
 	pr_info("Selecting UARTD as the debug console\n");
-	enterprise_uart_devices[3] = &debug_uartd_device;
-	debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartd_device.dev.platform_data))->mapbase;
-	debug_uart_clk = clk_get_sys("serial8250.0", "uartd");
+	debug_port_id = uart_console_debug_init(3);
+	if (debug_port_id < 0)
+		return;
 
-	/* Clock enable for the debug channel */
-	if (!IS_ERR_OR_NULL(debug_uart_clk)) {
-		rate = ((struct plat_serial8250_port *)(
-			debug_uartd_device.dev.platform_data))->uartclk;
-		pr_info("The debug console clock name is %s\n",
-						debug_uart_clk->name);
-		c = tegra_get_clock_by_name("pll_p");
-		if (IS_ERR_OR_NULL(c))
-			pr_err("Not getting the parent clock pll_p\n");
-		else
-			clk_set_parent(debug_uart_clk, c);
-
-		clk_enable(debug_uart_clk);
-		clk_set_rate(debug_uart_clk, rate);
-	} else {
-		pr_err("Not getting the clock %s for debug console\n",
-				debug_uart_clk->name);
-	}
+	enterprise_uart_devices[debug_port_id] = uart_console_debug_device;
 }
 
 static void __init enterprise_uart_init(void)
@@ -645,7 +685,6 @@ static struct platform_device *enterprise_devices[] __initdata = {
 	&tegra_avp_device,
 #endif
 	&tegra_camera,
-	&enterprise_bt_rfkill_device,
 	&tegra_spi_device4,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
@@ -725,11 +764,31 @@ static struct i2c_board_info __initdata atmel_i2c_info[] = {
 
 static int __init enterprise_touch_init(void)
 {
-	gpio_request(TEGRA_GPIO_PH6, "atmel-irq");
-	gpio_direction_input(TEGRA_GPIO_PH6);
-
-	gpio_request(TEGRA_GPIO_PF5, "atmel-reset");
-	gpio_direction_output(TEGRA_GPIO_PF5, 0);
+	int ret;
+	ret = gpio_request(TEGRA_GPIO_PH6, "atmel-irq");
+	if (ret < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, ret);
+		return ret;
+	}
+	ret = gpio_direction_input(TEGRA_GPIO_PH6);
+	if (ret < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n",
+			__func__, ret);
+		gpio_free(TEGRA_GPIO_PH6);
+		return ret;
+	}
+	ret = gpio_request(TEGRA_GPIO_PF5, "atmel-reset");
+	if (ret < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, ret);
+		return ret;
+	}
+	ret = gpio_direction_output(TEGRA_GPIO_PF5, 0);
+	if (ret < 0) {
+		pr_err("%s: gpio_direction_ouput failed %d\n",
+			__func__, ret);
+		gpio_free(TEGRA_GPIO_PF5);
+		return ret;
+	}
 	msleep(1);
 	gpio_set_value(TEGRA_GPIO_PF5, 1);
 	msleep(100);
@@ -1123,6 +1182,10 @@ static void __init tegra_enterprise_init(void)
 	enterprise_audio_init();
 	enterprise_baseband_init();
 	enterprise_panel_init();
+	if (tegra_get_commchip_id() == COMMCHIP_TI_WL18XX)
+		enterprise_bt_st();
+	else
+		enterprise_bt_rfkill();
 	enterprise_setup_bluesleep();
 	enterprise_emc_init();
 	enterprise_sensors_init();

@@ -33,7 +33,11 @@
 
 /* Audio-related GPIOs */
 #define TEGRA_GPIO_CDC_IRQ		TEGRA_GPIO_PW3
-#define TEGRA_GPIO_LDO1_EN		TEGRA_GPIO_PH4
+#define TEGRA_GPIO_LDO1_EN		TEGRA_GPIO_PV3
+#define TEGRA_GPIO_CODEC1_EN	TEGRA_GPIO_PP3
+#define TEGRA_GPIO_CODEC2_EN	TEGRA_GPIO_PP1
+#define TEGRA_GPIO_CODEC3_EN	TEGRA_GPIO_PV0
+
 #define TEGRA_GPIO_SPKR_EN		-1
 #define TEGRA_GPIO_HP_DET		TEGRA_GPIO_PW2
 #define TEGRA_GPIO_INT_MIC_EN		TEGRA_GPIO_PK3
@@ -69,6 +73,28 @@
 #define CAM_AF_PWDN			TEGRA_GPIO_PBB7
 #define CAM_GPIO1			TEGRA_GPIO_PCC1
 #define CAM_GPIO2			TEGRA_GPIO_PCC2
+
+/* Touchscreen definitions */
+#define TOUCH_GPIO_IRQ_RAYDIUM_SPI      TEGRA_GPIO_PK2
+#define TOUCH_GPIO_RST_RAYDIUM_SPI      TEGRA_GPIO_PK4
+
+/* Invensense MPU Definitions */
+#define MPU_GYRO_NAME           "mpu9150"
+#define MPU_GYRO_IRQ_GPIO       TEGRA_GPIO_PR3
+#define MPU_GYRO_ADDR           0x69
+#define MPU_GYRO_BUS_NUM        0
+#define MPU_GYRO_ORIENTATION    { -1, 0, 0, 0, -1, 0, 0, 0, 1 }
+#define MPU_ACCEL_NAME          "kxtf9"
+#define MPU_ACCEL_IRQ_GPIO      0 /* DISABLE ACCELIRQ:  TEGRA_GPIO_PJ2 */
+#define MPU_ACCEL_ADDR          0x0F
+#define MPU_ACCEL_BUS_NUM       0
+#define MPU_ACCEL_ORIENTATION   { 0, 1, 0, -1, 0, 0, 0, 0, 1 }
+#define MPU_COMPASS_NAME        "ak8975"
+#define MPU_COMPASS_IRQ_GPIO    0
+#define MPU_COMPASS_ADDR        0x0D
+#define MPU_COMPASS_BUS_NUM     0
+#define MPU_COMPASS_ORIENTATION { 0, 1, 0, -1, 0, 0, 0, 0, 1 }
+
 
 int dalmore_regulator_init(void);
 int dalmore_suspend_init(void);

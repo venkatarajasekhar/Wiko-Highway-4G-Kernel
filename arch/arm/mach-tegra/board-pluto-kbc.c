@@ -65,7 +65,7 @@ static struct tegra_kbc_platform_data pluto_kbc_platform_data = {
 	.scan_count = 30,
 	.wakeup = true,
 	.keymap_data = &keymap_data,
-	.wake_cnt = 2,
+	.wake_cnt = 1,
 	.wake_cfg = &pluto_wake_cfg[0],
 	.wakeup_key = KEY_POWER,
 #ifdef CONFIG_ANDROID
@@ -86,8 +86,8 @@ int __init pluto_kbc_init(void)
 		data->pin_cfg[i].type = PIN_CFG_ROW;
 	}
 	for (i = 0; i < PLUTO_COL_COUNT; i++) {
-		data->pin_cfg[i + KBC_PIN_GPIO_16].num = i;
-		data->pin_cfg[i + KBC_PIN_GPIO_16].type = PIN_CFG_COL;
+		data->pin_cfg[i + KBC_PIN_GPIO_11].num = i;
+		data->pin_cfg[i + KBC_PIN_GPIO_11].type = PIN_CFG_COL;
 	}
 
 	platform_device_register(&tegra_kbc_device);

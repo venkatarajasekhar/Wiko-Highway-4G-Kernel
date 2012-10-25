@@ -45,7 +45,7 @@
 #if TEGRA_PANEL_ENABLE
 
 #define TEGRA_DSI_GANGED_MODE	0
-#define IS_EXTERNAL_PWM		0
+#define IS_EXTERNAL_PWM		1
 
 /* PANEL_<diagonal length in inches>_<vendor name>_<resolution> */
 #define PANEL_10_1_PANASONIC_1920_1200	1
@@ -86,7 +86,7 @@ static struct regulator *dalmore_hdmi_pll;
 static struct regulator *dalmore_hdmi_vddio;
 #endif
 
-static struct resource dalmore_disp1_resources[] __initdata = {
+static struct resource dalmore_disp1_resources[] = {
 	{
 		.name	= "irq",
 		.start	= INT_DISPLAY_GENERAL,
@@ -128,7 +128,7 @@ static struct resource dalmore_disp1_resources[] __initdata = {
 #endif
 };
 
-static struct resource dalmore_disp2_resources[] __initdata = {
+static struct resource dalmore_disp2_resources[] = {
 	{
 		.name	= "irq",
 		.start	= INT_DISPLAY_B_GENERAL,
@@ -179,7 +179,7 @@ static struct tegra_dsi_out dalmore_dsi = {
 	.dsi2edp_bridge_enable = true,
 #endif
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
-	.refresh_rate = 60,
+	.refresh_rate = 59,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
 	.dsi_instance = DSI_INSTANCE_0,
@@ -190,14 +190,14 @@ static struct tegra_dsi_out dalmore_dsi = {
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
 #else
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE,
-	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS,
+	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END,
 #endif
 	.dsi_init_cmd = dsi_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_init_cmd),
 };
 
-static int dalmore_dsi_regulator_get(void)
+static int dalmore_dsi_regulator_get(struct device *dev)
 {
 	int err = 0;
 
@@ -206,7 +206,7 @@ static int dalmore_dsi_regulator_get(void)
 
 #if PANEL_11_6_AUO_1920_1080 || \
 	PANEL_10_1_SHARP_2560_1600
-	dvdd_lcd_1v8 = regulator_get(NULL, "dvdd_lcd");
+	dvdd_lcd_1v8 = regulator_get(dev, "dvdd_lcd");
 	if (IS_ERR_OR_NULL(dvdd_lcd_1v8)) {
 		pr_err("dvdd_lcd regulator get failed\n");
 		err = PTR_ERR(dvdd_lcd_1v8);
@@ -215,7 +215,7 @@ static int dalmore_dsi_regulator_get(void)
 	}
 #endif
 #if PANEL_11_6_AUO_1920_1080
-	vdd_ds_1v8 = regulator_get(NULL, "vdd_ds_1v8");
+	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
 	if (IS_ERR_OR_NULL(vdd_ds_1v8)) {
 		pr_err("vdd_ds_1v8 regulator get failed\n");
 		err = PTR_ERR(vdd_ds_1v8);
@@ -226,7 +226,7 @@ static int dalmore_dsi_regulator_get(void)
 #if PANEL_10_1_PANASONIC_1920_1200 || \
 	PANEL_11_6_AUO_1920_1080 || \
 	PANEL_10_1_SHARP_2560_1600
-	avdd_lcd_3v3 = regulator_get(NULL, "avdd_lcd");
+	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
 	if (IS_ERR_OR_NULL(avdd_lcd_3v3)) {
 		pr_err("avdd_lcd regulator get failed\n");
 		err = PTR_ERR(avdd_lcd_3v3);
@@ -234,7 +234,7 @@ static int dalmore_dsi_regulator_get(void)
 		goto fail;
 	}
 
-	vdd_lcd_bl_12v = regulator_get(NULL, "vdd_lcd_bl");
+	vdd_lcd_bl_12v = regulator_get(dev, "vdd_lcd_bl");
 	if (IS_ERR_OR_NULL(vdd_lcd_bl_12v)) {
 		pr_err("vdd_lcd_bl regulator get failed\n");
 		err = PTR_ERR(vdd_lcd_bl_12v);
@@ -286,11 +286,11 @@ fail:
 	return err;
 }
 
-static int dalmore_dsi_panel_enable(void)
+static int dalmore_dsi_panel_enable(struct device *dev)
 {
 	int err = 0;
 
-	err = dalmore_dsi_regulator_get();
+	err = dalmore_dsi_regulator_get(dev);
 	if (err < 0) {
 		pr_err("dsi regulator get failed\n");
 		goto fail;
@@ -300,17 +300,6 @@ static int dalmore_dsi_panel_enable(void)
 		pr_err("dsi gpio request failed\n");
 		goto fail;
 	}
-
-#if DSI_PANEL_RESET
-	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
-	usleep_range(1000, 5000);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
-	usleep_range(1000, 5000);
-	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
-	msleep(20);
-#endif
-
-	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
 
 	if (vdd_ds_1v8) {
 		err = regulator_enable(vdd_ds_1v8);
@@ -343,6 +332,19 @@ static int dalmore_dsi_panel_enable(void)
 			goto fail;
 		}
 	}
+
+	msleep(100);
+#if DSI_PANEL_RESET
+	gpio_direction_output(DSI_PANEL_RST_GPIO, 1);
+	usleep_range(1000, 5000);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 0);
+	msleep(150);
+	gpio_set_value(DSI_PANEL_RST_GPIO, 1);
+	msleep(1500);
+#endif
+
+	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
+	gpio_direction_output(57, 1);
 
 #if PANEL_11_6_AUO_1920_1080
 	gpio_direction_output(en_vdd_bl, 1);
@@ -395,7 +397,7 @@ static struct tegra_dc_mode dalmore_dsi_modes[] = {
 		.v_back_porch = 16,
 		.h_active = 1920,
 		.v_active = 1200,
-		.h_front_porch = 112,
+		.h_front_porch = 120,
 		.v_front_porch = 17,
 	},
 #endif
@@ -458,11 +460,11 @@ static struct tegra_dc_out dalmore_disp1_out = {
 #endif
 };
 
-static int dalmore_hdmi_enable(void)
+static int dalmore_hdmi_enable(struct device *dev)
 {
 	int ret;
 	if (!dalmore_hdmi_reg) {
-			dalmore_hdmi_reg = regulator_get(NULL, "avdd_hdmi");
+			dalmore_hdmi_reg = regulator_get(dev, "avdd_hdmi");
 			if (IS_ERR_OR_NULL(dalmore_hdmi_reg)) {
 				pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
 				dalmore_hdmi_reg = NULL;
@@ -475,7 +477,7 @@ static int dalmore_hdmi_enable(void)
 		return ret;
 	}
 	if (!dalmore_hdmi_pll) {
-		dalmore_hdmi_pll = regulator_get(NULL, "avdd_hdmi_pll");
+		dalmore_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
 		if (IS_ERR_OR_NULL(dalmore_hdmi_pll)) {
 			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
 			dalmore_hdmi_pll = NULL;
@@ -519,10 +521,10 @@ static int dalmore_hdmi_postsuspend(void)
 	return 0;
 }
 
-static int dalmore_hdmi_hotplug_init(void)
+static int dalmore_hdmi_hotplug_init(struct device *dev)
 {
 	if (!dalmore_hdmi_vddio) {
-		dalmore_hdmi_vddio = regulator_get(NULL, "vdd_hdmi_5v0");
+		dalmore_hdmi_vddio = regulator_get(dev, "vdd_hdmi_5v0");
 		if (WARN_ON(IS_ERR(dalmore_hdmi_vddio))) {
 			pr_err("%s: couldn't get regulator vdd_hdmi_5v0: %ld\n",
 				__func__, PTR_ERR(dalmore_hdmi_vddio));
@@ -594,7 +596,7 @@ static struct tegra_dc_platform_data dalmore_disp2_pdata = {
 	.emc_clk_rate	= 300000000,
 };
 
-static struct nvhost_device dalmore_disp2_device __initdata = {
+static struct nvhost_device dalmore_disp2_device = {
 	.name		= "tegradc",
 	.id		= 1,
 	.resource	= dalmore_disp2_resources,
@@ -604,7 +606,7 @@ static struct nvhost_device dalmore_disp2_device __initdata = {
 	},
 };
 
-static struct nvhost_device dalmore_disp1_device __initdata = {
+static struct nvhost_device dalmore_disp1_device = {
 	.name		= "tegradc",
 	.id		= 0,
 	.resource	= dalmore_disp1_resources,
@@ -687,7 +689,8 @@ static struct platform_tegra_pwm_backlight_data dalmore_disp1_bl_data = {
 	.check_fb		= dalmore_disp1_check_fb,
 };
 
-static struct platform_device dalmore_disp1_bl_device __initdata = {
+static struct platform_device __maybe_unused
+		dalmore_disp1_bl_device __initdata = {
 	.name	= "tegra-pwm-bl",
 	.id	= -1,
 	.dev	= {

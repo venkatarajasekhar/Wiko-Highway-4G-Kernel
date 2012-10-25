@@ -56,12 +56,13 @@ int enterprise_edp_init(void);
 void enterprise_bpc_mgmt_init(void);
 
 /* Invensense MPU Definitions */
-#define MPU_TYPE_MPU3050	1
-#define MPU_TYPE_MPU6050	2
-#define MPU_GYRO_TYPE		MPU_TYPE_MPU3050
+#define MPU_GYRO_NAME		"mpu3050"
+#define MPU_GYRO_NAME_TAI	"mpu9150"
 #define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PH4
+#define MPU_GYRO_IRQ_GPIO_TAI	TEGRA_GPIO_PI6
 #define MPU_GYRO_ADDR		0x68
 #define MPU_GYRO_BUS_NUM	0
+#define MPU_GYRO_BUS_NUM_TAI	0
 #define MPU_GYRO_ORIENTATION	{ -1, 0, 0, 0, -1, 0, 0, 0, 1 }
 #define MPU_ACCEL_NAME		"kxtf9"
 #define MPU_ACCEL_IRQ_GPIO	0 /* DISABLE ACCELIRQ:  TEGRA_GPIO_PJ2 */
@@ -121,6 +122,8 @@ void enterprise_bpc_mgmt_init(void);
 #define TEGRA_GPIO_HP_DET	TEGRA_GPIO_PW3
 #define TEGRA_GPIO_CODEC_RST	TEGRA_GPIO_PX0
 
+/* UART port which is used by bluetooth*/
+#define BLUETOOTH_UART_DEV_NAME "/dev/ttyHS2"
 /* Baseband GPIO addresses */
 
 #define GPIO_BB_RESET		TEGRA_GPIO_PE1

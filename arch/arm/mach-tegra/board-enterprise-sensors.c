@@ -141,34 +141,35 @@ static void enterprise_nct1008_init(void)
 }
 
 /* MPU board file definition	*/
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU3050)
-#define MPU_GYRO_NAME		"mpu3050"
-#endif
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU6050)
-#define MPU_GYRO_NAME		"mpu6050"
-#endif
 static struct mpu_platform_data mpu_gyro_data = {
 	.int_config	= 0x10,
 	.level_shifter	= 0,
-	.orientation	= MPU_GYRO_ORIENTATION,	/* Located in board_[platformname].h	*/
+	.orientation	= MPU_GYRO_ORIENTATION,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_ACCEL,
+	.sec_slave_id	= ACCEL_ID_KXTF9,
+	.secondary_i2c_addr	= MPU_ACCEL_ADDR,
+	.secondary_read_reg	= 0x06,
+	.secondary_orientation	= MPU_ACCEL_ORIENTATION,
+	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
+			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
 };
 
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU3050)
-static struct ext_slave_platform_data mpu_accel_data = {
-	.address	= MPU_ACCEL_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_ACCEL_BUS_NUM,
-	.bus		= EXT_SLAVE_BUS_SECONDARY,
-	.orientation	= MPU_ACCEL_ORIENTATION,	/* Located in board_[platformname].h	*/
+static struct mpu_platform_data mpu9150_gyro_data = {
+	.int_config	= 0x10,
+	.level_shifter	= 0,
+	.orientation	= MPU_GYRO_ORIENTATION,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_COMPASS,
+	.sec_slave_id	= COMPASS_ID_AK8975,
+	.secondary_i2c_addr	= MPU_COMPASS_ADDR,
+	.secondary_read_reg	= 0x06,
+	.secondary_orientation	= MPU_COMPASS_ORIENTATION,
+	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
+			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
 };
-#endif
 
-static struct ext_slave_platform_data mpu_compass_data = {
-	.address	= MPU_COMPASS_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_COMPASS_BUS_NUM,
-	.bus		= EXT_SLAVE_BUS_PRIMARY,
-	.orientation	= MPU_COMPASS_ORIENTATION,	/* Located in board_[platformname].h	*/
+static struct mpu_platform_data mpu_compass_data = {
+	.orientation    = MPU_COMPASS_ORIENTATION,
+	.sec_slave_type = SECONDARY_SLAVE_TYPE_NONE,
 };
 
 static struct i2c_board_info __initdata inv_mpu_i2c2_board_info[] = {
@@ -176,15 +177,19 @@ static struct i2c_board_info __initdata inv_mpu_i2c2_board_info[] = {
 		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
 		.platform_data = &mpu_gyro_data,
 	},
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU3050)
 	{
 		I2C_BOARD_INFO(MPU_ACCEL_NAME, MPU_ACCEL_ADDR),
-		.platform_data = &mpu_accel_data,
 	},
-#endif
 	{
 		I2C_BOARD_INFO(MPU_COMPASS_NAME, MPU_COMPASS_ADDR),
 		.platform_data = &mpu_compass_data,
+	},
+};
+
+static struct i2c_board_info __initdata inv_mpu9150_i2c2_board_info[] = {
+	{
+		I2C_BOARD_INFO(MPU_GYRO_NAME_TAI, MPU_GYRO_ADDR),
+		.platform_data = &mpu9150_gyro_data,
 	},
 };
 
@@ -192,10 +197,12 @@ static void mpuirq_init(void)
 {
 	int ret = 0;
 	int i = 0;
+	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
+	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
+	char *gyro_name = MPU_GYRO_NAME;
 
 	pr_info("*** MPU START *** mpuirq_init...\n");
 
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU3050)
 #if	MPU_ACCEL_IRQ_GPIO
 	/* ACCEL-IRQ assignment */
 	ret = gpio_request(MPU_ACCEL_IRQ_GPIO, MPU_ACCEL_NAME);
@@ -211,35 +218,46 @@ static void mpuirq_init(void)
 		return;
 	}
 #endif
-#endif
 
 	/* MPU-IRQ assignment */
-	ret = gpio_request(MPU_GYRO_IRQ_GPIO, MPU_GYRO_NAME);
+	if (machine_is_tai()) {
+		gyro_irq_gpio = MPU_GYRO_IRQ_GPIO_TAI;
+		gyro_bus_num = MPU_GYRO_BUS_NUM_TAI;
+		gyro_name = MPU_GYRO_NAME_TAI;
+	}
+
+/*	ret = gpio_request(MPU_GYRO_IRQ_GPIO, MPU_GYRO_NAME);*/
+	ret = gpio_request(gyro_irq_gpio, gyro_name);
+
 	if (ret < 0) {
 		pr_err("%s: gpio_request failed %d\n", __func__, ret);
 		return;
 	}
 
-	ret = gpio_direction_input(MPU_GYRO_IRQ_GPIO);
+	ret = gpio_direction_input(gyro_irq_gpio);
 	if (ret < 0) {
 		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
-		gpio_free(MPU_GYRO_IRQ_GPIO);
+		gpio_free(gyro_irq_gpio);
 		return;
 	}
 	pr_info("*** MPU END *** mpuirq_init...\n");
 
-	inv_mpu_i2c2_board_info[i++].irq = gpio_to_irq(MPU_GYRO_IRQ_GPIO);
-#if (MPU_GYRO_TYPE == MPU_TYPE_MPU3050)
-#ifdef MPU_ACCELL_IRQ_GPIO
-	inv_mpu_i2c2_board_info[i].irq = gpio_to_irq(MPU_ACCEL_IRQ_GPIO);
-#endif
-	i++;
-#endif
-#ifdef MPU_COMPASS_IRQ_GPIO
-	inv_mpu_i2c2_board_info[i++].irq = gpio_to_irq(MPU_COMPASS_IRQ_GPIO);
-#endif
-	i2c_register_board_info(MPU_GYRO_BUS_NUM, inv_mpu_i2c2_board_info,
-		ARRAY_SIZE(inv_mpu_i2c2_board_info));
+	if (machine_is_tai()) {
+		inv_mpu9150_i2c2_board_info[i++].irq =
+			gpio_to_irq(MPU_GYRO_IRQ_GPIO_TAI);
+		i2c_register_board_info(gyro_bus_num,
+			inv_mpu9150_i2c2_board_info,
+			ARRAY_SIZE(inv_mpu9150_i2c2_board_info));
+	} else {
+		inv_mpu_i2c2_board_info[i++].irq =
+			gpio_to_irq(MPU_GYRO_IRQ_GPIO);
+		inv_mpu_i2c2_board_info[i++].irq =
+			gpio_to_irq(MPU_ACCEL_IRQ_GPIO);
+		inv_mpu_i2c2_board_info[i++].irq =
+			gpio_to_irq(MPU_COMPASS_IRQ_GPIO);
+		i2c_register_board_info(gyro_bus_num, inv_mpu_i2c2_board_info,
+			ARRAY_SIZE(inv_mpu_i2c2_board_info));
+	}
 }
 
 static inline void enterprise_msleep(u32 t)
@@ -286,7 +304,7 @@ static __initdata struct tegra_clk_init_table tai_front_cam_clk_init_table[] = {
 };
 
 
-static int enterprise_cam_pwr(enum CAMERA_INDEX cam, bool pwr_on)
+static int enterprise_cam_pwr(struct device *dev, enum CAMERA_INDEX cam, bool pwr_on)
 {
 	struct enterprise_power_rail *reg_cam = &ent_vicsi_pwr[cam];
 	int ret = 0;
@@ -297,7 +315,7 @@ static int enterprise_cam_pwr(enum CAMERA_INDEX cam, bool pwr_on)
 	*/
 	if (pwr_on) {
 		if (reg_cam->csi_reg == NULL) {
-			reg_cam->csi_reg = regulator_get(NULL,
+			reg_cam->csi_reg = regulator_get(dev,
 						"avdd_dsi_csi");
 			if (IS_ERR_OR_NULL(reg_cam->csi_reg)) {
 				pr_err("%s: csi pwr err\n", __func__);
@@ -313,7 +331,7 @@ static int enterprise_cam_pwr(enum CAMERA_INDEX cam, bool pwr_on)
 		}
 
 		if (reg_cam->cam_reg == NULL) {
-			reg_cam->cam_reg = regulator_get(NULL,
+			reg_cam->cam_reg = regulator_get(dev,
 						"vddio_cam");
 			if (IS_ERR_OR_NULL(reg_cam->cam_reg)) {
 				pr_err("%s: vddio pwr err\n", __func__);
@@ -350,12 +368,12 @@ enterprise_cam_pwr_fail:
 	return ret;
 }
 
-static int enterprise_ar0832_ri_power_on(int is_stereo)
+static int enterprise_ar0832_ri_power_on(struct device *dev, int is_stereo)
 {
 	int ret = 0;
 
 	pr_info("%s: ++\n", __func__);
-	ret = enterprise_cam_pwr(CAM_REAR_RIGHT, true);
+	ret = enterprise_cam_pwr(dev, CAM_REAR_RIGHT, true);
 
 	/* Release Reset */
 	if (is_stereo) {
@@ -374,14 +392,14 @@ static int enterprise_ar0832_ri_power_on(int is_stereo)
 	return ret;
 }
 
-static int enterprise_ar0832_le_power_on(int is_stereo)
+static int enterprise_ar0832_le_power_on(struct device *dev, int is_stereo)
 {
 	int ret = 0;
 
 	pr_info("%s: ++\n", __func__);
 
 	if (board_info.board_id != BOARD_E1239) {
-		ret = enterprise_cam_pwr(CAM_REAR_LEFT, true);
+		ret = enterprise_cam_pwr(dev, CAM_REAR_LEFT, true);
 		/* Release Reset */
 		gpio_set_value(CAM2_RST_L_GPIO, 1);
 	}
@@ -400,12 +418,12 @@ static int enterprise_ar0832_le_power_on(int is_stereo)
 	return ret;
 }
 
-static int enterprise_ar0832_ri_power_off(int is_stereo)
+static int enterprise_ar0832_ri_power_off(struct device *dev, int is_stereo)
 {
 	int ret;
 
 	pr_info("%s: ++\n", __func__);
-	ret = enterprise_cam_pwr(CAM_REAR_RIGHT, false);
+	ret = enterprise_cam_pwr(dev, CAM_REAR_RIGHT, false);
 
 	/* Assert Reset */
 	if (is_stereo) {
@@ -418,13 +436,13 @@ static int enterprise_ar0832_ri_power_off(int is_stereo)
 	return ret;
 }
 
-static int enterprise_ar0832_le_power_off(int is_stereo)
+static int enterprise_ar0832_le_power_off(struct device *dev, int is_stereo)
 {
 	int ret = 0;
 
 	if (board_info.board_id != BOARD_E1239) {
 		pr_info("%s: ++\n", __func__);
-		ret = enterprise_cam_pwr(CAM_REAR_LEFT, false);
+		ret = enterprise_cam_pwr(dev, CAM_REAR_LEFT, false);
 
 		/* Assert Reset */
 		gpio_set_value(CAM2_RST_L_GPIO, 0);
@@ -432,7 +450,7 @@ static int enterprise_ar0832_le_power_off(int is_stereo)
 	return ret;
 }
 
-static int enterprise_ov9726_power_on(void)
+static int enterprise_ov9726_power_on(struct device *dev)
 {
 	pr_info("ov9726 power on\n");
 
@@ -440,7 +458,7 @@ static int enterprise_ov9726_power_on(void)
 		/* switch mipi mux to front camera */
 		gpio_set_value(CAM_CSI_MUX_SEL_GPIO, CAM_CSI_MUX_SEL_FRONT);
 	}
-	enterprise_cam_pwr(CAM_FRONT, true);
+	enterprise_cam_pwr(dev, CAM_FRONT, true);
 
 	if (board_info.board_id == BOARD_E1239)
 		clk_enable(tegra_get_clock_by_name("clk_out_3"));
@@ -448,11 +466,11 @@ static int enterprise_ov9726_power_on(void)
 	return 0;
 }
 
-static int enterprise_ov9726_power_off(void)
+static int enterprise_ov9726_power_off(struct device *dev)
 {
 	pr_info("ov9726 power off\n");
 
-	enterprise_cam_pwr(CAM_FRONT, false);
+	enterprise_cam_pwr(dev, CAM_FRONT, false);
 
 	if (board_info.board_id == BOARD_E1239)
 		clk_disable(tegra_get_clock_by_name("clk_out_3"));
@@ -675,9 +693,11 @@ static int enterprise_cam_init(void)
 		 * Right  camera is on PCA954x's I2C BUS1,
 		 * Left camera is on BUS0
 		 */
-		i2c_register_board_info(PCA954x_I2C_BUS0, enterprise_i2c6_boardinfo,
+		i2c_register_board_info(PCA954x_I2C_BUS0,
+			enterprise_i2c6_boardinfo,
 			ARRAY_SIZE(enterprise_i2c6_boardinfo));
-		i2c_register_board_info(PCA954x_I2C_BUS1, enterprise_i2c7_boardinfo,
+		i2c_register_board_info(PCA954x_I2C_BUS1,
+			enterprise_i2c7_boardinfo,
 			ARRAY_SIZE(enterprise_i2c7_boardinfo));
 	}
 	return 0;
@@ -742,8 +762,7 @@ int __init enterprise_sensors_init(void)
 
 	enterprise_isl_init();
 	enterprise_nct1008_init();
-	if (board_info.board_id != BOARD_E1239)
-		mpuirq_init();
+	mpuirq_init();
 #if ENTERPRISE_INA230_ENABLED
 	if (machine_is_tegra_enterprise())
 		enterprise_ina230_init();

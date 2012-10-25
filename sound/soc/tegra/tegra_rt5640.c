@@ -712,9 +712,9 @@ static __devinit int tegra_rt5640_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "No platform data supplied\n");
 		return -EINVAL;
 	}
-
 	if (pdata->codec_name)
 		card->dai_link->codec_name = pdata->codec_name;
+
 	if (pdata->codec_dai_name)
 		card->dai_link->codec_dai_name = pdata->codec_dai_name;
 
@@ -729,10 +729,47 @@ static __devinit int tegra_rt5640_driver_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev, "Fail gpio_request AUDIO_LDO1\n");
 		}
+
 		ret = gpio_direction_output(pdata->gpio_ldo1_en, 1);
-		if (ret) {
+		if (ret)
 			dev_err(&pdev->dev, "Fail gpio_direction AUDIO_LDO1\n");
-		}
+
+		msleep(200);
+	}
+
+	if (gpio_is_valid(pdata->gpio_codec1)) {
+		ret = gpio_request(pdata->gpio_codec1, "rt5640");
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_request GPIO_CODEC1\n");
+
+		ret = gpio_direction_output(pdata->gpio_codec1, 1);
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_direction GPIO_CODEC1\n");
+
+		msleep(200);
+	}
+
+	if (gpio_is_valid(pdata->gpio_codec2)) {
+		ret = gpio_request(pdata->gpio_codec2, "rt5640");
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_request GPIO_CODEC2\n");
+
+		ret = gpio_direction_output(pdata->gpio_codec2, 1);
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_direction GPIO_CODEC2\n");
+
+		msleep(200);
+	}
+
+	if (gpio_is_valid(pdata->gpio_codec3)) {
+		ret = gpio_request(pdata->gpio_codec3, "rt5640");
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_request GPIO_CODEC3\n");
+
+		ret = gpio_direction_output(pdata->gpio_codec3, 1);
+		if (ret)
+			dev_err(&pdev->dev, "Fail gpio_direction GPIO_CODEC3\n");
+
 		msleep(200);
 	}
 
@@ -761,7 +798,7 @@ static __devinit int tegra_rt5640_driver_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_SWITCH
 	/* Addd h2w swith class support */
-	ret = switch_dev_register(&tegra_rt5640_headset_switch);
+	ret = tegra_asoc_switch_register(&tegra_rt5640_headset_switch);
 	if (ret < 0)
 		goto err_fini_utils;
 #endif
@@ -800,7 +837,7 @@ err_unregister_card:
 	snd_soc_unregister_card(card);
 err_unregister_switch:
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&tegra_rt5640_headset_switch);
+	tegra_asoc_switch_unregister(&tegra_rt5640_headset_switch);
 err_fini_utils:
 #endif
 	tegra_asoc_utils_fini(&machine->util_data);
@@ -849,7 +886,7 @@ static int __devexit tegra_rt5640_driver_remove(struct platform_device *pdev)
 	tegra_asoc_utils_fini(&machine->util_data);
 
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&tegra_rt5640_headset_switch);
+	tegra_asoc_switch_unregister(&tegra_rt5640_headset_switch);
 #endif
 	kfree(machine);
 

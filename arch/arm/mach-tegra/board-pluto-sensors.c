@@ -16,27 +16,18 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#include <linux/i2c.h>
-#include <linux/delay.h>
-#include <mach/gpio.h>
-#include "gpio-names.h"
-#include "board.h"
-#include <mach/gpio.h>
-#include <media/imx091.h>
-#include "board-pluto.h"
-#include "cpu-tegra.h"
+#include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
-#include <mach/gpio-tegra.h>
-#include <mach/fb.h>
+#include <linux/mpu.h>
 #include <media/imx091.h>
 #include <media/imx132.h>
-#include <generated/mach-types.h>
-#include <linux/mpu.h>
+#include <media/ad5816.h>
 
-static struct board_info board_info;
+#include "gpio-names.h"
+#include "board-pluto.h"
 
 /* isl29029 support is provided by isl29028*/
 static struct i2c_board_info pluto_i2c1_isl_board_info[] = {
@@ -56,20 +47,19 @@ static char *pluto_cam_reg_name[] = {
 	"avdd_cam2",		/* Analog VDD 2.7V */
 	"vdd_1v2_cam",		/* Digital VDD 1.2V */
 	"vdd_1v8_cam12",	/* Digital VDDIO 1.8V */
-	"vddio_cam",		/* Tegra CAM_I2C, CAM_MCLK, VDD 1.8V */
 	"vddio_cam_mb",		/* CAM_I2C PULL-UP VDD 1.8V */
 	"vdd_af_cam1",		/* AF VDD */
 };
 
 static struct regulator *pluto_cam_reg[ARRAY_SIZE(pluto_cam_reg_name)];
 
-static int pluto_imx091_power_on(void)
+static int pluto_imx091_power_on(struct device *dev)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
 		if (!pluto_cam_reg[i]) {
-			pluto_cam_reg[i] = regulator_get(NULL,
+			pluto_cam_reg[i] = regulator_get(dev,
 					pluto_cam_reg_name[i]);
 			if (WARN_ON(IS_ERR(pluto_cam_reg[i]))) {
 				pr_err("%s: didn't get regulator #%d: %ld\n",
@@ -90,37 +80,39 @@ static int pluto_imx091_power_on(void)
 
 reg_alloc_fail:
 
-	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
+	for (i = ARRAY_SIZE(pluto_cam_reg_name) - 1; i >= 0; i--) {
 		if (pluto_cam_reg[i]) {
 			regulator_put(pluto_cam_reg[i]);
 			pluto_cam_reg[i] = NULL;
 		}
 	}
+	pr_info("%s fail\n", __func__);
 
 	return -ENODEV;
 }
 
-static int pluto_imx091_power_off(void)
+static int pluto_imx091_power_off(struct device *dev)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
+	for (i = ARRAY_SIZE(pluto_cam_reg_name) - 1; i >= 0; i--) {
 		if (pluto_cam_reg[i]) {
 			regulator_disable(pluto_cam_reg[i]);
 			regulator_put(pluto_cam_reg[i]);
+			pluto_cam_reg[i] = NULL;
 		}
 	}
 
 	return 0;
 }
 
-static int pluto_imx132_power_on(void)
+static int pluto_imx132_power_on(struct device *dev)
 {
 	int i;
 
 	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
 		if (!pluto_cam_reg[i]) {
-			pluto_cam_reg[i] = regulator_get(NULL,
+			pluto_cam_reg[i] = regulator_get(dev,
 					pluto_cam_reg_name[i]);
 			if (WARN_ON(IS_ERR(pluto_cam_reg[i]))) {
 				pr_err("%s: didn't get regulator #%d: %ld\n",
@@ -140,8 +132,7 @@ static int pluto_imx132_power_on(void)
 	return 0;
 
 reg_alloc_fail:
-
-	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
+	for (i = ARRAY_SIZE(pluto_cam_reg_name) - 1; i >= 0; i--) {
 		if (pluto_cam_reg[i]) {
 			regulator_put(pluto_cam_reg[i]);
 			pluto_cam_reg[i] = NULL;
@@ -152,14 +143,15 @@ reg_alloc_fail:
 }
 
 
-static int pluto_imx132_power_off(void)
+static int pluto_imx132_power_off(struct device *dev)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(pluto_cam_reg_name); i++) {
+	for (i = ARRAY_SIZE(pluto_cam_reg_name) - 1; i >= 0; i--) {
 		if (pluto_cam_reg[i]) {
 			regulator_disable(pluto_cam_reg[i]);
 			regulator_put(pluto_cam_reg[i]);
+			pluto_cam_reg[i] = NULL;
 		}
 	}
 
@@ -176,6 +168,13 @@ struct imx132_platform_data pluto_imx132_data = {
 	.power_off = pluto_imx132_power_off,
 };
 
+static struct ad5816_platform_data pluto_ad5816_pdata = {
+	.cfg		= 0,
+	.num		= 0,
+	.sync		= 0,
+	.dev_name	= "focuser",
+};
+
 static struct i2c_board_info pluto_i2c_board_info_e1625[] = {
 	{
 		I2C_BOARD_INFO("imx091", 0x10),
@@ -184,6 +183,10 @@ static struct i2c_board_info pluto_i2c_board_info_e1625[] = {
 	{
 		I2C_BOARD_INFO("imx132", 0x36),
 		.platform_data = &pluto_imx132_data,
+	},
+	{
+		I2C_BOARD_INFO("ad5816", 0x0E),
+		.platform_data = &pluto_ad5816_pdata,
 	},
 };
 
@@ -236,7 +239,6 @@ fail_free_gpio:
 int __init pluto_sensors_init(void)
 {
 	pr_debug("%s: ++\n", __func__);
-	tegra_get_board_info(&board_info);
 	pluto_camera_init();
 
 	i2c_register_board_info(0, pluto_i2c1_isl_board_info,

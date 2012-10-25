@@ -492,7 +492,8 @@ static int tegra_max98088_startup(struct snd_pcm_substream *substream)
 		/*dam configuration*/
 		if (!i2s->dam_ch_refcount)
 			i2s->dam_ifc = tegra30_dam_allocate_controller();
-
+		if (i2s->dam_ifc < 0)
+			return i2s->dam_ifc;
 		tegra30_dam_allocate_channel(i2s->dam_ifc, TEGRA30_DAM_CHIN1);
 		i2s->dam_ch_refcount++;
 		tegra30_dam_enable_clock(i2s->dam_ifc);
@@ -1145,6 +1146,27 @@ static int tegra30_soc_set_bias_level_post(struct snd_soc_card *card,
 	return 0 ;
 }
 
+static int tegra_max98088_suspend_post(struct snd_soc_card *card)
+{
+	struct tegra_max98088 *machine = snd_soc_card_get_drvdata(card);
+
+	if (machine->clock_enabled)
+		tegra_asoc_utils_clk_disable(&machine->util_data);
+
+	return 0;
+
+}
+
+static int tegra_max98088_resume_pre(struct snd_soc_card *card)
+{
+	struct tegra_max98088 *machine = snd_soc_card_get_drvdata(card);
+
+	if (!machine->clock_enabled)
+		tegra_asoc_utils_clk_enable(&machine->util_data);
+
+	return 0;
+}
+
 static struct snd_soc_card snd_soc_tegra_max98088 = {
 	.name = "tegra-max98088",
 	.owner = THIS_MODULE,
@@ -1152,6 +1174,8 @@ static struct snd_soc_card snd_soc_tegra_max98088 = {
 	.num_links = ARRAY_SIZE(tegra_max98088_dai),
 	.set_bias_level = tegra30_soc_set_bias_level,
 	.set_bias_level_post = tegra30_soc_set_bias_level_post,
+	.suspend_post = tegra_max98088_suspend_post,
+	.resume_pre = tegra_max98088_resume_pre,
 };
 
 static __devinit int tegra_max98088_driver_probe(struct platform_device *pdev)
@@ -1185,7 +1209,7 @@ static __devinit int tegra_max98088_driver_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_SWITCH
 	/* Add h2w switch class support */
-	ret = switch_dev_register(&wired_switch_dev);
+	ret = tegra_asoc_switch_register(&wired_switch_dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "not able to register switch device\n");
 		goto err_fini_utils;
@@ -1247,7 +1271,7 @@ err_unregister_card:
 	snd_soc_unregister_card(card);
 err_switch_unregister:
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&wired_switch_dev);
+	tegra_asoc_switch_unregister(&wired_switch_dev);
 #endif
 err_fini_utils:
 	tegra_asoc_utils_fini(&machine->util_data);
@@ -1265,7 +1289,7 @@ static int __devexit tegra_max98088_driver_remove(struct platform_device *pdev)
 	snd_soc_unregister_card(card);
 
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&wired_switch_dev);
+	tegra_asoc_switch_unregister(&wired_switch_dev);
 #endif
 
 	tegra_asoc_utils_fini(&machine->util_data);

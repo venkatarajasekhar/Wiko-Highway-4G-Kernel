@@ -483,23 +483,33 @@ void tegra_lp0_resume_mc(void)
 
 void tegra_lp0_cpu_mode(bool enter)
 {
+	static struct clk *cclk_lp;
 	static bool entered_on_g = false;
 	unsigned int flags;
+
+	if (!cclk_lp)
+		cclk_lp = tegra_get_clock_by_name("cclk_lp");
 
 	if (enter)
 		entered_on_g = !is_lp_cluster();
 
 	if (entered_on_g) {
+		if (enter)
+			clk_enable(cclk_lp);
+
 		flags = enter ? TEGRA_POWER_CLUSTER_LP : TEGRA_POWER_CLUSTER_G;
 		flags |= TEGRA_POWER_CLUSTER_IMMEDIATE;
 #if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
 		flags |= TEGRA_POWER_CLUSTER_PART_DEFAULT;
 #endif
-		tegra_cluster_control(0, flags);
-		pr_info("Tegra: switched to %s cluster\n", enter ? "LP" : "G");
+		if (!tegra_cluster_control(0, flags)) {
+			if (!enter)
+				clk_disable(cclk_lp);
+			pr_info("Tegra: switched to %s cluster\n",
+				enter ? "LP" : "G");
+		}
 	}
 }
-#endif
 
 #define IO_DPD_INFO(_name, _index, _bit) \
 	{ \
@@ -516,12 +526,15 @@ void tegra_lp0_cpu_mode(bool enter)
 #define APBDEV_DPD2_ENABLE_LSB		5
 #define PMC_DPD_SAMPLE			0x20
 
-struct tegra_io_dpd tegra_list_io_dpd[] = {
+static struct tegra_io_dpd tegra_list_io_dpd[] = {
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC) && defined(CONFIG_TEGRA_IO_DPD)
 	/* sd dpd bits in dpd2 register */
 	IO_DPD_INFO("sdhci-tegra.0",	1,	1), /* SDMMC1 */
 	IO_DPD_INFO("sdhci-tegra.2",	1,	2), /* SDMMC3 */
 	IO_DPD_INFO("sdhci-tegra.3",	1,	3), /* SDMMC4 */
+#endif
 };
+#endif
 
 /* we want to cleanup bootloader io dpd setting in kernel */
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -529,6 +542,7 @@ static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 #ifdef CONFIG_PM_SLEEP
 struct tegra_io_dpd *tegra_io_dpd_get(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_IO_DPD
 	int i;
 	const char *name = dev ? dev_name(dev) : NULL;
 	if (name) {
@@ -541,6 +555,7 @@ struct tegra_io_dpd *tegra_io_dpd_get(struct device *dev)
 	}
 	dev_info(dev, "Error: tegra3 io dpd not supported for %s\n",
 		((name) ? name : "NULL"));
+#endif
 	return NULL;
 }
 

@@ -19,16 +19,9 @@
 #ifndef _TEGRA_CL_DVFS_H_
 #define _TEGRA_CL_DVFS_H_
 
-#include "dvfs.h"
+struct tegra_cl_dvfs;
 
 #define MAX_CL_DVFS_VOLTAGES		33
-
-enum tegra_cl_dvfs_ctrl_mode {
-	TEGRA_CL_DVFS_UNINITIALIZED = 0,
-	TEGRA_CL_DVFS_DISABLED = 1,
-	TEGRA_CL_DVFS_OPEN_LOOP = 2,
-	TEGRA_CL_DVFS_CLOSED_LOOP = 3,
-};
 
 enum tegra_cl_dvfs_force_mode {
 	TEGRA_CL_DVFS_FORCE_NONE = 0,
@@ -84,52 +77,9 @@ struct tegra_cl_dvfs_platform_data {
 	struct tegra_cl_dvfs_cfg_param		*cfg_param;
 };
 
-struct tegra_cl_dvfs_dfll_data {
-	const char	*dfll_clk_name;
-	u32		tune0;
-	u32		tune1;
-	unsigned long	droop_rate_min;
-	unsigned long	out_rate_min;
-	int		millivolts_min;
-};
-
-struct dfll_rate_req {
-	u8	freq;
-	u8	scale;
-	u8	output;
-};
-
-struct tegra_cl_dvfs {
-	u32					cl_base;
-	struct tegra_cl_dvfs_dfll_data		*dfll_data;
-	struct tegra_cl_dvfs_platform_data	*p_data;
-
-	struct dvfs			*safe_dvfs;
-	struct clk			*soc_clk;
-	struct clk			*ref_clk;
-	struct clk			*i2c_clk;
-	struct clk			*i2c_fast;
-	unsigned long			ref_rate;
-	unsigned long			i2c_rate;
-
-	/* output voltage mapping:
-	 * legacy dvfs table index -to- cl_dvfs output LUT index
-	 * cl_dvfs output LUT index -to- PMU value/voltage pair ptr
-	 */
-	u8				clk_dvfs_map[MAX_DVFS_FREQS];
-	struct voltage_reg_map		*out_map[MAX_CL_DVFS_VOLTAGES];
-	u8				num_voltages;
-	u8				safe_ouput;
-
-	struct dfll_rate_req		last_req;
-	unsigned long			dfll_rate_min;
-	enum tegra_cl_dvfs_ctrl_mode	mode;
-};
-
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
-void tegra_cl_dvfs_set_platform_data(struct tegra_cl_dvfs_platform_data *data);
-void tegra_cl_dvfs_set_dfll_data(struct tegra_cl_dvfs_dfll_data *data);
-int tegra_init_cl_dvfs(struct tegra_cl_dvfs *cld);
+int tegra_init_cl_dvfs(void);
+void tegra_cl_dvfs_resume(struct tegra_cl_dvfs *cld);
 
 void tegra_cl_dvfs_disable(struct tegra_cl_dvfs *cld);
 int tegra_cl_dvfs_enable(struct tegra_cl_dvfs *cld);
@@ -138,14 +88,10 @@ int tegra_cl_dvfs_unlock(struct tegra_cl_dvfs *cld);
 int tegra_cl_dvfs_request_rate(struct tegra_cl_dvfs *cld, unsigned long rate);
 unsigned long tegra_cl_dvfs_request_get(struct tegra_cl_dvfs *cld);
 #else
-static inline void tegra_cl_dvfs_set_platform_data(
-		struct tegra_cl_dvfs_platform_data *data)
-{}
-static inline void tegra_cl_dvfs_set_dfll_data(
-		struct tegra_cl_dvfs_dfll_data *data)
-{}
-static inline int tegra_init_cl_dvfs(struct tegra_cl_dvfs *cld)
+static inline int tegra_init_cl_dvfs(void)
 { return -ENOSYS; }
+static inline void tegra_cl_dvfs_resume(struct tegra_cl_dvfs *cld)
+{}
 
 static inline void tegra_cl_dvfs_disable(struct tegra_cl_dvfs *cld)
 {}

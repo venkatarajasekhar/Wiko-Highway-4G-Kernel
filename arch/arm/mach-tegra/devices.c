@@ -158,9 +158,9 @@ static struct resource pinmux_resource[] = {
 
 struct platform_device tegra_pinmux_device = {
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	.name		= "tegra30-pinmux",
+	.name		= "tegra30-pinmux-ctlr",
 #elif defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	.name		= "tegra20-pinmux",
+	.name		= "tegra20-pinmux-ctlr",
 #elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	.name		= "tegra11x-pinmux",
 #elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
@@ -2122,6 +2122,23 @@ struct platform_device tegra_cec_device = {
 	.id   = -1,
 	.resource = tegra_cec_resources,
 	.num_resources = ARRAY_SIZE(tegra_cec_resources),
+};
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+static struct resource cl_dvfs_resource[] = {
+	[0] = {
+		.start	= TEGRA_CL_DVFS_BASE,
+		.end	= TEGRA_CL_DVFS_BASE + TEGRA_CL_DVFS_SIZE-1,
+		.flags	= IORESOURCE_MEM,
+	}
+};
+
+struct platform_device tegra_cl_dvfs_device = {
+	.name		= "tegra_cl_dvfs",
+	.id		= -1,
+	.resource	= cl_dvfs_resource,
+	.num_resources	= ARRAY_SIZE(cl_dvfs_resource),
 };
 #endif
 

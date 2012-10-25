@@ -521,7 +521,8 @@ static int tegra_aic326x_startup(struct snd_pcm_substream *substream)
 		/*dam configuration*/
 		if (!i2s->dam_ch_refcount)
 			i2s->dam_ifc = tegra30_dam_allocate_controller();
-
+		if (i2s->dam_ifc < 0)
+			return i2s->dam_ifc;
 		tegra30_dam_allocate_channel(i2s->dam_ifc, TEGRA30_DAM_CHIN1);
 		i2s->dam_ch_refcount++;
 		tegra30_dam_enable_clock(i2s->dam_ifc);
@@ -1247,7 +1248,7 @@ static __devinit int tegra_aic326x_driver_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_SWITCH
 	/* Add h2w switch class support */
-	ret = switch_dev_register(&aic326x_wired_switch_dev);
+	ret = tegra_asoc_switch_register(&aic326x_wired_switch_dev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "not able to register switch device %d\n",
 			ret);
@@ -1318,7 +1319,7 @@ err_unregister_card:
 	snd_soc_unregister_card(card);
 err_switch_unregister:
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&aic326x_wired_switch_dev);
+	tegra_asoc_switch_unregister(&aic326x_wired_switch_dev);
 #endif
 err_fini_utils:
 	tegra_asoc_utils_fini(&machine->util_data);
@@ -1336,7 +1337,7 @@ static int __devexit tegra_aic326x_driver_remove(struct platform_device *pdev)
 	snd_soc_unregister_card(card);
 
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&aic326x_wired_switch_dev);
+	tegra_asoc_switch_unregister(&aic326x_wired_switch_dev);
 #endif
 
 	tegra_asoc_utils_fini(&machine->util_data);

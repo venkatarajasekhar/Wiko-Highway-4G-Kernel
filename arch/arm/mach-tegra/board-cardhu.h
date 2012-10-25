@@ -207,6 +207,7 @@ int cardhu_regulator_init(void);
 int cardhu_suspend_init(void);
 int cardhu_sdhci_init(void);
 int cardhu_pinmux_init(void);
+int cardhu_gpio_init(void);
 int cardhu_panel_init(void);
 int cardhu_sensors_init(void);
 int cardhu_kbc_init(void);
@@ -223,9 +224,12 @@ int cardhu_pm299_regulator_init(void);
 
 extern struct tegra_uart_platform_data cardhu_irda_pdata;
 
-#define MPU_TYPE_MPU3050	1
-#define MPU_TYPE_MPU6050	2
-#define MPU_GYRO_TYPE		MPU_TYPE_MPU3050
+/* Touch definitions */
+#define TOUCH_GPIO_IRQ_RAYDIUM_SPI      TEGRA_GPIO_PH4
+#define TOUCH_GPIO_RST_RAYDIUM_SPI      TEGRA_GPIO_PH6
+
+/* Sensor definitions */
+#define MPU_GYRO_NAME		"mpu3050"
 #define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PX1
 #define MPU_GYRO_ADDR		0x68
 #define MPU_GYRO_BUS_NUM	2
