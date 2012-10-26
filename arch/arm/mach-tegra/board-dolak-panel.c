@@ -343,7 +343,7 @@ static struct tegra_dc_platform_data dolak_disp1_pdata = {
 	.fb		= &dolak_fb_data,
 };
 
-static struct nvhost_device dolak_disp1_device = {
+static struct platform_device dolak_disp1_device = {
 	.name		= "tegradc",
 	.id		= 0,
 	.resource	= dolak_disp1_resources,
@@ -399,7 +399,12 @@ static struct platform_device *dolak_gfx_devices[] __initdata = {
 int __init dolak_panel_init(void)
 {
 	int err;
+#if defined(CONFIG_TEGRA_GRHOST)
+#if defined(CONFIG_TEGRA_DC)
 	struct resource *res;
+#endif
+	struct platform_device *phost1x;
+#endif
 
 	dolak_carveouts[1].base = tegra_carveout_start;
 	dolak_carveouts[1].size = tegra_carveout_size;
@@ -410,24 +415,28 @@ int __init dolak_panel_init(void)
 				   ARRAY_SIZE(dolak_gfx_devices));
 
 #ifdef CONFIG_TEGRA_GRHOST
-	err = tegra14_register_host1x_devices();
-	if (err)
-		return err;
+	phost1x = tegra14_register_host1x_devices();
+	if (!phost1x)
+		return -EINVAL;
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
-	res = nvhost_get_resource_byname(&dolak_disp1_device,
+	res = platform_get_resource_byname(&dolak_disp1_device,
 					 IORESOURCE_MEM, "fbmem");
 	res->start = tegra_fb_start;
 	res->end = tegra_fb_start + tegra_fb_size - 1;
 
-	if (!err)
-		err = nvhost_device_register(&dolak_disp1_device);
+	if (!err) {
+		dolak_disp1_device.dev.parent = &phost1x->dev;
+		err = platform_device_register(&dolak_disp1_device);
+	}
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_NVAVP)
-	if (!err)
-		err = nvhost_device_register(&nvavp_device);
+	if (!err) {
+		nvavp_device.dev.parent = &phost1x->dev;
+		err = platform_device_register(&nvavp_device);
+	}
 #endif
 	return err;
 }
