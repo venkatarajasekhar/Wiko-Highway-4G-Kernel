@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
+#include <linux/i2c/ds90uh925q_ser.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -36,18 +37,6 @@
 #define P1852_LVDS_ENA2 TEGRA_GPIO_PV1
 #define P1852_HDMI_HPD  TEGRA_GPIO_PN7
 #define P1852_HDMI_RGB  TEGRA_GPIO_PW1
-#define P1852_LVDS_SER1_ADDR 0xd
-#define P1852_LVDS_SER2_ADDR 0xc
-
-#define LVDS_SER_REG_CONFIG_1                   0x4
-#define LVDS_SER_REG_CONFIG_1_BKWD_OVERRIDE     3
-#define LVDS_SER_REG_CONFIG_1_BKWD              2
-
-#define LVDS_SER_REG_DATA_PATH_CTRL             0x12
-#define LVDS_SER_REG_DATA_PATH_CTRL_PASS_RGB    6
-
-#define LVDS_SER_REG_CONFIG_0                   0x3
-#define LVDS_SER_REG_CONFIG_0_TRFB              0
 
 /* RGB panel requires no special enable/disable */
 static int p1852_panel_enable(struct device *dev)
@@ -60,176 +49,33 @@ static int p1852_panel_disable(void)
 	return 0;
 }
 
-static int ser_i2c_read(struct i2c_client *client,
-						u8 reg_addr, u8 *pval)
-{
-	struct i2c_msg msg[] = {
-		{
-			.addr = client->addr,
-			.flags = 0,
-			.len = 1,
-			.buf = &reg_addr,
-		},
-		{
-			.addr = client->addr,
-			.flags = I2C_M_RD,
-			.len = 1,
-			.buf = pval,
-		},
-	};
-
-	return i2c_transfer(client->adapter, msg, 2);
-}
-
-static int ser_i2c_write(struct i2c_client *client,
-						u8 reg_addr, u8 val)
-{
-	u8 buffer[] = {reg_addr, val};
-	struct i2c_msg msg[] = {
-		{
-			.addr = client->addr,
-			.flags = 0,
-			.len = 2,
-			.buf = buffer,
-		},
-	};
-
-	return i2c_transfer(client->adapter, msg, 1);
-}
-
-static int lvds_ser_init(struct i2c_client *client,
-						bool is_fpdlinkII,
-						bool support_hdcp,
-						bool clk_rise_edge)
-{
-	u8 val;
-	int err = 0;
-
-	/* intentional call make register & bus ready */
-	ser_i2c_read(client, LVDS_SER_REG_CONFIG_1, &val);
-
-	if (is_fpdlinkII) {
-		err = ser_i2c_read(client, LVDS_SER_REG_CONFIG_1, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_CONFIG_1_BKWD_OVERRIDE);
-		val |= (1 << LVDS_SER_REG_CONFIG_1_BKWD);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_CONFIG_1, val);
-		if (err < 0)
-			return err;
-	}
-	else if (!support_hdcp) {
-		err = ser_i2c_read(client, LVDS_SER_REG_DATA_PATH_CTRL, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_DATA_PATH_CTRL_PASS_RGB);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_DATA_PATH_CTRL, val);
-		if (err < 0)
-			return err;
-	}
-
-	if (clk_rise_edge) {
-		err = ser_i2c_read(client, LVDS_SER_REG_CONFIG_0, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_CONFIG_0_TRFB);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_CONFIG_0, val);
-	}
-
-	return (err < 0 ? err : 0);
-}
-
 /* enable primary LVDS */
 static int p1852_lvds_enable(struct device *dev)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_board_info info = {{0}};
-	static struct i2c_client *client;
-	int err = -1;
-
-	/* Turn on serializer chip */
-	gpio_set_value(P1852_LVDS_ENA1, 1);
-
-	/* Program the serializer */
-	adapter = i2c_get_adapter(3);
-	if (!adapter)
-		pr_warning("%s: adapter is null\n", __func__);
-	else {
-		info.addr = P1852_LVDS_SER1_ADDR;
-		if (!client)
-			client = i2c_new_device(adapter, &info);
-		i2c_put_adapter(adapter);
-		if (!client)
-			pr_warning("%s: client is null\n", __func__);
-		else {
-			err = lvds_ser_init(client,
-								true,  /* is_fpdlinkII*/
-								false, /* support_hdcp */
-								true); /* clk_rise_edge */
-		}
-	}
-	return err;
+	return 0;
 }
 
 /* Disable primary LVDS */
 static int p1852_lvds_disable(void)
 {
-	/* Turn off serializer chip */
-	gpio_set_value(P1852_LVDS_ENA1, 0);
-
 	return 0;
 }
 
 /* Enable secondary LVDS */
 static int p1852_lvds2_enable(struct device *dev)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_board_info info = {{0}};
-	static struct i2c_client *client;
-	int err = -1;
-
 	/* Enable HDMI HPD */
 	/* need nothing here */
 
 	/* Turn on HDMI-RGB converter */
 	gpio_set_value(P1852_HDMI_RGB, 1);
 
-	/* Turn on serializer chip */
-	gpio_set_value(P1852_LVDS_ENA2, 1);
-
-	/* Program the serializer */
-	adapter = i2c_get_adapter(3);
-	if (!adapter)
-		pr_warning("%s: adapter is null\n", __func__);
-	else {
-		info.addr = P1852_LVDS_SER2_ADDR;
-		if (!client)
-			client = i2c_new_device(adapter, &info);
-		i2c_put_adapter(adapter);
-		if (!client)
-			pr_warning("%s: client is null\n", __func__);
-		else {
-			err = lvds_ser_init(client,
-								true,  /* is_fpdlinkII*/
-								false, /* support_hdcp */
-								true); /* clk_rise_edge */
-		}
-	}
-	return err;
+	return 0;
 }
 
 /* Disable secondary LVDS */
 static int p1852_lvds2_disable(void)
 {
-	/* Turn off serializer chip */
-	gpio_set_value(P1852_LVDS_ENA2, 0);
-
 	/* Turn off HDMI-RGB converter */
 	gpio_set_value(P1852_HDMI_RGB, 0);
 
@@ -252,6 +98,36 @@ static int p1852_hdmi_disable(void)
 	/* need nothing here */
 	return 0;
 }
+
+static struct ds90uh925q_platform_data lvds_ser_platform = {
+	.has_lvds_en_gpio = true,
+	.lvds_en_gpio    = P1852_LVDS_ENA1,
+	.is_fpdlinkII  = true,
+	.support_hdcp  = false,
+	.clk_rise_edge = true,
+};
+
+static struct i2c_board_info __initdata lvds_ser_info[] = {
+	{
+		I2C_BOARD_INFO("ds90uh925q", 0xd),
+		.platform_data = &lvds_ser_platform,
+	}
+};
+
+static struct ds90uh925q_platform_data lvds2_ser_platform = {
+	.has_lvds_en_gpio = true,
+	.lvds_en_gpio    = P1852_LVDS_ENA2,
+	.is_fpdlinkII  = true,
+	.support_hdcp  = false,
+	.clk_rise_edge = true,
+};
+
+static struct i2c_board_info __initdata lvds2_ser_info[] = {
+	{
+		I2C_BOARD_INFO("ds90uh925q", 0xc),
+		.platform_data = &lvds2_ser_platform,
+	}
+};
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
 
@@ -562,6 +438,12 @@ static int __init p1852_sku2_panel_init(void)
 		err = platform_device_register(&nvavp_device);
 	}
 #endif
+
+	if (!err) {
+		i2c_register_board_info(3, lvds_ser_info, 1);
+		i2c_register_board_info(3, lvds2_ser_info, 1);
+	}
+
 	return err;
 }
 
