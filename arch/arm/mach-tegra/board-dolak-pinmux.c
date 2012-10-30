@@ -105,6 +105,7 @@ static __initdata struct tegra_pingroup_config dolak_pinmux[] = {
 	DEFAULT_PINMUX(SDMMC3_DAT1,     SDMMC3,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC3_DAT2,     SDMMC3,          NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(SDMMC3_DAT3,     SDMMC3,          NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(BCL,             BCL,             NORMAL,    NORMAL,     INPUT),
 };
 
 void __init dolak_pinmux_init(void)
