@@ -726,6 +726,11 @@
 
 #endif
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define TEGRA_MIPI_BIF_BASE		0x70120000
+#define TEGRA_MIPI_BIF_SIZE		SZ_1K
+#endif
+
 #if defined(CONFIG_TEGRA_DEBUG_UART_NONE)
 # define TEGRA_DEBUG_UART_BASE 0
 #elif defined(CONFIG_TEGRA_DEBUG_UARTA)
