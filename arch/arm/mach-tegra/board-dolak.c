@@ -153,6 +153,9 @@ static __initdata struct tegra_clk_init_table dolak_clk_init_table[] = {
 	{ "d_audio",	"clk_m",	13000000,	true},
 	{ "apbif",	"clk_m",	13000000,	true},
 	{ "audio_2x",	"audio",	26000000,	true},
+#if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
+	{ "vde",	"pll_c",	48400000,	true},
+#endif
 	{ NULL,		NULL,		0,		0},
 };
 
