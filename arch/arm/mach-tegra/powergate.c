@@ -53,6 +53,7 @@ static void test_unpowergate_clk_on_parts(void);
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static int tegra11x_check_partition_pug_seq(int id);
+static int tegra11x_unpowergate(int id);
 #endif
 
 #define PWRGATE_TOGGLE		0x30
@@ -171,8 +172,8 @@ struct powergate_partition {
 
 static struct powergate_partition powergate_partition_info[TEGRA_NUM_POWERGATE] = {
 	[TEGRA_POWERGATE_CPU]	= { "cpu0",	{MC_CLIENT_LAST}, },
-	[TEGRA_POWERGATE_L2]	= { "l2",	{MC_CLIENT_LAST}, },
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	[TEGRA_POWERGATE_L2]	= { "l2",	{MC_CLIENT_LAST}, },
 	[TEGRA_POWERGATE_3D]	= { "3d0",
 #else
 	[TEGRA_POWERGATE_3D]	= { "3d",
@@ -737,12 +738,14 @@ b.	CLK_RST_CONTROLLER_PLLD2_BASE_0_PLLD2_ENABLE
 }
 #endif
 
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static int unpowergate_module(int id)
 {
 	if (id < 0 || id >= tegra_num_powerdomains)
 		return -EINVAL;
 	return tegra_powergate_set(id, true);
 }
+#endif
 
 static int powergate_module(int id)
 {
@@ -877,7 +880,7 @@ static int partition_clk_enable(int id)
 			break;
 
 		if (clk_info->clk_type != RST_ONLY) {
-			ret = clk_enable(clk);
+			ret = tegra_clk_prepare_enable(clk);
 			if (ret)
 				goto err_clk_en;
 		}
@@ -890,7 +893,7 @@ err_clk_en:
 	while (idx--) {
 		clk_info = &powergate_partition_info[id].clk_info[idx];
 		if (clk_info->clk_type != RST_ONLY)
-			clk_disable(clk_info->clk_ptr);
+			tegra_clk_disable_unprepare(clk_info->clk_ptr);
 	}
 
 	return ret;
@@ -947,7 +950,7 @@ static void partition_clk_disable(int id)
 			break;
 
 		if (clk_info->clk_type != RST_ONLY)
-			clk_disable(clk);
+			tegra_clk_disable_unprepare(clk);
 	}
 }
 
@@ -1078,9 +1081,6 @@ static void tegra11x_mipical_calibrate(int id)
 	/* mipi cal status read - to flush writes */
 	status = mipi_cal_read(MIPI_CAL_CIL_MIPI_CAL_STATUS_0);
 	spin_unlock_irqrestore(&tegra_powergate_lock, flags);
-	if (status)
-		pr_err("Error: mipi_cal calibration failed at file: %s, func: %s, line=%d\n",
-		__FILE__, __func__, __LINE__);
 }
 #endif
 
@@ -1094,21 +1094,10 @@ static bool skip_pg_check(int id, bool is_unpowergate)
 	 */
 	static int skip_pg_t11x_list[] = {
 		/*
-		 * CPU power gate enable/disable done
-		 * from cpu power management code
+		 * CPU and 3D partitions enable/disable
+		 * is managed by respective modules
 		 */
-		TEGRA_POWERGATE_CRAIL,
-		TEGRA_POWERGATE_VENC,
-		TEGRA_POWERGATE_PCIE,
-		TEGRA_POWERGATE_VDEC,
-		TEGRA_POWERGATE_L2,
 		TEGRA_POWERGATE_MPE,
-		TEGRA_POWERGATE_HEG,
-		TEGRA_POWERGATE_SATA,
-		TEGRA_POWERGATE_CELP,
-		TEGRA_POWERGATE_3D1,
-		TEGRA_POWERGATE_C0NC,
-		TEGRA_POWERGATE_C1NC,
 		TEGRA_POWERGATE_DISA,
 		TEGRA_POWERGATE_DISB,
 		TEGRA_POWERGATE_XUSBA,
@@ -1134,13 +1123,8 @@ static bool skip_pg_check(int id, bool is_unpowergate)
 	}
 	/* unpowergate is allowed for all partitions */
 	if (!tegra_powergate_is_powered(id) &&
-		is_unpowergate) {
-		pr_err("Partition %s already powered-%s unpowergating\n",
-			tegra_powergate_get_name(id),
-			(tegra_powergate_is_powered(id)) ?
-			"on" : "off");
+		is_unpowergate)
 		return false;
-	}
 	for (i = 0; i < tegra_num_powerdomains; i++) {
 		if (id == skip_pg_t11x_list[i]) {
 			pr_err("Partition %s %spowergate skipped\n",
@@ -1171,7 +1155,12 @@ int tegra_unpowergate_partition(int id)
 	ret = tegra11x_check_partition_pug_seq(id);
 	if (ret)
 		return ret;
-#endif
+
+	ret = tegra11x_unpowergate(id);
+	return ret;
+#else
+	/* FIXME: not changing previous chip's power-ungate implementation */
+
 	/* If first clk_ptr is null, fill clk info for the partition */
 	if (!powergate_partition_info[id].clk_info[0].clk_ptr)
 		get_clk_info(id);
@@ -1198,9 +1187,6 @@ int tegra_unpowergate_partition(int id)
 
 	udelay(10);
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	tegra11x_mipical_calibrate(id);
-#endif
 	powergate_partition_deassert_reset(id);
 
 	mc_flush_done(id);
@@ -1217,6 +1203,7 @@ err_clk_on:
 err_power:
 	WARN(1, "Could not Un-Powergate %d", id);
 	return ret;
+#endif
 }
 
 int tegra_cpu_powergate_id(int cpuid)
@@ -1311,7 +1298,7 @@ err_unpowergating:
 }
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
-static int tegra11x_3d_powergate_set(int id, bool new_state)
+static int tegra11x_powergate_set(int id, bool new_state)
 {
 #ifndef CONFIG_TEGRA_SIMULATION_PLATFORM
 	bool status;
@@ -1357,7 +1344,7 @@ static int tegra11x_3d_powergate_set(int id, bool new_state)
 	return 0;
 }
 
-static int tegra11x_powergate_3d(int id)
+static int tegra11x_powergate(int id)
 {
 	int ret;
 
@@ -1384,7 +1371,7 @@ static int tegra11x_powergate_3d(int id)
 
 	udelay(10);
 
-	ret = tegra11x_3d_powergate_set(id, false);
+	ret = tegra11x_powergate_set(id, false);
 	if (ret)
 		goto err_power_off;
 
@@ -1395,7 +1382,7 @@ err_power_off:
 	return ret;
 }
 
-static int tegra11x_unpowergate_3d(int id)
+static int tegra11x_unpowergate(int id)
 {
 	int ret;
 	/* If first clk_ptr is null, fill clk info for the partition */
@@ -1405,7 +1392,7 @@ static int tegra11x_unpowergate_3d(int id)
 	if (tegra_powergate_is_powered(id))
 		return tegra_powergate_reset_module(id);
 
-	ret = tegra11x_3d_powergate_set(id, true);
+	ret = tegra11x_powergate_set(id, true);
 	if (ret)
 		goto err_power;
 
@@ -1424,6 +1411,9 @@ static int tegra11x_unpowergate_3d(int id)
 
 	udelay(10);
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	tegra11x_mipical_calibrate(id);
+#endif
 	powergate_partition_deassert_reset(id);
 
 	udelay(10);
@@ -1486,6 +1476,10 @@ static int tegra11x_unpowergate_partition(int id)
 	return 0;
 }
 
+/*
+ * Tegra11x has powergate dependencies between partitions.
+ * This function captures the dependencies.
+ */
 static int tegra11x_check_partition_pg_seq(int id)
 {
 	int ret;
@@ -1498,16 +1492,14 @@ static int tegra11x_check_partition_pg_seq(int id)
 		ret = tegra11x_powergate_partition(TEGRA_POWERGATE_DISB);
 		if (ret < 0)
 			return ret;
-
 		break;
-	case TEGRA_POWERGATE_3D:
-		ret = tegra11x_powergate_3d(id);
-		if (ret < 0)
-			return ret;
 	}
 	return 0;
 }
 
+/*
+ * This function captures power-ungate dependencies between tegra11x partitions
+ */
 static int tegra11x_check_partition_pug_seq(int id)
 {
 	int ret;
@@ -1520,10 +1512,6 @@ static int tegra11x_check_partition_pug_seq(int id)
 			return ret;
 
 		break;
-	case TEGRA_POWERGATE_3D:
-		ret = tegra11x_unpowergate_3d(TEGRA_POWERGATE_3D);
-		if (ret < 0)
-			return ret;
 	}
 	return 0;
 }
@@ -1545,7 +1533,13 @@ int tegra_powergate_partition(int id)
 	ret = tegra11x_check_partition_pg_seq(id);
 	if (ret)
 		return ret;
-#endif
+
+	/* All Tegra11x partition powergate */
+	ret = tegra11x_powergate(id);
+	return ret;
+#else
+	/* FIXME: not changing previous chip's powergate implementation */
+
 	/* If first clk_ptr is null, fill clk info for the partition */
 	if (powergate_partition_info[id].clk_info[0].clk_ptr)
 		get_clk_info(id);
@@ -1568,6 +1562,7 @@ err_power_off:
 err_clk_off:
 	WARN(1, "Could not Powergate Partition %d, all clks not disabled", id);
 	return ret;
+#endif
 }
 
 int tegra_powergate_partition_with_clk_off(int id)

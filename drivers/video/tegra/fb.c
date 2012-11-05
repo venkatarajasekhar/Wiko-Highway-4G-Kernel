@@ -139,16 +139,29 @@ static int tegra_fb_set_par(struct fb_info *info)
 
 	if (var->pixclock) {
 		bool stereo;
+		unsigned old_len = 0;
 		struct fb_videomode m;
+		struct fb_videomode *old_mode = NULL;
 
 		fb_var_to_videomode(&m, var);
+
+		/* Load framebuffer info with new mode details*/
+		old_mode = info->mode;
+		old_len  = info->fix.line_length;
 
 		info->mode = (struct fb_videomode *)
 			fb_find_nearest_mode(&m, &info->modelist);
 		if (!info->mode) {
 			dev_warn(&tegra_fb->ndev->dev, "can't match video mode\n");
+			info->mode = old_mode;
 			return -EINVAL;
 		}
+
+		/* Update fix line_length and window stride as per new mode */
+		info->fix.line_length = var->xres * var->bits_per_pixel / 8;
+		info->fix.line_length = round_up(info->fix.line_length,
+			TEGRA_LINEAR_PITCH_ALIGNMENT);
+		tegra_fb->win->stride = info->fix.line_length;
 
 		/*
 		 * only enable stereo if the mode supports it and
@@ -161,7 +174,16 @@ static int tegra_fb_set_par(struct fb_info *info)
 					FB_VMODE_STEREO_LEFT_RIGHT);
 #endif
 
-		tegra_dc_set_fb_mode(dc, info->mode, stereo);
+		/* Configure DC with new mode */
+		if (tegra_dc_set_fb_mode(dc, info->mode, stereo)) {
+			/* Error while configuring DC, fallback to old mode */
+			dev_warn(&tegra_fb->ndev->dev, "can't configure dc with mode %ux%u\n",
+				info->mode->xres, info->mode->yres);
+			info->mode = old_mode;
+			info->fix.line_length = old_len;
+			tegra_fb->win->stride = old_len;
+			return -EINVAL;
+		}
 
 		/* Reflect mode chnage on DC HW */
 		if (dc->enabled)
@@ -332,8 +354,10 @@ static void tegra_fb_imageblit(struct fb_info *info,
 
 static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 {
+	struct tegra_fb_info *tegra_fb = (struct tegra_fb_info *)info->par;
 	struct tegra_fb_modedb modedb;
 	struct fb_modelist *modelist;
+	struct fb_vblank vblank = {};
 	int i;
 
 	switch (cmd) {
@@ -375,6 +399,17 @@ static int tegra_fb_ioctl(struct fb_info *info, unsigned int cmd, unsigned long 
 		if (copy_to_user((void __user *)arg, &modedb, sizeof(modedb)))
 			return -EFAULT;
 		break;
+
+	case FBIOGET_VBLANK:
+		tegra_dc_get_fbvblank(tegra_fb->win->dc, &vblank);
+
+		if (copy_to_user(
+			(void __user *)arg, &vblank, sizeof(vblank)))
+			return -EFAULT;
+		break;
+
+	case FBIO_WAITFORVSYNC:
+		return tegra_dc_wait_for_vsync(tegra_fb->win->dc);
 
 	default:
 		return -ENOTTY;

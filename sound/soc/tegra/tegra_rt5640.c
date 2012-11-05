@@ -545,24 +545,24 @@ static int tegra_rt5640_init(struct snd_soc_pcm_runtime *rtd)
 		ret = gpio_request(pdata->gpio_int_mic_en, "int_mic_en");
 		if (ret) {
 			dev_err(card->dev, "cannot get int_mic_en gpio\n");
-			return ret;
-		}
-		machine->gpio_requested |= GPIO_INT_MIC_EN;
+		} else {
+			machine->gpio_requested |= GPIO_INT_MIC_EN;
 
-		/* Disable int mic; enable signal is active-high */
-		gpio_direction_output(pdata->gpio_int_mic_en, 0);
+			/* Disable int mic; enable signal is active-high */
+			gpio_direction_output(pdata->gpio_int_mic_en, 0);
+		}
 	}
 
 	if (gpio_is_valid(pdata->gpio_ext_mic_en)) {
 		ret = gpio_request(pdata->gpio_ext_mic_en, "ext_mic_en");
 		if (ret) {
 			dev_err(card->dev, "cannot get ext_mic_en gpio\n");
-			return ret;
-		}
-		machine->gpio_requested |= GPIO_EXT_MIC_EN;
+		} else {
+			machine->gpio_requested |= GPIO_EXT_MIC_EN;
 
-		/* Disable ext mic; enable signal is active-low */
-		gpio_direction_output(pdata->gpio_ext_mic_en, 1);
+			/* Disable ext mic; enable signal is active-low */
+			gpio_direction_output(pdata->gpio_ext_mic_en, 1);
+		}
 	}
 
 	if (gpio_is_valid(pdata->gpio_hp_det)) {
@@ -690,11 +690,7 @@ static struct snd_soc_card snd_soc_tegra_rt5640 = {
 	.name = "tegra-rt5640",
 	.owner = THIS_MODULE,
 	.dai_link = tegra_rt5640_dai,
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	.num_links = 1,
-#else
 	.num_links = ARRAY_SIZE(tegra_rt5640_dai),
-#endif
 	.resume_pre = tegra_rt5640_resume_pre,
 	.set_bias_level = tegra_rt5640_set_bias_level,
 	.set_bias_level_post = tegra_rt5640_set_bias_level_post,

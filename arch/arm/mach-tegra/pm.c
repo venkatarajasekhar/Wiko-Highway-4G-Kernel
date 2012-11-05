@@ -138,8 +138,6 @@ struct suspend_context tegra_sctx;
 #define PMC_DPAD_ORIDE		0x1C
 #define PMC_WAKE_DELAY		0xe0
 #define PMC_DPD_SAMPLE		0x20
-#define PMC_IO_DPD_REQ_0	0x1b8
-#define PMC_IO_DPD2_REQ_0	0X1C0
 
 #define PMC_WAKE_STATUS		0x14
 #define PMC_SW_WAKE_STATUS	0x18
@@ -256,6 +254,18 @@ unsigned long tegra_cpu_lp2_min_residency(void)
 	return pdata->cpu_lp2_min_residency;
 }
 
+#ifdef CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE
+unsigned long tegra_min_residency_noncpu(void)
+{
+	return pdata->min_residency_noncpu;
+}
+
+unsigned long tegra_min_residency_crail(void)
+{
+	return pdata->min_residency_crail;
+}
+#endif
+
 static void suspend_cpu_dfll_mode(void)
 {
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
@@ -343,16 +353,10 @@ static void set_power_timers(unsigned long us_on, unsigned long us_off,
  */
 static void restore_cpu_complex(u32 mode)
 {
-	int cpu = smp_processor_id();
+	int cpu = cpu_logical_map(smp_processor_id());
 	unsigned int reg;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	unsigned int policy;
-#endif
-
-	BUG_ON(cpu != 0);
-
-#ifdef CONFIG_SMP
-	cpu = cpu_logical_map(cpu);
 #endif
 
 /*
@@ -448,15 +452,12 @@ static void restore_cpu_complex(u32 mode)
  */
 static void suspend_cpu_complex(u32 mode)
 {
-	int cpu = smp_processor_id();
+	int cpu = cpu_logical_map(smp_processor_id());
 	unsigned int reg;
 	int i;
 
 	BUG_ON(cpu != 0);
 
-#ifdef CONFIG_SMP
-	cpu = cpu_logical_map(cpu);
-#endif
 	/* switch coresite to clk_m, save off original source */
 	tegra_sctx.clk_csite_src = readl(clk_rst + CLK_RESET_SOURCE_CSITE);
 	writel(3<<30, clk_rst + CLK_RESET_SOURCE_CSITE);
@@ -609,9 +610,16 @@ unsigned int tegra_idle_lp2_last(unsigned int sleep_time, unsigned int flags)
 			 * transition. Before the transition, enable
 			 * the vdd_cpu rail.
 			 */
-			if (is_lp_cluster())
+			if (is_lp_cluster()) {
+#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
+				reg = readl(FLOW_CTRL_CPU_PWR_CSR);
+				reg |= FLOW_CTRL_CPU_PWR_CSR_RAIL_ENABLE;
+				writel(reg, FLOW_CTRL_CPU_PWR_CSR);
+#else
 				writel(UN_PWRGATE_CPU,
 				       pmc + PMC_PWRGATE_TOGGLE);
+#endif
+			}
 		}
 		tegra_cluster_switch_prolog(flags);
 	} else {
@@ -784,10 +792,6 @@ static void tegra_pm_set(enum tegra_suspend_mode mode)
 		/* Enable DPD sample to trigger sampling pads data and direction
 		 * in which pad will be driven during lp0 mode*/
 		writel(0x1, pmc + PMC_DPD_SAMPLE);
-#if !defined(CONFIG_ARCH_TEGRA_3x_SOC) && !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-		writel(0x800fffff, pmc + PMC_IO_DPD_REQ_0);
-		writel(0x80001fff, pmc + PMC_IO_DPD2_REQ_0);
-#endif
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		/* this is needed only for T11x, not for other chips */
 		reg &= ~TEGRA_POWER_CPUPWRGOOD_EN;
@@ -941,6 +945,7 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 		tegra_lp0_suspend_mc();
 		tegra_cpu_reset_handler_save();
 		tegra_tsc_wait_for_suspend();
+		tegra_smp_clear_power_mask();
 	}
 	else if (mode == TEGRA_SUSPEND_LP1)
 		*iram_cpu_lp1_mask = 1;
@@ -948,8 +953,8 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 	suspend_cpu_complex(flags);
 
 #if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
-	/* In case of LP0, program external power gating accordinly */
-	if (mode == TEGRA_SUSPEND_LP0) {
+	/* In case of LP0/1, program external power gating accordinly */
+	if (mode == TEGRA_SUSPEND_LP0 || mode == TEGRA_SUSPEND_LP1) {
 		reg = readl(FLOW_CTRL_CPU_CSR(0));
 		if (is_lp_cluster())
 			reg |= FLOW_CTRL_CSR_ENABLE_EXT_NCPU; /* Non CPU */
@@ -971,11 +976,16 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 	tegra_init_cache(true);
 
 	if (mode == TEGRA_SUSPEND_LP0) {
+
+		/* CPUPWRGOOD_EN is not enabled in HW so disabling this, *
+		* Otherwise it is creating issue in cluster switch after LP0 *
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		reg = readl(pmc+PMC_CTRL);
 		reg |= TEGRA_POWER_CPUPWRGOOD_EN;
 		pmc_32kwritel(reg, PMC_CTRL);
 #endif
+		*/
+
 		tegra_tsc_resume();
 		tegra_cpu_reset_handler_restore();
 		tegra_lp0_resume_mc();
@@ -1378,13 +1388,13 @@ EXPORT_SYMBOL(debug_uart_clk);
 void tegra_console_uart_suspend(void)
 {
 	if (console_suspend_enabled && debug_uart_clk)
-		clk_disable(debug_uart_clk);
+		tegra_clk_disable_unprepare(debug_uart_clk);
 }
 
 void tegra_console_uart_resume(void)
 {
 	if (console_suspend_enabled && debug_uart_clk)
-		clk_enable(debug_uart_clk);
+		tegra_clk_prepare_enable(debug_uart_clk);
 }
 
 static int tegra_debug_uart_syscore_init(void)

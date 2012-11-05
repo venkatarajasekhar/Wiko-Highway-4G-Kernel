@@ -28,7 +28,6 @@
 #include <linux/uaccess.h>
 #include <linux/thermal.h>
 #include <linux/module.h>
-#include <mach/thermal.h>
 
 #include "clock.h"
 #include "cpu-tegra.h"
@@ -37,6 +36,7 @@
 static struct mutex *cpu_throttle_lock;
 static DEFINE_MUTEX(bthrot_list_lock);
 static LIST_HEAD(bthrot_list);
+static int num_throt;
 
 static unsigned int clip_to_table(unsigned int cpu_freq)
 {
@@ -96,20 +96,22 @@ unsigned int tegra_throttle_governor_speed(unsigned int requested_speed)
 	return throttle_speed;
 }
 
-bool tegra_is_throttling(void)
+bool tegra_is_throttling(int *count)
 {
 	struct balanced_throttle *bthrot;
 	bool is_throttling = false;
+	int lcount = 0;
 
 	mutex_lock(&bthrot_list_lock);
 	list_for_each_entry(bthrot, &bthrot_list, node) {
-		if (bthrot->is_throttling) {
+		if (bthrot->is_throttling)
 			is_throttling = true;
-			break;
-		}
+		lcount += bthrot->throttle_count;
 	}
 	mutex_unlock(&bthrot_list_lock);
 
+	if (count)
+		*count = lcount;
 	return is_throttling;
 }
 
@@ -160,6 +162,7 @@ tegra_throttle_set_cur_state(struct thermal_cooling_device *cdev,
 		if (!bthrot->is_throttling) {
 			tegra_dvfs_core_cap_enable(true);
 			bthrot->is_throttling = true;
+			bthrot->throttle_count++;
 		}
 
 		bthrot->throttle_index = bthrot->throt_tab_size - cur_state;
@@ -252,17 +255,8 @@ struct thermal_cooling_device *balanced_throttle_register(
 #ifdef CONFIG_DEBUG_FS
 	char name[32];
 #endif
-	struct balanced_throttle *dev;
-
 	mutex_lock(&bthrot_list_lock);
-	list_for_each_entry(dev, &bthrot_list, node) {
-		if (dev->tegra_cdev.id == bthrot->tegra_cdev.id) {
-			mutex_unlock(&bthrot_list_lock);
-			return ERR_PTR(-EINVAL);
-		}
-	}
-
-
+	num_throt++;
 	list_add(&bthrot->node, &bthrot_list);
 	mutex_unlock(&bthrot_list_lock);
 
@@ -277,7 +271,7 @@ struct thermal_cooling_device *balanced_throttle_register(
 	}
 
 #ifdef CONFIG_DEBUG_FS
-	sprintf(name, "throttle_table%d", bthrot->tegra_cdev.id);
+	sprintf(name, "throttle_table%d", num_throt);
 	debugfs_create_file(name,0644, throttle_debugfs_root,
 				bthrot, &table_fops);
 #endif

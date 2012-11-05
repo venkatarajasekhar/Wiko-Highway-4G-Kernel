@@ -805,6 +805,17 @@ static int palmas_smps_init(struct palmas *palmas, int id,
 				"Error in configuring external control\n");
 			return ret;
 		}
+
+		if (id == PALMAS_REG_SMPS123) {
+			ret = palmas_ext_power_req_config(palmas,
+					PALMAS_SLEEP_REQSTR_ID_SMPS3,
+					reg_init->roof_floor, true);
+			if (ret < 0) {
+				dev_err(palmas->dev,
+					"Error in configuring ext control\n");
+				return ret;
+			}
+		}
 	}
 
 	if (palmas_regs_info[id].tstep_addr && reg_init->tstep) {
@@ -912,6 +923,7 @@ static void palmas_enable_ldo8_track(struct palmas *palmas)
 	unsigned int reg;
 	unsigned int addr;
 	int ret;
+	int i;
 
 	addr = palmas_regs_info[PALMAS_REG_LDO8].ctrl_addr;
 
@@ -941,8 +953,86 @@ static void palmas_enable_ldo8_track(struct palmas *palmas)
 
 	reg = (reg << 1) & PALMAS_LDO8_VOLTAGE_VSEL_MASK;
 	ret = palmas_ldo_write(palmas, addr, reg);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(palmas->dev, "Error in setting ldo8 voltage reg\n");
+		return;
+	}
+
+	/*
+	 * When Tracking is enbled, it need to disable Pull-Down for LDO8 and
+	 * when tracking is disabled, SW has to enabe Pull-Down.
+	 */
+	addr = PALMAS_LDO_PD_CTRL1;
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in reading pulldown control reg\n");
+		return;
+	}
+	reg &= ~PALMAS_LDO_PD_CTRL1_LDO8;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in setting pulldown control reg\n");
+		return;
+	}
+
+	return;
+}
+
+static void palmas_disable_ldo8_track(struct palmas *palmas)
+{
+	unsigned int reg;
+	unsigned int addr;
+	int ret;
+
+	/*
+	 * When SMPS4&5 is set to off and LDO8 tracking is enabled, the LDO8
+	 * output is defined by the LDO8_VOLTAGE.VSEL register divided by two,
+	 * and can be set from 0.45 to 1.65 V.
+	 */
+	addr = palmas_regs_info[PALMAS_REG_LDO8].vsel_addr;
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret) {
+		dev_err(palmas->dev, "Error in reading ldo8 voltage reg\n");
+		return;
+	}
+
+	reg = (reg >> 1) & PALMAS_LDO8_VOLTAGE_VSEL_MASK;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in setting ldo8 voltage reg\n");
+		return;
+	}
+
+	/* Disable the tracking mode */
+	addr = palmas_regs_info[PALMAS_REG_LDO8].ctrl_addr;
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret) {
+		dev_err(palmas->dev, "Error in reading ldo8 control reg\n");
+		return;
+	}
+	reg &= ~PALMAS_LDO8_CTRL_LDO_TRACKING_EN;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in disabling tracking mode\n");
+		return;
+	}
+
+	/*
+	 * When Tracking is enbled, it need to disable Pull-Down for LDO8 and
+	 * when tracking is disabled, SW has to enabe Pull-Down.
+	 */
+	addr = PALMAS_LDO_PD_CTRL1;
+	ret = palmas_ldo_read(palmas, addr, &reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in reading pulldown control reg\n");
+		return;
+	}
+	reg |= PALMAS_LDO_PD_CTRL1_LDO8;
+	ret = palmas_ldo_write(palmas, addr, reg);
+	if (ret < 0) {
+		dev_err(palmas->dev, "Error in setting pulldown control reg\n");
+		return;
+	}
 
 	return;
 }
@@ -1153,10 +1243,41 @@ static int __devexit palmas_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int palmas_suspend(struct device *dev)
+{
+	struct palmas *palmas = dev_get_drvdata(dev->parent);
+	struct palmas_pmic_platform_data *pdata = dev_get_platdata(dev);
+
+	/* Check if LDO8 is in tracking mode disable in suspend or not */
+	if (pdata->enable_ldo8_tracking && pdata->disabe_ldo8_tracking_suspend)
+		palmas_disable_ldo8_track(palmas);
+
+	return 0;
+}
+
+static int palmas_resume(struct device *dev)
+{
+	struct palmas *palmas = dev_get_drvdata(dev->parent);
+	struct palmas_pmic_platform_data *pdata = dev_get_platdata(dev);
+
+	/* Check if LDO8 is in tracking mode disable in suspend or not */
+	if (pdata->enable_ldo8_tracking && pdata->disabe_ldo8_tracking_suspend)
+		palmas_enable_ldo8_track(palmas);
+
+	return 0;
+}
+#endif
+static const struct dev_pm_ops palmas_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(palmas_suspend, palmas_resume)
+};
+
+
 static struct platform_driver palmas_driver = {
 	.driver = {
 		.name = "palmas-pmic",
 		.owner = THIS_MODULE,
+		.pm     = &palmas_pm_ops,
 	},
 	.probe = palmas_probe,
 	.remove = __devexit_p(palmas_remove),

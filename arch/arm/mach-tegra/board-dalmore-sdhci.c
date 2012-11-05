@@ -41,6 +41,7 @@
 #define DALMORE_WLAN_PWR	TEGRA_GPIO_PCC5
 #define DALMORE_WLAN_RST	TEGRA_GPIO_PX7
 #define DALMORE_WLAN_WOW	TEGRA_GPIO_PU5
+#define DALMORE_SD_CD		TEGRA_GPIO_PV2
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 static int dalmore_wifi_status_register(void (*callback)(int , void *), void *);
@@ -144,15 +145,17 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.cd_gpio = -1,
 	.wp_gpio = -1,
 	.power_gpio = -1,
-	.tap_delay = 0x0F,
+	.tap_delay = 0x2,
+	.trim_delay = 0x2,
 	.ddr_clk_limit = 41000000,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
-	.cd_gpio = -1,
+	.cd_gpio = DALMORE_SD_CD,
 	.wp_gpio = -1,
 	.power_gpio = -1,
-	.tap_delay = 0x0F,
+	.tap_delay = 0x3,
+	.trim_delay = 0x3,
 	.ddr_clk_limit = 41000000,
 };
 
@@ -161,7 +164,8 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.is_8bit = 1,
-	.tap_delay = 0x0F,
+	.tap_delay = 0x5,
+	.trim_delay = 0x3,
 	.ddr_clk_limit = 41000000,
 	.mmc_data = {
 		.built_in = 1,

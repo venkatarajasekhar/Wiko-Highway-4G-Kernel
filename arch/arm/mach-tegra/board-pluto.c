@@ -67,8 +67,10 @@
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
 #include <mach/edp.h>
+#include <mach/tegra_usb_modem_power.h>
 
 #include "board.h"
+#include "board-common.h"
 #include "board-touch-raydium.h"
 #include "clock.h"
 #include "board-pluto.h"
@@ -142,8 +144,8 @@ static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	{ "hda",	"pll_p",	108000000,	false},
 	{ "hda2codec_2x", "pll_p",	48000000,	false},
 	{ "pwm",	"pll_p",	3187500,	false},
-	{ "blink",	"clk_32k",	32768,		true},
 	{ "i2s1",	"pll_a_out0",	0,		false},
+	{ "i2s2",	"pll_a_out0",	0,		false},
 	{ "i2s3",	"pll_a_out0",	0,		false},
 	{ "i2s4",	"pll_a_out0",	0,		false},
 	{ "spdif_out",	"pll_a_out0",	0,		false},
@@ -152,7 +154,9 @@ static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	{ "dam1",	"clk_m",	12000000,	false},
 	{ "dam2",	"clk_m",	12000000,	false},
 	{ "audio1",	"i2s1_sync",	0,		false},
+	{ "audio2",	"i2s2_sync",	0,		false},
 	{ "audio3",	"i2s3_sync",	0,		false},
+	{ "audio4",	"i2s4_sync",	0,		false},
 	{ "vi_sensor",	"pll_p",	150000000,	false},
 	{ "cilab",	"pll_p",	150000000,	false},
 	{ "cilcd",	"pll_p",	150000000,	false},
@@ -212,56 +216,6 @@ static struct tegra_i2c_platform_data pluto_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
-static struct led_info pluto_max8831_leds[] = {
-	[MAX8831_ID_LED3] = {
-		.name = "max8831:red:pluto",
-	},
-	[MAX8831_ID_LED4] = {
-		.name = "max8831:green:pluto",
-	},
-	[MAX8831_ID_LED5] = {
-		.name = "max8831:blue:pluto",
-	},
-	[MAX8831_BL_LEDS] = {
-		.name = "pluto_display_bl",
-	},
-};
-
-static struct max8831_subdev_info pluto_max8831_subdevs[] = {
-	{
-		.id = MAX8831_ID_LED3,
-		.name = "max8831_led_bl",
-		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED3],
-		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED3]),
-	}, {
-		.id = MAX8831_ID_LED4,
-		.name = "max8831_led_bl",
-		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED4],
-		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED4]),
-	}, {
-		.id = MAX8831_ID_LED5,
-		.name = "max8831_led_bl",
-		.platform_data = &pluto_max8831_leds[MAX8831_ID_LED5],
-		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_ID_LED5]),
-	}, {
-		.id = MAX8831_BL_LEDS,
-		.name = "max8831_display_bl",
-		.platform_data = &pluto_max8831_leds[MAX8831_BL_LEDS],
-		.pdata_size = sizeof(pluto_max8831_leds[MAX8831_BL_LEDS]),
-	},
-};
-
-static struct max8831_platform_data pluto_max8831 = {
-	.num_subdevs = ARRAY_SIZE(pluto_max8831_subdevs),
-	.subdevs = pluto_max8831_subdevs,
-};
-
-static struct i2c_board_info pluto_i2c_led_info = {
-	.type		= "max8831",
-	.addr		= 0x4d,
-	.platform_data	= &pluto_max8831,
-};
-
 static struct i2c_board_info __initdata cs42l73_board_info = {
 	I2C_BOARD_INFO("cs42l73", 0x4a),
 };
@@ -298,8 +252,6 @@ static void pluto_i2c_init(void)
 	tegra11_i2c_device4.dev.platform_data = &pluto_i2c4_platform_data;
 	tegra11_i2c_device5.dev.platform_data = &pluto_i2c5_platform_data;
 
-	i2c_register_board_info(1, &pluto_i2c_led_info, 1);
-
 	platform_device_register(&tegra11_i2c_device5);
 	platform_device_register(&tegra11_i2c_device4);
 	platform_device_register(&tegra11_i2c_device3);
@@ -333,56 +285,10 @@ static void __init uart_debug_init(void)
 {
 	int debug_port_id;
 
-	debug_port_id = get_tegra_uart_debug_port_id();
+	debug_port_id = uart_console_debug_init(3);
 	if (debug_port_id < 0)
-		debug_port_id = 3;
-
-	switch (debug_port_id) {
-	case 0:
-		/* UARTA is the debug port. */
-		pr_info("Selecting UARTA as the debug console\n");
-		pluto_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-
-	case 1:
-		/* UARTB is the debug port. */
-		pr_info("Selecting UARTB as the debug console\n");
-		pluto_uart_devices[1] = &debug_uartb_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartb");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartb_device.dev.platform_data))->mapbase;
-		break;
-
-	case 2:
-		/* UARTC is the debug port. */
-		pr_info("Selecting UARTC as the debug console\n");
-		pluto_uart_devices[2] = &debug_uartc_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartc");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartc_device.dev.platform_data))->mapbase;
-		break;
-
-	case 3:
-		/* UARTD is the debug port. */
-		pr_info("Selecting UARTD as the debug console\n");
-		pluto_uart_devices[3] = &debug_uartd_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uartd");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uartd_device.dev.platform_data))->mapbase;
-		break;
-
-	default:
-		pr_info("The debug console id %d is invalid, Assuming UARTA",
-			debug_port_id);
-		pluto_uart_devices[0] = &debug_uarta_device;
-		debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
-		debug_uart_port_base = ((struct plat_serial8250_port *)(
-			debug_uarta_device.dev.platform_data))->mapbase;
-		break;
-	}
+		return;
+	pluto_uart_devices[debug_port_id] = uart_console_debug_device;
 }
 
 static void __init pluto_uart_init(void)
@@ -412,25 +318,8 @@ static void __init pluto_uart_init(void)
 	tegra_uartd_device.dev.platform_data = &pluto_uart_pdata;
 
 	/* Register low speed only if it is selected */
-	if (!is_tegra_debug_uartport_hs()) {
+	if (!is_tegra_debug_uartport_hs())
 		uart_debug_init();
-		/* Clock enable for the debug channel */
-		if (!IS_ERR_OR_NULL(debug_uart_clk)) {
-			pr_info("The debug console clock name is %s\n",
-						debug_uart_clk->name);
-			c = tegra_get_clock_by_name("pll_p");
-			if (IS_ERR_OR_NULL(c))
-				pr_err("Not getting the parent clock pll_p\n");
-			else
-				clk_set_parent(debug_uart_clk, c);
-
-			clk_enable(debug_uart_clk);
-			clk_set_rate(debug_uart_clk, clk_get_rate(c));
-		} else {
-			pr_err("Not getting the clock %s for debug console\n",
-					debug_uart_clk->name);
-		}
-	}
 
 	platform_add_devices(pluto_uart_devices,
 				ARRAY_SIZE(pluto_uart_devices));
@@ -465,8 +354,24 @@ static struct tegra_asoc_platform_data pluto_audio_pdata = {
 	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
 	.i2s_param[HIFI_CODEC]	= {
 		.audio_port_id	= 1,
+		.is_i2s_master	= 0,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.channels       = 2,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= 2,
 		.is_i2s_master	= 1,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.rate		= 16000,
+		.channels	= 2,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.sample_size	= 16,
 	},
 };
 
@@ -502,9 +407,15 @@ static struct platform_device *pluto_devices[] __initdata = {
 	&tegra_dam_device0,
 	&tegra_dam_device1,
 	&tegra_dam_device2,
+	&tegra_i2s_device0,
 	&tegra_i2s_device1,
+	&tegra_i2s_device2,
 	&tegra_i2s_device3,
 	&tegra_i2s_device4,
+	&tegra_spdif_device,
+	&spdif_dit_device,
+	&bluetooth_dit_device,
+	&baseband_dit_device,
 	&pluto_audio_device,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_AES)
@@ -516,7 +427,7 @@ static struct platform_device *pluto_devices[] __initdata = {
 static struct tegra_usb_platform_data tegra_ehci3_hsic_smsc_hub_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
-	.unaligned_dma_buf_supported = true,
+	.unaligned_dma_buf_supported = false,
 	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
 	.op_mode	= TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -554,7 +465,7 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
-	.unaligned_dma_buf_supported = true,
+	.unaligned_dma_buf_supported = false,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -581,46 +492,238 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
 };
 
+static struct regulator *baseband_reg;
+static struct gpio modem_gpios[] = { /* i500 modem */
+	{MDM_RST, GPIOF_OUT_INIT_LOW, "MODEM RESET"},
+	{MDM_ACK, GPIOF_OUT_INIT_HIGH, "MODEM ACK1"},
+};
+
+static void baseband_post_phy_on(void);
+static void baseband_pre_phy_off(void);
+
+static struct tegra_usb_phy_platform_ops baseband_plat_ops = {
+	.pre_phy_off = baseband_pre_phy_off,
+	.post_phy_on = baseband_post_phy_on,
+};
+
+static struct gpio modem2_gpios[] = {
+	{MDM2_PWR_ON, GPIOF_OUT_INIT_LOW, "MODEM2 PWR ON"},
+	{MDM2_RST, GPIOF_DIR_OUT, "MODEM2 RESET"},
+	{MDM2_ACK2, GPIOF_OUT_INIT_HIGH, "MODEM2 ACK2"},
+	{MDM2_ACK1, GPIOF_OUT_INIT_LOW, "MODEM2 ACK1"},
+};
+
+static void baseband2_post_phy_on(void);
+static void baseband2_pre_phy_off(void);
+
+static struct tegra_usb_phy_platform_ops baseband2_plat_ops = {
+	.pre_phy_off = baseband2_pre_phy_off,
+	.post_phy_on = baseband2_post_phy_on,
+};
+
+static struct tegra_usb_platform_data tegra_ehci2_hsic_baseband_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = false,
+		.power_off_on_suspend = false,
+	},
+	.ops = &baseband_plat_ops,
+};
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+static struct tegra_usb_platform_data tegra_ehci3_hsic_baseband2_pdata = {
+#else
+static struct tegra_usb_platform_data tegra_ehci2_hsic_baseband2_pdata = {
+#endif
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = false,
+		.power_off_on_suspend = false,
+	},
+	.ops = &baseband2_plat_ops,
+};
+
+static void baseband_post_phy_on(void)
+{
+	gpio_set_value(MDM_ACK, 0);
+}
+
+static void baseband_pre_phy_off(void)
+{
+	gpio_set_value(MDM_ACK, 1);
+}
+
+static int baseband_init(void)
+{
+	int ret;
+
+	ret = gpio_request_array(modem_gpios, ARRAY_SIZE(modem_gpios));
+	if (ret) {
+		pr_warn("%s:gpio request failed\n", __func__);
+		return ret;
+	}
+
+	baseband_reg = regulator_get(NULL, "vdd_core_bb");
+	if (IS_ERR_OR_NULL(baseband_reg))
+		pr_warn("%s: baseband regulator get failed\n", __func__);
+	else
+		regulator_enable(baseband_reg);
+
+	/* export GPIO for user space access through sysfs */
+	gpio_export(MDM_RST, false);
+
+	return 0;
+}
+
+static const struct tegra_modem_operations baseband_operations = {
+	.init = baseband_init,
+};
+
+static struct tegra_usb_modem_power_platform_data baseband_pdata = {
+	.ops = &baseband_operations,
+	.wake_gpio = MDM_REQ,
+	.wake_irq_flags = IRQF_TRIGGER_FALLING,
+	.boot_gpio = MDM_COLDBOOT,
+	.boot_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+	.autosuspend_delay = 2000,
+	.short_autosuspend_delay = 50,
+	.tegra_ehci_device = &tegra_ehci2_device,
+	.tegra_ehci_pdata = &tegra_ehci2_hsic_baseband_pdata,
+};
+
+static struct platform_device icera_baseband_device = {
+	.name = "tegra_usb_modem_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &baseband_pdata,
+	},
+};
+
+static void baseband2_post_phy_on(void)
+{
+	/* set MDM2_ACK2 low */
+	gpio_set_value(MDM2_ACK2, 0);
+}
+
+static void baseband2_pre_phy_off(void)
+{
+	/* set MDM2_ACK2 high */
+	gpio_set_value(MDM2_ACK2, 1);
+}
+
+static void baseband2_start(void)
+{
+	/*
+	 *  Leave baseband powered OFF.
+	 *  User-space daemons will take care of powering it up.
+	 */
+	pr_info("%s\n", __func__);
+	gpio_set_value(MDM2_PWR_ON, 0);
+}
+
+static void baseband2_reset(void)
+{
+	/* Initiate power cycle on baseband sub system */
+	pr_info("%s\n", __func__);
+	gpio_set_value(MDM2_PWR_ON, 0);
+	mdelay(200);
+	gpio_set_value(MDM2_PWR_ON, 1);
+}
+
+static int baseband2_init(void)
+{
+	int ret;
+
+	ret = gpio_request_array(modem2_gpios, ARRAY_SIZE(modem2_gpios));
+	if (ret)
+		return ret;
+
+	/* enable pull-up for MDM2_REQ2 */
+	tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_GPIO_PV1,
+				    TEGRA_PUPD_PULL_UP);
+
+	/* export GPIO for user space access through sysfs */
+	gpio_export(MDM2_PWR_ON, false);
+
+	return 0;
+}
+
+static const struct tegra_modem_operations baseband2_operations = {
+	.init = baseband2_init,
+	.start = baseband2_start,
+	.reset = baseband2_reset,
+};
+
+static struct tegra_usb_modem_power_platform_data baseband2_pdata = {
+	.ops = &baseband2_operations,
+	.wake_gpio = MDM2_REQ2,
+	.wake_irq_flags = IRQF_TRIGGER_FALLING,
+	.boot_gpio = MDM2_COLDBOOT,
+	.boot_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+	.autosuspend_delay = 2000,
+	.short_autosuspend_delay = 50,
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	.tegra_ehci_device = &tegra_ehci3_device,
+	.tegra_ehci_pdata = &tegra_ehci3_hsic_baseband2_pdata,
+#else
+	.tegra_ehci_device = &tegra_ehci2_device,
+	.tegra_ehci_pdata = &tegra_ehci2_hsic_baseband2_pdata,
+#endif
+};
+
+static struct platform_device icera_baseband2_device = {
+	.name = "tegra_usb_modem_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &baseband2_pdata,
+	},
+};
+
 static void pluto_usb_init(void)
 {
+	int modem_id = tegra_get_modem_id();
+
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
 	platform_device_register(&tegra_otg_device);
 
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 
-	tegra_ehci3_device.dev.platform_data =
-		&tegra_ehci3_hsic_smsc_hub_pdata;
-	platform_device_register(&tegra_ehci3_device);
+	if (!modem_id) {
+		tegra_ehci3_device.dev.platform_data =
+			&tegra_ehci3_hsic_smsc_hub_pdata;
+		platform_device_register(&tegra_ehci3_device);
+	}
 }
 
 static void pluto_modem_init(void)
 {
-	int ret;
+	int modem_id = tegra_get_modem_id();
 
-	ret = gpio_request(TEGRA_GPIO_W_DISABLE, "w_disable_gpio");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_W_DISABLE);
-	else
-		gpio_direction_output(TEGRA_GPIO_W_DISABLE, 1);
+	pr_info("%s: modem_id = %d\n", __func__, modem_id);
 
-
-	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD1, "Port_V_PIN_0");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_MODEM_RSVD1);
-	else
-		gpio_direction_input(TEGRA_GPIO_MODEM_RSVD1);
-
-
-	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD2, "Port_H_PIN_7");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_MODEM_RSVD2);
-	else
-		gpio_direction_output(TEGRA_GPIO_MODEM_RSVD2, 1);
-
+	switch (modem_id) {
+	case TEGRA_BB_I500: /* on board i500 HSIC */
+		platform_device_register(&icera_baseband_device);
+		break;
+	case TEGRA_BB_I500SWD: /* i500 SWD HSIC */
+		platform_device_register(&icera_baseband2_device);
+		break;
+	default:
+		return;
+	}
 }
 
 #else
@@ -738,6 +841,7 @@ static void __init tegra_pluto_init(void)
 	pluto_i2c_init();
 	pluto_spi_init();
 	pluto_usb_init();
+	pluto_edp_init();
 	pluto_uart_init();
 	pluto_audio_init();
 	platform_add_devices(pluto_devices, ARRAY_SIZE(pluto_devices));
@@ -749,6 +853,7 @@ static void __init tegra_pluto_init(void)
 	pluto_touch_init();
 	pluto_emc_init();
 	pluto_panel_init();
+	pluto_pmon_init();
 	pluto_kbc_init();
 	pluto_setup_bluesleep();
 	pluto_setup_bt_rfkill();

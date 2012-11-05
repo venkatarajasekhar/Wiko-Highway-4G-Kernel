@@ -56,7 +56,7 @@ static unsigned int tegra_lp2_min_residency;
 
 extern void tegra_cpu_wfi(void);
 
-static int tegra_idle_enter_lp3(struct cpuidle_device *dev,
+static int tegra_idle_enter_clock_gating(struct cpuidle_device *dev,
 				int index);
 
 struct cpuidle_driver tegra_idle_driver = {
@@ -66,7 +66,7 @@ struct cpuidle_driver tegra_idle_driver = {
 
 static DEFINE_PER_CPU(struct cpuidle_device *, tegra_idle_device);
 
-static int tegra_idle_enter_lp3(struct cpuidle_device *dev,
+static int tegra_idle_enter_clock_gating(struct cpuidle_device *dev,
 	int index)
 {
 	ktime_t enter, exit;
@@ -78,7 +78,7 @@ static int tegra_idle_enter_lp3(struct cpuidle_device *dev,
 
 	enter = ktime_get();
 
-	tegra_cpu_wfi();
+	cpu_do_idle();
 
 	exit = ktime_sub(ktime_get(), enter);
 	us = ktime_to_us(exit);
@@ -97,6 +97,7 @@ static bool lp2_in_idle __read_mostly = false;
 #ifdef CONFIG_PM_SLEEP
 static bool lp2_in_idle_modifiable __read_mostly = true;
 static bool lp2_disabled_by_suspend;
+static struct tegra_cpuidle_ops tegra_idle_ops;
 
 void tegra_lp2_in_idle(bool enable)
 {
@@ -126,7 +127,7 @@ static int tegra_idle_enter_lp2(struct cpuidle_device *dev,
 	bool entered_lp2;
 
 	if (!lp2_in_idle || lp2_disabled_by_suspend ||
-	    !tegra_lp2_is_allowed(dev, state)) {
+	    !tegra_idle_ops.lp2_is_allowed(dev, state)) {
 		return dev->states[dev->safe_state_index].enter(dev,
 					dev->safe_state_index);
 	}
@@ -139,8 +140,8 @@ static int tegra_idle_enter_lp2(struct cpuidle_device *dev,
 
 	enter = ktime_get();
 
-	tegra_cpu_idle_stats_lp2_ready(dev->cpu);
-	entered_lp2 = tegra_idle_lp2(dev, state);
+	tegra_idle_ops.cpu_idle_stats_lp2_ready(dev->cpu);
+	entered_lp2 = tegra_idle_ops.tegra_idle_lp2(dev, state);
 
 	trace_cpu_powergate_rcuidle((unsigned long)readl(
 					    IO_ADDRESS(TEGRA_TMR1_BASE)
@@ -155,69 +156,15 @@ static int tegra_idle_enter_lp2(struct cpuidle_device *dev,
 
 	smp_rmb();
 
-	/* Update LP2 latency provided no fall back to LP3 */
+	/* Update LP2 latency provided no fall back to clock gating */
 	if (entered_lp2) {
 		tegra_lp2_set_global_latency(state);
 		tegra_lp2_update_target_residency(state);
 	}
-	tegra_cpu_idle_stats_lp2_time(dev->cpu, us);
+	tegra_idle_ops.cpu_idle_stats_lp2_time(dev->cpu, us);
 
 	dev->last_residency = (int)us;
 	return (entered_lp2) ? index : 0;
-}
-#endif
-
-#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
-#define	POWER_GATING_OPTION_LEN	8
-static char power_gating_option[8] __read_mostly =
-											{'c', 'r', 'a', 'i', 'l', '\0'};
-static int power_gating_mode = TEGRA_POWER_CLUSTER_PART_CRAIL;
-static struct kparam_string power_gating __read_mostly = {
-	.maxlen = POWER_GATING_OPTION_LEN,
-	.string = power_gating_option,
-};
-
-static int power_gating_set(const char *buffer, const struct kernel_param *kp)
-{
-	const struct kparam_string *kps = kp->str;
-	int len = strlen(buffer);
-	int mode = -1;
-
-	if (len > kp->str->maxlen-1) {
-		pr_err("%s: string %s does not fit in 6 chars.\n", kp->name, buffer);
-		return -ENOSPC;
-	}
-
-	if (!strncmp(buffer, "noncpu", 6))
-		mode = TEGRA_POWER_CLUSTER_PART_NONCPU;
-	else if (!strncmp(buffer, "crail", 5))
-		mode = TEGRA_POWER_CLUSTER_PART_CRAIL;
-	else if (!strncmp(buffer, "emu", 3))
-		mode = TEGRA_POWER_CLUSTER_PART_MASK;
-	else if (!strncmp(buffer, "none", 4))
-		mode = 0;
-
-	if (mode >= 0) {
-		strcpy(kps->string, buffer);
-		kps->string[len - 1] = '\0';
-		power_gating_mode = mode;
-		return 0;
-	}
-
-	pr_err("%s: power gating option: noncpu, crail, emu, cpu.", kp->name);
-	return -EINVAL;
-}
-
-static struct kernel_param_ops power_gating_ops = {
-	.set = power_gating_set,
-	.get = param_get_string,
-};
-
-module_param_cb(power_gating, &power_gating_ops, &power_gating, 0644);
-
-int get_power_gating_partition(void)
-{
-	return power_gating_mode;
 }
 #endif
 
@@ -235,20 +182,20 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 	dev->power_specified = 1;
 
 	state = &dev->states[0];
-	snprintf(state->name, CPUIDLE_NAME_LEN, "LP3");
-	snprintf(state->desc, CPUIDLE_DESC_LEN, "CPU flow-controlled");
+	snprintf(state->name, CPUIDLE_NAME_LEN, "clock-gated");
+	snprintf(state->desc, CPUIDLE_DESC_LEN, "CPU clock gated");
 	state->exit_latency = 10;
 	state->target_residency = 10;
 	state->power_usage = 600;
 	state->flags = CPUIDLE_FLAG_TIME_VALID;
-	state->enter = tegra_idle_enter_lp3;
+	state->enter = tegra_idle_enter_clock_gating;
 	dev->safe_state_index = 0;
 	dev->state_count++;
 
 #ifdef CONFIG_PM_SLEEP
 	state = &dev->states[1];
-	snprintf(state->name, CPUIDLE_NAME_LEN, "LP2");
-	snprintf(state->desc, CPUIDLE_DESC_LEN, "CPU power-gate");
+	snprintf(state->name, CPUIDLE_NAME_LEN, "powered-down");
+	snprintf(state->desc, CPUIDLE_DESC_LEN, "CPU power gated");
 	state->exit_latency = tegra_cpu_power_good_time();
 	state->target_residency = tegra_cpu_power_off_time() +
 		tegra_cpu_power_good_time();
@@ -302,11 +249,8 @@ static int __init tegra_cpuidle_init(void)
 	tegra_lp2_exit_latency = tegra_cpu_power_good_time();
 	tegra_lp2_power_off_time = tegra_cpu_power_off_time();
 
-	ret = tegra_cpudile_init_soc();
-	if (ret)
-		return ret;
+	tegra_cpuidle_init_soc(&tegra_idle_ops);
 #endif
-
 	for_each_possible_cpu(cpu) {
 		ret = tegra_cpuidle_register_device(cpu);
 		if (ret) {
@@ -356,7 +300,8 @@ module_param_cb(lp2_in_idle, &lp2_in_idle_ops, &lp2_in_idle, 0644);
 #if defined(CONFIG_DEBUG_FS) && defined(CONFIG_PM_SLEEP)
 static int tegra_lp2_debug_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, tegra_lp2_debug_show, inode->i_private);
+	return single_open(file, tegra_idle_ops.lp2_debug_show,
+				inode->i_private);
 }
 
 static const struct file_operations tegra_lp2_debug_ops = {

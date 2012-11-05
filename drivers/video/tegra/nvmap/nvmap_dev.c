@@ -205,6 +205,17 @@ void nvmap_free_pte(struct nvmap_device *dev, pte_t **pte)
 	wake_up(&dev->pte_wait);
 }
 
+/* get pte for the virtual address */
+pte_t **nvmap_vaddr_to_pte(struct nvmap_device *dev, unsigned long vaddr)
+{
+	unsigned int bit;
+
+	BUG_ON(vaddr < (unsigned long)dev->vm_rgn->addr);
+	bit = (vaddr - (unsigned long)dev->vm_rgn->addr) >> PAGE_SHIFT;
+	BUG_ON(bit >= NVMAP_NUM_PTES);
+	return &(dev->ptes[bit]);
+}
+
 /* verifies that the handle ref value "ref" is a valid handle ref for the
  * file. caller must hold the file's ref_lock prior to calling this function */
 struct nvmap_handle_ref *_nvmap_validate_id_locked(struct nvmap_client *c,
@@ -683,8 +694,10 @@ static void destroy_client(struct nvmap_client *client)
 		smp_rmb();
 		pins = atomic_read(&ref->pin);
 
-		if (ref->handle->owner == client)
+		if (ref->handle->owner == client) {
 			ref->handle->owner = NULL;
+			ref->handle->owner_ref = NULL;
+		}
 
 		while (pins--)
 			nvmap_unpin_handles(client, &ref->handle, 1);

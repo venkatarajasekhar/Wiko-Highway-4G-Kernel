@@ -26,6 +26,7 @@
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pwm_backlight.h>
 
 #include <mach/irqs.h>
 #include <mach/iomap.h>
@@ -34,15 +35,23 @@
 #include "board.h"
 #include "devices.h"
 #include "gpio-names.h"
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-#include "tegra3_host1x_devices.h"
-#else
 #include "tegra11_host1x_devices.h"
+
+int __init dalmore_host1x_init(void)
+{
+	int err = -EINVAL;
+
+#ifdef CONFIG_TEGRA_GRHOST
+	err = tegra11_register_host1x_devices();
+	if (err) {
+		pr_err("host1x devices registration failed\n");
+		return err;
+	}
 #endif
+	return err;
+}
 
-#define TEGRA_PANEL_ENABLE	1
-
-#if TEGRA_PANEL_ENABLE
+#ifdef CONFIG_TEGRA_DC
 
 #define TEGRA_DSI_GANGED_MODE	0
 #define IS_EXTERNAL_PWM		1
@@ -55,6 +64,7 @@
 #define DSI_PANEL_RESET		1
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+#define DSI_PANEL_BL_PWM	TEGRA_GPIO_PH1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 
@@ -80,11 +90,9 @@ static struct regulator *vdd_ds_1v8;
 #define en_vdd_bl	TEGRA_GPIO_PG0
 #define lvds_en		TEGRA_GPIO_PG3
 
-#ifdef CONFIG_TEGRA_DC
 static struct regulator *dalmore_hdmi_reg;
 static struct regulator *dalmore_hdmi_pll;
 static struct regulator *dalmore_hdmi_vddio;
-#endif
 
 static struct resource dalmore_disp1_resources[] = {
 	{
@@ -126,6 +134,12 @@ static struct resource dalmore_disp1_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 #endif
+	{
+		.name	= "mipi_cal",
+		.start	= TEGRA_MIPI_CAL_BASE,
+		.end	= TEGRA_MIPI_CAL_BASE + TEGRA_MIPI_CAL_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
 };
 
 static struct resource dalmore_disp2_resources[] = {
@@ -155,6 +169,117 @@ static struct resource dalmore_disp2_resources[] = {
 	},
 };
 
+#if PANEL_10_1_PANASONIC_1920_1200
+static tegra_dc_bl_output dalmore_bl_output_measured = {
+	0, 0, 1, 2, 3, 4, 5, 6,
+	7, 8, 9, 9, 10, 11, 12, 13,
+	13, 14, 15, 16, 17, 17, 18, 19,
+	20, 21, 22, 22, 23, 24, 25, 26,
+	27, 27, 28, 29, 30, 31, 32, 32,
+	33, 34, 35, 36, 37, 37, 38, 39,
+	40, 41, 42, 42, 43, 44, 45, 46,
+	47, 48, 48, 49, 50, 51, 52, 53,
+	54, 55, 56, 57, 57, 58, 59, 60,
+	61, 62, 63, 64, 65, 66, 67, 68,
+	69, 70, 71, 71, 72, 73, 74, 75,
+	76, 77, 77, 78, 79, 80, 81, 82,
+	83, 84, 85, 87, 88, 89, 90, 91,
+	92, 93, 94, 95, 96, 97, 98, 99,
+	100, 101, 102, 103, 104, 105, 106, 107,
+	108, 109, 110, 111, 112, 113, 115, 116,
+	117, 118, 119, 120, 121, 122, 123, 124,
+	125, 126, 127, 128, 129, 130, 131, 132,
+	133, 134, 135, 136, 137, 138, 139, 141,
+	142, 143, 144, 146, 147, 148, 149, 151,
+	152, 153, 154, 155, 156, 157, 158, 158,
+	159, 160, 161, 162, 163, 165, 166, 167,
+	168, 169, 170, 171, 172, 173, 174, 176,
+	177, 178, 179, 180, 182, 183, 184, 185,
+	186, 187, 188, 189, 190, 191, 192, 194,
+	195, 196, 197, 198, 199, 200, 201, 202,
+	203, 204, 205, 206, 207, 208, 209, 210,
+	211, 212, 213, 214, 215, 216, 217, 219,
+	220, 221, 222, 224, 225, 226, 227, 229,
+	230, 231, 232, 233, 234, 235, 236, 238,
+	239, 240, 241, 242, 243, 244, 245, 246,
+	247, 248, 249, 250, 251, 252, 253, 255
+};
+#elif PANEL_11_6_AUO_1920_1080
+/* TODO: Calibrate for AUO panel */
+static tegra_dc_bl_output dalmore_bl_output_measured = {
+	0, 0, 1, 2, 3, 4, 5, 6,
+	7, 8, 9, 9, 10, 11, 12, 13,
+	13, 14, 15, 16, 17, 17, 18, 19,
+	20, 21, 22, 22, 23, 24, 25, 26,
+	27, 27, 28, 29, 30, 31, 32, 32,
+	33, 34, 35, 36, 37, 37, 38, 39,
+	40, 41, 42, 42, 43, 44, 45, 46,
+	47, 48, 48, 49, 50, 51, 52, 53,
+	54, 55, 56, 57, 57, 58, 59, 60,
+	61, 62, 63, 64, 65, 66, 67, 68,
+	69, 70, 71, 71, 72, 73, 74, 75,
+	76, 77, 77, 78, 79, 80, 81, 82,
+	83, 84, 85, 87, 88, 89, 90, 91,
+	92, 93, 94, 95, 96, 97, 98, 99,
+	100, 101, 102, 103, 104, 105, 106, 107,
+	108, 109, 110, 111, 112, 113, 115, 116,
+	117, 118, 119, 120, 121, 122, 123, 124,
+	125, 126, 127, 128, 129, 130, 131, 132,
+	133, 134, 135, 136, 137, 138, 139, 141,
+	142, 143, 144, 146, 147, 148, 149, 151,
+	152, 153, 154, 155, 156, 157, 158, 158,
+	159, 160, 161, 162, 163, 165, 166, 167,
+	168, 169, 170, 171, 172, 173, 174, 176,
+	177, 178, 179, 180, 182, 183, 184, 185,
+	186, 187, 188, 189, 190, 191, 192, 194,
+	195, 196, 197, 198, 199, 200, 201, 202,
+	203, 204, 205, 206, 207, 208, 209, 210,
+	211, 212, 213, 214, 215, 216, 217, 219,
+	220, 221, 222, 224, 225, 226, 227, 229,
+	230, 231, 232, 233, 234, 235, 236, 238,
+	239, 240, 241, 242, 243, 244, 245, 246,
+	247, 248, 249, 250, 251, 252, 253, 255
+};
+#elif PANEL_10_1_SHARP_2560_1600
+/* TODO: Calibrate for SHARP panel */
+static tegra_dc_bl_output dalmore_bl_output_measured = {
+	0, 0, 1, 2, 3, 4, 5, 6,
+	7, 8, 9, 9, 10, 11, 12, 13,
+	13, 14, 15, 16, 17, 17, 18, 19,
+	20, 21, 22, 22, 23, 24, 25, 26,
+	27, 27, 28, 29, 30, 31, 32, 32,
+	33, 34, 35, 36, 37, 37, 38, 39,
+	40, 41, 42, 42, 43, 44, 45, 46,
+	47, 48, 48, 49, 50, 51, 52, 53,
+	54, 55, 56, 57, 57, 58, 59, 60,
+	61, 62, 63, 64, 65, 66, 67, 68,
+	69, 70, 71, 71, 72, 73, 74, 75,
+	76, 77, 77, 78, 79, 80, 81, 82,
+	83, 84, 85, 87, 88, 89, 90, 91,
+	92, 93, 94, 95, 96, 97, 98, 99,
+	100, 101, 102, 103, 104, 105, 106, 107,
+	108, 109, 110, 111, 112, 113, 115, 116,
+	117, 118, 119, 120, 121, 122, 123, 124,
+	125, 126, 127, 128, 129, 130, 131, 132,
+	133, 134, 135, 136, 137, 138, 139, 141,
+	142, 143, 144, 146, 147, 148, 149, 151,
+	152, 153, 154, 155, 156, 157, 158, 158,
+	159, 160, 161, 162, 163, 165, 166, 167,
+	168, 169, 170, 171, 172, 173, 174, 176,
+	177, 178, 179, 180, 182, 183, 184, 185,
+	186, 187, 188, 189, 190, 191, 192, 194,
+	195, 196, 197, 198, 199, 200, 201, 202,
+	203, 204, 205, 206, 207, 208, 209, 210,
+	211, 212, 213, 214, 215, 216, 217, 219,
+	220, 221, 222, 224, 225, 226, 227, 229,
+	230, 231, 232, 233, 234, 235, 236, 238,
+	239, 240, 241, 242, 243, 244, 245, 246,
+	247, 248, 249, 250, 251, 252, 253, 255
+};
+#endif
+
+static p_tegra_dc_bl_output bl_output = dalmore_bl_output_measured;
+
 static struct tegra_dsi_cmd dsi_init_cmd[] = {
 #if PANEL_10_1_PANASONIC_1920_1200
 	/* no init command required */
@@ -165,6 +290,29 @@ static struct tegra_dsi_cmd dsi_init_cmd[] = {
 #if PANEL_10_1_SHARP_2560_1600
 	/* TODO */
 #endif
+};
+
+const u32 __maybe_unused panasonic_1920_1200_vnb_syne[NUMOF_PKT_SEQ] = {
+	PKT_ID0(CMD_VS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_VE) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0),
+	PKT_ID3(CMD_BLNK) | PKT_LEN3(2) | PKT_ID4(CMD_RGB_24BPP) | PKT_LEN4(3) |
+	PKT_ID5(CMD_BLNK) | PKT_LEN5(4),
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0) | PKT_LP,
+	0,
+	PKT_ID0(CMD_HS) | PKT_LEN0(0) | PKT_ID1(CMD_BLNK) | PKT_LEN1(1) |
+	PKT_ID2(CMD_HE) | PKT_LEN2(0),
+	PKT_ID3(CMD_BLNK) | PKT_LEN3(2) | PKT_ID4(CMD_RGB_24BPP) | PKT_LEN4(3) |
+	PKT_ID5(CMD_BLNK) | PKT_LEN5(4),
 };
 
 static struct tegra_dsi_out dalmore_dsi = {
@@ -179,7 +327,7 @@ static struct tegra_dsi_out dalmore_dsi = {
 	.dsi2edp_bridge_enable = true,
 #endif
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
-	.refresh_rate = 59,
+	.refresh_rate = 60,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
 	.dsi_instance = DSI_INSTANCE_0,
@@ -195,6 +343,9 @@ static struct tegra_dsi_out dalmore_dsi = {
 #endif
 	.dsi_init_cmd = dsi_init_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_init_cmd),
+#if PANEL_10_1_PANASONIC_1920_1200
+	.pkt_seq = panasonic_1920_1200_vnb_syne,
+#endif
 };
 
 static int dalmore_dsi_regulator_get(struct device *dev)
@@ -266,6 +417,14 @@ static int dalmore_dsi_gpio_get(void)
 		pr_err("panel backlight gpio request failed\n");
 		goto fail;
 	}
+
+	/* free pwm GPIO */
+	err = gpio_request(DSI_PANEL_BL_PWM, "panel pwm");
+	if (err < 0) {
+		pr_err("panel pwm gpio request failed\n");
+		goto fail;
+	}
+	gpio_free(DSI_PANEL_BL_PWM);
 
 #if PANEL_11_6_AUO_1920_1080
 	err = gpio_request(en_vdd_bl, "edp bridge 1v2 enable");
@@ -344,7 +503,6 @@ static int dalmore_dsi_panel_enable(struct device *dev)
 #endif
 
 	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
-	gpio_direction_output(57, 1);
 
 #if PANEL_11_6_AUO_1920_1080
 	gpio_direction_output(en_vdd_bl, 1);
@@ -433,11 +591,14 @@ static struct tegra_dc_mode dalmore_dsi_modes[] = {
 #endif
 };
 
+static struct tegra_dc_sd_settings sd_settings;
+
 static struct tegra_dc_out dalmore_disp1_out = {
 	.type		= TEGRA_DC_OUT_DSI,
 	.dsi		= &dalmore_dsi,
 
 	.flags		= DC_CTRL_MODE,
+	.sd_settings	= &sd_settings,
 
 	.modes		= dalmore_dsi_modes,
 	.n_modes	= ARRAY_SIZE(dalmore_dsi_modes),
@@ -579,6 +740,8 @@ static struct tegra_dc_platform_data dalmore_disp1_pdata = {
 	.default_out	= &dalmore_disp1_out,
 	.fb		= &dalmore_disp1_fb_data,
 	.emc_clk_rate	= 204000000,
+
+	.cmu_enable	= 1,
 };
 
 static struct tegra_fb_data dalmore_disp2_fb_data = {
@@ -664,8 +827,7 @@ static int dalmore_disp1_bl_notify(struct device *unused, int brightness)
 	if (brightness > 255)
 		pr_info("Error: Brightness > 255!\n");
 	else
-		/* TODO: backlight response LUT */
-		brightness = brightness;
+		brightness = bl_output[brightness];
 
 	return brightness;
 }
@@ -675,27 +837,71 @@ static int dalmore_disp1_check_fb(struct device *dev, struct fb_info *info)
 	return info->device == &dalmore_disp1_device.dev;
 }
 
-static struct platform_tegra_pwm_backlight_data dalmore_disp1_bl_data = {
-	.which_dc		= 0,
-	.which_pwm		= TEGRA_PWM_PM1,
-	.gpio_conf_to_sfio	= TEGRA_GPIO_PH1,
-	.max_brightness		= 255,
-	.dft_brightness		= 224,
-	.notify			= dalmore_disp1_bl_notify,
-	.period			= 0x3F,
-	.clk_div		= 0x3FF,
-	.clk_select		= 0,
+static struct platform_pwm_backlight_data dalmore_disp1_bl_data = {
+	.pwm_id		= 1,
+	.max_brightness	= 255,
+	.dft_brightness	= 224,
+	.pwm_period_ns	= 1000000,
+	.notify		= dalmore_disp1_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
-	.check_fb		= dalmore_disp1_check_fb,
+	.check_fb	= dalmore_disp1_check_fb,
 };
 
 static struct platform_device __maybe_unused
 		dalmore_disp1_bl_device __initdata = {
-	.name	= "tegra-pwm-bl",
+	.name	= "pwm-backlight",
 	.id	= -1,
 	.dev	= {
 		.platform_data = &dalmore_disp1_bl_data,
 	},
+};
+
+static struct tegra_dc_sd_settings dalmore_sd_settings = {
+	.enable = 1, /* enabled by default. */
+	.use_auto_pwm = false,
+	.hw_update_delay = 0,
+	.bin_width = -1,
+	.aggressiveness = 5,
+	.use_vid_luma = false,
+	.k_limit_enable = true,
+	.k_limit = 200,
+	.sd_window_enable = false,
+	.soft_clipping_enable = true,
+	/* Low soft clipping threshold to compensate for aggressive k_limit */
+	.soft_clipping_threshold = 128,
+	.smooth_k_enable = true,
+	.smooth_k_incr = 64,
+	/* Default video coefficients */
+	.coeff = {5, 9, 2},
+	.fc = {0, 0},
+	/* Immediate backlight changes */
+	.blp = {1024, 255},
+	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
+	/* Default BL TF */
+	.bltf = {
+			{
+				{57, 65, 73, 82},
+				{92, 103, 114, 125},
+				{138, 150, 164, 178},
+				{193, 208, 224, 241},
+			},
+		},
+	/* Default LUT */
+	.lut = {
+			{
+				{255, 255, 255},
+				{199, 199, 199},
+				{153, 153, 153},
+				{116, 116, 116},
+				{85, 85, 85},
+				{59, 59, 59},
+				{36, 36, 36},
+				{17, 17, 17},
+				{0, 0, 0},
+			},
+		},
+	.sd_brightness = &sd_brightness,
+	.bl_device_name = "pwm-backlight",
 };
 
 #if PANEL_11_6_AUO_1920_1080
@@ -704,11 +910,18 @@ static struct i2c_board_info dalmore_tc358770_dsi2edp_board_info __initdata = {
 };
 #endif
 
+static struct platform_device __maybe_unused
+			*dalmore_bl_device[] __initdata = {
+	&tegra_pwfm1_device,
+	&dalmore_disp1_bl_device,
+};
+
 int __init dalmore_panel_init(void)
 {
 	int err = 0;
 	struct resource __maybe_unused *res;
 
+	sd_settings = dalmore_sd_settings;
 #ifdef CONFIG_TEGRA_NVMAP
 	dalmore_carveouts[1].base = tegra_carveout_start;
 	dalmore_carveouts[1].size = tegra_carveout_size;
@@ -722,25 +935,21 @@ int __init dalmore_panel_init(void)
 	}
 #endif
 
+	err = dalmore_host1x_init();
+	if (err)
+		return err;
+
 	gpio_request(dalmore_hdmi_hpd, "hdmi_hpd");
 	gpio_direction_input(dalmore_hdmi_hpd);
 
-#ifdef CONFIG_TEGRA_GRHOST
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	err = tegra3_register_host1x_devices();
-#else
-	err = tegra11_register_host1x_devices();
-#endif
-	if (err) {
-		pr_err("host1x devices registration failed\n");
-		return err;
-	}
-
-#ifdef CONFIG_TEGRA_DC
 	res = nvhost_get_resource_byname(&dalmore_disp1_device,
 					 IORESOURCE_MEM, "fbmem");
 	res->start = tegra_fb_start;
 	res->end = tegra_fb_start + tegra_fb_size - 1;
+
+	/* Copy the bootloader fb to the fb. */
+	tegra_move_framebuffer(tegra_fb_start, tegra_bootloader_fb_start,
+			min(tegra_fb_size, tegra_bootloader_fb_size));
 
 	res = nvhost_get_resource_byname(&dalmore_disp2_device,
 					 IORESOURCE_MEM, "fbmem");
@@ -759,8 +968,9 @@ int __init dalmore_panel_init(void)
 		return err;
 	}
 
-#if !IS_EXTERNAL_PWM
-	err = platform_device_register(&dalmore_disp1_bl_device);
+#if IS_EXTERNAL_PWM
+	err = platform_add_devices(dalmore_bl_device,
+				ARRAY_SIZE(dalmore_bl_device));
 	if (err) {
 		pr_err("disp1 bl device registration failed");
 		return err;
@@ -768,7 +978,6 @@ int __init dalmore_panel_init(void)
 #endif
 #if PANEL_11_6_AUO_1920_1080
 	i2c_register_board_info(0, &dalmore_tc358770_dsi2edp_board_info, 1);
-#endif
 #endif
 
 #ifdef CONFIG_TEGRA_NVAVP
@@ -778,12 +987,11 @@ int __init dalmore_panel_init(void)
 		return err;
 	}
 #endif
-#endif
 	return err;
 }
 #else
 int __init dalmore_panel_init(void)
 {
-	return -ENODEV;
+	return dalmore_host1x_init();
 }
 #endif

@@ -74,8 +74,10 @@ static const struct tegra_usb_platform_data *hc_pdata;
 
 /* supported modems */
 static const struct usb_device_id modem_list[] = {
+	/*FIXME: add i500 USB_DEVICE macro*/
 	{USB_DEVICE(0x1983, 0x0310),	/* Icera 450 rev1 */
-	 .driver_info = TEGRA_MODEM_AUTOSUSPEND,
+	/* FIXME: temporarily reusing for i500 SWD */
+	/* .driver_info = TEGRA_MODEM_AUTOSUSPEND, */
 	 },
 	{USB_DEVICE(0x1983, 0x0321),	/* Icera 450 rev2 */
 	 .driver_info = TEGRA_MODEM_AUTOSUSPEND,
@@ -105,6 +107,7 @@ static void cpu_freq_boost(struct work_struct *ws)
 			      msecs_to_jiffies(BOOST_CPU_FREQ_TIMEOUT));
 }
 
+#if 0
 static irqreturn_t tegra_usb_modem_wake_thread(int irq, void *data)
 {
 	struct tegra_usb_modem *modem = (struct tegra_usb_modem *)data;
@@ -160,6 +163,7 @@ static irqreturn_t tegra_usb_modem_boot_thread(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 static void tegra_usb_modem_recovery(struct work_struct *ws)
 {
@@ -296,6 +300,7 @@ static int mdm_pm_notifier(struct notifier_block *notifier,
 	return NOTIFY_DONE;
 }
 
+#if 0
 static int mdm_request_wakeable_irq(struct tegra_usb_modem *modem,
 				    irq_handler_t thread_fn,
 				    unsigned int irq_gpio,
@@ -325,9 +330,10 @@ static int mdm_request_wakeable_irq(struct tegra_usb_modem *modem,
 
 	return ret;
 }
+#endif
 
 /* load USB host controller */
-static struct platform_device *tegra_usb_null_ulpi_host_register(void)
+static struct platform_device *tegra_usb_host_register(void)
 {
 	struct platform_device *pdev;
 	int val;
@@ -362,7 +368,7 @@ error:
 }
 
 /* unload USB host controller */
-static void tegra_usb_null_ulpi_host_unregister(struct platform_device *pdev)
+static void tegra_usb_host_unregister(struct platform_device *pdev)
 {
 	platform_device_unregister(pdev);
 }
@@ -387,10 +393,10 @@ static ssize_t load_unload_usb_host(struct device *dev,
 	mutex_lock(&hc_lock);
 	if (host) {
 		if (!hc)
-			hc = tegra_usb_null_ulpi_host_register();
+			hc = tegra_usb_host_register();
 	} else {
 		if (hc) {
-			tegra_usb_null_ulpi_host_unregister(hc);
+			tegra_usb_host_unregister(hc);
 			hc = NULL;
 		}
 	}
@@ -451,6 +457,7 @@ static int mdm_init(struct tegra_usb_modem *modem, struct platform_device *pdev)
 	pm_qos_add_request(&modem->cpu_boost_req, PM_QOS_CPU_FREQ_MIN,
 			   PM_QOS_DEFAULT_VALUE);
 
+#if 0
 	/* request remote wakeup irq from platform data */
 	ret = mdm_request_wakeable_irq(modem,
 				       tegra_usb_modem_wake_thread,
@@ -472,6 +479,7 @@ static int mdm_init(struct tegra_usb_modem *modem, struct platform_device *pdev)
 		dev_err(&pdev->dev, "request boot irq error\n");
 		goto error;
 	}
+#endif
 
 	modem->pm_notifier.notifier_call = mdm_pm_notifier;
 	modem->usb_notifier.notifier_call = mdm_usb_notifier;
@@ -597,7 +605,7 @@ static int __init tegra_usb_modem_power_init(void)
 	return platform_driver_register(&tegra_usb_modem_power_driver);
 }
 
-subsys_initcall(tegra_usb_modem_power_init);
+module_init(tegra_usb_modem_power_init);
 
 static void __exit tegra_usb_modem_power_exit(void)
 {

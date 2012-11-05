@@ -31,6 +31,9 @@
 #define PALMAS_TEGRA_GPIO_BASE	TEGRA_NR_GPIOS
 #define MAX77663_GPIO_END       (MAX77663_GPIO_BASE + MAX77663_GPIO_NR)
 
+/* Hall Effect Sensor GPIO */
+#define TEGRA_GPIO_HALL		TEGRA_GPIO_PS0
+
 /* Audio-related GPIOs */
 #define TEGRA_GPIO_CDC_IRQ		TEGRA_GPIO_PW3
 #define TEGRA_GPIO_LDO1_EN		TEGRA_GPIO_PV3
@@ -39,7 +42,7 @@
 #define TEGRA_GPIO_CODEC3_EN	TEGRA_GPIO_PV0
 
 #define TEGRA_GPIO_SPKR_EN		-1
-#define TEGRA_GPIO_HP_DET		TEGRA_GPIO_PW2
+#define TEGRA_GPIO_HP_DET		TEGRA_GPIO_PR7
 #define TEGRA_GPIO_INT_MIC_EN		TEGRA_GPIO_PK3
 #define TEGRA_GPIO_EXT_MIC_EN		TEGRA_GPIO_PK4
 
@@ -68,6 +71,7 @@
 
 /* Camera related GPIOs */
 #define CAM_RSTN			TEGRA_GPIO_PBB3
+#define CAM_FLASH_STROBE		TEGRA_GPIO_PBB4
 #define CAM1_POWER_DWN_GPIO		TEGRA_GPIO_PBB5
 #define CAM2_POWER_DWN_GPIO		TEGRA_GPIO_PBB6
 #define CAM_AF_PWDN			TEGRA_GPIO_PBB7
@@ -102,7 +106,9 @@ int dalmore_sdhci_init(void);
 int dalmore_pinmux_init(void);
 int dalmore_sensors_init(void);
 int dalmore_emc_init(void);
+int dalmore_edp_init(void);
 int dalmore_panel_init(void);
 int dalmore_kbc_init(void);
+int dalmore_pmon_init(void);
 
 #endif

@@ -215,6 +215,94 @@ void nvhost_memmgr_munmap(struct mem_handle *handle, void *addr)
 	}
 }
 
+void *nvhost_memmgr_kmap(struct mem_handle *handle, unsigned int pagenum)
+{
+	switch (nvhost_memmgr_type((u32)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		return nvhost_nvmap_kmap(handle, pagenum);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		return nvhost_dmabuf_kmap(handle, pagenum);
+		break;
+#endif
+	default:
+		return 0;
+		break;
+	}
+}
+
+void nvhost_memmgr_kunmap(struct mem_handle *handle, unsigned int pagenum,
+		void *addr)
+{
+	switch (nvhost_memmgr_type((u32)handle)) {
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	case mem_mgr_type_nvmap:
+		nvhost_nvmap_kunmap(handle, pagenum, addr);
+		break;
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	case mem_mgr_type_dmabuf:
+		nvhost_dmabuf_kunmap(handle, pagenum, addr);
+		break;
+#endif
+	default:
+		break;
+	}
+}
+
+int nvhost_memmgr_pin_array_ids(struct mem_mgr *mgr,
+		struct nvhost_device *dev,
+		long unsigned *ids,
+		dma_addr_t *phys_addr,
+		u32 count,
+		struct nvhost_job_unpin *unpin_data)
+{
+	int pin_count = 0;
+
+#ifdef CONFIG_TEGRA_GRHOST_USE_NVMAP
+	{
+		int nvmap_count = 0;
+		nvmap_count = nvhost_nvmap_pin_array_ids(mgr,
+			ids, MEMMGR_TYPE_MASK,
+			mem_mgr_type_nvmap,
+			count, unpin_data,
+			phys_addr);
+		if (nvmap_count < 0)
+			return nvmap_count;
+		pin_count += nvmap_count;
+	}
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_USE_DMABUF
+	{
+		int dmabuf_count = 0;
+		dmabuf_count = nvhost_dmabuf_pin_array_ids(dev,
+			ids, MEMMGR_TYPE_MASK,
+			mem_mgr_type_dmabuf,
+			count, &unpin_data[pin_count],
+			phys_addr);
+
+		if (dmabuf_count < 0) {
+			/* clean up previous handles */
+			while (pin_count) {
+				pin_count--;
+				/* unpin, put */
+				nvhost_memmgr_unpin(mgr,
+						unpin_data[pin_count].h,
+						unpin_data[pin_count].mem);
+				nvhost_memmgr_put(mgr,
+						unpin_data[pin_count].h);
+			}
+			return dmabuf_count;
+		}
+		pin_count += dmabuf_count;
+	}
+#endif
+	return pin_count;
+}
+
 static const struct nvhost_mem_ops mem_ops = {
 	.alloc_mgr = nvhost_memmgr_alloc_mgr,
 	.put_mgr = nvhost_memmgr_put_mgr,
@@ -227,6 +315,9 @@ static const struct nvhost_mem_ops mem_ops = {
 	.unpin = nvhost_memmgr_unpin,
 	.mmap = nvhost_memmgr_mmap,
 	.munmap = nvhost_memmgr_munmap,
+	.kmap = nvhost_memmgr_kmap,
+	.kunmap = nvhost_memmgr_kunmap,
+	.pin_array_ids = nvhost_memmgr_pin_array_ids,
 };
 
 int nvhost_memmgr_init(struct nvhost_chip_support *chip)
@@ -234,3 +325,4 @@ int nvhost_memmgr_init(struct nvhost_chip_support *chip)
 	chip->mem = mem_ops;
 	return 0;
 }
+

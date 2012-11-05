@@ -1047,7 +1047,7 @@ static int dbg_hdmi_show(struct seq_file *s, void *unused)
 	} while (0)
 
 	tegra_dc_io_start(hdmi->dc);
-	clk_enable(hdmi->clk);
+	clk_prepare_enable(hdmi->clk);
 
 	DUMP_REG(HDMI_CTXSW);
 	DUMP_REG(HDMI_NV_PDISP_SOR_STATE0);
@@ -1205,7 +1205,7 @@ static int dbg_hdmi_show(struct seq_file *s, void *unused)
 	DUMP_REG(HDMI_NV_PDISP_KEY_SKEY_INDEX);
 #undef DUMP_REG
 
-	clk_disable(hdmi->clk);
+	clk_disable_unprepare(hdmi->clk);
 	tegra_dc_io_end(hdmi->dc);
 
 	return 0;
@@ -1509,10 +1509,7 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 	/* Set default videomode on dc before enabling it*/
 	tegra_dc_set_default_videomode(dc);
 #endif
-	tegra_dc_enable(dc);
-	msleep(5);
 	if (!tegra_dc_hdmi_detect(dc)) {
-		tegra_dc_disable(dc);
 		tegra_fb_update_monspecs(dc->fb, NULL, NULL);
 
 		dc->connected = false;
@@ -1670,21 +1667,11 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 #endif
 
-	/* TODO: support non-hotplug */
-	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_hdmi_irq,
-			IRQF_DISABLED | IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-			dev_name(&dc->ndev->dev), dc)) {
-		dev_err(&dc->ndev->dev, "hdmi: request_irq %d failed\n",
-			gpio_to_irq(dc->out->hotplug_gpio));
-		err = -EBUSY;
-		goto err_put_clock;
-	}
-
 	hdmi->edid = tegra_edid_create(dc->out->dcc_bus);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
 		err = PTR_ERR(hdmi->edid);
-		goto err_free_irq;
+		goto err_put_clock;
 	}
 
 #ifdef CONFIG_TEGRA_NVHDCP
@@ -1739,14 +1726,25 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_debug_create(hdmi);
 
+	/* TODO: support non-hotplug */
+	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_hdmi_irq,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+		dev_name(&dc->ndev->dev), dc)) {
+		dev_err(&dc->ndev->dev, "hdmi: request_irq %d failed\n",
+			gpio_to_irq(dc->out->hotplug_gpio));
+		err = -EBUSY;
+		goto err_nvhdcp_destroy;
+	}
+
 	return 0;
 
+err_nvhdcp_destroy:
+	if (hdmi->nvhdcp)
+		tegra_nvhdcp_destroy(hdmi->nvhdcp);
 #ifdef CONFIG_TEGRA_NVHDCP
 err_edid_destroy:
-	tegra_edid_destroy(hdmi->edid);
 #endif
-err_free_irq:
-	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
+	tegra_edid_destroy(hdmi->edid);
 err_put_clock:
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	if (!IS_ERR_OR_NULL(hdmi->hda2hdmi_clk))
@@ -1932,6 +1930,11 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
 			  AUDIO_CNTRL0_FRAMES_PER_BLOCK(0xc0),
 			  HDMI_NV_PDISP_AUDIO_CNTRL0);
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	tegra_hdmi_writel(hdmi, (1 << HDMI_AUDIO_HBR_ENABLE_SHIFT) |
+	   tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_SOR_AUDIO_SPARE0_0),
+	   HDMI_NV_PDISP_SOR_AUDIO_SPARE0_0);
+#endif
 #else
 	tegra_hdmi_writel(hdmi,
 			  AUDIO_CNTRL0_ERROR_TOLERANCE(6) |
@@ -2304,14 +2307,14 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	 * hard lock the system.  Because we don't know if HDMI is conencted
 	 * to disp1 or disp2 we need to enable both until we set the DC mux.
 	 */
-	clk_enable(hdmi->disp1_clk);
-	clk_enable(hdmi->disp2_clk);
+	clk_prepare_enable(hdmi->disp1_clk);
+	clk_prepare_enable(hdmi->disp2_clk);
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	/* Enabling HDA clocks before asserting HDA PD and ELDV bits */
-	clk_enable(hdmi->hda_clk);
-	clk_enable(hdmi->hda2codec_clk);
-	clk_enable(hdmi->hda2hdmi_clk);
+	clk_prepare_enable(hdmi->hda_clk);
+	clk_prepare_enable(hdmi->hda2codec_clk);
+	clk_prepare_enable(hdmi->hda2hdmi_clk);
 #endif
 
 	/* back off multiplier before attaching to parent at new rate. */
@@ -2321,7 +2324,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_dc_setup_clk(dc, hdmi->clk);
 	clk_set_rate(hdmi->clk, dc->mode.pclk);
 
-	clk_enable(hdmi->clk);
+	clk_prepare_enable(hdmi->clk);
 	tegra_periph_reset_assert(hdmi->clk);
 	mdelay(1);
 	tegra_periph_reset_deassert(hdmi->clk);
@@ -2366,8 +2369,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 				  ARM_VIDEO_RANGE_LIMITED,
 				  HDMI_NV_PDISP_INPUT_CONTROL);
 
-	clk_disable(hdmi->disp1_clk);
-	clk_disable(hdmi->disp2_clk);
+	clk_disable_unprepare(hdmi->disp1_clk);
+	clk_disable_unprepare(hdmi->disp2_clk);
 
 	dispclk_div_8_2 = clk_get_rate(hdmi->clk) / 1000000 * 4;
 	tegra_hdmi_writel(hdmi,
@@ -2517,13 +2520,13 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_hdmi_writel(hdmi, 0, HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
 	/* sleep 1ms before disabling clocks to ensure HDA gets the interrupt */
 	msleep(1);
-	clk_disable(hdmi->hda2hdmi_clk);
-	clk_disable(hdmi->hda2codec_clk);
-	clk_disable(hdmi->hda_clk);
+	clk_disable_unprepare(hdmi->hda2hdmi_clk);
+	clk_disable_unprepare(hdmi->hda2codec_clk);
+	clk_disable_unprepare(hdmi->hda_clk);
 #endif
 	tegra_periph_reset_assert(hdmi->clk);
 	hdmi->clk_enabled = false;
-	clk_disable(hdmi->clk);
+	clk_disable_unprepare(hdmi->clk);
 	tegra_dvfs_set_rate(hdmi->clk, 0);
 }
 

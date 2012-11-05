@@ -35,6 +35,7 @@
 #include <mach/clk.h>
 
 #include "apbio.h"
+#include "clock.h"
 
 #define APB_DMA_GEN				0x000
 #define GEN_ENABLE				(1<<31)
@@ -886,6 +887,14 @@ static void tegra_dma_update_hw(struct tegra_dma_channel *ch,
 	case TEGRA_DMA_REQ_SEL_APBIF_CH1:
 	case TEGRA_DMA_REQ_SEL_APBIF_CH2:
 	case TEGRA_DMA_REQ_SEL_APBIF_CH3:
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	case TEGRA_DMA_REQ_SEL_APBIF_CH4:
+	case TEGRA_DMA_REQ_SEL_APBIF_CH5:
+	case TEGRA_DMA_REQ_SEL_APBIF_CH6:
+	case TEGRA_DMA_REQ_SEL_APBIF_CH7:
+	case TEGRA_DMA_REQ_SEL_APBIF_CH8:
+	case TEGRA_DMA_REQ_SEL_APBIF_CH9:
+#endif
 #endif
 	case TEGRA_DMA_REQ_SEL_SPI:
 		/* dtv interface has fixed burst size of 4 */
@@ -1209,7 +1218,7 @@ int __init tegra_dma_init(void)
 		ret = PTR_ERR(dma_clk);
 		goto fail;
 	}
-	ret = clk_enable(dma_clk);
+	ret = tegra_clk_prepare_enable(dma_clk);
 	if (ret != 0) {
 		pr_err("Unable to enable clock for APB DMA\n");
 		goto fail;
@@ -1303,7 +1312,7 @@ static int tegra_dma_suspend(void)
 	}
 
 	/* Disabling clock of dma. */
-	clk_disable(dma_clk);
+	tegra_clk_disable_unprepare(dma_clk);
 	return 0;
 }
 
@@ -1313,7 +1322,7 @@ static void tegra_dma_resume(void)
 	int i;
 
 	/* Enabling clock of dma. */
-	clk_enable(dma_clk);
+	tegra_clk_prepare_enable(dma_clk);
 
 	writel(*ctx++, general_dma_addr + APB_DMA_GEN);
 	writel(*ctx++, general_dma_addr + APB_DMA_CNTRL);

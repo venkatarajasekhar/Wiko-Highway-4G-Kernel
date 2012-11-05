@@ -407,6 +407,34 @@ static ssize_t nvdps_store(struct device *dev,
 
 static DEVICE_ATTR(nvdps, S_IRUGO|S_IWUSR, nvdps_show, nvdps_store);
 
+#ifdef CONFIG_TEGRA_DC_CMU
+static ssize_t cmu_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val;
+	int e;
+	struct nvhost_device *ndev = to_nvhost_device(dev);
+	struct tegra_dc *dc = nvhost_get_drvdata(ndev);
+
+	e = kstrtoint(buf, 10, &val);
+	if (e)
+		return e;
+
+	tegra_dc_cmu_enable(dc, val);
+
+	return count;
+}
+
+static DEVICE_ATTR(cmu_enable, S_IRUGO|S_IWUSR, NULL, cmu_enable_store);
+#endif
+static ssize_t smart_panel_show(struct device *device,
+	struct device_attribute *attr, char  *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "1\n");
+}
+
+static DEVICE_ATTR(smart_panel, S_IRUGO, smart_panel_show, NULL);
+
 void __devexit tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct nvhost_device *ndev = to_nvhost_device(dev);
@@ -419,6 +447,9 @@ void __devexit tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
 	device_remove_file(dev, &dev_attr_colorbar);
+#ifdef CONFIG_TEGRA_DC_CMU
+	device_remove_file(dev, &dev_attr_cmu_enable);
+#endif
 
 	if (dc->out->stereo) {
 		device_remove_file(dev, &dev_attr_stereo_orientation);
@@ -427,6 +458,9 @@ void __devexit tegra_dc_remove_sysfs(struct device *dev)
 
 	if (sd_settings)
 		nvsd_remove_sysfs(dev);
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		device_remove_file(dev, &dev_attr_smart_panel);
 }
 
 void tegra_dc_create_sysfs(struct device *dev)
@@ -442,6 +476,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
 	error |= device_create_file(dev, &dev_attr_colorbar);
+#ifdef CONFIG_TEGRA_DC_CMU
+	error |= device_create_file(dev, &dev_attr_cmu_enable);
+#endif
 
 	if (dc->out->stereo) {
 		error |= device_create_file(dev, &dev_attr_stereo_orientation);
@@ -450,6 +487,9 @@ void tegra_dc_create_sysfs(struct device *dev)
 
 	if (sd_settings)
 		error |= nvsd_create_sysfs(dev);
+
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
+		error |= device_create_file(dev, &dev_attr_smart_panel);
 
 	if (error)
 		dev_err(&ndev->dev, "Failed to create sysfs attributes!\n");

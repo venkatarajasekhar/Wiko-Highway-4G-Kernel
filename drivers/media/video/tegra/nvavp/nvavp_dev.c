@@ -42,6 +42,7 @@
 #include <mach/iomap.h>
 #include <mach/legacy_irq.h>
 #include <linux/nvmap.h>
+#include <mach/powergate.h>
 
 #if defined(CONFIG_TEGRA_AVP_KERNEL_ON_MMU)
 #include "../avp/headavp.h"
@@ -259,12 +260,45 @@ static struct clk *nvavp_clk_get(struct nvavp_info *nvavp, int id)
 	return NULL;
 }
 
+static int nvavp_powergate_vde(struct nvavp_info *nvavp)
+{
+	int ret = 0;
+
+	dev_dbg(&nvavp->nvhost_dev->dev, "%s++\n", __func__);
+
+	/* Powergate VDE */
+	ret = tegra_powergate_partition(TEGRA_POWERGATE_VDEC);
+	if (ret)
+		dev_err(&nvavp->nvhost_dev->dev,
+				"%s: powergate failed\n",
+				__func__);
+
+	return ret;
+}
+
+static int nvavp_unpowergate_vde(struct nvavp_info *nvavp)
+{
+	int ret = 0;
+
+	dev_dbg(&nvavp->nvhost_dev->dev, "%s++\n", __func__);
+
+	/* UnPowergate VDE */
+	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VDEC);
+	if (ret)
+		dev_err(&nvavp->nvhost_dev->dev,
+				"%s: unpowergate failed\n",
+				__func__);
+
+	return ret;
+}
+
 static void nvavp_clks_enable(struct nvavp_info *nvavp)
 {
 	if (nvavp->clk_enabled++ == 0) {
 		nvhost_module_busy_ext(nvhost_get_parent(nvavp->nvhost_dev));
-		clk_enable(nvavp->bsev_clk);
-		clk_enable(nvavp->vde_clk);
+		clk_prepare_enable(nvavp->bsev_clk);
+		clk_prepare_enable(nvavp->vde_clk);
+		nvavp_unpowergate_vde(nvavp);
 		clk_set_rate(nvavp->emc_clk, nvavp->emc_clk_rate);
 		clk_set_rate(nvavp->sclk, nvavp->sclk_rate);
 		dev_dbg(&nvavp->nvhost_dev->dev, "%s: setting sclk to %lu\n",
@@ -277,10 +311,11 @@ static void nvavp_clks_enable(struct nvavp_info *nvavp)
 static void nvavp_clks_disable(struct nvavp_info *nvavp)
 {
 	if (--nvavp->clk_enabled == 0) {
-		clk_disable(nvavp->bsev_clk);
-		clk_disable(nvavp->vde_clk);
+		clk_disable_unprepare(nvavp->bsev_clk);
+		clk_disable_unprepare(nvavp->vde_clk);
 		clk_set_rate(nvavp->emc_clk, 0);
 		clk_set_rate(nvavp->sclk, 0);
+		nvavp_powergate_vde(nvavp);
 		nvhost_module_idle_ext(nvhost_get_parent(nvavp->nvhost_dev));
 		dev_dbg(&nvavp->nvhost_dev->dev, "%s: resetting emc_clk "
 				"and sclk\n", __func__);
@@ -412,8 +447,8 @@ static int nvavp_reset_avp(struct nvavp_info *nvavp, unsigned long reset_addr)
 
 	writel(reset_addr, TEGRA_NVAVP_RESET_VECTOR_ADDR);
 
-	clk_enable(nvavp->sclk);
-	clk_enable(nvavp->emc_clk);
+	clk_prepare_enable(nvavp->sclk);
+	clk_prepare_enable(nvavp->emc_clk);
 
 	/* If sclk_rate and emc_clk is not set by user space,
 	 * max clock in dvfs table will be used to get best performance.
@@ -934,9 +969,9 @@ static int nvavp_os_init(struct nvavp_info *nvavp)
 		BUG();
 	}
 	dev_info(&nvavp->nvhost_dev->dev,
-		"using nvmem= carveout at %lx to load AVP os\n",
+		"using nvmem= carveout at %x to load AVP os\n",
 		nvavp->os_info.phys);
-	sprintf(fw_os_file, "nvavp_os_%08lx.bin", nvavp->os_info.phys);
+	sprintf(fw_os_file, "nvavp_os_%08x.bin", nvavp->os_info.phys);
 	nvavp->os_info.reset_addr = nvavp->os_info.phys;
 	nvavp->os_info.data = ioremap(nvavp->os_info.phys, SZ_1M);
 #endif
@@ -1034,8 +1069,8 @@ static void nvavp_uninit(struct nvavp_info *nvavp)
 	if (video_initialized == audio_initialized) {
 		pr_debug("nvavp_uninit both channels unitialized\n");
 
-		clk_disable(nvavp->sclk);
-		clk_disable(nvavp->emc_clk);
+		clk_disable_unprepare(nvavp->sclk);
+		clk_disable_unprepare(nvavp->emc_clk);
 		disable_irq(nvavp->mbox_from_avp_pend_irq);
 		nvavp_pushbuffer_deinit(nvavp);
 		nvavp_halt_avp(nvavp);
@@ -1065,11 +1100,11 @@ static int nvavp_set_clock_ioctl(struct file *filp, unsigned int cmd,
 	if (IS_ERR_OR_NULL(c))
 		return -EINVAL;
 
-	clk_enable(c);
+	clk_prepare_enable(c);
 	clk_set_rate(c, config.rate);
 
 	config.rate = clk_get_rate(c);
-	clk_disable(c);
+	clk_disable_unprepare(c);
 	if (copy_to_user((void __user *)arg, &config, sizeof(struct nvavp_clock_args)))
 		return -EFAULT;
 
@@ -1091,9 +1126,9 @@ static int nvavp_get_clock_ioctl(struct file *filp, unsigned int cmd,
 	if (IS_ERR_OR_NULL(c))
 		return -EINVAL;
 
-	clk_enable(c);
+	clk_prepare_enable(c);
 	config.rate = clk_get_rate(c);
-	clk_disable(c);
+	clk_disable_unprepare(c);
 
 	if (copy_to_user((void __user *)arg, &config, sizeof(struct nvavp_clock_args)))
 		return -EFAULT;
@@ -1310,9 +1345,9 @@ static int nvavp_enable_audio_clocks(struct file *filp, unsigned int cmd,
 			__func__, config.id);
 
 	if (config.id == NVAVP_MODULE_ID_VCP)
-		clk_enable(nvavp->vcp_clk);
+		clk_prepare_enable(nvavp->vcp_clk);
 	else if	(config.id == NVAVP_MODULE_ID_BSEA)
-		clk_enable(nvavp->bsea_clk);
+		clk_prepare_enable(nvavp->bsea_clk);
 
 	return 0;
 }
@@ -1331,9 +1366,9 @@ static int nvavp_disable_audio_clocks(struct file *filp, unsigned int cmd,
 			__func__, config.id);
 
 	if (config.id == NVAVP_MODULE_ID_VCP)
-		clk_disable(nvavp->vcp_clk);
+		clk_disable_unprepare(nvavp->vcp_clk);
 	else if	(config.id == NVAVP_MODULE_ID_BSEA)
-		clk_disable(nvavp->bsea_clk);
+		clk_disable_unprepare(nvavp->bsea_clk);
 
 	return 0;
 }
@@ -1840,6 +1875,11 @@ static int tegra_nvavp_suspend(struct nvhost_device *ndev, pm_message_t state)
 			ret = -EBUSY;
 		}
 	}
+
+	/* Partition vde has to be left on before suspend for the
+	 * device to wakeup on resume
+	 */
+	nvavp_unpowergate_vde(nvavp);
 
 	mutex_unlock(&nvavp->open_lock);
 	return ret;

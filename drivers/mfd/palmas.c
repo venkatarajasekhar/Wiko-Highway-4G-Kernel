@@ -310,6 +310,7 @@ static struct regmap_irq_chip palmas_irq_chip = {
 			PALMAS_INT1_STATUS),
 	.mask_base = PALMAS_BASE_TO_REG(PALMAS_INTERRUPT_BASE,
 			PALMAS_INT1_MASK),
+	.wake_base = 1,
 };
 
 struct palmas_sleep_requestor_info {
@@ -542,6 +543,7 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 	int ret = 0, i;
 	unsigned int reg, addr;
 	int slave;
+	int irq_flag;
 	struct mfd_cell *children;
 
 	pdata = dev_get_platdata(&i2c->dev);
@@ -582,6 +584,16 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 		}
 	}
 
+	/* Change interrupt line output polarity */
+	slave = PALMAS_BASE_TO_SLAVE(PALMAS_PU_PD_OD_BASE);
+	addr = PALMAS_BASE_TO_REG(PALMAS_PU_PD_OD_BASE, PALMAS_POLARITY_CTRL);
+	regmap_read(palmas->regmap[slave], addr, &reg);
+	if (pdata->irq_type & IRQ_TYPE_LEVEL_HIGH)
+		reg |= PALMAS_POLARITY_CTRL_INT_POLARITY;
+	else
+		reg &= ~PALMAS_POLARITY_CTRL_INT_POLARITY;
+	regmap_write(palmas->regmap[slave], addr, reg);
+
 	/* Change IRQ into clear on read mode for efficiency */
 	slave = PALMAS_BASE_TO_SLAVE(PALMAS_INTERRUPT_BASE);
 	addr = PALMAS_BASE_TO_REG(PALMAS_INTERRUPT_BASE, PALMAS_INT_CTRL);
@@ -589,8 +601,10 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 
 	regmap_write(palmas->regmap[slave], addr, reg);
 
+	irq_flag = pdata->irq_type;
+	irq_flag |= IRQF_ONESHOT;
 	ret = regmap_add_irq_chip(palmas->regmap[slave], palmas->irq,
-			IRQF_ONESHOT, pdata->irq_base, &palmas_irq_chip,
+			irq_flag, pdata->irq_base, &palmas_irq_chip,
 			&palmas->irq_data);
 	if (ret < 0)
 		goto err;
@@ -653,6 +667,23 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 		palmas->gpio_muxed |= PALMAS_GPIO_6_MUXED;
 	if (!(reg & PALMAS_PRIMARY_SECONDARY_PAD2_GPIO_7_MASK))
 		palmas->gpio_muxed |= PALMAS_GPIO_7_MUXED;
+
+	addr = PALMAS_BASE_TO_REG(PALMAS_PU_PD_OD_BASE,
+			PALMAS_PRIMARY_SECONDARY_PAD3);
+
+	if (pdata->mux_from_pdata) {
+		reg = pdata->pad3;
+		ret = regmap_write(palmas->regmap[slave], addr, reg);
+		if (ret)
+			goto err;
+	} else {
+		ret = regmap_read(palmas->regmap[slave], addr, &reg);
+		if (ret)
+			goto err;
+	}
+
+	if (!(reg & PALMAS_PRIMARY_SECONDARY_PAD3_DVFS2))
+		palmas->gpio_muxed |= PALMAS_GPIO_6_MUXED;
 
 	dev_info(palmas->dev, "Muxing GPIO %x, PWM %x, LED %x\n",
 			palmas->gpio_muxed, palmas->pwm_muxed,

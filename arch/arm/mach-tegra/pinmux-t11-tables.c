@@ -40,7 +40,7 @@
 #define MUXCTL_REG_A	0x3000
 
 #define SET_DRIVE_PINGROUP(pg_name, r, drv_down_offset, drv_down_mask, drv_up_offset, drv_up_mask,	\
-	slew_rise_offset, slew_rise_mask, slew_fall_offset, slew_fall_mask)	\
+	slew_rise_offset, slew_rise_mask, slew_fall_offset, slew_fall_mask, drv_type_valid, drv_type_offset, drv_type_mask)	\
 	[TEGRA_DRIVE_PINGROUP_ ## pg_name] = {			\
 		.name = #pg_name,				\
 		.reg_bank = 0,					\
@@ -53,6 +53,9 @@
 		.slewrise_mask = slew_rise_mask,		\
 		.slewfall_offset = slew_fall_offset,		\
 		.slewfall_mask = slew_fall_mask,		\
+		.drvtype_valid = drv_type_valid,		\
+		.drvtype_offset = drv_type_offset,		\
+		.drvtype_mask = drv_type_mask,		\
 	}
 
 #define DEFAULT_DRIVE_PINGROUP(pg_name, r)		\
@@ -68,6 +71,9 @@
 		.slewrise_mask = 0x3,			\
 		.slewfall_offset = 30,			\
 		.slewfall_mask = 0x3,			\
+		.drvtype_valid = 0,			\
+		.drvtype_offset = 6,			\
+		.drvtype_mask = 0x3,		\
 	}
 
 const struct tegra_drive_pingroup_desc tegra_soc_drive_pingroups[TEGRA_MAX_DRIVE_PINGROUP] = {
@@ -86,16 +92,19 @@ const struct tegra_drive_pingroup_desc tegra_soc_drive_pingroups[TEGRA_MAX_DRIVE
 	DEFAULT_DRIVE_PINGROUP(DAP3,		0x898),
 	DEFAULT_DRIVE_PINGROUP(DAP4,		0x89c),
 	DEFAULT_DRIVE_PINGROUP(DBG,		0x8a0),
-	DEFAULT_DRIVE_PINGROUP(SDIO3,		0x8b0),
+	SET_DRIVE_PINGROUP(SDIO3,		0x8b0,	12,	0x7F,	20,
+		0x7F,	28,	0x3,	30,	0x3,	0,	0,	0),
 	DEFAULT_DRIVE_PINGROUP(SPI,		0x8b4),
 	DEFAULT_DRIVE_PINGROUP(UAA,		0x8b8),
 	DEFAULT_DRIVE_PINGROUP(UAB,		0x8bc),
 	DEFAULT_DRIVE_PINGROUP(UART2,		0x8c0),
 	DEFAULT_DRIVE_PINGROUP(UART3,		0x8c4),
-	DEFAULT_DRIVE_PINGROUP(SDIO1,		0x8ec),
+	SET_DRIVE_PINGROUP(SDIO1,		0x8ec,	12,	0x7F,	20,
+		0x7F,	28,	0x3,	30,	0x3,	0,	0,	0),
 	DEFAULT_DRIVE_PINGROUP(CRT,		0x8f8),
 	DEFAULT_DRIVE_PINGROUP(DDC,		0x8fc),
-	DEFAULT_DRIVE_PINGROUP(GMA,		0x900),
+	SET_DRIVE_PINGROUP(GMA,			0x900,	14,	0x1F,	20,
+		0x1F,	28,	0x3,	30,	0x3,	1,	6,	0x3),
 	DEFAULT_DRIVE_PINGROUP(GME,		0x910),
 	DEFAULT_DRIVE_PINGROUP(GMF,		0x914),
 	DEFAULT_DRIVE_PINGROUP(GMG,		0x918),
@@ -135,6 +144,7 @@ const struct tegra_drive_pingroup_desc tegra_soc_drive_pingroups[TEGRA_MAX_DRIVE
 		.od_bit = 6,					\
 		.lock_bit = 7,					\
 		.ioreset_bit = 8,				\
+		.rcv_sel_bit = 9,				\
 	}
 
 /* !!!FIXME!!! FILL IN fSafe COLUMN IN TABLE ....... */
@@ -240,7 +250,7 @@ const struct tegra_drive_pingroup_desc tegra_soc_drive_pingroups[TEGRA_MAX_DRIVE
 	PINGROUP(SDMMC4_DAT5,	  PAA5,		SDMMC4,     SDMMC4,	SPI3,	    GMI,	RSVD3,	     RSVD,	INPUT,	0x3274),\
 	PINGROUP(SDMMC4_DAT6,	  PAA6,		SDMMC4,     SDMMC4,	SPI3,	    GMI,	RSVD3,	     RSVD,	INPUT,	0x3278),\
 	PINGROUP(SDMMC4_DAT7,	  PAA7,		SDMMC4,     SDMMC4,	RSVD1,	    GMI,	RSVD3,	     RSVD,	INPUT,	0x327c),\
-	PINGROUP(CAM_MCLK,	  PCC0,		CAM,	    VI,		VI_ALT1,    VI_ALT2,	RSVD3,	     RSVD,	INPUT,	0x3284),\
+	PINGROUP(CAM_MCLK,	  PCC0,		CAM,	    VI,		VI_ALT1,    VI_ALT3,	RSVD3,	     RSVD,	INPUT,	0x3284),\
 	PINGROUP(GPIO_PCC1,	  PCC1,		CAM,	    I2S4,	RSVD1,	    RSVD2,	RSVD3,	     RSVD,	INPUT,	0x3288),\
 	PINGROUP(GPIO_PBB0,	  PBB0,		CAM,	    I2S4,	VI,	    VI_ALT1,	VI_ALT3,     RSVD,	INPUT,	0x328c),\
 	PINGROUP(CAM_I2C_SCL,	  PBB1,		CAM,	    VGP1,	I2C3,	    RSVD2,	RSVD3,	     RSVD,	INPUT,	0x3290),\
@@ -372,21 +382,8 @@ static int tegra11x_pinmux_suspend(void)
 
 static void tegra11x_pinmux_resume(void)
 {
-	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	unsigned int i;
 	u32 *ctx = pinmux_reg;
-	u32 *tmp = pinmux_reg;
-	u32 reg_value;
-
-	for (i = 0; i < TEGRA_MAX_PINGROUP; i++) {
-		reg_value = *tmp++;
-		reg_value |= BIT(4); /* tristate */
-		pg_writel(reg_value, tegra_soc_pingroups[i].mux_bank,
-			tegra_soc_pingroups[i].mux_reg);
-	}
-
-	writel(0x400fffff, pmc_base + PMC_IO_DPD_REQ);
-	writel(0x40001fff, pmc_base + PMC_IO_DPD2_REQ);
 
 	for (i = 0; i < TEGRA_MAX_PINGROUP; i++)
 		pg_writel(*ctx++, tegra_soc_pingroups[i].mux_bank,

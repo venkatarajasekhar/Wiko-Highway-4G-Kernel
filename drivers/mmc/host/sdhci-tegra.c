@@ -46,6 +46,7 @@
 #define SDHCI_VENDOR_CLOCK_CNTRL_SPI_MODE_CLKEN_OVERRIDE	0x4
 #define SDHCI_VENDOR_CLOCK_CNTRL_BASE_CLK_FREQ_SHIFT	8
 #define SDHCI_VENDOR_CLOCK_CNTRL_TAP_VALUE_SHIFT	16
+#define SDHCI_VENDOR_CLOCK_CNTRL_TRIM_VALUE_SHIFT	24
 #define SDHCI_VENDOR_CLOCK_CNTRL_SDR50_TUNING		0x20
 
 #define SDHCI_VENDOR_MISC_CNTRL		0x120
@@ -58,14 +59,19 @@
 #define SDMMC_SDMEMCOMPPADCTRL_VREF_SEL_MASK	0xF
 
 #define SDMMC_AUTO_CAL_CONFIG	0x1E4
+#define SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_START	0x80000000
 #define SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE	0x20000000
 #define SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET_SHIFT	0x8
 #define SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET	0x70
 #define SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PU_OFFSET	0x62
 
+#define SDMMC_AUTO_CAL_STATUS	0x1EC
+#define SDMMC_AUTO_CAL_STATUS_AUTO_CAL_ACTIVE	0x80000000
+
 #define SDHOST_1V8_OCR_MASK	0x8
 #define SDHOST_HIGH_VOLT_MIN	2700000
 #define SDHOST_HIGH_VOLT_MAX	3600000
+#define SDHOST_HIGH_VOLT_2V8	2800000
 #define SDHOST_LOW_VOLT_MIN	1800000
 #define SDHOST_LOW_VOLT_MAX	1800000
 
@@ -118,6 +124,7 @@ static struct tegra_sdhci_hw_ops tegra_11x_sdhci_ops = {
 #define NVQUIRK_FORCE_SDHCI_SPEC_200		BIT(0)
 #define NVQUIRK_ENABLE_BLOCK_GAP_DET		BIT(1)
 #define NVQUIRK_DISABLE_AUTO_CALIBRATION	BIT(2)
+#define NVQUIRK_SET_CALIBRATION_OFFSETS	BIT(3)
 
 struct sdhci_tegra_soc_data {
 	struct sdhci_pltfm_data *pdata;
@@ -294,6 +301,14 @@ static void tegra11x_sdhci_post_reset_init(struct sdhci_host *sdhci)
 			SDHCI_VENDOR_CLOCK_CNTRL_TAP_VALUE_SHIFT);
 		vendor_ctrl |= (plat->tap_delay <<
 			SDHCI_VENDOR_CLOCK_CNTRL_TAP_VALUE_SHIFT);
+	}
+
+	/* Set trim delay */
+	if (plat->trim_delay) {
+		vendor_ctrl &= ~(0x1F <<
+			SDHCI_VENDOR_CLOCK_CNTRL_TRIM_VALUE_SHIFT);
+		vendor_ctrl |= (plat->trim_delay <<
+			SDHCI_VENDOR_CLOCK_CNTRL_TRIM_VALUE_SHIFT);
 	}
 	sdhci_writel(sdhci, vendor_ctrl, SDHCI_VENDOR_CLOCK_CNTRL);
 
@@ -636,18 +651,71 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		}
 	}
 }
+static void tegra_sdhci_do_calibration(struct sdhci_host *sdhci)
+{
+	unsigned int val;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
+	struct sdhci_tegra *tegra_host = pltfm_host->priv;
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+	unsigned int timeout = 10;
+
+	/*
+	 * Do not enable auto calibration if the platform doesn't
+	 * support it.
+	 */
+	if (unlikely(soc_data->nvquirks & NVQUIRK_DISABLE_AUTO_CALIBRATION))
+		return;
+
+	val = sdhci_readl(sdhci, SDMMC_SDMEMCOMPPADCTRL);
+	val &= ~SDMMC_SDMEMCOMPPADCTRL_VREF_SEL_MASK;
+	val |= 0x7;
+	sdhci_writel(sdhci, val, SDMMC_SDMEMCOMPPADCTRL);
+
+	/* Enable Auto Calibration*/
+	val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
+	val |= SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
+	val |= SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_START;
+	if (unlikely(soc_data->nvquirks & NVQUIRK_SET_CALIBRATION_OFFSETS)) {
+		/* Program Auto cal PD offset(bits 8:14) */
+		val &= ~(0x7F <<
+			SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET_SHIFT);
+		val |= (SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET <<
+			SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET_SHIFT);
+		/* Program Auto cal PU offset(bits 0:6) */
+		val &= ~0x7F;
+		val |= SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PU_OFFSET;
+	}
+	sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
+
+	/* Wait until the calibration is done */
+	do {
+		if (!(sdhci_readl(sdhci, SDMMC_AUTO_CAL_STATUS) &
+			SDMMC_AUTO_CAL_STATUS_AUTO_CAL_ACTIVE))
+			break;
+
+		mdelay(1);
+		timeout--;
+	} while (timeout);
+
+	if (!timeout)
+		dev_err(mmc_dev(sdhci->mmc), "Auto calibration failed\n");
+
+	/* Disable Auto calibration */
+	val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
+	val &= ~SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
+	sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
+}
 
 static int tegra_sdhci_signal_voltage_switch(struct sdhci_host *sdhci,
 	unsigned int signal_voltage)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
-	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
-	unsigned int min_uV = SDHOST_HIGH_VOLT_MIN;
-	unsigned int max_uV = SDHOST_HIGH_VOLT_MAX;
+	unsigned int min_uV = tegra_host->vddio_min_uv;
+	unsigned int max_uV = tegra_host->vddio_max_uv;
 	unsigned int rc = 0;
 	u16 clk, ctrl;
-	unsigned int val;
+
 
 	ctrl = sdhci_readw(sdhci, SDHCI_HOST_CONTROL2);
 	if (signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
@@ -681,7 +749,6 @@ static int tegra_sdhci_signal_voltage_switch(struct sdhci_host *sdhci,
 			regulator_set_voltage(tegra_host->vdd_io_reg,
 				SDHOST_HIGH_VOLT_MIN,
 				SDHOST_HIGH_VOLT_MAX);
-			goto out;
 		}
 	}
 
@@ -693,41 +760,6 @@ static int tegra_sdhci_signal_voltage_switch(struct sdhci_host *sdhci,
 	sdhci_writew(sdhci, clk, SDHCI_CLOCK_CONTROL);
 
 	/* Wait for 1 msec after enabling clock */
-	mdelay(1);
-
-	/*
-	 * Do not enable auto calibration if the platform doesn't
-	 * support it.
-	 */
-	if (unlikely(soc_data->nvquirks & NVQUIRK_DISABLE_AUTO_CALIBRATION))
-		return rc;
-
-	if (signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
-		/* Do Auto Calibration for 1.8V signal voltage */
-		val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
-		val |= SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
-		/* Program Auto cal PD offset(bits 8:14) */
-		val &= ~(0x7F <<
-			SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET_SHIFT);
-		val |= (SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET <<
-			SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PD_OFFSET_SHIFT);
-		/* Program Auto cal PU offset(bits 0:6) */
-		val &= ~0x7F;
-		val |= SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_PU_OFFSET;
-		sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
-
-		val = sdhci_readl(sdhci, SDMMC_SDMEMCOMPPADCTRL);
-		val &= ~SDMMC_SDMEMCOMPPADCTRL_VREF_SEL_MASK;
-		val |= 0x7;
-		sdhci_writel(sdhci, val, SDMMC_SDMEMCOMPPADCTRL);
-	}
-	return rc;
-out:
-	/* Enable the card clock */
-	clk |= SDHCI_CLOCK_CARD_EN;
-	sdhci_writew(sdhci, clk, SDHCI_CLOCK_CONTROL);
-
-	/* Wait for 1 msec for the clock to stabilize */
 	mdelay(1);
 
 	return rc;
@@ -1031,6 +1063,7 @@ static struct sdhci_ops tegra_sdhci_ops = {
 	.platform_reset_exit	= tegra_sdhci_reset_exit,
 	.set_uhs_signaling	= tegra_sdhci_set_uhs_signaling,
 	.switch_signal_voltage	= tegra_sdhci_signal_voltage_switch,
+	.switch_signal_voltage_exit = tegra_sdhci_do_calibration,
 	.execute_freq_tuning	= sdhci_tegra_execute_tuning,
 };
 
@@ -1044,21 +1077,22 @@ static struct sdhci_pltfm_data sdhci_tegra20_pdata = {
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		  SDHCI_QUIRK_NONSTANDARD_CLOCK |
 #endif
-#ifndef CONFIG_ARCH_TEGRA_11x_SOC
-		  SDHCI_QUIRK_BROKEN_CARD_DETECTION |
-#endif
 		  SDHCI_QUIRK_SINGLE_POWER_WRITE |
 		  SDHCI_QUIRK_NO_HISPD_BIT |
 		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC |
+		  SDHCI_QUIRK_BROKEN_CARD_DETECTION |
 		  SDHCI_QUIRK_NO_CALC_MAX_DISCARD_TO,
+	.quirks2 = SDHCI_QUIRK2_BROKEN_PRESET_VALUES,
 	.ops  = &tegra_sdhci_ops,
 };
 
 static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 	.pdata = &sdhci_tegra20_pdata,
 	.nvquirks = NVQUIRK_FORCE_SDHCI_SPEC_200 |
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		    NVQUIRK_DISABLE_AUTO_CALIBRATION |
+#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
+		    NVQUIRK_SET_CALIBRATION_OFFSETS |
 #endif
 		    NVQUIRK_ENABLE_BLOCK_GAP_DET,
 };
@@ -1228,51 +1262,55 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	if (!gpio_is_valid(plat->cd_gpio))
 		tegra_host->card_present = 1;
 
-	if (!plat->mmc_data.built_in) {
-		if (plat->mmc_data.ocr_mask & SDHOST_1V8_OCR_MASK) {
-			tegra_host->vddio_min_uv = SDHOST_LOW_VOLT_MIN;
-			tegra_host->vddio_max_uv = SDHOST_LOW_VOLT_MAX;
-		} else {
-			/*
-			 * Set the minV and maxV to default
-			 * voltage range of 2.7V - 3.6V
-			 */
-			tegra_host->vddio_min_uv = SDHOST_HIGH_VOLT_MIN;
+	if (plat->mmc_data.ocr_mask & SDHOST_1V8_OCR_MASK) {
+		tegra_host->vddio_min_uv = SDHOST_LOW_VOLT_MIN;
+		tegra_host->vddio_max_uv = SDHOST_LOW_VOLT_MAX;
+	} else if (plat->mmc_data.ocr_mask & MMC_OCR_2V8_MASK) {
+			tegra_host->vddio_min_uv = SDHOST_HIGH_VOLT_2V8;
 			tegra_host->vddio_max_uv = SDHOST_HIGH_VOLT_MAX;
-		}
-		tegra_host->vdd_io_reg = regulator_get(mmc_dev(host->mmc), "vddio_sdmmc");
-		if (IS_ERR_OR_NULL(tegra_host->vdd_io_reg)) {
-			dev_info(mmc_dev(host->mmc), "%s regulator not found: %ld."
-				"Assuming vddio_sdmmc is not required.\n",
-					"vddio_sdmmc", PTR_ERR(tegra_host->vdd_io_reg));
+	} else {
+		/*
+		 * Set the minV and maxV to default
+		 * voltage range of 2.7V - 3.6V
+		 */
+		tegra_host->vddio_min_uv = SDHOST_HIGH_VOLT_MIN;
+		tegra_host->vddio_max_uv = SDHOST_HIGH_VOLT_MAX;
+	}
+
+	tegra_host->vdd_io_reg = regulator_get(mmc_dev(host->mmc),
+							"vddio_sdmmc");
+	if (IS_ERR_OR_NULL(tegra_host->vdd_io_reg)) {
+		dev_info(mmc_dev(host->mmc), "%s regulator not found: %ld."
+			"Assuming vddio_sdmmc is not required.\n",
+			"vddio_sdmmc", PTR_ERR(tegra_host->vdd_io_reg));
+		tegra_host->vdd_io_reg = NULL;
+	} else {
+		rc = regulator_set_voltage(tegra_host->vdd_io_reg,
+			tegra_host->vddio_min_uv,
+			tegra_host->vddio_max_uv);
+		if (rc) {
+			dev_err(mmc_dev(host->mmc), "%s regulator_set_voltage failed: %d",
+				"vddio_sdmmc", rc);
+			regulator_put(tegra_host->vdd_io_reg);
 			tegra_host->vdd_io_reg = NULL;
-		} else {
-			rc = regulator_set_voltage(tegra_host->vdd_io_reg,
-				tegra_host->vddio_min_uv,
-				tegra_host->vddio_max_uv);
-			if (rc) {
-				dev_err(mmc_dev(host->mmc), "%s regulator_set_voltage failed: %d",
-					"vddio_sdmmc", rc);
-				regulator_put(tegra_host->vdd_io_reg);
-				tegra_host->vdd_io_reg = NULL;
-			}
 		}
+	}
 
-		tegra_host->vdd_slot_reg = regulator_get(mmc_dev(host->mmc), "vddio_sd_slot");
-		if (IS_ERR_OR_NULL(tegra_host->vdd_slot_reg)) {
-			dev_info(mmc_dev(host->mmc), "%s regulator not found: %ld."
-				" Assuming vddio_sd_slot is not required.\n",
-					"vddio_sd_slot", PTR_ERR(tegra_host->vdd_slot_reg));
-			tegra_host->vdd_slot_reg = NULL;
-		}
+	tegra_host->vdd_slot_reg = regulator_get(mmc_dev(host->mmc),
+							"vddio_sd_slot");
+	if (IS_ERR_OR_NULL(tegra_host->vdd_slot_reg)) {
+		dev_info(mmc_dev(host->mmc), "%s regulator not found: %ld."
+			" Assuming vddio_sd_slot is not required.\n",
+			"vddio_sd_slot", PTR_ERR(tegra_host->vdd_slot_reg));
+		tegra_host->vdd_slot_reg = NULL;
+	}
 
-		if (tegra_host->card_present) {
-			if (tegra_host->vdd_slot_reg)
-				regulator_enable(tegra_host->vdd_slot_reg);
-			if (tegra_host->vdd_io_reg)
-				regulator_enable(tegra_host->vdd_io_reg);
-			tegra_host->is_rail_enabled = 1;
-		}
+	if (tegra_host->card_present) {
+		if (tegra_host->vdd_slot_reg)
+			regulator_enable(tegra_host->vdd_slot_reg);
+		if (tegra_host->vdd_io_reg)
+			regulator_enable(tegra_host->vdd_io_reg);
+		tegra_host->is_rail_enabled = 1;
 	}
 
 	pm_runtime_enable(&pdev->dev);

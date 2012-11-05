@@ -73,6 +73,10 @@ struct tegra_suspend_platform_data {
 	unsigned int lp1_core_volt_low;
 	unsigned int lp1_core_volt_high;
 #endif
+#ifdef CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE
+	unsigned long min_residency_noncpu;
+	unsigned long min_residency_crail;
+#endif
 };
 
 /* clears io dpd settings before kernel code */
@@ -81,6 +85,10 @@ void tegra_bl_io_dpd_cleanup(void);
 unsigned long tegra_cpu_power_good_time(void);
 unsigned long tegra_cpu_power_off_time(void);
 unsigned long tegra_cpu_lp2_min_residency(void);
+#ifdef CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE
+unsigned long tegra_min_residency_noncpu(void);
+unsigned long tegra_min_residency_crail(void);
+#endif
 void tegra_clear_cpu_in_lp2(int cpu);
 bool tegra_set_cpu_in_lp2(int cpu);
 
@@ -92,6 +100,9 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags);
 #define FLOW_CTRL_CPU_PWR_CSR \
 	(IO_ADDRESS(TEGRA_FLOW_CTRL_BASE) + 0x38)
 #define FLOW_CTRL_CPU_PWR_CSR_RAIL_ENABLE	1
+
+#define FLOW_CTRL_MPID \
+	(IO_ADDRESS(TEGRA_FLOW_CTRL_BASE) + 0x3c)
 
 #define FLOW_CTRL_RAM_REPAIR \
 	(IO_ADDRESS(TEGRA_FLOW_CTRL_BASE) + 0x40)
@@ -229,6 +240,12 @@ static inline void tegra_cluster_switch_set_parameters(
 extern bool tegra_all_cpus_booted __read_mostly;
 #else
 #define tegra_all_cpus_booted (true)
+#endif
+
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+void tegra_smp_clear_power_mask(void);
+#else
+static inline void tegra_smp_clear_power_mask(void){}
 #endif
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS

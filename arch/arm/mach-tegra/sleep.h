@@ -36,14 +36,20 @@
 #define TEGRA_POWER_LP1_AUDIO		(1 << 25) /* do not turn off pll-p in LP1 */
 
 #ifdef CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE
-#define TEGRA_POWER_CLUSTER_PART_CRAIL	(1 << 24) /* Power gate CRAIL partition */
-#define TEGRA_POWER_CLUSTER_PART_NONCPU	(1 << 25) /* Power gate CxNC partition */
+
+/* Power gate CRAIL partition */
+#define TEGRA_POWER_CLUSTER_PART_CRAIL	(1 << 25)
+
+/* Power gate CxNC partition */
+#define TEGRA_POWER_CLUSTER_PART_NONCPU	(1 << 24)
+
 #define TEGRA_POWER_CLUSTER_PART_MASK	(TEGRA_POWER_CLUSTER_PART_CRAIL | \
 						TEGRA_POWER_CLUSTER_PART_NONCPU)
 #define TEGRA_POWER_CLUSTER_PART_DEFAULT TEGRA_POWER_CLUSTER_PART_CRAIL
 #else
 #define TEGRA_POWER_CLUSTER_PART_DEFAULT 0
 #endif
+#define TEGRA_POWER_CLUSTER_PART_SHIFT	24
 
 #define TEGRA_POWER_SDRAM_SELFREFRESH	(1 << 26) /* SDRAM is in self-refresh */
 #define TEGRA_POWER_HOTPLUG_SHUTDOWN	(1 << 27) /* Hotplug shutdown */
@@ -178,7 +184,6 @@ static inline void flowctrl_writel(unsigned long val, void __iomem *addr)
 
 void tegra_pen_lock(void);
 void tegra_pen_unlock(void);
-void tegra_cpu_wfi(void);
 int tegra_sleep_cpu_finish(unsigned long v2p);
 void tegra_resume(void);
 void tegra_flush_l1_cache(void);

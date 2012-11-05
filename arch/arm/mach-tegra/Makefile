@@ -37,7 +37,11 @@ else
 obj-y					+= wakeups-t11x.o
 endif
 ifeq ($(CONFIG_CPU_IDLE),y)
+ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t3.o
+else
+obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t11x.o
+endif
 endif
 endif
 
@@ -53,7 +57,7 @@ obj-y                                   += sleep.o
 plus_sec := $(call as-instr,.arch_extension sec,+sec)
 AFLAGS_sleep.o :=-Wa,-march=armv7-a$(plus_sec)
 
-obj-y                                   += fuse.o
+obj-y                                   += tegra_fuse.o
 obj-y                                   += kfuse.o
 obj-y                                   += csi.o
 obj-y                                   += tegra_odm_fuses.o
@@ -120,12 +124,14 @@ endif
 endif
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 obj-$(CONFIG_USB_SUPPORT)               += usb_phy.o
+ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_soctherm.o
+endif
 ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_throttle.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_throttle.o
+obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra3_throttle.o
 endif
-obj-$(CONFIG_TEGRA_THERMAL)             += tegra3_thermal.o
 obj-$(CONFIG_TEGRA_IOVMM)               += iovmm.o
 obj-$(CONFIG_TEGRA_IOVMM_GART)          += iovmm-gart.o
 obj-$(CONFIG_TEGRA_IOVMM_SMMU)          += iovmm-smmu.o
@@ -141,6 +147,17 @@ obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS)    += tegra_cl_dvfs.o
 
 obj-y					+= board-common.o
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
+
+# MC error reporting.
+ifeq ($(CONFIG_ARCH_TEGRA_2x_SOC),)
+obj-y                                   += mcerr.o
+ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
+obj-y                                   += mcerr-t3.o
+else
+obj-y                                   += mcerr-t11.o
+endif
+endif
+
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony-kbc.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony-panel.o
@@ -221,6 +238,7 @@ obj-${CONFIG_MACH_KAI}                  += board-touch-kai-synaptics-spi.o
 obj-y                                   += board-touch-raydium_spi.o
 
 obj-${CONFIG_MACH_P1852}               += board-p1852.o
+obj-${CONFIG_MACH_P1852}               += board-p1852-power.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-panel.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-pinmux.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-sdhci.o
@@ -254,10 +272,12 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-memory.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-pinmux.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-power.o
+obj-${CONFIG_MACH_DALMORE}              += board-dalmore-powermon.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
+obj-${CONFIG_MACH_DALMORE}              += board-roth-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-kbc.o
-obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sensors.o
+obj-${CONFIG_MACH_DALMORE}          	+= board-dalmore-sensors.o
 
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-memory.o
@@ -267,6 +287,7 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sdhci.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-panel.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-kbc.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sensors.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-powermon.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

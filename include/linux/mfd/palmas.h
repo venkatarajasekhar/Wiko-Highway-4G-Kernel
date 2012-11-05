@@ -174,6 +174,7 @@ struct palmas_pmic_platform_data {
 	int ldo6_vibrator;
 
 	bool enable_ldo8_tracking;
+	bool disabe_ldo8_tracking_suspend;
 
 
 };
@@ -181,6 +182,7 @@ struct palmas_pmic_platform_data {
 struct palmas_platform_data {
 	int gpio_base;
 	int irq_base;
+	int irq_type;
 
 	/* bit value to be loaded to the POWER_CTRL register */
 	u8 power_ctrl;
@@ -190,7 +192,7 @@ struct palmas_platform_data {
 	 * then the two value to load into the registers if true
 	 */
 	int mux_from_pdata;
-	u8 pad1, pad2;
+	u8 pad1, pad2, pad3;
 
 	struct palmas_pmic_platform_data *pmic_pdata;
 

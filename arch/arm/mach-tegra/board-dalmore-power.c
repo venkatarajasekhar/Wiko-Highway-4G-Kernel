@@ -38,8 +38,10 @@
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
+#include <mach/edp.h>
 #include <mach/gpio-tegra.h>
 
+#include "cpu-tegra.h"
 #include "pm.h"
 #include "tegra-board-id.h"
 #include "board.h"
@@ -47,6 +49,7 @@
 #include "board-dalmore.h"
 #include "tegra_cl_dvfs.h"
 #include "devices.h"
+#include "tegra11_soctherm.h"
 
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)
@@ -72,6 +75,7 @@ static struct regulator_consumer_supply tps65090_dcdc2_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_dtv_3v3", NULL),
 	REGULATOR_SUPPLY("vcc", "0-007c"),
 	REGULATOR_SUPPLY("vcc", "0-0030"),
+	REGULATOR_SUPPLY("vin", "2-0030"),
 };
 
 static struct regulator_consumer_supply tps65090_dcdc3_supply[] = {
@@ -190,7 +194,7 @@ static struct regulator_consumer_supply max77663_sd2_supply[] = {
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
-	REGULATOR_SUPPLY("vddio_cam", "tegrra_camera"),
+	REGULATOR_SUPPLY("vddio_cam", "tegra_camera"),
 	REGULATOR_SUPPLY("pwrdet_cam", NULL),
 	REGULATOR_SUPPLY("avdd_osc", NULL),
 	REGULATOR_SUPPLY("vddio_sys", NULL),
@@ -248,7 +252,7 @@ static struct regulator_consumer_supply max77663_ldo1_supply[] = {
 static struct regulator_consumer_supply max77663_ldo2_supply[] = {
 	REGULATOR_SUPPLY("vdd_sensor_2v85", NULL),
 	REGULATOR_SUPPLY("vdd_als", NULL),
-	REGULATOR_SUPPLY("vdd", "1-004c"),
+	REGULATOR_SUPPLY("vdd", "0-004c"),
 };
 
 static struct regulator_consumer_supply max77663_ldo3_supply[] = {
@@ -280,11 +284,13 @@ static struct regulator_consumer_supply max77663_ldo6_supply[] = {
 static struct regulator_consumer_supply max77663_ldo7_supply[] = {
 	REGULATOR_SUPPLY("avdd_cam1", NULL),
 	REGULATOR_SUPPLY("avdd_2v8_cam_af", NULL),
+	REGULATOR_SUPPLY("vana", "2-0036"),
 };
 
 /* FIXME!! Put the device address of camera */
 static struct regulator_consumer_supply max77663_ldo8_supply[] = {
 	REGULATOR_SUPPLY("avdd_cam2", NULL),
+	REGULATOR_SUPPLY("avdd", "2-0010"),
 };
 
 static struct max77663_regulator_fps_cfg max77663_fps_cfgs[] = {
@@ -532,38 +538,8 @@ static struct regulator_consumer_supply palmas_smps12_supply[] = {
 	REGULATOR_SUPPLY("vref2_ddr3l", NULL),
 };
 
-static struct regulator_consumer_supply palmas_smps3_supply[] = {
-	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-udc.0"),
-	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.0"),
-	REGULATOR_SUPPLY("avdd_usb_pll", "tegra-ehci.1"),
-	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.0"),
-	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.3"),
-	REGULATOR_SUPPLY("vdd_emmc", "sdhci-tegra.3"),
-	REGULATOR_SUPPLY("avdd_osc", NULL),
-	REGULATOR_SUPPLY("vddio_sys", NULL),
-	REGULATOR_SUPPLY("vddio_audio", NULL),
-	REGULATOR_SUPPLY("avdd_audio_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_audio_1v8", NULL),
-	REGULATOR_SUPPLY("vddio_uart", NULL),
-	REGULATOR_SUPPLY("vddio_gmi", NULL),
-	REGULATOR_SUPPLY("vddio_cam", "tegra_camera"),
-	REGULATOR_SUPPLY("vddio_bb", NULL),
-	REGULATOR_SUPPLY("vddio_bb_1v8", NULL),
-	REGULATOR_SUPPLY("vddio_wifi_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_gps_1v8", NULL),
-	REGULATOR_SUPPLY("vddio_bt_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_dtv_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_modem", NULL),
-	REGULATOR_SUPPLY("vdd_ts_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_ds_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_spi_1v8", NULL),
-	REGULATOR_SUPPLY("dvdd_lcd", NULL),
-
-};
-
-static struct regulator_consumer_supply palmas_smps45_supply[] = {
-	REGULATOR_SUPPLY("vdd_core", NULL),
-};
+#define palmas_smps3_supply max77663_sd2_supply
+#define palmas_smps45_supply max77663_sd0_supply
 
 static struct regulator_consumer_supply palmas_smps8_supply[] = {
 	REGULATOR_SUPPLY("avdd_plla_p_c", NULL),
@@ -582,44 +558,26 @@ static struct regulator_consumer_supply palmas_smps8_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_smps9_supply[] = {
-	REGULATOR_SUPPLY("vcore_emmc", "sdhci-tegra.3"),
+	REGULATOR_SUPPLY("vddio_sd_slot", "sdhci-tegra.3"),
 };
 
-static struct regulator_consumer_supply palmas_ldo1_supply[] = {
-	REGULATOR_SUPPLY("avdd_cam1", NULL),
-};
-
-static struct regulator_consumer_supply palmas_ldo2_supply[] = {
-	REGULATOR_SUPPLY("avdd_cam2", NULL),
-};
-
-static struct regulator_consumer_supply palmas_ldo3_supply[] = {
-	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.1"),
-	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.2"),
-	REGULATOR_SUPPLY("vddio_hsic_bb", NULL),
-	REGULATOR_SUPPLY("avdd_csi_dsi", "tegradc.0"),
-	REGULATOR_SUPPLY("avdd_csi_dsi", "tegradc.1"),
-	REGULATOR_SUPPLY("avdd_csi_dsi", "tegra_camera"),
-};
+#define palmas_ldo1_supply max77663_ldo7_supply
+#define palmas_ldo2_supply max77663_ldo8_supply
+#define palmas_ldo3_supply max77663_ldo5_supply
 
 static struct regulator_consumer_supply palmas_ldo4_supply[] = {
 	REGULATOR_SUPPLY("vpp_fuse", NULL),
 };
 
-static struct regulator_consumer_supply palmas_ldo6_supply[] = {
-	REGULATOR_SUPPLY("vdd_temp", NULL),
-	REGULATOR_SUPPLY("vdd_sensor", NULL),
-};
+#define palmas_ldo6_supply max77663_ldo2_supply
 
 static struct regulator_consumer_supply palmas_ldo7_supply[] = {
 	REGULATOR_SUPPLY("vdd_af_cam1", NULL),
+	REGULATOR_SUPPLY("vdd", "2-000e"),
 };
-static struct regulator_consumer_supply palmas_ldo8_supply[] = {
-	REGULATOR_SUPPLY("vdd_rtc", NULL),
-};
-static struct regulator_consumer_supply palmas_ldo9_supply[] = {
-	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.2"),
-};
+
+#define palmas_ldo8_supply max77663_ldo4_supply
+#define palmas_ldo9_supply max77663_ldo6_supply
 
 static struct regulator_consumer_supply palmas_ldoln_supply[] = {
 	REGULATOR_SUPPLY("hvdd_usb", "tegra-ehci.2"),
@@ -666,7 +624,7 @@ PALMAS_PDATA_INIT(ldo3, 1200,  1200, palmas_rails(smps3), 0, 0, 1);
 PALMAS_PDATA_INIT(ldo4, 1800,  1800, tps65090_rails(DCDC2), 0, 0, 0);
 PALMAS_PDATA_INIT(ldo6, 2850,  2850, tps65090_rails(DCDC2), 0, 0, 1);
 PALMAS_PDATA_INIT(ldo7, 2800,  2800, tps65090_rails(DCDC2), 0, 0, 1);
-PALMAS_PDATA_INIT(ldo8, 1100,  1100, tps65090_rails(DCDC3), 1, 1, 1);
+PALMAS_PDATA_INIT(ldo8, 900,  900, tps65090_rails(DCDC3), 1, 1, 1);
 PALMAS_PDATA_INIT(ldo9, 1800,  3300, palmas_rails(smps9), 0, 0, 1);
 PALMAS_PDATA_INIT(ldoln, 3300, 3300, tps65090_rails(DCDC1), 0, 0, 1);
 PALMAS_PDATA_INIT(ldousb, 3300,  3300, tps65090_rails(DCDC1), 0, 0, 1);
@@ -771,6 +729,7 @@ static struct palmas_reg_init *dalmore_e1611_reg_init[PALMAS_NUM_REGS] = {
 
 static struct palmas_pmic_platform_data pmic_platform = {
 	.enable_ldo8_tracking = true,
+	.disabe_ldo8_tracking_suspend = true,
 };
 
 static struct palmas_platform_data palmas_pdata = {
@@ -780,6 +739,8 @@ static struct palmas_platform_data palmas_pdata = {
 	.mux_from_pdata = true,
 	.pad1 = 0,
 	.pad2 = 0,
+	.pad3 = PALMAS_PRIMARY_SECONDARY_PAD3_DVFS1,
+	.use_power_off = true,
 };
 
 static struct i2c_board_info palma_device[] = {
@@ -804,12 +765,20 @@ static struct regulator_consumer_supply fixed_reg_avdd_usb_hdmi_supply[] = {
 static struct regulator_consumer_supply fixed_reg_en_1v8_cam_supply[] = {
 	REGULATOR_SUPPLY("dvdd_cam", NULL),
 	REGULATOR_SUPPLY("vdd_cam_1v8", NULL),
+	REGULATOR_SUPPLY("vi2c", "2-0030"),
+	REGULATOR_SUPPLY("vif", "2-0036"),
+	REGULATOR_SUPPLY("dovdd", "2-0010"),
+	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
 };
 
 /* EN_CAM_1v8 on e1611 From PMU GP6 */
 static struct regulator_consumer_supply fixed_reg_en_1v8_cam_e1611_supply[] = {
 	REGULATOR_SUPPLY("dvdd_cam", NULL),
 	REGULATOR_SUPPLY("vdd_cam_1v8", NULL),
+	REGULATOR_SUPPLY("vi2c", "2-0030"),
+	REGULATOR_SUPPLY("vif", "2-0036"),
+	REGULATOR_SUPPLY("dovdd", "2-0010"),
+	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
 };
 
 static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
@@ -991,13 +960,15 @@ static struct platform_device dalmore_pda_power_device = {
 };
 
 static struct tegra_suspend_platform_data dalmore_suspend_data = {
-	.cpu_timer	= 2000,
-	.cpu_off_timer	= 2000,
+	.cpu_timer	= 300,
+	.cpu_off_timer	= 300,
 	.suspend_mode	= TEGRA_SUSPEND_LP0,
-	.core_timer	= 0x7e7e,
+	.core_timer	= 0x157e,
 	.core_off_timer = 2000,
 	.corereq_high	= true,
 	.sysclkreq_high	= true,
+	.min_residency_noncpu = 600,
+	.min_residency_crail = 1000,
 };
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
 /* board parameters for cpu dfll */
@@ -1068,6 +1039,28 @@ static int __init dalmore_max77663_regulator_init(void)
 	return 0;
 }
 
+static struct regulator_bulk_data dalmore_gps_regulator_supply[] = {
+	[0] = {
+		.supply	= "vdd_gps_3v3",
+	},
+	[1] = {
+		.supply	= "vdd_gps_1v8",
+	},
+};
+
+static struct regulator_userspace_consumer_data dalmore_gps_regulator_pdata = {
+	.num_supplies	= ARRAY_SIZE(dalmore_gps_regulator_supply),
+	.supplies	= dalmore_gps_regulator_supply,
+};
+
+static struct platform_device dalmore_gps_regulator_device = {
+	.name	= "reg-userspace-consumer",
+	.id	= 2,
+	.dev	= {
+			.platform_data = &dalmore_gps_regulator_pdata,
+	},
+};
+
 static struct regulator_bulk_data dalmore_bt_regulator_supply[] = {
 	[0] = {
 		.supply	= "vdd_bt_3v3",
@@ -1099,7 +1092,8 @@ static int __init dalmore_fixed_regulator_init(void)
 
 	tegra_get_board_info(&board_info);
 
-	if (board_info.board_id == BOARD_E1611)
+	if (board_info.board_id == BOARD_E1611 ||
+		board_info.board_id == BOARD_P2454)
 		return platform_add_devices(fixed_reg_devs_e1611_a00,
 				ARRAY_SIZE(fixed_reg_devs_e1611_a00));
 	else
@@ -1117,7 +1111,8 @@ int __init dalmore_regulator_init(void)
 	dalmore_cl_dvfs_init();
 #endif
 	tegra_get_board_info(&board_info);
-	if (board_info.board_id == BOARD_E1611)
+	if (board_info.board_id == BOARD_E1611 ||
+		board_info.board_id == BOARD_P2454)
 		dalmore_palmas_regulator_init();
 	else
 		dalmore_max77663_regulator_init();
@@ -1125,6 +1120,7 @@ int __init dalmore_regulator_init(void)
 	i2c_register_board_info(4, tps51632_boardinfo, 1);
 	platform_device_register(&dalmore_pda_power_device);
 	platform_device_register(&dalmore_bt_regulator_device);
+	platform_device_register(&dalmore_gps_regulator_device);
 	return 0;
 }
 
@@ -1134,3 +1130,130 @@ int __init dalmore_suspend_init(void)
 	return 0;
 }
 
+int __init dalmore_edp_init(void)
+{
+#ifdef CONFIG_TEGRA_EDP_LIMITS
+	unsigned int regulator_mA;
+
+	regulator_mA = get_maximum_cpu_current_supported();
+	if (!regulator_mA)
+		regulator_mA = 15000;
+
+	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
+
+	tegra_init_cpu_edp_limits(regulator_mA);
+#endif
+	return 0;
+}
+
+static struct soctherm_platform_data dalmore_soctherm_data = {
+	.soctherm_clk_rate = 136000000,
+	.tsensor_clk_rate = 500000,
+	.sensor_data = {
+		[TSENSE_CPU0] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU1] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU2] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU3] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_MEM0] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_MEM1] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_GPU] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_PLLX] = {
+			.enable = true,
+			.therm_a = 570,
+			.therm_b = -744,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+	},
+};
+
+static struct balanced_throttle tj_throttle = {
+	.throt_tab_size = 10,
+	.throt_tab = {
+		{      0, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 760000, 1000 },
+		{ 760000, 1050 },
+		{1000000, 1050 },
+		{1000000, 1100 },
+	},
+};
+
+static int __init dalmore_soctherm_init(void)
+{
+	dalmore_soctherm_data.therm[THERM_CPU].cdev =
+			balanced_throttle_register(&tj_throttle);
+
+	return tegra11_soctherm_init(&dalmore_soctherm_data);
+}
+module_init(dalmore_soctherm_init);

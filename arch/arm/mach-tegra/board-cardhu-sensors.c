@@ -46,7 +46,6 @@
 #include <media/ov14810.h>
 #include <media/ov2710.h>
 #include <media/tps61050.h>
-#include <media/imx091.h>
 #include <generated/mach-types.h>
 #include "board.h"
 #include <linux/mpu.h>
@@ -54,7 +53,6 @@
 #include <media/ad5816.h>
 #include <linux/bq27x00.h>
 #include <mach/edp.h>
-#include <mach/thermal.h>
 #include <linux/therm_est.h>
 
 #include "gpio-names.h"
@@ -90,7 +88,8 @@ static int cardhu_camera_init(void)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		ret = gpio_request(CAM1_POWER_DWN_GPIO, "camera_power_en");
 		if (ret < 0)
 			pr_err("%s: gpio_request failed for gpio %s\n",
@@ -139,7 +138,8 @@ static int cardhu_left_ov5650_power_on(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 
 		if (cardhu_vdd_2v8_cam1 == NULL) {
 			cardhu_vdd_2v8_cam1 =
@@ -167,7 +167,8 @@ static int cardhu_left_ov5650_power_on(struct device *dev)
 
 	mdelay(5);
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
 		mdelay(20);
 		gpio_direction_output(OV5650_RESETN_GPIO, 0);
@@ -202,7 +203,8 @@ static int cardhu_left_ov5650_power_off(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM3_POWER_DWN_GPIO, 1);
@@ -276,92 +278,6 @@ static struct i2c_board_info cardhu_i2c_board_info_e1214[] = {
 };
 #endif
 
-#ifdef CONFIG_VIDEO_IMX091
-static int cardhu_imx091_power_on(struct device *dev)
-{
-	/* Boards E1198 and E1291 are of Cardhu personality
-	* and donot have TCA6416 exp for camera */
-	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
-
-			if (cardhu_vdd_2v8_cam1 == NULL) {
-				cardhu_vdd_2v8_cam1 =
-					regulator_get(dev, "vdd_2v8_cam1");
-				if (WARN_ON(IS_ERR(cardhu_vdd_2v8_cam1))) {
-					pr_err("%s: couldn't get regulator vdd_2v8_cam1: %ld\n",
-							__func__, PTR_ERR(cardhu_vdd_2v8_cam1));
-						goto reg_alloc_fail;
-					}
-			}
-		regulator_enable(cardhu_vdd_2v8_cam1);
-		mdelay(5);
-	}
-
-	/* Enable VDD_1V8_Cam1 */
-	if (cardhu_1v8_cam1 == NULL) {
-			cardhu_1v8_cam1 = regulator_get(dev, "vdd_1v8_cam1");
-			if (WARN_ON(IS_ERR(cardhu_1v8_cam1))) {
-					pr_err("%s: couldn't get regulator vdd_1v8_cam1: %ld\n",
-							__func__, PTR_ERR(cardhu_1v8_cam1));
-					goto reg_alloc_fail;
-			}
-	}
-	regulator_enable(cardhu_1v8_cam1);
-
-	mdelay(5);
-	if ((board_info.board_id == BOARD_E1198) ||
-			(board_info.board_id == BOARD_E1291)) {
-			gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
-			mdelay(20);
-	}
-	return 0;
-
-reg_alloc_fail:
-	if (cardhu_1v8_cam1) {
-			regulator_put(cardhu_1v8_cam1);
-			cardhu_1v8_cam1 = NULL;
-	}
-	if (cardhu_vdd_2v8_cam1) {
-			regulator_put(cardhu_vdd_2v8_cam1);
-			cardhu_vdd_2v8_cam1 = NULL;
-	}
-
-	return -ENODEV;
-
-}
-
-static int cardhu_imx091_power_off(void)
-{
-	/* Boards E1198 and E1291 are of Cardhu personality
-	 * and donot have TCA6416 exp for camera */
-	if ((board_info.board_id == BOARD_E1198) ||
-			(board_info.board_id == BOARD_E1291)) {
-			gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
-	}
-	if (cardhu_1v8_cam1)
-			regulator_disable(cardhu_1v8_cam1);
-	if (cardhu_vdd_2v8_cam1)
-			regulator_disable(cardhu_vdd_2v8_cam1);
-
-	return 0;
-}
-
-struct imx091_platform_data cardhu_imx091_data = {
-	.power_on = cardhu_imx091_power_on,
-	.power_off = cardhu_imx091_power_off,
-};
-
-
-static struct i2c_board_info cardhu_i2c_board_info_e1244[] = {
-	{
-		I2C_BOARD_INFO("imx091", 0x36),
-		.platform_data = &cardhu_imx091_data,
-	},
-};
-#endif /* CONFIG_VIDEO_IMX091 */
-
-
-
 static int cardhu_right_ov5650_power_on(struct device *dev)
 {
 	/* CSI-B and front sensor are muxed on cardhu */
@@ -370,7 +286,8 @@ static int cardhu_right_ov5650_power_on(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 0);
@@ -432,7 +349,8 @@ static int cardhu_right_ov5650_power_off(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and do not have TCA6416 for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM3_POWER_DWN_GPIO, 1);
@@ -453,8 +371,8 @@ static void cardhu_ov5650_synchronize_sensors(void)
 		mdelay(50);
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
 		mdelay(50);
-	}
-	else if (board_info.board_id == BOARD_E1291) {
+	} else if ((board_info.board_id == BOARD_E1291) ||
+			(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
 		mdelay(50);
@@ -491,7 +409,8 @@ static int cardhu_ov2710_power_on(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and do not have TCA6416 for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		if (cardhu_vdd_cam3 == NULL) {
 			cardhu_vdd_cam3 = regulator_get(dev, "vdd_cam3");
 			if (WARN_ON(IS_ERR(cardhu_vdd_cam3))) {
@@ -536,7 +455,8 @@ static int cardhu_ov2710_power_off(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM3_POWER_DWN_GPIO, 1);
@@ -563,7 +483,8 @@ static int cardhu_ov5640_power_on(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 0);
@@ -616,7 +537,8 @@ static int cardhu_ov5640_power_off(struct device *dev)
 	/* Boards E1198 and E1291 are of Cardhu personality
 	 * and donot have TCA6416 exp for camera */
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315)) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM3_POWER_DWN_GPIO, 1);
@@ -828,85 +750,40 @@ static struct i2c_board_info cardhu_i2c8_board_info[] = {
 	},
 };
 
-static int nct_get_temp(void *_data, long *temp)
-{
-	struct nct1008_data *data = _data;
-	return nct1008_thermal_get_temp(data, temp);
-}
-
-static int nct_set_limits(void *_data,
-			long lo_limit_milli,
-			long hi_limit_milli)
-{
-	struct nct1008_data *data = _data;
-	return nct1008_thermal_set_limits(data,
-					lo_limit_milli,
-					hi_limit_milli);
-}
-
-static int nct_set_alert(void *_data,
-				void (*alert_func)(void *),
-				void *alert_data)
-{
-	struct nct1008_data *data = _data;
-	return nct1008_thermal_set_alert(data, alert_func, alert_data);
-}
-
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-static int nct_get_itemp(void *dev_data, long *temp)
-{
-	struct nct1008_data *data = dev_data;
-	return nct1008_thermal_get_temps(data, NULL, temp);
-}
-#endif
-
-static void nct1008_probe_callback(struct nct1008_data *data)
-{
-	struct tegra_thermal_device *ext_nct;
-
-	ext_nct = kzalloc(sizeof(struct tegra_thermal_device),
-					GFP_KERNEL);
-	if (!ext_nct) {
-		pr_err("unable to allocate thermal device\n");
-		return;
-	}
-
-	ext_nct->name = "nct_ext";
-	ext_nct->id = THERMAL_DEVICE_ID_NCT_EXT;
-	ext_nct->data = data;
-	ext_nct->get_temp = nct_get_temp;
-	ext_nct->set_limits = nct_set_limits;
-	ext_nct->set_alert = nct_set_alert;
-
-	tegra_thermal_device_register(ext_nct);
-
-#ifdef CONFIG_TEGRA_SKIN_THROTTLE
-	{
-		struct tegra_thermal_device *int_nct;
-		int_nct = kzalloc(sizeof(struct tegra_thermal_device),
-						GFP_KERNEL);
-		if (!int_nct) {
-			kfree(int_nct);
-			pr_err("unable to allocate thermal device\n");
-			return;
-		}
-
-		int_nct->name = "nct_int";
-		int_nct->id = THERMAL_DEVICE_ID_NCT_INT;
-		int_nct->data = data;
-		int_nct->get_temp = nct_get_itemp;
-
-		tegra_thermal_device_register(int_nct);
-	}
-#endif
-}
+static struct balanced_throttle tj_throttle = {
+	.throt_tab_size = 10,
+	.throt_tab = {
+		{      0, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 640000, 1000 },
+		{ 760000, 1000 },
+		{ 760000, 1050 },
+		{1000000, 1050 },
+		{1000000, 1100 },
+	},
+};
 
 static struct nct1008_platform_data cardhu_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x08,
 	.offset = 8, /* 4 * 2C. Bug 844025 - 1C for device accuracies */
-	.probe_callback = nct1008_probe_callback,
+	.shutdown_ext_limit = 90, /* C */
+	.shutdown_local_limit = 100, /* C */
+
+	/* Thermal Throttling */
+	.passive = {
+		.create_cdev = (struct thermal_cooling_device *(*)(void *))
+				balanced_throttle_register,
+		.cdev_data = &tj_throttle,
+		.trip_temp = 85000,
+		.tc1 = 0,
+		.tc2 = 1,
+		.passive_delay = 2000,
+	}
 };
 
 static struct i2c_board_info cardhu_i2c4_bq27510_board_info[] = {
@@ -933,7 +810,8 @@ static int cardhu_nct1008_init(void)
 		(board_info.board_id == BOARD_E1257) ||
 		(board_info.board_id == BOARD_PM269) ||
 		(board_info.board_id == BOARD_PM305) ||
-		(board_info.board_id == BOARD_PM311)) {
+		(board_info.board_id == BOARD_PM311) ||
+		(board_info.board_id == BOARD_PM315)) {
 		nct1008_port = TEGRA_GPIO_PCC2;
 	} else if ((board_info.board_id == BOARD_E1186) ||
 		(board_info.board_id == BOARD_E1187) ||
@@ -943,6 +821,29 @@ static int cardhu_nct1008_init(void)
 	}
 
 	if (nct1008_port >= 0) {
+#ifdef CONFIG_TEGRA_EDP_LIMITS
+		const struct tegra_edp_limits *cpu_edp_limits;
+		int cpu_edp_limits_size;
+		int i;
+
+		/* edp capping */
+		tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
+
+		if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
+			BUG();
+
+		for (i = 0; i < cpu_edp_limits_size-1; i++) {
+			cardhu_nct1008_pdata.active[i].create_cdev =
+				(struct thermal_cooling_device *(*)(void *))
+					edp_cooling_device_create;
+			cardhu_nct1008_pdata.active[i].cdev_data = (void *)i;
+			cardhu_nct1008_pdata.active[i].trip_temp =
+				cpu_edp_limits[i].temperature * 1000;
+			cardhu_nct1008_pdata.active[i].hysteresis = 1000;
+		}
+		cardhu_nct1008_pdata.active[i].create_cdev = NULL;
+#endif
+
 		/* FIXME: enable irq when throttling is supported */
 		cardhu_i2c4_nct1008_board_info[0].irq = gpio_to_irq(nct1008_port);
 
@@ -954,6 +855,9 @@ static int cardhu_nct1008_init(void)
 		if (ret < 0)
 			gpio_free(nct1008_port);
 	}
+
+	i2c_register_board_info(4, cardhu_i2c4_nct1008_board_info,
+		ARRAY_SIZE(cardhu_i2c4_nct1008_board_info));
 
 	return ret;
 }
@@ -1201,11 +1105,6 @@ int __init cardhu_sensors_init(void)
 	cardhu_camera_init();
 	cam_tca6416_init();
 
-#ifdef CONFIG_VIDEO_IMX091
-	i2c_register_board_info(2, cardhu_i2c_board_info_e1244,
-		ARRAY_SIZE(cardhu_i2c_board_info_e1244));
-#endif
-
 	i2c_register_board_info(2, cardhu_i2c3_board_info,
 		ARRAY_SIZE(cardhu_i2c3_board_info));
 
@@ -1253,7 +1152,7 @@ int __init cardhu_sensors_init(void)
 	if (board_info.sku == BOARD_SKU_B11)
 		i2c_register_board_info(2, cardhu_i2c2_ltr_board_info,
 			ARRAY_SIZE(cardhu_i2c2_ltr_board_info));
-	else
+	else if (board_info.board_id != BOARD_PM315)
 		i2c_register_board_info(2, cardhu_i2c2_isl_board_info,
 			ARRAY_SIZE(cardhu_i2c2_isl_board_info));
 
@@ -1309,19 +1208,20 @@ int __init cardhu_ov5650_late_init(void)
 		return 0;
 
 	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291))
+		(board_info.board_id == BOARD_E1291) ||
+		(board_info.board_id == BOARD_PM315))
 		return 0;
 
-	printk("%s: \n", __func__);
+	printk(KERN_INFO "%s:\n", __func__);
 	for (i = 0; i < ARRAY_SIZE(ov5650_gpio_keys); i++) {
 		ret = gpio_request(ov5650_gpio_keys[i].gpio,
 			ov5650_gpio_keys[i].name);
 		if (ret < 0) {
-			printk("%s: gpio_request failed for gpio #%d\n",
+			printk(KERN_INFO "%s: gpio_request failed for gpio #%d\n",
 				__func__, i);
 			goto fail;
 		}
-		printk("%s: enable - %d\n", __func__, i);
+		printk(KERN_INFO "%s: enable - %d\n", __func__, i);
 		gpio_direction_output(ov5650_gpio_keys[i].gpio,
 			ov5650_gpio_keys[i].enabled);
 		gpio_export(ov5650_gpio_keys[i].gpio, false);

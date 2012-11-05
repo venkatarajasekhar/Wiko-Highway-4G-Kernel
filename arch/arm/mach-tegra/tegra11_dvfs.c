@@ -68,30 +68,32 @@ int __attribute__((weak)) tegra_get_cvb_alignment_uV(void)
 static struct cpu_cvb_dvfs cpu_cvb_dvfs_table[] = {
 	{
 		.speedo_id = 0,
-		.max_mv = 1230,
+		.max_mv = 1250,
 		.min_dfll_mv = 1000,
 		.freqs_mult = MHZ,
 		.speedo_scale = 100,
 		.voltage_scale = 100,
 		.cvb_table = {
-			/*f   dfll: c0,    c1,   c2  pll:  c0,     c1,   c2 */
-			{ 306, { 9251,  12837, -570}, {  90000,     0,    0} },
-			{ 408, { 11737, 12957, -570}, {  90000,     0,    0} },
-			{ 510, { 14282, 13076, -570}, {  95000,     0,    0} },
-			{ 612, { 16887, 13196, -570}, {  95000,     0,    0} },
-			{ 714, { 19552, 13315, -570}, {  98000,     0,    0} },
-			{ 816, { 22277, 13435, -570}, {  98000,     0,    0} },
-			{ 918, { 25061, 13554, -570}, { 102500,     0,    0} },
-			{1020, { 27905, 13674, -570}, { 110000,     0,    0} },
-			{1122, { 30809, 13793, -570}, { 110000,     0,    0} },
-			{1224, { 33773, 13913, -570}, { 123000,     0,    0} },
-			{1326, { 36797, 14032, -570}, { 123000,     0,    0} },
-			{1428, { 39880, 14152, -570}, { 140000,     0,    0} },
-			{1530, { 43023, 14271, -570}, { 140000,     0,    0} },
-			{1632, { 46226, 14391, -570}, { 140000,     0,    0} },
-			{1734, { 49489, 14511, -570}, { 140000,     0,    0} },
-			{1836, { 52812, 14630, -570}, { 140000,     0,    0} },
-			{   0, {     0,     0,    0}, {    0,       0,    0} },
+			/*f    dfll: c0,     c1,   c2  pll:  c0,   c1,    c2 */
+			{ 306, { 107330,  -1569,   0}, {  90000,    0,    0} },
+			{ 408, { 111250,  -1666,   0}, {  90000,    0,    0} },
+			{ 510, { 110000,  -1460,   0}, {  94000,    0,    0} },
+			{ 612, { 117290,  -1745,   0}, {  94000,    0,    0} },
+			{ 714, { 122700,  -1910,   0}, {  99000,    0,    0} },
+			{ 816, { 125620,  -1945,   0}, {  99000,    0,    0} },
+			{ 918, { 130560,  -2076,   0}, { 103000,    0,    0} },
+			{1020, { 137280,  -2303,   0}, { 103000,    0,    0} },
+			{1122, { 146440,  -2660,   0}, { 109000,    0,    0} },
+			{1224, { 152190,  -2825,   0}, { 109000,    0,    0} },
+			{1326, { 157520,  -2953,   0}, { 112000,    0,    0} },
+			{1428, { 166100,  -3261,   0}, { 140000,    0,    0} },
+			{1530, { 176410,  -3647,   0}, { 140000,    0,    0} },
+			{1632, { 189620,  -4186,   0}, { 140000,    0,    0} },
+			{1734, { 203190,  -4725,   0}, { 140000,    0,    0} },
+			{1836, { 222670,  -5573,   0}, { 140000,    0,    0} },
+			{1938, { 256210,  -7165,   0}, { 140000,    0,    0} },
+			{2040, { 250050,  -6544,   0}, { 140000,    0,    0} },
+			{   0, {      0,      0,   0}, {      0,    0,    0} },
 		},
 	}
 };
@@ -107,8 +109,8 @@ static struct dvfs cpu_dvfs = {
 	.auto_dvfs	= true,
 	.dvfs_rail	= &tegra11_dvfs_rail_vdd_cpu,
 	.dfll_data	= {
-		.tune0		= 0x000B0380,
-		.tune1		= 0x000005e0,
+		.tune0		= 0x00b0019d,
+		.tune1		= 0x0000001f,
 		.droop_rate_min = 1000000,
 	},
 };
@@ -196,8 +198,8 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("pwm",  -1, 1, KHZ,         1,  40800,  48000,  48000,  48000,   48000,   48000),
 
 	CORE_DVFS("csi",  -1, 1, KHZ,         1,      1,      1, 102000, 102000,  102000,  102000),
-	CORE_DVFS("dsia", -1, 1, KHZ,         1, 100000, 125000, 125000, 125000,  125000,  125000),
-	CORE_DVFS("dsib", -1, 1, KHZ,         1, 100000, 125000, 125000, 125000,  125000,  125000),
+	CORE_DVFS("dsia", -1, 1, KHZ,         1, 100000, 125000, 125000, 125000,  500000,  500000),
+	CORE_DVFS("dsib", -1, 1, KHZ,         1, 100000, 125000, 125000, 125000,  500000,  500000),
 	CORE_DVFS("dsialp", -1, 1, KHZ,       1, 102000, 102000, 102000, 102000,  156000,  156000),
 	CORE_DVFS("dsiblp", -1, 1, KHZ,       1, 102000, 102000, 102000, 102000,  156000,  156000),
 	CORE_DVFS("hdmi", -1, 1, KHZ,         1,  99000, 118800, 148500, 198000,  198000,  198000),
@@ -377,6 +379,7 @@ static int __init set_cpu_dvfs_data(int speedo_id, struct dvfs *cpu_dvfs,
 	int i, j, mv, dfll_mv;
 	unsigned long fmax_at_vmin = 0;
 	unsigned long fmax_pll_mode = 0;
+	unsigned long fmin_use_dfll = 0;
 	struct cpu_cvb_dvfs *d = NULL;
 	struct cpu_cvb_dvfs_table *table = NULL;
 	int speedo = tegra_cpu_speedo_value();
@@ -436,6 +439,10 @@ static int __init set_cpu_dvfs_data(int speedo_id, struct dvfs *cpu_dvfs,
 				fmax_pll_mode = cpu_dvfs->freqs[j - 1];
 		}
 
+		/* Minimum rate with pll source voltage above dfll Vmin */
+		if ((mv >= d->min_dfll_mv) && (!fmin_use_dfll))
+			fmin_use_dfll = table->freq;
+
 		/* fill in dvfs tables */
 		cpu_dvfs->freqs[j] = table->freq;
 		cpu_dfll_millivolts[j] = min(dfll_mv, d->max_mv);
@@ -459,6 +466,14 @@ static int __init set_cpu_dvfs_data(int speedo_id, struct dvfs *cpu_dvfs,
 		return -ENOENT;
 	}
 
+	/* In the dfll operating range dfll voltage at any rate should be
+	   better (below) than pll voltage */
+	if (!fmin_use_dfll || (fmin_use_dfll > fmax_at_vmin)) {
+		WARN(1, "tegra11_dvfs: pll voltage is below dfll in the dfll"
+			" operating range\n");
+		fmin_use_dfll = fmax_at_vmin;
+	}
+
 	/* dvfs tables are successfully populated - fill in the rest */
 	cpu_dvfs->speedo_id = speedo_id;
 	cpu_dvfs->freqs_mult = d->freqs_mult;
@@ -469,6 +484,7 @@ static int __init set_cpu_dvfs_data(int speedo_id, struct dvfs *cpu_dvfs,
 	cpu_dvfs->dfll_data.max_rate_boost = fmax_pll_mode ?
 		(cpu_dvfs->freqs[j - 1] - fmax_pll_mode) * d->freqs_mult : 0;
 	cpu_dvfs->dfll_data.out_rate_min = fmax_at_vmin * d->freqs_mult;
+	cpu_dvfs->dfll_data.use_dfll_rate_min = fmin_use_dfll * d->freqs_mult;
 	cpu_dvfs->dfll_data.min_millivolts = d->min_dfll_mv;
 	return 0;
 }
@@ -501,6 +517,13 @@ static int __init get_core_nominal_mv_index(int speedo_id)
 	return i - 1;
 }
 
+int tegra_cpu_dvfs_alter(int edp_thermal_index, const cpumask_t *cpus,
+			 bool before_clk_update, int cpu_event)
+{
+	/* empty definition for tegra11 */
+	return 0;
+}
+
 void __init tegra11x_init_dvfs(void)
 {
 	int cpu_speedo_id = tegra_cpu_speedo_id();
@@ -517,6 +540,9 @@ void __init tegra11x_init_dvfs(void)
 #ifndef CONFIG_TEGRA_CPU_DVFS
 	tegra_dvfs_cpu_disabled = true;
 #endif
+	/* Setup rail bins */
+	tegra11_dvfs_rail_vdd_cpu.stats.bin_uV = tegra_get_cvb_alignment_uV();
+	tegra11_dvfs_rail_vdd_core.stats.bin_uV = tegra_get_cvb_alignment_uV();
 
 	/*
 	 * Find nominal voltages for core (1st) and cpu rails before rail

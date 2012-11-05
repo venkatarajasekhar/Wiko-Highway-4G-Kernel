@@ -86,6 +86,8 @@ static struct regulator_consumer_supply tps80031_vio_supply_a02[] = {
 	REGULATOR_SUPPLY("vdd_bat", NULL),
 	REGULATOR_SUPPLY("vdd_io", NULL),
 	REGULATOR_SUPPLY("pwrdet_pex_ctl", NULL),
+	REGULATOR_SUPPLY("vlogic", "0-0068"),
+	REGULATOR_SUPPLY("vdd", "1-004a"),
 };
 
 static struct regulator_consumer_supply tps80031_vio_supply_a03[] = {
@@ -115,6 +117,8 @@ static struct regulator_consumer_supply tps80031_vio_supply_a03[] = {
 	REGULATOR_SUPPLY("vdd_bat", NULL),
 	REGULATOR_SUPPLY("vdd_io", NULL),
 	REGULATOR_SUPPLY("pwrdet_pex_ctl", NULL),
+	REGULATOR_SUPPLY("vlogic", "0-0068"),
+	REGULATOR_SUPPLY("vdd", "1-004a"),
 };
 
 static struct regulator_consumer_supply tps80031_smps1_supply_common[] = {
@@ -176,6 +180,7 @@ static struct regulator_consumer_supply tps80031_ldo3_supply_common[] = {
 
 static struct regulator_consumer_supply tps80031_ldo4_supply_a02[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
+	REGULATOR_SUPPLY("avdd", "1-004a"),
 };
 
 static struct regulator_consumer_supply tps80031_ldo4_supply_a03[] = {
@@ -191,6 +196,7 @@ static struct regulator_consumer_supply tps80031_ldo5_supply_common[] = {
 	REGULATOR_SUPPLY("vdd_gyro", NULL),
 	REGULATOR_SUPPLY("vdd_touch", NULL),
 	REGULATOR_SUPPLY("vdd_proxim_diode", NULL),
+	REGULATOR_SUPPLY("vdd", "0-0068"),
 };
 
 static struct regulator_consumer_supply tps80031_ldo6_supply_a02[] = {
@@ -215,6 +221,7 @@ static struct regulator_consumer_supply tps80031_ldo7_supply_a02[] = {
 
 static struct regulator_consumer_supply tps80031_ldo7_supply_a03[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
+	REGULATOR_SUPPLY("avdd", "1-004a"),
 };
 
 static struct regulator_consumer_supply tps80031_ldoln_supply_a02[] = {
@@ -240,11 +247,11 @@ static struct regulator_consumer_supply tps80031_ldousb_supply_a03[] = {
 };
 
 static struct regulator_consumer_supply tps80031_vbus_supply_common[] = {
-	REGULATOR_SUPPLY("usb_vbus", NULL),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 };
 
 static struct regulator_consumer_supply tps80031_battery_charge_supply[] = {
-	REGULATOR_SUPPLY("usb_bat_chg", NULL),
+	REGULATOR_SUPPLY("usb_bat_chg", "tegra-udc.0"),
 };
 
 #define TPS_PDATA_INIT(_reg_id, _id, _sname, _minmv, _maxmv, _supply_reg, _always_on,	\
@@ -816,7 +823,7 @@ static struct tegra_suspend_platform_data enterprise_suspend_data = {
 	.cpu_off_timer	= 200,
 	.suspend_mode	= TEGRA_SUSPEND_LP0,
 	.core_timer	= 0x7e7e,
-	.core_off_timer = 0,
+	.core_off_timer = 0x80,
 	.corereq_high	= true,
 	.sysclkreq_high	= true,
 	.board_suspend = enterprise_board_suspend,

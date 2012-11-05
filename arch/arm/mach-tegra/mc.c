@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/mc.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011 NVIDIA Corporation
+ * Copyright (C) 2011-2012 NVIDIA Corporation
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -18,6 +18,7 @@
  *
  */
 
+#include <linux/export.h>
 #include <linux/io.h>
 #include <linux/spinlock.h>
 
@@ -71,3 +72,34 @@ int tegra_mc_get_tiled_memory_bandwidth_multiplier(void)
 		return 1;
 }
 #endif
+
+/* API to get EMC freq to be requested, for Bandwidth.
+ * bw_kbps: BandWidth passed is in KBps.
+ * returns freq in KHz
+ */
+unsigned int tegra_emc_bw_to_freq_req(unsigned int bw_kbps)
+{
+	unsigned int freq;
+	unsigned int bytes_per_emc_clk;
+
+	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
+	freq = (bw_kbps + bytes_per_emc_clk - 1) / bytes_per_emc_clk *
+		CONFIG_TEGRA_EMC_TO_DDR_CLOCK;
+	return freq;
+}
+EXPORT_SYMBOL_GPL(tegra_emc_bw_to_freq_req);
+
+/* API to get EMC bandwidth, for freq that can be requested.
+ * freq_khz: Frequency passed is in KHz.
+ * returns bandwidth in KBps
+ */
+unsigned int tegra_emc_freq_req_to_bw(unsigned int freq_khz)
+{
+	unsigned int bw;
+	unsigned int bytes_per_emc_clk;
+
+	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
+	bw = freq_khz * bytes_per_emc_clk / CONFIG_TEGRA_EMC_TO_DDR_CLOCK;
+	return bw;
+}
+EXPORT_SYMBOL_GPL(tegra_emc_freq_req_to_bw);

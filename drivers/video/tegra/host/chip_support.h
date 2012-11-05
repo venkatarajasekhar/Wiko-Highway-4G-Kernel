@@ -37,6 +37,7 @@ struct push_buffer;
 struct nvhost_syncpt;
 struct dentry;
 struct nvhost_job;
+struct nvhost_job_unpin;
 struct nvhost_intr_syncpt;
 struct mem_handle;
 struct mem_mgr;
@@ -150,6 +151,14 @@ struct nvhost_mem_ops {
 	void (*unpin)(struct mem_mgr *, struct mem_handle *, struct sg_table *);
 	void *(*mmap)(struct mem_handle *);
 	void (*munmap)(struct mem_handle *, void *);
+	void *(*kmap)(struct mem_handle *, unsigned int);
+	void (*kunmap)(struct mem_handle *, unsigned int, void *);
+	int (*pin_array_ids)(struct mem_mgr *,
+			struct nvhost_device *,
+			long unsigned *,
+			dma_addr_t *,
+			u32,
+			struct nvhost_job_unpin *);
 };
 
 struct nvhost_actmon_ops {

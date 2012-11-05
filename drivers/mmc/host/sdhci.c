@@ -1720,6 +1720,9 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		return 0;
 	sdhci_runtime_pm_get(host);
 	err = sdhci_do_start_signal_voltage_switch(host, ios);
+	/* Do any post voltage switch platform specific configuration */
+	if  (host->ops->switch_signal_voltage_exit)
+		host->ops->switch_signal_voltage_exit(host);
 	sdhci_runtime_pm_put(host);
 	return err;
 }
@@ -1940,13 +1943,10 @@ static void sdhci_do_enable_preset_value(struct sdhci_host *host, bool enable)
 		return;
 
 	/*
-	 * Enabling preset value would make programming clock
-	 * divider ineffective. The controller would use the
-	 * values present in the preset value registers. In
-	 * case of non-standard clock, let the platform driver
-	 * decide whether to enable preset or not.
+	 * Do not enable preset if the host preset registers have
+	 * incorrect values.
 	 */
-	if (host->quirks & SDHCI_QUIRK_NONSTANDARD_CLOCK)
+	if (host->quirks2 & SDHCI_QUIRK2_BROKEN_PRESET_VALUES)
 		return;
 
 	spin_lock_irqsave(&host->lock, flags);
@@ -1995,7 +1995,7 @@ int sdhci_enable(struct mmc_host *mmc)
 	return 0;
 }
 
-int sdhci_disable(struct mmc_host *mmc, int lazy)
+int sdhci_disable(struct mmc_host *mmc)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
 
@@ -2643,6 +2643,9 @@ int sdhci_runtime_resume_host(struct sdhci_host *host)
 	sdhci_do_set_ios(host, &host->mmc->ios);
 
 	sdhci_do_start_signal_voltage_switch(host, &host->mmc->ios);
+	/* Do any post voltage switch platform specific configuration */
+	if  (host->ops->switch_signal_voltage_exit)
+		host->ops->switch_signal_voltage_exit(host);
 	if (host_flags & SDHCI_PV_ENABLED)
 		sdhci_do_enable_preset_value(host, true);
 
@@ -2938,6 +2941,18 @@ int sdhci_add_host(struct sdhci_host *host)
 	/* Initial value for re-tuning timer count */
 	host->tuning_count = (caps[1] & SDHCI_RETUNING_TIMER_COUNT_MASK) >>
 			      SDHCI_RETUNING_TIMER_COUNT_SHIFT;
+	/*
+	 * If the re-tuning timer count value is 0xF, the timer count
+	 * information should be obtained in a non-standard way.
+	 */
+	if (host->tuning_count == 0xF) {
+		if (host->ops->get_tuning_counter) {
+			host->tuning_count =
+				host->ops->get_tuning_counter(host);
+		} else {
+			host->tuning_count = 0;
+		}
+	}
 
 	/*
 	 * In case Re-tuning Timer is not disabled, the actual value of

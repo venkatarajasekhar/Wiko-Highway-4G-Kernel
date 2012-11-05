@@ -677,12 +677,12 @@ static int tegra3_super_clk_set_parent(struct clk *c, struct clk *p)
 			}
 
 			if (c->refcnt)
-				clk_enable(p);
+				tegra_clk_prepare_enable(p);
 
 			clk_writel_delay(val, c->reg);
 
 			if (c->refcnt && c->parent)
-				clk_disable(c->parent);
+				tegra_clk_disable_unprepare(c->parent);
 
 			clk_reparent(c, p);
 			return 0;
@@ -844,7 +844,8 @@ static int tegra3_cpu_clk_set_rate(struct clk *c, unsigned long rate)
 	if (c->dvfs) {
 		if (!c->dvfs->dvfs_rail)
 			return -ENOSYS;
-		else if ((!c->dvfs->dvfs_rail->reg) &&
+		else if ((!c->dvfs->dvfs_rail->disabled) &&
+			  (!c->dvfs->dvfs_rail->reg) &&
 			  (clk_get_rate_locked(c) < rate)) {
 			WARN(1, "Increasing CPU rate while regulator is not"
 				" ready may overclock CPU\n");
@@ -856,7 +857,7 @@ static int tegra3_cpu_clk_set_rate(struct clk *c, unsigned long rate)
 	 * Take an extra reference to the main pll so it doesn't turn
 	 * off when we move the cpu off of it
 	 */
-	clk_enable(c->u.cpu.main);
+	tegra_clk_prepare_enable(c->u.cpu.main);
 
 	if (c->parent->parent != c->u.cpu.backup) {
 		if (skip_to_backup) {
@@ -918,7 +919,7 @@ out:
 		udelay(skipper_delay);
 		tegra3_super_clk_skipper_update(c->parent, 2, 1);
 	}
-	clk_disable(c->u.cpu.main);
+	tegra_clk_disable_unprepare(c->u.cpu.main);
 	return ret;
 }
 
@@ -1067,13 +1068,13 @@ static int tegra3_cpu_cmplx_clk_set_parent(struct clk *c, struct clk *p)
 	/* Enabling new parent scales new mode voltage rail in advanvce
 	   before the switch happens*/
 	if (c->refcnt)
-		clk_enable(p);
+		tegra_clk_prepare_enable(p);
 
 	/* switch CPU mode */
 	ret = tegra_cluster_control(delay, flags);
 	if (ret) {
 		if (c->refcnt)
-			clk_disable(p);
+			tegra_clk_disable_unprepare(p);
 		pr_err("%s: Failed to switch %s mode to %s\n",
 		       __func__, c->name, p->name);
 		return ret;
@@ -1081,7 +1082,7 @@ static int tegra3_cpu_cmplx_clk_set_parent(struct clk *c, struct clk *p)
 
 	/* Disabling old parent scales old mode voltage rail */
 	if (c->refcnt && c->parent)
-		clk_disable(c->parent);
+		tegra_clk_disable_unprepare(c->parent);
 
 	clk_reparent(c, p);
 	return 0;
@@ -2279,12 +2280,12 @@ static int tegra3_periph_clk_set_parent(struct clk *c, struct clk *p)
 			val |= (sel->value << periph_clk_source_shift(c));
 
 			if (c->refcnt)
-				clk_enable(p);
+				tegra_clk_prepare_enable(p);
 
 			clk_writel_delay(val, c->reg);
 
 			if (c->refcnt && c->parent)
-				clk_disable(c->parent);
+				tegra_clk_disable_unprepare(c->parent);
 
 			clk_reparent(c, p);
 			return 0;
@@ -2479,7 +2480,7 @@ static int tegra3_dsib_clk_set_parent(struct clk *c, struct clk *p)
 	for (sel = c->inputs; sel->input != NULL; sel++) {
 		if (sel->input == p) {
 			if (c->refcnt)
-				clk_enable(p);
+				tegra_clk_prepare_enable(p);
 
 			/* The DSIB parent selection bit is in PLLD base
 			   register - can not do direct r-m-w, must be
@@ -2488,7 +2489,7 @@ static int tegra3_dsib_clk_set_parent(struct clk *c, struct clk *p)
 				d, TEGRA_CLK_PLLD_MIPI_MUX_SEL, sel->value);
 
 			if (c->refcnt && c->parent)
-				clk_disable(c->parent);
+				tegra_clk_disable_unprepare(c->parent);
 
 			clk_reparent(c, p);
 			return 0;
@@ -2577,7 +2578,7 @@ static int tegra3_clk_out_set_parent(struct clk *c, struct clk *p)
 	for (sel = c->inputs; sel->input != NULL; sel++) {
 		if (sel->input == p) {
 			if (c->refcnt)
-				clk_enable(p);
+				tegra_clk_prepare_enable(p);
 
 			spin_lock_irqsave(&clk_out_lock, flags);
 			val = pmc_readl(c->reg);
@@ -2587,7 +2588,7 @@ static int tegra3_clk_out_set_parent(struct clk *c, struct clk *p)
 			spin_unlock_irqrestore(&clk_out_lock, flags);
 
 			if (c->refcnt && c->parent)
-				clk_disable(c->parent);
+				tegra_clk_disable_unprepare(c->parent);
 
 			clk_reparent(c, p);
 			return 0;
@@ -2657,7 +2658,7 @@ static int tegra3_emc_clk_set_rate(struct clk *c, unsigned long rate)
 		if (div_value == c->div)
 			return 0;
 	} else if (c->refcnt)
-		clk_enable(p);
+		tegra_clk_prepare_enable(p);
 
 	ret = tegra_emc_set_rate(rate);
 	if (ret < 0)
@@ -2665,7 +2666,7 @@ static int tegra3_emc_clk_set_rate(struct clk *c, unsigned long rate)
 
 	if (p != c->parent) {
 		if(c->refcnt && c->parent)
-			clk_disable(c->parent);
+			tegra_clk_disable_unprepare(c->parent);
 		clk_reparent(c, p);
 	}
 	c->div = div_value;
@@ -2778,12 +2779,12 @@ static int tegra3_audio_sync_clk_set_parent(struct clk *c, struct clk *p)
 			val |= sel->value;
 
 			if (c->refcnt)
-				clk_enable(p);
+				tegra_clk_prepare_enable(p);
 
 			clk_writel(val, c->reg);
 
 			if (c->refcnt && c->parent)
-				clk_disable(c->parent);
+				tegra_clk_disable_unprepare(c->parent);
 
 			clk_reparent(c, p);
 			return 0;
@@ -2969,7 +2970,7 @@ static int tegra3_clk_cbus_set_rate(struct clk *c, unsigned long rate)
 	if (rate == 0)
 		return 0;
 
-	ret = clk_enable(c->parent);
+	ret = tegra_clk_prepare_enable(c->parent);
 	if (ret) {
 		pr_err("%s: failed to enable %s clock: %d\n",
 		       __func__, c->name, ret);
@@ -2990,7 +2991,7 @@ static int tegra3_clk_cbus_set_rate(struct clk *c, unsigned long rate)
 	cbus_restore(c);
 
 out:
-	clk_disable(c->parent);
+	tegra_clk_disable_unprepare(c->parent);
 	return ret;
 }
 
@@ -3053,7 +3054,7 @@ static noinline int shared_bus_set_rate(struct clk *bus, unsigned long rate,
 	 */
 	if ((mv > TEGRA_EMC_BRIDGE_MVOLTS_MIN) &&
 	    (old_mv <= TEGRA_EMC_BRIDGE_MVOLTS_MIN)) {
-		ret = clk_enable(emc_bridge);
+		ret = tegra_clk_prepare_enable(emc_bridge);
 		if (ret) {
 			pr_err("%s: Failed to enable emc bridge\n", __func__);
 			return ret;
@@ -3066,7 +3067,7 @@ static noinline int shared_bus_set_rate(struct clk *bus, unsigned long rate,
 
 	if ((mv <= TEGRA_EMC_BRIDGE_MVOLTS_MIN) &&
 	    (old_mv > TEGRA_EMC_BRIDGE_MVOLTS_MIN))
-		clk_disable(emc_bridge);
+		tegra_clk_disable_unprepare(emc_bridge);
 
 	return 0;
 }
@@ -3129,7 +3130,7 @@ static int tegra3_clk_shared_bus_update(struct clk *bus)
 	return shared_bus_set_rate(bus, rate, old_rate);
 };
 
-static void tegra_clk_shared_bus_init(struct clk *c)
+static void tegra_clk_shared_bus_user_init(struct clk *c)
 {
 	c->max_rate = c->parent->max_rate;
 	c->u.shared_bus_user.rate = c->parent->max_rate;
@@ -3155,14 +3156,15 @@ static void tegra_clk_shared_bus_init(struct clk *c)
 		&c->parent->shared_bus_list);
 }
 
-static int tegra_clk_shared_bus_set_rate(struct clk *c, unsigned long rate)
+static int tegra_clk_shared_bus_user_set_rate(struct clk *c, unsigned long rate)
 {
 	c->u.shared_bus_user.rate = rate;
 	tegra_clk_shared_bus_update(c->parent);
 	return 0;
 }
 
-static long tegra_clk_shared_bus_round_rate(struct clk *c, unsigned long rate)
+static long tegra_clk_shared_bus_user_round_rate(
+	struct clk *c, unsigned long rate)
 {
 	/* auto user follow others, by itself it run at minimum bus rate */
 	if (c->u.shared_bus_user.mode == SHARED_AUTO)
@@ -3175,25 +3177,25 @@ static long tegra_clk_shared_bus_round_rate(struct clk *c, unsigned long rate)
 	return clk_round_rate(c->parent, rate);
 }
 
-static int tegra_clk_shared_bus_enable(struct clk *c)
+static int tegra_clk_shared_bus_user_enable(struct clk *c)
 {
 	c->u.shared_bus_user.enabled = true;
 	tegra_clk_shared_bus_update(c->parent);
 	if (c->u.shared_bus_user.client) {
-		return clk_enable(c->u.shared_bus_user.client);
+		return tegra_clk_prepare_enable(c->u.shared_bus_user.client);
 	}
 	return 0;
 }
 
-static void tegra_clk_shared_bus_disable(struct clk *c)
+static void tegra_clk_shared_bus_user_disable(struct clk *c)
 {
 	if (c->u.shared_bus_user.client)
-		clk_disable(c->u.shared_bus_user.client);
+		tegra_clk_disable_unprepare(c->u.shared_bus_user.client);
 	c->u.shared_bus_user.enabled = false;
 	tegra_clk_shared_bus_update(c->parent);
 }
 
-static void tegra_clk_shared_bus_reset(struct clk *c, bool assert)
+static void tegra_clk_shared_bus_user_reset(struct clk *c, bool assert)
 {
 	if (c->u.shared_bus_user.client) {
 		if (c->u.shared_bus_user.client->ops &&
@@ -3203,13 +3205,13 @@ static void tegra_clk_shared_bus_reset(struct clk *c, bool assert)
 	}
 }
 
-static struct clk_ops tegra_clk_shared_bus_ops = {
-	.init = tegra_clk_shared_bus_init,
-	.enable = tegra_clk_shared_bus_enable,
-	.disable = tegra_clk_shared_bus_disable,
-	.set_rate = tegra_clk_shared_bus_set_rate,
-	.round_rate = tegra_clk_shared_bus_round_rate,
-	.reset = tegra_clk_shared_bus_reset,
+static struct clk_ops tegra_clk_shared_bus_user_ops = {
+	.init = tegra_clk_shared_bus_user_init,
+	.enable = tegra_clk_shared_bus_user_enable,
+	.disable = tegra_clk_shared_bus_user_disable,
+	.set_rate = tegra_clk_shared_bus_user_set_rate,
+	.round_rate = tegra_clk_shared_bus_user_round_rate,
+	.reset = tegra_clk_shared_bus_user_reset,
 };
 
 /* emc bridge ops */
@@ -3230,7 +3232,7 @@ static struct clk_ops tegra_clk_shared_bus_ops = {
  */
 static void tegra3_clk_emc_bridge_init(struct clk *c)
 {
-	tegra_clk_shared_bus_init(c);
+	tegra_clk_shared_bus_user_init(c);
 	c->u.shared_bus_user.rate = 0;
 }
 
@@ -3243,10 +3245,10 @@ static int tegra3_clk_emc_bridge_set_rate(struct clk *c, unsigned long rate)
 
 static struct clk_ops tegra_clk_emc_bridge_ops = {
 	.init = tegra3_clk_emc_bridge_init,
-	.enable = tegra_clk_shared_bus_enable,
-	.disable = tegra_clk_shared_bus_disable,
+	.enable = tegra_clk_shared_bus_user_enable,
+	.disable = tegra_clk_shared_bus_user_disable,
 	.set_rate = tegra3_clk_emc_bridge_set_rate,
-	.round_rate = tegra_clk_shared_bus_round_rate,
+	.round_rate = tegra_clk_shared_bus_user_round_rate,
 };
 
 /* Clock definitions */
@@ -4288,7 +4290,7 @@ static struct clk tegra_clk_cbus = {
 			.dev_id    = _dev,		\
 			.con_id    = _con,		\
 		},					\
-		.ops       = &tegra_clk_shared_bus_ops,	\
+		.ops = &tegra_clk_shared_bus_user_ops,	\
 		.parent = _parent,			\
 		.u.shared_bus_user = {			\
 			.client_id = _id,		\
@@ -4588,19 +4590,19 @@ static int tegra3_emc_relock_set_rate(struct clk *emc, unsigned long old_rate,
 	   to backup PLLC */
 	if (on_pllm) {
 		clk_lock_save(cbus, &flags);
-		clk_enable(cbus->parent);
+		tegra_clk_prepare_enable(cbus->parent);
 		ret = clk_set_rate_locked(cbus, backup_rate);
 		if (ret) {
-			clk_disable(cbus->parent);
+			tegra_clk_disable_unprepare(cbus->parent);
 			goto _cbus_out;
 		}
 
 		ret = tegra_emc_backup(backup_rate);
 		if (ret) {
-			clk_disable(cbus->parent);
+			tegra_clk_disable_unprepare(cbus->parent);
 			goto _cbus_out;
 		}
-		clk_disable(emc->parent);
+		tegra_clk_disable_unprepare(emc->parent);
 		clk_reparent(emc, cbus->parent);
 	}
 
@@ -4739,6 +4741,12 @@ static struct cpufreq_frequency_table freq_table_300MHz[] = {
 	{ 2, CPUFREQ_TABLE_END },
 };
 
+static struct cpufreq_frequency_table freq_table_900MHz[] = {
+	{ 0, 450000 },
+	{ 1, 900000 },
+	{ 2, CPUFREQ_TABLE_END },
+};
+
 static struct cpufreq_frequency_table freq_table_1p0GHz[] = {
 	{ 0,  51000 },
 	{ 1, 102000 },
@@ -4825,6 +4833,7 @@ static struct cpufreq_frequency_table freq_table_1p7GHz[] = {
 
 static struct tegra_cpufreq_table_data cpufreq_tables[] = {
 	{ freq_table_300MHz, 0,  1 },
+	{ freq_table_900MHz, 1,  1 },
 	{ freq_table_1p0GHz, 2,  8 },
 	{ freq_table_1p3GHz, 2, 10 },
 	{ freq_table_1p4GHz, 2, 11 },

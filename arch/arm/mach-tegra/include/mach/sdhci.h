@@ -26,7 +26,8 @@
  * for built_in = 0 devices enabling ocr_mask to MMC_OCR_1V8_MASK
  * sets the voltage to 1.8V
  */
-#define MMC_OCR_1V8_MASK    0x8
+#define MMC_OCR_1V8_MASK    0x00000008
+#define MMC_OCR_2V8_MASK    0x00010000
 
 struct tegra_sdhci_platform_data {
 	int cd_gpio;
@@ -38,6 +39,7 @@ struct tegra_sdhci_platform_data {
 	unsigned int max_clk_limit;
 	unsigned int ddr_clk_limit;
 	unsigned int tap_delay;
+	unsigned int trim_delay;
 	struct mmc_platform_data mmc_data;
 };
 

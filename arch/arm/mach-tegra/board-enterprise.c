@@ -61,7 +61,6 @@
 #include <mach/i2s.h>
 #include <mach/tegra_aic326x_pdata.h>
 #include <mach/tegra_asoc_pdata.h>
-#include <mach/thermal.h>
 #include <mach/tegra-bb-power.h>
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
@@ -81,71 +80,33 @@
 #include "pm.h"
 #include "common.h"
 
-static struct balanced_throttle throttle_list[] = {
-	{
-		.tegra_cdev = {
-			.id = CDEV_BTHROT_ID_TJ,
-		},
-		.throt_tab_size = 10,
-		.throt_tab = {
-			{      0, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 760000, 1000 },
-			{ 760000, 1050 },
-			{1000000, 1050 },
-			{1000000, 1100 },
-		},
-	},
-};
-
-/* All units are in millicelsius */
-static struct tegra_thermal_bind thermal_binds[] = {
-	{
-		.tdev_id = THERMAL_DEVICE_ID_NCT_EXT,
-		.cdev_id = CDEV_BTHROT_ID_TJ,
-		.type = THERMAL_TRIP_PASSIVE,
-		.passive = {
-			.trip_temp = 85000,
-			.tc1 = 0,
-			.tc2 = 1,
-			.passive_delay = 2000,
-		}
-	},
-	{
-		.tdev_id = THERMAL_DEVICE_ID_NULL,
-	},
-};
-
 /* wl128x BT, FM, GPS connectivity chip */
 struct ti_st_plat_data enterprise_wilink_pdata = {
-	.nshutdown_gpio = TEGRA_GPIO_PE6,
-	.dev_name = BLUETOOTH_UART_DEV_NAME,
-	.flow_cntrl = 1,
-	.baud_rate = 3000000,
+       .nshutdown_gpio = TEGRA_GPIO_PE6,
+       .dev_name = BLUETOOTH_UART_DEV_NAME,
+       .flow_cntrl = 1,
+       .baud_rate = 3000000,
 };
 
 static struct platform_device wl128x_device = {
-	.name		= "kim",
-	.id		= -1,
-	.dev.platform_data = &enterprise_wilink_pdata,
+       .name           = "kim",
+       .id             = -1,
+       .dev.platform_data = &enterprise_wilink_pdata,
 };
 
 static struct platform_device btwilink_device = {
-	.name = "btwilink",
-	.id = -1,
+       .name = "btwilink",
+       .id = -1,
 };
 
 static noinline void __init enterprise_bt_st(void)
 {
-	pr_info("enterprise_bt_st");
+       pr_info("enterprise_bt_st");
 
-	platform_device_register(&wl128x_device);
-	platform_device_register(&btwilink_device);
+       platform_device_register(&wl128x_device);
+       platform_device_register(&btwilink_device);
 }
+
 static struct rfkill_gpio_platform_data enterprise_bt_rfkill_pdata[] = {
 	{
 		.name           = "bt_rfkill",
@@ -247,6 +208,7 @@ static __initdata struct tegra_clk_init_table enterprise_clk_init_table[] = {
 	{ "audio1",	"i2s1_sync",	0,		false},
 	{ "audio2",	"i2s2_sync",	0,		false},
 	{ "audio3",	"i2s3_sync",	0,		false},
+	{ "audio4",	"i2s4_sync",	0,		false},
 	{ "vi",		"pll_p",	0,		false},
 	{ "vi_sensor",	"pll_p",	0,		false},
 	{ "i2c5",	"pll_p",	3200000,	false},
@@ -695,69 +657,22 @@ static struct platform_device *enterprise_devices[] __initdata = {
 #endif
 };
 
-#define MXT_CONFIG_CRC 0x62F903
-/*
- * Config converted from memory-mapped cfg-file with
- * following version information:
- *
- *
- *
- *      FAMILY_ID=128
- *      VARIANT=1
- *      VERSION=32
- *      BUILD=170
- *      VENDOR_ID=255
- *      PRODUCT_ID=TBD
- *      CHECKSUM=0xC189B6
- *
- *
- */
-
-static const u8 config[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x05, 0x01, 0x00,
-        0x00, 0x1E, 0x0A, 0x8B, 0x00, 0x00, 0x13, 0x0B,
-        0x00, 0x10, 0x32, 0x03, 0x03, 0x00, 0x03, 0x01,
-        0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0xBF, 0x03, 0x1B,
-        0x02, 0x00, 0x00, 0x37, 0x37, 0x00, 0x00, 0x00,
-        0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0xA9, 0x7F, 0x9A, 0x0E, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x03, 0x23, 0x00, 0x00, 0x00, 0x0A,
-        0x0F, 0x14, 0x19, 0x03, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x03, 0x08, 0x10,
-        0x00
-};
+#define MXT_CFG_NAME            "Android_Enterprise_2012-01-31.cfg"
+static u8 read_chg(void)
+{
+	return gpio_get_value(TEGRA_GPIO_PH6);
+}
 
 static struct mxt_platform_data atmel_mxt_info = {
-        .x_line         = 19,
-        .y_line         = 11,
-        .x_size         = 960,
-        .y_size         = 540,
-        .blen           = 0x10,
-        .threshold      = 0x32,
-        .voltage        = 3300000,              /* 3.3V */
-        .orient         = 3,
-        .config         = config,
-        .config_length  = 168,
-        .config_crc     = MXT_CONFIG_CRC,
-        .irqflags       = IRQF_TRIGGER_FALLING,
-/*      .read_chg       = &read_chg, */
-        .read_chg       = NULL,
+	.irqflags       = IRQF_TRIGGER_FALLING,
+	.read_chg       = &read_chg,
+	.mxt_cfg_name	= MXT_CFG_NAME,
 };
 
 static struct i2c_board_info __initdata atmel_i2c_info[] = {
 	{
 		I2C_BOARD_INFO("atmel_mxt_ts", MXT224_I2C_ADDR1),
+		.flags = I2C_CLIENT_WAKE,
 		.platform_data = &atmel_mxt_info,
 	}
 };
@@ -1135,18 +1050,6 @@ static void enterprise_nfc_init(void)
 	}
 }
 
-/* This needs to be inialized later hand */
-static int __init enterprise_throttle_list_init(void)
-{
-	int i;
-	for (i = 0; i < ARRAY_SIZE(throttle_list); i++)
-		if (balanced_throttle_register(&throttle_list[i]))
-			return -ENODEV;
-
-	return 0;
-}
-late_initcall(enterprise_throttle_list_init);
-
 static void __init tegra_enterprise_init(void)
 {
 	struct board_info board_info;
@@ -1156,7 +1059,6 @@ static void __init tegra_enterprise_init(void)
 	else
 		tegra_clk_init_from_table(enterprise_clk_i2s2_table);
 
-	tegra_thermal_init(thermal_binds);
 	tegra_clk_init_from_table(enterprise_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();

@@ -23,8 +23,9 @@
 
 #include <linux/debugfs.h>
 #include <linux/edp.h>
+#include <linux/thermal.h>
 
-struct tegra_edp_entry {
+struct tegra_edp_vdd_cpu_entry {
 	char speedo_id;
 	char regulator_100mA;
 	char temperature;
@@ -36,35 +37,46 @@ struct tegra_edp_limits {
 	unsigned int freq_limits[4];
 };
 
-struct system_edp_entry {
+struct tegra_system_edp_entry {
 	char speedo_id;
 	char power_limit_100mW;
 	char freq_limits[4];
 };
 
+struct tegra_edp_cpu_leakage_params {
+	int cpu_speedo_id;
+	/* All constants are pre-multiplied by 1,000,000 */
+	int dyn_consts_n[NR_CPUS];
+	int leakage_consts_n[NR_CPUS];
+	int leakage_consts_ijk[4][4][4];
+};
+
+struct tegra_edp_freq_voltage_table {
+	unsigned int freq;
+	int voltage_mV;
+};
+
 #ifdef CONFIG_TEGRA_EDP_LIMITS
-int tegra_edp_get_trip_temp(void *, long trip);
-int tegra_edp_get_trip_size(void);
+struct thermal_cooling_device *edp_cooling_device_create(int index);
 void tegra_init_cpu_edp_limits(unsigned int regulator_mA);
 void tegra_init_system_edp_limits(unsigned int power_limit_mW);
 void tegra_get_cpu_edp_limits(const struct tegra_edp_limits **limits, int *size);
-unsigned int tegra_get_edp_limit(void);
+unsigned int tegra_get_edp_limit(int *get_edp_thermal_index);
 void tegra_get_system_edp_limits(const unsigned int **limits);
 int tegra_system_edp_alarm(bool alarm);
 
 #else
+static inline struct thermal_cooling_device *edp_cooling_device_create(
+	int index)
+{ return NULL; }
 static inline void tegra_init_cpu_edp_limits(int regulator_mA)
 {}
 static inline void tegra_init_system_edp_limits(int power_limit_mW)
 {}
-static inline int tegra_edp_get_trip_temp(void *data, long trip)
-{ return 0; }
-static inline int tegra_edp_get_trip_size(void)
-{ return 0; }
 static inline void tegra_get_cpu_edp_limits(struct tegra_edp_limits **limits,
 					    int *size)
 {}
-static inline unsigned int tegra_get_edp_limit(void)
+static inline unsigned int tegra_get_edp_limit(int *get_edp_thermal_index)
 { return -1; }
 static inline void tegra_get_system_edp_limits(unsigned int **limits)
 {}

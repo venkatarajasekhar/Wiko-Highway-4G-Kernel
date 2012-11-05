@@ -194,7 +194,7 @@ static int tegra2_idle_lp2_cpu_0(struct cpuidle_device *dev,
 	idle_stats.both_idle_count++;
 
 	if (request < state->target_residency) {
-		tegra_cpu_wfi();
+		cpu_do_idle();
 		return -EBUSY;
 	}
 
@@ -274,7 +274,7 @@ static bool tegra2_idle_lp2_cpu_1(struct cpuidle_device *dev,
 
 	if (request < tegra_lp2_exit_latency) {
 		tegra2_cpu_clear_resettable();
-		tegra_cpu_wfi();
+		cpu_do_idle();
 		return false;
 	}
 
@@ -321,7 +321,7 @@ bool tegra2_idle_lp2(struct cpuidle_device *dev,
 			} else
 				entered_lp2 = true;
 		} else {
-			tegra_cpu_wfi();
+			cpu_do_idle();
 		}
 	} else {
 		BUG_ON(last_cpu);
@@ -414,3 +414,20 @@ int tegra2_lp2_debug_show(struct seq_file *s, void *data)
 	return 0;
 }
 #endif
+
+int __init tegra2_cpuidle_init_soc(struct tegra_cpuidle_ops *idle_ops)
+{
+	struct tegra_cpuidle_ops ops = {
+		tegra2_idle_lp2,
+		tegra2_cpu_idle_stats_lp2_ready,
+		tegra2_cpu_idle_stats_lp2_time,
+		tegra2_lp2_is_allowed,
+#ifdef CONFIG_DEBUG_FS
+		tegra2_lp2_debug_show
+#endif
+	};
+
+	*idle_ops = ops;
+
+	return 0;
+}

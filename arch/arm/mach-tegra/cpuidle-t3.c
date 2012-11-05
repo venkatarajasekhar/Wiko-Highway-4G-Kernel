@@ -130,7 +130,7 @@ void tegra3_cpu_idle_stats_lp2_time(unsigned int cpu, s64 us)
 
 /* Allow rail off only if all secondary CPUs are power gated, and no
    rail update is in progress */
-static bool tegra3_rail_off_is_allowed(void)
+static bool tegra_rail_off_is_allowed(void)
 {
 	u32 rst = readl(CLK_RST_CONTROLLER_CPU_CMPLX_STATUS);
 	u32 pg = readl(PMC_POWERGATE_STATUS) >> 8;
@@ -170,7 +170,7 @@ bool tegra3_lp2_is_allowed(struct cpuidle_device *dev,
 	if ((dev->cpu == 0) && (num_online_cpus() > 1))
 		return false;
 #endif
-	if ((dev->cpu == 0)  && (!tegra3_rail_off_is_allowed()))
+	if ((dev->cpu == 0)  && (!tegra_rail_off_is_allowed()))
 		return false;
 
 	request = ktime_to_us(tick_nohz_get_sleep_length());
@@ -201,7 +201,7 @@ static inline void tegra3_lp2_restore_affinity(void)
 #endif
 }
 
-static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
+static bool tegra_cpu_cluster_power_down(struct cpuidle_device *dev,
 			   struct cpuidle_state *state, s64 request)
 {
 	ktime_t entry_time;
@@ -209,7 +209,6 @@ static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
 	bool sleep_completed = false;
 	bool multi_cpu_entry = false;
 	int bin;
-	unsigned int flag = 0;
 	s64 sleep_time;
 
 	/* LP2 entry time */
@@ -217,7 +216,7 @@ static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
 
 	if (request < state->target_residency) {
 		/* Not enough time left to enter LP2 */
-		tegra_cpu_wfi();
+		cpu_do_idle();
 		return false;
 	}
 
@@ -235,10 +234,10 @@ static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
 
 		/* Did an interrupt come in for another CPU before we
 		   could disable the distributor? */
-		if (!tegra3_rail_off_is_allowed()) {
-			/* Yes, re-enable the distributor and LP3. */
+		if (!tegra_rail_off_is_allowed()) {
+			/* Yes, re-enable the distributor and clock gating. */
 			tegra_gic_dist_enable();
-			tegra_cpu_wfi();
+			cpu_do_idle();
 			return false;
 		}
 
@@ -258,7 +257,7 @@ static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
 		if (request < state->target_residency) {
 			/* Not enough time left to enter LP2 */
 			tegra_gic_dist_enable();
-			tegra_cpu_wfi();
+			cpu_do_idle();
 			return false;
 		}
 
@@ -287,10 +286,7 @@ static bool tegra3_idle_enter_lp2_cpu_0(struct cpuidle_device *dev,
 	if (!is_lp_cluster())
 		tegra_dvfs_rail_off(tegra_cpu_rail, entry_time);
 
-#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
-	flag = get_power_gating_partition();
-#endif
-	if (tegra_idle_lp2_last(sleep_time, flag) == 0)
+	if (tegra_idle_lp2_last(sleep_time, 0) == 0)
 		sleep_completed = true;
 	else {
 		int irq = tegra_gic_pending_interrupt();
@@ -353,7 +349,7 @@ static void restore_cpu_arch_register(void)
 }
 #endif
 
-static bool tegra3_idle_enter_lp2_cpu_n(struct cpuidle_device *dev,
+static bool tegra_cpu_core_power_down(struct cpuidle_device *dev,
 			   struct cpuidle_state *state, s64 request)
 {
 #ifdef CONFIG_SMP
@@ -394,6 +390,10 @@ static bool tegra3_idle_enter_lp2_cpu_n(struct cpuidle_device *dev,
 	if (!arch_timer_get_state(&timer_context)) {
 		if ((timer_context.cntp_ctl & ARCH_TIMER_CTRL_ENABLE) &&
 		    ~(timer_context.cntp_ctl & ARCH_TIMER_CTRL_IT_MASK)) {
+			if (timer_context.cntp_tval <= 0) {
+				cpu_do_idle();
+				return false;
+			}
 			request = div_u64((u64)timer_context.cntp_tval *
 					1000000, timer_context.cntfrq);
 #ifdef CONFIG_TEGRA_LP2_CPU_TIMER
@@ -416,7 +416,7 @@ static bool tegra3_idle_enter_lp2_cpu_n(struct cpuidle_device *dev,
 		/*
 		 * Not enough time left to enter LP2, or wake timer not ready
 		 */
-		tegra_cpu_wfi();
+		cpu_do_idle();
 		return false;
 	}
 
@@ -463,7 +463,7 @@ static bool tegra3_idle_enter_lp2_cpu_n(struct cpuidle_device *dev,
 #endif
 #ifdef CONFIG_ARM_ARCH_TIMER
 	if (!arch_timer_get_state(&timer_context))
-		sleep_completed = (timer_context.cntp_tval == 0);
+		sleep_completed = (timer_context.cntp_tval <= 0);
 #endif
 #else
 	sleep_completed = !tegra_lp2_timer_remain();
@@ -503,44 +503,19 @@ bool tegra3_idle_lp2(struct cpuidle_device *dev,
 	s64 request = ktime_to_us(tick_nohz_get_sleep_length());
 	bool last_cpu = tegra_set_cpu_in_lp2(dev->cpu);
 	bool entered_lp2;
-	bool cpu_gating_only = false;
 
-#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
-	cpu_gating_only = get_power_gating_partition() ? false : true;
-#endif
-
-	if (cpu_gating_only)
-		entered_lp2 = tegra3_idle_enter_lp2_cpu_n(dev, state, request);
-	else if (dev->cpu == 0) {
-		if (last_cpu) {
-			entered_lp2 = tegra3_idle_enter_lp2_cpu_0(dev, state, request);
-		} else {
-#if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
-			entered_lp2 = tegra3_idle_enter_lp2_cpu_n(dev, state, request);
-#else
-			tegra_cpu_wfi();
-			entered_lp2 = false;
-#endif
-		}
-	} else
-		entered_lp2 = tegra3_idle_enter_lp2_cpu_n(dev, state, request);
+	if ((dev->cpu == 0) && last_cpu)
+		entered_lp2 = tegra_cpu_cluster_power_down(dev, state, request);
+	else if (dev->cpu)
+		entered_lp2 = tegra_cpu_core_power_down(dev, state, request);
+	else {
+		cpu_do_idle();
+		entered_lp2 = false;
+	}
 
 	tegra_clear_cpu_in_lp2(dev->cpu);
 
 	return entered_lp2;
-}
-
-int tegra3_cpudile_init_soc(void)
-{
-	int i;
-
-	cpu_clk_for_dvfs = tegra_get_clock_by_name("cpu_g");
-	twd_clk = tegra_get_clock_by_name("twd");
-
-	for (i = 0; i < ARRAY_SIZE(lp2_exit_latencies); i++)
-		lp2_exit_latencies[i] = tegra_lp2_exit_latency;
-
-	return 0;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -632,3 +607,27 @@ int tegra3_lp2_debug_show(struct seq_file *s, void *data)
 	return 0;
 }
 #endif
+
+int __init tegra3_cpuidle_init_soc(struct tegra_cpuidle_ops *idle_ops)
+{
+	int i;
+	struct tegra_cpuidle_ops ops = {
+		tegra3_idle_lp2,
+		tegra3_cpu_idle_stats_lp2_ready,
+		tegra3_cpu_idle_stats_lp2_time,
+		tegra3_lp2_is_allowed,
+#ifdef CONFIG_DEBUG_FS
+		tegra3_lp2_debug_show
+#endif
+	};
+
+	cpu_clk_for_dvfs = tegra_get_clock_by_name("cpu_g");
+	twd_clk = tegra_get_clock_by_name("twd");
+
+	for (i = 0; i < ARRAY_SIZE(lp2_exit_latencies); i++)
+		lp2_exit_latencies[i] = tegra_lp2_exit_latency;
+
+	*idle_ops = ops;
+
+	return 0;
+}

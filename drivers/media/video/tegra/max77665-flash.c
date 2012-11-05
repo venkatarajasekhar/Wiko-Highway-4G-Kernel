@@ -1,21 +1,19 @@
 /*
  * MAX77665_F.c - MAX77665_F flash/torch kernel driver
  *
- * Copyright (C) 2012 NVIDIA Corporation.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
+ * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
- * 02111-1307, USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* Implementation
@@ -59,7 +57,6 @@
  *             by asserting the trigger signal for only when needed.
  */
 
-#define DEBUG
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -94,48 +91,95 @@
 #define MAX77665_F_RW_FLASH_INTMASK		0x0F
 #define MAX77665_F_RO_FLASH_STATUS		0x10
 
-#define FIELD(x, y)				((x) << (y))
-#define FMASK(x)				(0x0F << (x))
-#define MAX77665_F_L1_MODE_SHIFT		0
-#define MAX77665_F_L2_MODE_SHIFT		4
-#define MAX77665_F_L1_MODE_MASK			FMASK(MAX77665_F_L1_MODE_SHIFT)
-#define MAX77665_F_L2_MODE_MASK			FMASK(MAX77665_F_L2_MODE_SHIFT)
+#define FIELD(x, y)			((x) << (y))
+#define FMASK(x)			FIELD(0x03, (x))
 
-#define MAX77665_F_MODE_FLASH			0x00
-#define MAX77665_F_MODE_TORCH			0x01
+#define TORCH_TIMER_SAFETY_DIS		0x1
 
-#define MAX77665_F_L1_TRIG_SHIFT		8
-#define MAX77665_F_L2_TRIG_SHIFT		12
-#define MAX77665_F_L1_TRIG_MASK			FMASK(MAX77665_F_L1_TRIG_SHIFT)
-#define MAX77665_F_L2_TRIG_MASK			FMASK(MAX77665_F_L2_TRIG_SHIFT)
+#define TIMER_ONESHOT			0x0
+#define TIMER_MAX			0x1
 
-#define MAX77665_F_TRIG_OFF			0x00
-#define MAX77665_F_TRIG_FLASHEN			0x01
-#define MAX77665_F_TRIG_TORCHEN			0x00
-#define MAX77665_F_TRIG_I2C			0x03
+#define TORCH_TIMER_CTL_MASK		(FIELD(TIMER_MAX, 7) | \
+					FIELD(TORCH_TIMER_SAFETY_DIS, 6))
 
-#define MAX77665_F_OUTPUT(m, t)		((m << MAX77665_F_L1_MODE_SHIFT) | \
-					(m << MAX77665_F_L2_MODE_SHIFT) | \
-					(t << MAX77665_F_L1_TRIG_SHIFT) | \
-					(t << MAX77665_F_L2_TRIG_SHIFT))
+#define BOOST_FLASH_MODE_OFF		0x0
+#define BOOST_FLASH_MODE_LED1		0x1
+#define BOOST_FLASH_MODE_LED2		0x2
+#define BOOST_FLASH_MODE_BOTH		0x3
+#define BOOST_FLASH_MODE_FIXED		0x4
 
-#define MAX77665_F_OUTPUT_L1MODE(x)	FIELD((x), MAX77665_F_L1_MODE_SHIFT)
-#define MAX77665_F_OUTPUT_L2MODE(x)	FIELD((x), MAX77665_F_L2_MODE_SHIFT)
-#define MAX77665_F_OUTPUT_MODE(x)	(MAX77665_F_OUTPUT_L1MODE(x) | \
-					MAX77665_F_OUTPUT_L2MODE(x))
+#define BOOST_MODE_ONELED		0x0
+#define BOOST_MODE_TWOLED		0x1
 
-#define MAX77665_F_MAX_FLASH_LEVEL		(1 << 6)
-#define MAX77665_F_MAX_TORCH_LEVEL		(1 << 4)
+#define LED2_TORCH_MODE_SHIFT		0
+#define LED1_TORCH_MODE_SHIFT		2
+#define LED2_FLASH_MODE_SHIFT		4
+#define LED1_FLASH_MODE_SHIFT		6
+
+#define LED1_TORCH_TRIG_MASK		FMASK(LED1_TORCH_MODE_SHIFT)
+#define LED2_TORCH_TRIG_MASK		FMASK(LED2_TORCH_MODE_SHIFT)
+#define LED1_FLASH_TRIG_MASK		FMASK(LED1_FLASH_MODE_SHIFT)
+#define LED2_FLASH_TRIG_MASK		FMASK(LED2_FLASH_MODE_SHIFT)
+
+/* TO DO: Need to confirm with maxim these trigger settings */
+#define TRIG_MODE_OFF			0x00
+#define TRIG_MODE_FLASHEN		0x01
+#define TRIG_MODE_TORCHEN		0x02
+#define TRIG_MODE_I2C			0x03
+
+#define TORCH_TRIG_BY_I2C	\
+			(FIELD(TRIG_MODE_I2C, LED2_TORCH_MODE_SHIFT) | \
+			FIELD(TRIG_MODE_I2C, LED1_TORCH_MODE_SHIFT))
+
+#define TORCH_TRIG_BY_FLASHEN	\
+			(FIELD(TRIG_MODE_FLASHEN, LED2_TORCH_MODE_SHIFT) | \
+			FIELD(TRIG_MODE_FLASHEN, LED1_TORCH_MODE_SHIFT))
+
+#define TORCH_TRIG_BY_TORCHEN	\
+			(FIELD(TRIG_MODE_TORCHEN, LED2_TORCH_MODE_SHIFT) | \
+			FIELD(TRIG_MODE_TORCHEN, LED1_TORCH_MODE_SHIFT))
+
+#define FLASH_TRIG_BY_FLASHEN	\
+			(FIELD(TRIG_MODE_FLASHEN, LED2_FLASH_MODE_SHIFT) | \
+			FIELD(TRIG_MODE_FLASHEN, LED1_FLASH_MODE_SHIFT))
+
+#define FLASH_TRIG_BY_TORCHEN	\
+			(FIELD(TRIG_MODE_TORCHEN, LED2_FLASH_MODE_SHIFT) | \
+			FIELD(TRIG_MODE_TORCHEN, LED1_FLASH_MODE_SHIFT))
+
+#define MAXFLASH_DISABLE		0
+#define MAXFLASH_ENABLE			1
+
+#define MAXFLASH_VOLT_HYS_FLOOR		100 /* mV */
+#define MAXFLASH_VOLT_HYS_CEILING	300 /* mV */
+#define MAXFLASH_VOLT_HYS_STEP		100 /* mV */
+
+#define MAXFLASH_V_TH_FLOOR		2400 /* mV */
+#define MAXFLASH_V_TH_CEILING		3400 /* mV */
+#define MAXFLASH_V_TH_STEP		33 /* mV */
+
+#define MAXFLASH_TIMER_STEP		256 /* uS */
+
+#define BOOST_VOLT_FLOOR		3300 /* mV */
+#define BOOST_VOLT_CEILING		5500 /* mV */
+#define BOOST_VOLT_STEP			25 /* mV */
+
+#define MAX77665_F_MAX_FLASH_LEVEL	((1 << 6) + 1)
+#define MAX77665_F_MAX_TORCH_LEVEL	((1 << 4) + 1)
 
 #define MAX77665_F_MAX_FLASH_CURRENT(x)    \
 	DIV_ROUND_UP(((x) * MAX77665_F_MAX_FLASH_LEVEL), 1000)
 #define MAX77665_F_MAX_TORCH_CURRENT(x) \
 	DIV_ROUND_UP(((x) * MAX77665_F_MAX_TORCH_LEVEL), 1000)
 
-#define SUSTAINTIME_DEF				62
+#define SUSTAINTIME_DEF			558
 
 /* minimium debounce time 600uS */
-#define RECHARGEFACTOR_DEF			600
+#define RECHARGEFACTOR_DEF		600
+
+#define MAXFLASH_MODE_NONE		0
+#define MAXFLASH_MODE_TORCH		1
+#define MAXFLASH_MODE_FLASH		2
 
 #define max77665_f_max_flash_cap_size	(sizeof(u32) \
 				+ (sizeof(struct nvc_torch_level_info) \
@@ -192,7 +236,10 @@ struct max77665_f_info {
 	int torch_cap_size;
 	int pwr_api;
 	int pwr_dev;
-	int output_mode;
+	int sustainTime;
+	u8 fled_settings;
+	u8 op_mode;
+	u8 power_is_on;
 	u8 s_mode;
 	u8 new_ftimer;
 	u8 new_ttimer;
@@ -208,7 +255,8 @@ static const struct max77665_f_caps_struct max77665_f_caps = {
 static struct max77665_f_platform_data max77665_f_default_pdata = {
 	.config		= {
 			.led_mask = 3, /* both LEDs enabled */
-			.torch_on_flash_en = false,
+			.torch_trigger_mode = 3,
+			.flash_on_torch = false,
 			.flash_mode = 2,
 			.torch_mode = 1,
 			.adaptive_mode = 2,
@@ -227,8 +275,6 @@ static struct max77665_f_platform_data max77665_f_default_pdata = {
 static LIST_HEAD(max77665_f_info_list);
 static DEFINE_SPINLOCK(max77665_f_spinlock);
 
-static int max77665_f_dev_power_set(struct max77665_f_info *info, int pwr);
-
 static inline int max77665_f_reg_wr(struct max77665_f_info *info,
 		u8 reg, u8 val, bool stale_chk, bool refresh)
 {
@@ -241,19 +287,21 @@ static int max77665_f_set_leds(struct max77665_f_info *info,
 		u8 mask, u8 curr1, u8 curr2)
 {
 	int err = 0;
+	u32 f_levels = info->flash_cap->numberoflevels - 2;
+	u32 t_levels = info->torch_cap->numberoflevels - 2;
 	u8 fled_en = 0;
 	u8 t_curr = 0;
-	u8 trig = 0;
 	u8 val = 0;
 
-	if (mask & 1) {
-		trig = (info->output_mode & MAX77665_F_L1_TRIG_MASK) >>
-				MAX77665_F_L1_TRIG_SHIFT;
+	if (info->op_mode == MAXFLASH_MODE_NONE)
+		goto update_led_en_reg;
 
-		if ((info->output_mode & MAX77665_F_L1_MODE_MASK) ==
-			MAX77665_F_OUTPUT_L1MODE(MAX77665_F_MODE_FLASH)) {
-			if (curr1 >= info->flash_cap->numberoflevels)
-				curr1 = info->flash_cap->numberoflevels - 1;
+	if (mask & 1) {
+		fled_en |= (info->fled_settings & LED1_TORCH_TRIG_MASK);
+
+		if (info->op_mode == MAXFLASH_MODE_FLASH) {
+			if (curr1 > f_levels)
+				curr1 = f_levels;
 
 			err = max77665_f_reg_wr(info,
 				MAX77665_F_RW_FLASH_FLED1CURR, curr1,
@@ -264,24 +312,21 @@ static int max77665_f_set_leds(struct max77665_f_info *info,
 			else
 				goto set_led_end;
 
-			fled_en |= trig << 6;
+			fled_en |= (info->fled_settings & LED1_FLASH_TRIG_MASK);
 		} else {
-			if (curr1 >= info->torch_cap->numberoflevels)
-				curr1 = info->torch_cap->numberoflevels - 1;
+			if (curr1 > t_levels)
+				curr1 = t_levels;
 
 			t_curr = curr1;
-			fled_en |= trig << 2;
 		}
 	}
 
 	if (mask & 2) {
-		trig = (info->output_mode & MAX77665_F_L2_TRIG_MASK) >>
-				MAX77665_F_L2_TRIG_SHIFT;
+		fled_en |= (info->fled_settings & LED2_TORCH_TRIG_MASK);
 
-		if ((info->output_mode & MAX77665_F_L2_MODE_MASK) ==
-			MAX77665_F_OUTPUT_L2MODE(MAX77665_F_MODE_FLASH)) {
-			if (curr2 >= info->flash_cap->numberoflevels)
-				curr2 = info->flash_cap->numberoflevels - 1;
+		if (info->op_mode == MAXFLASH_MODE_FLASH) {
+			if (curr2 > f_levels)
+				curr2 = f_levels;
 
 			err = max77665_f_reg_wr(info,
 				MAX77665_F_RW_FLASH_FLED2CURR, curr2,
@@ -291,19 +336,20 @@ static int max77665_f_set_leds(struct max77665_f_info *info,
 				info->regs.led2_curr = curr2;
 			else
 				goto set_led_end;
-			fled_en |= trig << 4;
+
+			fled_en |= (info->fled_settings & LED2_FLASH_TRIG_MASK);
 		} else {
-			if (curr2 >= info->torch_cap->numberoflevels)
-				curr2 = info->torch_cap->numberoflevels - 1;
+			if (curr2 > t_levels)
+				curr2 = t_levels;
 
 			t_curr |= curr2 << 4;
-			fled_en |= trig << 0;
 		}
 	}
 
 	/* if any led is set as flash, update the flash timer register */
-	if (fled_en & 0xF0) {
-		val = (info->regs.f_timer & 0x80) | (info->new_ftimer & 0x0f);
+	if (fled_en & (LED1_FLASH_TRIG_MASK | LED2_FLASH_TRIG_MASK)) {
+		val = (info->regs.f_timer & FIELD(TIMER_MAX, 7)) |
+			info->new_ftimer;
 		err = max77665_f_reg_wr(info,
 			MAX77665_F_RW_FLASH_TIMER, val, info->regs.regs_stale,
 			(info->regs.f_timer & 0x0f) != info->new_ftimer);
@@ -313,17 +359,18 @@ static int max77665_f_set_leds(struct max77665_f_info *info,
 	}
 
 	/* if any led is set as torch, update the torch timer register */
-	if (fled_en & 0x0F) {
+	if (fled_en & (LED1_TORCH_TRIG_MASK | LED2_TORCH_TRIG_MASK)) {
 		err = max77665_f_reg_wr(info,
 				MAX77665_F_RW_TORCH_FLEDCURR, t_curr,
 				info->regs.regs_stale,
-				info->regs.led_tcurr != val);
+				info->regs.led_tcurr != t_curr);
 		if (!err)
-			info->regs.led_tcurr = val;
+			info->regs.led_tcurr = t_curr;
 		else
 			goto set_led_end;
 
-		val = (info->regs.t_timer & 0x80) | (info->new_ttimer & 0x0f);
+		val = (info->regs.t_timer & TORCH_TIMER_CTL_MASK) |
+			(info->new_ttimer & 0x0f);
 		err = max77665_f_reg_wr(info, MAX77665_F_RW_TORCH_TIMER, val,
 				info->regs.regs_stale,
 				(info->regs.t_timer & 0x0f) !=
@@ -333,6 +380,7 @@ static int max77665_f_set_leds(struct max77665_f_info *info,
 		info->regs.t_timer = val;
 	}
 
+update_led_en_reg:
 	err = max77665_f_reg_wr(info,
 		MAX77665_F_RW_FLED_ENABLE, fled_en,
 				info->regs.regs_stale,
@@ -348,14 +396,14 @@ set_led_end:
 	return err;
 }
 
-static int max77665_f_get_boost_volt(u16 mV)
+static inline int max77665_f_get_boost_volt(u16 mV)
 {
-	if (mV <= 3300)
+	if (mV <= BOOST_VOLT_FLOOR)
 		return 0;
-	if (mV >= 5500)
+	if (mV >= BOOST_VOLT_CEILING)
 		return 0x64;
 
-	return (mV - 3300) / 25 + 0x0C;
+	return (mV - BOOST_VOLT_FLOOR) / BOOST_VOLT_STEP + 0x0C;
 }
 
 static void max77665_f_update_config(struct max77665_f_info *info)
@@ -372,16 +420,23 @@ static void max77665_f_update_config(struct max77665_f_info *info)
 	}
 	pcfg_cust = &info->pdata->config;
 
+	pcfg->flash_on_torch = pcfg_cust->flash_on_torch;
+
+	if (pcfg_cust->torch_trigger_mode)
+		pcfg->torch_trigger_mode = pcfg_cust->torch_trigger_mode;
+
 	if (pcfg_cust->led_mask)
 		pcfg->led_mask = pcfg_cust->led_mask;
-	if (pcfg_cust->torch_on_flash_en)
-		pcfg->torch_on_flash_en = pcfg_cust->torch_on_flash_en;
+
 	if (pcfg_cust->flash_mode)
 		pcfg->flash_mode = pcfg_cust->flash_mode;
+
 	if (pcfg_cust->torch_mode)
 		pcfg->torch_mode = pcfg_cust->torch_mode;
+
 	if (pcfg_cust->adaptive_mode)
 		pcfg->adaptive_mode = pcfg_cust->adaptive_mode;
+
 	if (pcfg_cust->boost_vout_flash_mV)
 		pcfg->boost_vout_flash_mV = pcfg_cust->boost_vout_flash_mV;
 
@@ -414,65 +469,99 @@ static void max77665_f_update_config(struct max77665_f_info *info)
 				pcfg_cust->max_flash_lbdly_r_uS;
 
 update_end:
+	/* FLED enable settings */
+	/* How TORCH is triggered */
+	switch (pcfg->torch_trigger_mode) {
+	case 1: /* triggered by FLASHEN */
+		info->fled_settings = TORCH_TRIG_BY_FLASHEN;
+		break;
+	case 2: /* triggered by TORCHEN */
+		info->fled_settings = TORCH_TRIG_BY_TORCHEN;
+		break;
+	case 3: /* triggered by serial interface */
+		info->fled_settings = TORCH_TRIG_BY_I2C;
+		break;
+	default:
+		dev_err(info->dev, "%s: unrecognized torch trigger mode.\n",
+			__func__);
+		dev_err(info->dev, "use default i2c mode.\n");
+		info->fled_settings = TORCH_TRIG_BY_I2C;
+		break;
+	}
+
+	/* How FLASH is triggered */
+	if (pcfg->flash_on_torch) /* triggered by TORCHEN */
+		info->fled_settings |= FLASH_TRIG_BY_TORCHEN;
+	else /* triggered by FLASHEN */
+		info->fled_settings |= FLASH_TRIG_BY_FLASHEN;
+
 	if (1 == pcfg->adaptive_mode)
-		info->regs.boost_control = 4;
+		info->regs.boost_control = BOOST_FLASH_MODE_FIXED;
 	else {
 		if (pcfg->led_mask > 3) {
 			dev_dbg(info->dev, "%s invalid led mask = %d\n",
 				__func__, pcfg->led_mask);
-			info->regs.boost_control = 3;
+			info->regs.boost_control = BOOST_FLASH_MODE_BOTH;
 		} else
 			info->regs.boost_control = pcfg->led_mask;
 	}
 
 	/* both FLED1/FLED2 are enabled */
-	if (info->regs.boost_control == 3)
-		info->regs.boost_control |= 0x80;
+	if (info->regs.boost_control == FIELD(BOOST_FLASH_MODE_BOTH, 0))
+		info->regs.boost_control |= FIELD(BOOST_MODE_TWOLED, 7);
 
 	info->regs.boost_vout_flash =
 		max77665_f_get_boost_volt(pcfg->boost_vout_flash_mV);
 
-	info->regs.f_timer = pcfg->flash_mode == 1 ? 0 : 0x80;
+	info->regs.f_timer = (pcfg->flash_mode == 1) ?
+			FIELD(TIMER_ONESHOT, 7) : FIELD(TIMER_MAX, 7);
 
 	switch (pcfg->torch_mode) {
 	case 1:
-		info->regs.t_timer = 0x40;
+		info->regs.t_timer = FIELD(TIMER_ONESHOT, 7) |
+					FIELD(TORCH_TIMER_SAFETY_DIS, 6);
 		break;
 	case 2:
-		info->regs.t_timer = 0x00;
+		info->regs.t_timer = FIELD(TIMER_ONESHOT, 7);
 		break;
 	case 3:
 	default:
-		info->regs.t_timer = 0x80;
+		info->regs.t_timer = FIELD(TIMER_MAX, 7);
 		break;
 	}
 
 	if (pcfg->max_flash_threshold_mV) {
-		if (pcfg->max_flash_threshold_mV < 2400)
-			pcfg->max_flash_threshold_mV = 2400;
-		else if (pcfg->max_flash_threshold_mV > 3400)
-			pcfg->max_flash_threshold_mV = 3400;
+		if (pcfg->max_flash_threshold_mV < MAXFLASH_V_TH_FLOOR)
+			pcfg->max_flash_threshold_mV = MAXFLASH_V_TH_FLOOR;
+		else if (pcfg->max_flash_threshold_mV > MAXFLASH_V_TH_CEILING)
+			pcfg->max_flash_threshold_mV = MAXFLASH_V_TH_CEILING;
 
 		/* 0 - hysteresis disabled */
 		if (pcfg->max_flash_hysteresis_mV) {
-			if (pcfg->max_flash_hysteresis_mV < 100)
-				pcfg->max_flash_hysteresis_mV = 100;
-			else if (pcfg->max_flash_hysteresis_mV > 300)
-				pcfg->max_flash_hysteresis_mV = 300;
+			if (pcfg->max_flash_hysteresis_mV <
+				MAXFLASH_VOLT_HYS_FLOOR)
+				pcfg->max_flash_hysteresis_mV =
+					MAXFLASH_VOLT_HYS_FLOOR;
+			else if (pcfg->max_flash_hysteresis_mV >
+				 MAXFLASH_VOLT_HYS_CEILING)
+				pcfg->max_flash_hysteresis_mV =
+					MAXFLASH_VOLT_HYS_CEILING;
 		}
 
-		info->regs.m_flash = 0x80 |
-			((pcfg->max_flash_threshold_mV - 2400) / 33);
-		info->regs.m_flash |=
-			(pcfg->max_flash_hysteresis_mV + 50) / 100;
+		info->regs.m_flash = FIELD(MAXFLASH_ENABLE, 7) |
+		((pcfg->max_flash_threshold_mV - MAXFLASH_V_TH_FLOOR) /
+				MAXFLASH_V_TH_STEP);
+		info->regs.m_flash |= (pcfg->max_flash_hysteresis_mV +
+		MAXFLASH_VOLT_HYS_STEP / 2) / MAXFLASH_VOLT_HYS_STEP;
 	}
 
 	if (pcfg->max_flash_lbdly_f_uS)
-		info->regs.m_timing = pcfg->max_flash_lbdly_f_uS / 256;
+		info->regs.m_timing =
+		FIELD(pcfg->max_flash_lbdly_f_uS / MAXFLASH_TIMER_STEP, 0);
 
 	if (pcfg->max_flash_lbdly_r_uS)
 		info->regs.m_timing |=
-			(pcfg->max_flash_lbdly_r_uS / 256) << 3;
+		FIELD(pcfg->max_flash_lbdly_r_uS / MAXFLASH_TIMER_STEP, 3);
 }
 
 static int max77665_f_update_settings(struct max77665_f_info *info)
@@ -509,10 +598,9 @@ static int max77665_f_configure(struct max77665_f_info *info, bool update)
 
 	if (pcfg->max_peak_current_mA > max77665_f_caps.max_peak_curr_mA ||
 		!pcfg->max_peak_current_mA) {
-		dev_warn(info->dev,
-				"max_peak_current_mA of %d invalid, "
-				"changed to %d\n",
-				pcfg->max_peak_current_mA,
+		dev_warn(info->dev, "invalid max_peak_current_mA: %d,",
+				pcfg->max_peak_current_mA);
+		dev_info(info->dev, " changed to %d\n",
 				max77665_f_caps.max_peak_curr_mA);
 		pcfg->max_peak_current_mA = max77665_f_caps.max_peak_curr_mA;
 	}
@@ -531,31 +619,34 @@ static int max77665_f_configure(struct max77665_f_info *info, bool update)
 
 	if (pcfg->max_torch_current_mA > max77665_f_caps.max_torch_curr_mA ||
 		!pcfg->max_torch_current_mA) {
-		dev_warn(info->dev,
-				"max_torch_current_mA of %d invalid"
-				"changing to %d\n",
-				pcfg->max_torch_current_mA,
+		dev_warn(info->dev, "invalid max_torch_current_mA: %d,",
+				pcfg->max_torch_current_mA);
+		dev_info(info->dev, " changed to %d\n",
 				max77665_f_caps.max_torch_curr_mA);
 		pcfg->max_torch_current_mA =
 			max77665_f_caps.max_torch_curr_mA;
 	}
 
+	pfcap->levels[0].guidenum = 0;
+	pfcap->levels[0].sustaintime = 0xFFFFFFFF;
+	pfcap->levels[0].rechargefactor = 0;
 	val = max77665_f_caps.curr_step_uA;
-	for (i = 0; i < MAX77665_F_MAX_FLASH_LEVEL; i++) {
-		pfcap->levels[i].guidenum = val * i / 1000;
+	for (i = 1; i < MAX77665_F_MAX_FLASH_LEVEL; i++) {
+		pfcap->levels[i].guidenum = val * i / 1000; /* mA */
 		if (pfcap->levels[i].guidenum >
 			pcfg->max_peak_current_mA) {
 			pfcap->levels[i].guidenum = 0;
 			break;
 		}
-		pfcap->levels[i].sustaintime = SUSTAINTIME_DEF;
+		pfcap->levels[i].sustaintime = info->sustainTime;
 		pfcap->levels[i].rechargefactor = RECHARGEFACTOR_DEF;
 	}
 	info->flash_cap_size = (sizeof(u32) +
 			(sizeof(struct nvc_torch_level_info) * i));
 	pfcap->numberoflevels = i;
 
-	for (i = 0; i < MAX77665_F_MAX_TORCH_LEVEL; i++) {
+	ptcap->guidenum[0] = 0;
+	for (i = 1; i < MAX77665_F_MAX_TORCH_LEVEL; i++) {
 		ptcap->guidenum[i] = pfcap->levels[i].guidenum;
 		if (ptcap->guidenum[i] > pcfg->max_torch_current_mA) {
 			ptcap->guidenum[i] = 0;
@@ -613,62 +704,25 @@ static void max77665_f_shutdown(struct platform_device *pdev)
 }
 #endif
 
-static int max77665_f_power_on(struct max77665_f_info *info)
-{
-	struct max77665_f_power_rail *pw = &info->pwr_rail;
-	int err = 0;
-
-	if (pw->vio) {
-		err = regulator_enable(pw->vio);
-		if (err) {
-			dev_err(info->dev, "%s host err\n", __func__);
-			return err;
-		}
-	}
-
-	if (pw->vbus) {
-		err = regulator_enable(pw->vbus);
-		if (err) {
-			if (pw->vio)
-				regulator_disable(pw->vio);
-
-			dev_err(info->dev, "%s in err\n", __func__);
-			return err;
-		}
-	}
-
-	if (pw->i2c) {
-		err = regulator_enable(pw->i2c);
-		if (err) {
-			if (pw->vbus)
-				regulator_disable(pw->vbus);
-			if (pw->vio)
-				regulator_disable(pw->vio);
-
-			dev_err(info->dev, "%s i2c err\n", __func__);
-			return err;
-		}
-	}
-
-	if (info->pdata && info->pdata->poweron_callback)
-		err = info->pdata->poweron_callback(pw);
-
-	if (!err)
-		err = max77665_f_update_settings(info);
-
-	return err;
-}
-
 static int max77665_f_power_off(struct max77665_f_info *info)
 {
 	struct max77665_f_power_rail *pw = &info->pwr_rail;
 	int err = 0;
 
+	if (!info->power_is_on)
+		return 0;
+
 	if (info->pdata && info->pdata->poweroff_callback)
 		err = info->pdata->poweroff_callback(pw);
 
-	if (!err)
+	if (IS_ERR_VALUE(err))
 		return err;
+
+	/* the call back function already handles the power off sequence */
+	if (err) {
+		err = 0;
+		goto max77665_f_poweroff_done;
+	}
 
 	if (pw->i2c)
 		regulator_disable(pw->i2c);
@@ -679,6 +733,73 @@ static int max77665_f_power_off(struct max77665_f_info *info)
 	if (pw->vio)
 		regulator_disable(pw->vio);
 
+max77665_f_poweroff_done:
+	info->power_is_on = 0;
+	return err;
+}
+
+static int max77665_f_power_on(struct max77665_f_info *info)
+{
+	struct max77665_f_power_rail *pw = &info->pwr_rail;
+	int err = 0;
+
+	if (info->power_is_on)
+		return 0;
+
+	if (info->pdata && info->pdata->poweron_callback)
+		err = info->pdata->poweron_callback(pw);
+
+	if (IS_ERR_VALUE(err))
+		return err;
+
+	/* the call back function already handles the power on sequence */
+	if (err) {
+		err = 0;
+		goto max77665_f_poweron_sync;
+	}
+
+	if (pw->vio) {
+		err = regulator_enable(pw->vio);
+		if (err) {
+			dev_err(info->dev, "%s vio err\n", __func__);
+			goto max77665_f_poweron_vio_fail;
+		}
+	}
+
+	if (pw->vbus) {
+		err = regulator_enable(pw->vbus);
+		if (err) {
+			dev_err(info->dev, "%s vbus err\n", __func__);
+			goto max77665_f_poweron_vbus_fail;
+		}
+	}
+
+	if (pw->i2c) {
+		err = regulator_enable(pw->i2c);
+		if (err) {
+			dev_err(info->dev, "%s i2c err\n", __func__);
+			goto max77665_f_poweron_i2c_fail;
+		}
+	}
+
+max77665_f_poweron_sync:
+	info->power_is_on = 1;
+	err = max77665_f_update_settings(info);
+	if (err) {
+		max77665_f_power_off(info);
+		return err;
+	}
+	return 0;
+
+max77665_f_poweron_i2c_fail:
+	if (pw->vbus)
+		regulator_disable(pw->vbus);
+max77665_f_poweron_vbus_fail:
+	if (pw->vio)
+		regulator_disable(pw->vio);
+max77665_f_poweron_vio_fail:
+	if (info->pdata && info->pdata->poweroff_callback)
+		info->pdata->poweroff_callback(pw);
 	return err;
 }
 
@@ -800,6 +921,7 @@ static int max77665_f_get_param(struct max77665_f_info *info, long arg)
 		reg = info->regs.led1_curr;
 		data_ptr = &info->flash_cap->levels[reg].guidenum;
 		data_size = sizeof(info->flash_cap->levels[reg].guidenum);
+		dev_dbg(info->dev, "%s FLASH_LEVEL %d\n", __func__, reg);
 		break;
 
 	case NVC_PARAM_TORCH_CAPS:
@@ -812,15 +934,16 @@ static int max77665_f_get_param(struct max77665_f_info *info, long arg)
 		reg = info->regs.led1_curr;
 		data_ptr = &info->torch_cap->guidenum[reg];
 		data_size = sizeof(info->torch_cap->guidenum[reg]);
+		dev_dbg(info->dev, "%s TORCH_LEVEL %d\n", __func__, reg);
 		break;
 
 	case NVC_PARAM_FLASH_PIN_STATE:
 		pinstate = info->pdata->pinstate;
-		if ((info->output_mode &
-			(MAX77665_F_L1_MODE_MASK | MAX77665_F_L2_MODE_MASK)) !=
-			MAX77665_F_OUTPUT_MODE(MAX77665_F_MODE_FLASH))
+		if (info->op_mode != MAXFLASH_MODE_FLASH)
 			pinstate.values ^= 0xffff;
-		dev_dbg(info->dev, "%s FLASH_PIN_STATE: %x&%x\n",
+		pinstate.values &= pinstate.mask;
+
+		dev_dbg(info->dev, "%s FLASH_PIN_STATE: %x & %x\n",
 				__func__, pinstate.mask, pinstate.values);
 		data_ptr = &pinstate;
 		data_size = sizeof(pinstate);
@@ -833,15 +956,13 @@ static int max77665_f_get_param(struct max77665_f_info *info, long arg)
 		break;
 
 	default:
-		dev_err(info->dev,
-				"%s unsupported parameter: %d\n",
+		dev_err(info->dev, "%s unsupported parameter: %d\n",
 				__func__, params.param);
 		return -EINVAL;
 	}
 
 	if (params.sizeofvalue < data_size) {
-		dev_err(info->dev,
-				"%s data size mismatch %d != %d\n",
+		dev_err(info->dev, "%s data size mismatch %d != %d\n",
 				__func__, params.sizeofvalue, data_size);
 		return -EINVAL;
 	}
@@ -849,8 +970,7 @@ static int max77665_f_get_param(struct max77665_f_info *info, long arg)
 	if (copy_to_user((void __user *)params.p_value,
 			 data_ptr,
 			 data_size)) {
-		dev_err(info->dev,
-				"%s copy_to_user err line %d\n",
+		dev_err(info->dev, "%s copy_to_user err line %d\n",
 				__func__, __LINE__);
 		return -EFAULT;
 	}
@@ -867,36 +987,35 @@ static int max77665_f_param_update(struct max77665_f_info *info,
 	switch (params->param) {
 	case NVC_PARAM_FLASH_LEVEL:
 		dev_dbg(info->dev, "%s FLASH_LEVEL: %d\n", __func__, val);
+		if (val) {
+			info->new_ftimer =
+				info->flash_cap->levels[val].sustaintime & 0X0F;
+			info->op_mode = MAXFLASH_MODE_FLASH;
+			val--;
+		} else
+			info->op_mode = MAXFLASH_MODE_NONE;
+
 		max77665_f_dev_power_set(info, NVC_PWR_ON);
-		info->new_ftimer =
-			info->flash_cap->levels[val].sustaintime;
-
-		if (info->config.torch_on_flash_en)
-			info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_FLASH, MAX77665_F_TRIG_TORCHEN);
-		else
-			info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_FLASH, MAX77665_F_TRIG_FLASHEN);
-
 		err = max77665_f_set_leds(info,
 			info->config.led_mask, val, val);
-		if (!val) /*turn pwr off if no flash && no pwr_api*/
+		/*turn pwr off if no flash && no pwr_api*/
+		if (info->op_mode == MAXFLASH_MODE_NONE)
 			max77665_f_dev_power_set(info, NVC_PWR_OFF);
 		return err;
 
 	case NVC_PARAM_TORCH_LEVEL:
 		dev_dbg(info->dev, "%s TORCH_LEVEL: %d\n", __func__, val);
-		max77665_f_dev_power_set(info, NVC_PWR_ON);
-		if (info->config.torch_on_flash_en)
-			info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_TORCH, MAX77665_F_TRIG_TORCHEN);
-		else
-			info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_TORCH, MAX77665_F_TRIG_FLASHEN);
+		if (val) {
+			info->op_mode = MAXFLASH_MODE_TORCH;
+			val--;
+		} else
+			info->op_mode = MAXFLASH_MODE_NONE;
 
+		max77665_f_dev_power_set(info, NVC_PWR_ON);
 		err = max77665_f_set_leds(info,
 			info->config.led_mask, val, val);
-		if (!val) /*turn pwr off if no flash && no pwr_api*/
+		/*turn pwr off if no flash && no pwr_api*/
+		if (info->op_mode == MAXFLASH_MODE_NONE)
 			max77665_f_dev_power_set(info, NVC_PWR_OFF);
 		return err;
 
@@ -906,8 +1025,7 @@ static int max77665_f_param_update(struct max77665_f_info *info,
 		return max77665_f_strobe(info, val);
 
 	default:
-		dev_err(info->dev,
-				"%s unsupported parameter: %d\n",
+		dev_err(info->dev, "%s unsupported parameter: %d\n",
 				__func__, params->param);
 		return -EINVAL;
 	}
@@ -1155,6 +1273,55 @@ static int max77665_f_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
+static int max77665_f_power_put(struct max77665_f_power_rail *pw)
+{
+	if (likely(pw->vbus))
+		regulator_put(pw->vbus);
+
+	if (likely(pw->vio))
+		regulator_put(pw->vio);
+
+	if (likely(pw->i2c))
+		regulator_put(pw->i2c);
+
+	pw->vio = NULL;
+	pw->vbus = NULL;
+	pw->i2c = NULL;
+
+	return 0;
+}
+
+static int max77665_f_regulator_get(struct max77665_f_info *info,
+	struct regulator **vreg, char vreg_name[])
+{
+	struct regulator *reg = NULL;
+	int err = 0;
+
+	reg = regulator_get(info->dev, vreg_name);
+	if (unlikely(IS_ERR_OR_NULL(reg))) {
+		dev_err(info->dev, "%s %s ERR: %d\n",
+			__func__, vreg_name, (int)reg);
+		err = PTR_ERR(reg);
+		reg = NULL;
+	} else
+		dev_dbg(info->dev, "%s: %s\n", __func__, vreg_name);
+
+	*vreg = reg;
+	return err;
+}
+
+static int max77665_f_power_get(struct max77665_f_info *info)
+{
+	struct max77665_f_power_rail *pw = &info->pwr_rail;
+	int err;
+
+	err = max77665_f_regulator_get(info, &pw->vbus, "vbus"); /* 3.7v */
+	err |= max77665_f_regulator_get(info, &pw->vio, "vio"); /* 1.8v */
+	err |= max77665_f_regulator_get(info, &pw->i2c, "vi2c"); /* 1.8v */
+
+	return err;
+}
+
 static const struct file_operations max77665_f_fileops = {
 	.owner = THIS_MODULE,
 	.open = max77665_f_open,
@@ -1165,10 +1332,7 @@ static const struct file_operations max77665_f_fileops = {
 static void max77665_f_del(struct max77665_f_info *info)
 {
 	max77665_f_power_sync(info, NVC_PWR_OFF);
-
-	if (info->pdata && info->pdata->power_put)
-		info->pdata->power_put(&info->pwr_rail);
-
+	max77665_f_power_put(&info->pwr_rail);
 	max77665_f_sync_disable(info);
 	spin_lock(&max77665_f_spinlock);
 	list_del_rcu(&info->list);
@@ -1216,6 +1380,8 @@ static int max77665_f_probe(struct platform_device *pdev)
 		return -EFAULT;
 	}
 
+	max77665_f_power_get(info);
+
 	if (pdev->dev.platform_data) {
 		info->pdata = pdev->dev.platform_data;
 		dev_dbg(&pdev->dev, "pdata: %s\n", info->pdata->dev_name);
@@ -1225,16 +1391,12 @@ static int max77665_f_probe(struct platform_device *pdev)
 	info->flash_cap = (void *)info + sizeof(*info);
 	info->torch_cap = (void *)info->flash_cap +
 				max77665_f_max_flash_cap_size;
+	info->sustainTime = SUSTAINTIME_DEF;
 
 	max77665_f_update_config(info);
 
 	/* flash mode */
-	if (info->config.torch_on_flash_en)
-		info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_FLASH, MAX77665_F_TRIG_TORCHEN);
-	else
-		info->output_mode = MAX77665_F_OUTPUT(
-			MAX77665_F_MODE_FLASH, MAX77665_F_TRIG_FLASHEN);
+	info->op_mode = MAXFLASH_MODE_NONE;
 
 	max77665_f_configure(info, false);
 
@@ -1245,16 +1407,13 @@ static int max77665_f_probe(struct platform_device *pdev)
 	list_add_rcu(&info->list, &max77665_f_info_list);
 	spin_unlock(&max77665_f_spinlock);
 
-	if (info->pdata && info->pdata->power_get)
-		info->pdata->power_get(&info->pwr_rail);
-
-	if (info->pdata->dev_name != 0)
+	if (info->pdata->dev_name != NULL)
 		strcpy(dname, info->pdata->dev_name);
 	else
 		strcpy(dname, "max77665_f");
 	if (info->pdata->num)
 		snprintf(dname, sizeof(dname), "%s.%u",
-			 dname, info->pdata->num);
+				dname, info->pdata->num);
 	info->miscdev.name = dname;
 	info->miscdev.fops = &max77665_f_fileops;
 	info->miscdev.minor = MISC_DYNAMIC_MINOR;
@@ -1276,19 +1435,25 @@ static int max77665_f_status_show(struct seq_file *s, void *data)
 	dev_info(info->dev, "%s\n", __func__);
 
 	seq_printf(s, "max77665_f status:\n"
+		"    Power State      = %01x\n"
 		"    Led Mask         = %01x\n"
 		"    Led1 Current     = 0x%02x\n"
 		"    Led2 Current     = 0x%02x\n"
-		"    Output Mode      = 0x%04x\n"
+		"    Output Mode      = %s\n"
+		"    Led Settings     = 0x%02x\n"
 		"    Flash TimeOut    = 0x%02x\n"
 		"    PinState Mask    = 0x%04x\n"
 		"    PinState Values  = 0x%04x\n"
 		"    Max_Peak_Current = %dmA\n"
 		,
+		info->pwr_dev,
 		info->config.led_mask,
 		info->regs.led1_curr,
 		info->regs.led2_curr,
-		info->output_mode, info->regs.f_timer,
+		info->op_mode == MAXFLASH_MODE_FLASH ? "FLASH" :
+		info->op_mode == MAXFLASH_MODE_TORCH ? "TORCH" : "NONE",
+		info->fled_settings,
+		info->regs.f_timer,
 		info->pdata->pinstate.mask,
 		info->pdata->pinstate.values,
 		info->config.max_peak_current_mA
@@ -1342,10 +1507,9 @@ set_attr:
 		info->pdata->pinstate.values = val & 0xffff;
 		break;
 	case 'f': /* modify flash timeout reg */
-		info->new_ftimer = val;
+		info->new_ftimer = val & 0X0F;
 		max77665_f_set_leds(info, info->config.led_mask,
-			info->regs.led1_curr,
-			info->regs.led2_curr);
+			info->regs.led1_curr, info->regs.led2_curr);
 		break;
 	case 'p':
 		if (val)
@@ -1355,17 +1519,18 @@ set_attr:
 		break;
 	case 'k':
 		if (val & 0xffff)
-			info->config.max_peak_current_mA =
-				val & 0xffff;
+			info->config.max_peak_current_mA = val & 0xffff;
 		max77665_f_configure(info, true);
 		break;
 	case 'x':
-		info->output_mode = val;
+		info->op_mode = (val & 0x300) >> 8;
+		if (val & 0xff)
+			info->fled_settings = val & 0xff;
 		max77665_f_configure(info, true);
 		break;
 	case 'g':
-		info->pdata->gpio_strobe = val;
-		max77665_f_strobe(info, 1);
+		info->pdata->gpio_strobe = val & 0xffff;
+		max77665_f_strobe(info, (val >> 16) & 1);
 		break;
 	}
 

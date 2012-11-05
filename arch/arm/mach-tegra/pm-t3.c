@@ -34,6 +34,7 @@
 #include <mach/irqs.h>
 #include <mach/io_dpd.h>
 
+#include <asm/smp_plat.h>
 #include <asm/cputype.h>
 #include <asm/hardware/gic.h>
 
@@ -142,6 +143,7 @@ static int cluster_switch_prolog_clock(unsigned int flags)
 			writel(SuperCclkDivier, CAR_SUPER_CCLKG_DIVIDER);
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		/* Hold G CPUs 1-3 in reset after the switch */
 		reg = CPU_RESET(1) | CPU_RESET(2) | CPU_RESET(3);
 		writel(reg, CAR_RST_CPUG_CMPLX_SET);
@@ -161,6 +163,7 @@ static int cluster_switch_prolog_clock(unsigned int flags)
 		/* Enable the G CPU complex clock after the switch */
 		reg = CAR_CLK_ENB_V_CPU_G;
 		writel(reg, CAR_CLK_ENB_V_SET);
+#endif
 	}
 	/* Switching to LP? */
 	else if (flags & TEGRA_POWER_CLUSTER_LP) {
@@ -180,6 +183,7 @@ static int cluster_switch_prolog_clock(unsigned int flags)
 			writel(SuperCclkDivier, CAR_SUPER_CCLKLP_DIVIDER);
 		}
 
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		/* Take the LP CPU ut of reset after the switch */
 		reg = CPU_RESET(0);
 		writel(reg, CAR_RST_CPULP_CMPLX_CLR);
@@ -191,6 +195,7 @@ static int cluster_switch_prolog_clock(unsigned int flags)
 		/* Enable the LP CPU complex clock after the switch */
 		reg = CAR_CLK_ENB_V_CPU_LP;
 		writel(reg, CAR_CLK_ENB_V_SET);
+#endif
 	}
 
 	return 0;
@@ -217,11 +222,14 @@ void tegra_cluster_switch_prolog(unsigned int flags)
 					? TEGRA_POWER_CLUSTER_LP
 					: TEGRA_POWER_CLUSTER_G;
 	u32 reg;
+	u32 cpu;
+
+	cpu = cpu_logical_map(smp_processor_id());
 
 	/* Read the flow controler CSR register and clear the CPU switch
 	   and immediate flags. If an actual CPU switch is to be performed,
 	   re-write the CSR register with the desired values. */
-	reg = readl(FLOW_CTRL_CPU_CSR(0));
+	reg = readl(FLOW_CTRL_CPU_CSR(cpu));
 	reg &= ~(FLOW_CTRL_CSR_IMMEDIATE_WAKE |
 		 FLOW_CTRL_CSR_SWITCH_CLUSTER);
 
@@ -264,7 +272,7 @@ void tegra_cluster_switch_prolog(unsigned int flags)
 	}
 
 done:
-	writel(reg, FLOW_CTRL_CPU_CSR(0));
+	writel(reg, FLOW_CTRL_CPU_CSR(cpu));
 }
 
 
@@ -332,17 +340,20 @@ static void cluster_switch_epilog_gic(void)
 void tegra_cluster_switch_epilog(unsigned int flags)
 {
 	u32 reg;
+	u32 cpu;
+
+	cpu = cpu_logical_map(smp_processor_id());
 
 	/* Make sure the switch and immediate flags are cleared in
 	   the flow controller to prevent undesirable side-effects
 	   for future users of the flow controller. */
-	reg = readl(FLOW_CTRL_CPU_CSR(0));
+	reg = readl(FLOW_CTRL_CPU_CSR(cpu));
 	reg &= ~(FLOW_CTRL_CSR_IMMEDIATE_WAKE |
 		 FLOW_CTRL_CSR_SWITCH_CLUSTER);
 #if defined(CONFIG_ARCH_TEGRA_HAS_SYMMETRIC_CPU_PWR_GATE)
 	reg &= ~FLOW_CTRL_CSR_ENABLE_EXT_MASK;
 #endif
-	writel(reg, FLOW_CTRL_CPU_CSR(0));
+	writel(reg, FLOW_CTRL_CPU_CSR(cpu));
 
 	/* Perform post-switch LP=>G clean-up */
 	if (!is_lp_cluster()) {
@@ -429,6 +440,12 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 #endif
 
 		} else {
+#ifdef CONFIG_TEGRA_VIRTUAL_CPUID
+			u32 cpu;
+
+			cpu = cpu_logical_map(smp_processor_id());
+			writel(cpu, FLOW_CTRL_MPID);
+#endif
 			last_g2lp = now;
 			tegra_dvfs_rail_off(tegra_cpu_rail, now);
 		}
@@ -445,9 +462,11 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 		if (us)
 			tegra_lp2_set_trigger(0);
 	} else {
-		int cpu = 0;
+		int cpu;
 
-		tegra_set_cpu_in_lp2(0);
+		cpu = cpu_logical_map(smp_processor_id());
+
+		tegra_set_cpu_in_lp2(cpu);
 		cpu_pm_enter();
 		if (!timekeeping_suspended)
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER,
@@ -457,7 +476,7 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
 					   &cpu);
 		cpu_pm_exit();
-		tegra_clear_cpu_in_lp2(0);
+		tegra_clear_cpu_in_lp2(cpu);
 	}
 	local_irq_restore(irq_flags);
 
@@ -523,16 +542,20 @@ void tegra_lp0_cpu_mode(bool enter)
 #define APBDEV_PMC_IO_DPD_STATUS_0	0x1bc
 #define APBDEV_PMC_SEL_DPD_TIM_0	0x1c8
 #define APBDEV_DPD_ENABLE_LSB		30
+#if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define APBDEV_DPD2_ENABLE_LSB		5
+#else
+#define APBDEV_DPD2_ENABLE_LSB		30
+#endif
 #define PMC_DPD_SAMPLE			0x20
 
 static struct tegra_io_dpd tegra_list_io_dpd[] = {
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) && defined(CONFIG_TEGRA_IO_DPD)
 	/* sd dpd bits in dpd2 register */
 	IO_DPD_INFO("sdhci-tegra.0",	1,	1), /* SDMMC1 */
+#endif
 	IO_DPD_INFO("sdhci-tegra.2",	1,	2), /* SDMMC3 */
 	IO_DPD_INFO("sdhci-tegra.3",	1,	3), /* SDMMC4 */
-#endif
 };
 #endif
 

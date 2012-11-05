@@ -59,13 +59,12 @@
 #include <mach/io.h>
 #include <mach/i2s.h>
 #include <mach/tegra_asoc_pdata.h>
+#include <mach/tegra_rt5640_pdata.h>
 #include <mach/tegra_wm8903_pdata.h>
 #include <mach/usb_phy.h>
-#include <mach/thermal.h>
 #include <mach/pci.h>
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
-#include <linux/thermal.h>
 
 #include <asm/hardware/gic.h>
 #include <asm/mach-types.h>
@@ -83,53 +82,6 @@
 #include "baseband-xmm-power.h"
 #include "wdt-recovery.h"
 #include "common.h"
-
-static struct balanced_throttle throttle_list[] = {
-	{
-		.tegra_cdev = {
-			.id = CDEV_BTHROT_ID_TJ,
-		},
-		.throt_tab_size = 10,
-		.throt_tab = {
-			{      0, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 760000, 1000 },
-			{ 760000, 1050 },
-			{1000000, 1050 },
-			{1000000, 1100 },
-		},
-	},
-};
-
-static struct tegra_thermal_bind thermal_binds[] = {
-	/* Thermal Throttling */
-	{
-		.tdev_id = THERMAL_DEVICE_ID_NCT_EXT,
-		.cdev_id = CDEV_BTHROT_ID_TJ,
-		.type = THERMAL_TRIP_PASSIVE,
-		.passive = {
-			.trip_temp = 85000,
-			.tc1 = 0,
-			.tc2 = 1,
-			.passive_delay = 2000,
-		}
-	},
-	/* EDP Capping */
-	{
-		.tdev_id = THERMAL_DEVICE_ID_NCT_EXT,
-		.cdev_id = CDEV_EDPTABLE_ID_EDP,
-		.type = THERMAL_TRIP_ACTIVE,
-		.get_trip_temp = tegra_edp_get_trip_temp,
-		.get_trip_size = tegra_edp_get_trip_size,
-	},
-	{
-		.tdev_id = THERMAL_DEVICE_ID_NULL,
-	},
-};
 
 static struct rfkill_gpio_platform_data cardhu_bt_rfkill_pdata[] = {
 	{
@@ -397,8 +349,17 @@ static struct i2c_board_info __initdata cardhu_codec_max98095_info = {
 	.platform_data = &cardhu_max98095_pdata,
 };
 
+static struct i2c_board_info __initdata rt5640_board_info = {
+	I2C_BOARD_INFO("rt5640", 0x1c),
+};
+
+
 static void cardhu_i2c_init(void)
 {
+	struct board_info board_info;
+
+		tegra_get_board_info(&board_info);
+
 	tegra_i2c_device1.dev.platform_data = &cardhu_i2c1_platform_data;
 	tegra_i2c_device2.dev.platform_data = &cardhu_i2c2_platform_data;
 	tegra_i2c_device3.dev.platform_data = &cardhu_i2c3_platform_data;
@@ -413,7 +374,11 @@ static void cardhu_i2c_init(void)
 
 	cardhu_codec_wm8903_info.irq = cardhu_codec_max98095_info.irq =
 		cardhu_codec_aic326x_info.irq = gpio_to_irq(TEGRA_GPIO_CDC_IRQ);
-	i2c_register_board_info(4, &cardhu_codec_wm8903_info, 1);
+
+	if (board_info.board_id == BOARD_PM315)
+		i2c_register_board_info(4, &rt5640_board_info, 1);
+	else
+		i2c_register_board_info(4, &cardhu_codec_wm8903_info, 1);
 	i2c_register_board_info(4, &cardhu_codec_max98095_info, 1);
 	i2c_register_board_info(4, &cardhu_codec_aic326x_info, 1);
 
@@ -722,6 +687,38 @@ static struct platform_device cardhu_audio_aic326x_device = {
 	},
 };
 
+static struct tegra_asoc_platform_data beaver_audio_rt5640_pdata = {
+	.codec_name = "rt5640.4-001c",
+	.codec_dai_name = "rt5640-aif1",
+	.gpio_spkr_en		= TEGRA_GPIO_RTL_SPKR_EN,
+	.gpio_hp_det		= TEGRA_GPIO_RTL_HP_DET,
+	.gpio_hp_mute		= -1,
+	.gpio_int_mic_en	= TEGRA_GPIO_RTL_INT_MIC_EN,
+	.gpio_ext_mic_en	= -1,	/* TEGRA_GPIO_EXT_MIC_EN,*/
+		.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= -1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+	},
+};
+
+static struct platform_device beaver_audio_rt5640_device = {
+	.name	= "tegra-snd-rt5640",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &beaver_audio_rt5640_pdata,
+	},
+};
+
+
 static struct platform_device *cardhu_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
@@ -749,7 +746,6 @@ static struct platform_device *cardhu_devices[] __initdata = {
 	&baseband_dit_device,
 	&cardhu_bt_rfkill_device,
 	&tegra_pcm_device,
-	&cardhu_audio_wm8903_device,
 	&cardhu_audio_max98095_device,
 	&cardhu_audio_aic326x_device,
 	&tegra_hda_device,
@@ -759,125 +755,42 @@ static struct platform_device *cardhu_devices[] __initdata = {
 #endif
 };
 
-#define E1506_MXT_CONFIG_CRC 0x62F903
-static const u8 e1506_config[] = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x05, 0x01, 0x00,
-	0x00, 0x1E, 0x0A, 0x8B, 0x00, 0x00, 0x13, 0x0B,
-	0x00, 0x10, 0x32, 0x03, 0x03, 0x00, 0x03, 0x01,
-	0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0xBF, 0x03, 0x1B,
-	0x02, 0x00, 0x00, 0x37, 0x37, 0x00, 0x00, 0x00,
-	0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0xA9, 0x7F, 0x9A, 0x0E, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x03, 0x23, 0x00, 0x00, 0x00, 0x0A,
-	0x0F, 0x14, 0x19, 0x03, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x01, 0x00, 0x03, 0x08, 0x10,
-	0x00
+static u8 read_chg(void)
+{
+	return gpio_get_value(TEGRA_GPIO_PH4);
+}
+
+static struct platform_device *cardhu_audio_devices[] __initdata = {
+		&cardhu_audio_wm8903_device,
+
 };
 
-#define MXT_CONFIG_CRC  0xD62DE8
-static const u8 config[] = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x14, 0x14, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x00, 0x00,
-	0x1B, 0x2A, 0x00, 0x20, 0x3C, 0x04, 0x05, 0x00,
-	0x02, 0x01, 0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0xFF,
-	0x02, 0x55, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x64, 0x02, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23,
-	0x00, 0x00, 0x00, 0x05, 0x0A, 0x15, 0x1E, 0x00,
-	0x00, 0x04, 0xFF, 0x03, 0x3F, 0x64, 0x64, 0x01,
-	0x0A, 0x14, 0x28, 0x4B, 0x00, 0x02, 0x00, 0x64,
-	0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x08, 0x10, 0x3C, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+static struct platform_device *beaver_audio_devices[] __initdata = {
+		&beaver_audio_rt5640_device,
+
 };
 
-#define MXT_CONFIG_CRC_SKU2000  0xA24D9A
-static const u8 config_sku2000[] = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x14, 0x14, 0x19,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x8B, 0x00, 0x00,
-	0x1B, 0x2A, 0x00, 0x20, 0x3A, 0x04, 0x05, 0x00,  //23=thr  2 di
-	0x04, 0x04, 0x41, 0x0A, 0x0A, 0x0A, 0x0A, 0xFF,
-	0x02, 0x55, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00,  //0A=limit
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23,
-	0x00, 0x00, 0x00, 0x05, 0x0A, 0x15, 0x1E, 0x00,
-	0x00, 0x04, 0x00, 0x03, 0x3F, 0x64, 0x64, 0x01,
-	0x0A, 0x14, 0x28, 0x4B, 0x00, 0x02, 0x00, 0x64,
-	0x00, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x08, 0x10, 0x3C, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
+#define MXT_CFG_NAME            "Android_Cardhu_2012-01-31.cfg"
 
 static struct mxt_platform_data atmel_mxt_info = {
-	.x_line         = 27,
-	.y_line         = 42,
-	.x_size         = 768,
-	.y_size         = 1366,
-	.blen           = 0x20,
-	.threshold      = 0x3C,
-	.voltage        = 3300000,              /* 3.3V */
-	.orient         = 5,
-	.config         = config,
-	.config_length  = 157,
-	.config_crc     = MXT_CONFIG_CRC,
 	.irqflags       = IRQF_TRIGGER_FALLING,
-/*	.read_chg       = &read_chg, */
-	.read_chg       = NULL,
-};
-
-static struct mxt_platform_data e1506_atmel_mxt_info = {
-	.x_line         = 19,
-	.y_line         = 11,
-	.x_size         = 960,
-	.y_size         = 540,
-	.blen           = 0x10,
-	.threshold      = 0x32,
-	.voltage        = 3300000,              /* 3.3V */
-	.orient         = 3,
-	.config         = e1506_config,
-	.config_length  = 168,
-	.config_crc     = E1506_MXT_CONFIG_CRC,
-	.irqflags       = IRQF_TRIGGER_FALLING,
-/*	.read_chg       = &read_chg, */
-	.read_chg       = NULL,
+	.read_chg       = &read_chg,
+	.mxt_cfg_name	= MXT_CFG_NAME,
 };
 
 static struct i2c_board_info __initdata atmel_i2c_info[] = {
 	{
-		I2C_BOARD_INFO("atmel_mxt_ts", 0x5A),
+		I2C_BOARD_INFO("atmel_mxt_ts", MXT1386_I2C_ADDR3),
+		.flags = I2C_CLIENT_WAKE,
 		.platform_data = &atmel_mxt_info,
 	}
 };
 
 static struct i2c_board_info __initdata e1506_atmel_i2c_info[] = {
 	{
-		I2C_BOARD_INFO("atmel_mxt_ts", 0x4A),
-		.platform_data = &e1506_atmel_mxt_info,
+		I2C_BOARD_INFO("atmel_mxt_ts", MXT224_I2C_ADDR1),
+		.flags = I2C_CLIENT_WAKE,
+		.platform_data = &atmel_mxt_info,
 	}
 };
 
@@ -957,12 +870,16 @@ static int __init cardhu_touch_init(void)
 		gpio_set_value(TEGRA_GPIO_PH6, 1);
 		msleep(100);
 
-		if ((BoardInfo.sku & SKU_TOUCH_MASK) == SKU_TOUCH_2000) {
-			atmel_mxt_info.config = config_sku2000;
-			atmel_mxt_info.config_crc = MXT_CONFIG_CRC_SKU2000;
-		}
+		tegra_get_board_info(&BoardInfo);
+		if ((BoardInfo.sku & SKU_TOUCH_MASK) == SKU_TOUCH_2000)
+			strncpy(atmel_mxt_info.mxt_cfg_name,
+				"Android_Cardhu_SKU2000_2012-01-31.cfg",
+				CFG_NAME_SIZE);
 
 		if (DisplayBoardInfo.board_id == BOARD_DISPLAY_E1506) {
+			strncpy(atmel_mxt_info.mxt_cfg_name,
+			"Android_Cardhu_Verbier_E1506_2012-06-06.cfg",
+			CFG_NAME_SIZE);
 			e1506_atmel_i2c_info[0].irq = gpio_to_irq(TEGRA_GPIO_PH4);
 			i2c_register_board_info(1, e1506_atmel_i2c_info, 1);
 		} else {
@@ -1297,10 +1214,17 @@ static void cardhu_pci_init(void)
 		cardhu_pci_platform_data.port_status[2] = 1;
 		cardhu_pci_platform_data.use_dock_detect = 1;
 		cardhu_pci_platform_data.gpio = DOCK_DETECT_GPIO;
+	} else if (board_info.board_id == BOARD_PM315) {
+		cardhu_pci_platform_data.port_status[0] = 1;
+		cardhu_pci_platform_data.port_status[1] = 0;
+		cardhu_pci_platform_data.port_status[2] = 1;
+		cardhu_pci_platform_data.use_dock_detect = 0;
+		cardhu_pci_platform_data.gpio = 0;
 	}
 	if ((board_info.board_id == BOARD_E1186) ||
-		(board_info.board_id == BOARD_E1187) ||
-		(board_info.board_id == BOARD_E1291)) {
+			(board_info.board_id == BOARD_E1187) ||
+			(board_info.board_id == BOARD_E1291) ||
+			(board_info.board_id == BOARD_PM315)) {
 		tegra_pci_device.dev.platform_data = &cardhu_pci_platform_data;
 		platform_device_register(&tegra_pci_device);
 	}
@@ -1364,21 +1288,11 @@ static void cardhu_sata_init(void)
 static void cardhu_sata_init(void) { }
 #endif
 
-/* This needs to be inialized later hand */
-static int __init cardhu_throttle_list_init(void)
-{
-	int i;
-	for (i = 0; i < ARRAY_SIZE(throttle_list); i++)
-		if (balanced_throttle_register(&throttle_list[i]))
-			return -ENODEV;
-
-	return 0;
-}
-late_initcall(cardhu_throttle_list_init);
-
 static void __init tegra_cardhu_init(void)
 {
-	tegra_thermal_init(thermal_binds);
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
 	tegra_clk_init_from_table(cardhu_clk_init_table);
 	tegra_enable_pinmux();
 	tegra_smmu_init();
@@ -1393,6 +1307,17 @@ static void __init tegra_cardhu_init(void)
 #endif
 	cardhu_uart_init();
 	platform_add_devices(cardhu_devices, ARRAY_SIZE(cardhu_devices));
+	switch (board_info.board_id) {
+	case BOARD_PM315:
+		platform_add_devices(beaver_audio_devices,
+				ARRAY_SIZE(beaver_audio_devices));
+		break;
+	default:
+		platform_add_devices(cardhu_audio_devices,
+				ARRAY_SIZE(cardhu_audio_devices));
+
+		break;
+	}
 	tegra_ram_console_debug_init();
 	tegra_io_dpd_init();
 	cardhu_sdhci_init();
@@ -1408,7 +1333,13 @@ static void __init tegra_cardhu_init(void)
 	cardhu_pmon_init();
 	cardhu_sensors_init();
 	cardhu_setup_bluesleep();
-	cardhu_sata_init();
+	/*
+	 * if you want to add support for SATA in your board
+	 * then add your board check here like
+	 * board_info.board_id == BOARD_E1186
+	 */
+	if (board_info.board_id == BOARD_PM315)
+		cardhu_sata_init();
 	cardhu_pins_state_init();
 	cardhu_emc_init();
 	tegra_release_bootloader_fb();

@@ -463,10 +463,10 @@
 #define   USBOP_VAL_P1			(1 << 4)
 #define   USBOP_VAL_P0			(1 << 0)
 
-#define PMC_UTMIP_BIAS_MASTER_CNTRL 0x30c
+#define PMC_UTMIP_BIAS_MASTER_CNTRL 0x270
 #define   BIAS_MASTER_PROG_VAL		(1 << 1)
 
-#define PMC_UTMIP_MASTER_CONFIG		0x310
+#define PMC_UTMIP_MASTER_CONFIG		0x274
 #define   UTMIP_PWR(inst)		(1 << (inst))
 
 #define FUSE_USB_CALIB_0		0x1F0
@@ -602,19 +602,29 @@ static int _usb_phy_init(struct tegra_usb_phy *phy)
 	val |= USB_PORT_SUSPEND_EN;
 	writel(val, base + USB_IF_SPARE);
 
-	val = readl(base + USB_NEW_CONTROL);
-	val |= USB_COHRENCY_EN;
-	val |= USB_MEM_ALLIGNMENT_MUX_EN;
-	writel(val, base + USB_NEW_CONTROL);
-
-#if !defined(CONFIG_TEGRA_SILICON_PLATFORM)
 	val =  readl(base + TEGRA_STREAM_DISABLE);
+#if !defined(CONFIG_TEGRA_SILICON_PLATFORM)
 	val |= TEGRA_STREAM_DISABLE_OFFSET;
-	writel(val , base + TEGRA_STREAM_DISABLE);
+#else
+	val &= ~TEGRA_STREAM_DISABLE_OFFSET;
 #endif
+	writel(val , base + TEGRA_STREAM_DISABLE);
 
 	return 0;
 }
+
+static void usb_phy_fence_read(struct tegra_usb_phy *phy)
+{
+	/* Fence read for coherency of AHB master intiated writes */
+	if (phy->inst == 0)
+		readb(IO_ADDRESS(IO_PPCS_PHYS + USB1_PREFETCH_ID));
+	else if (phy->inst == 1)
+		readb(IO_ADDRESS(IO_PPCS_PHYS + USB2_PREFETCH_ID));
+	else if (phy->inst == 2)
+		readb(IO_ADDRESS(IO_PPCS_PHYS + USB3_PREFETCH_ID));
+	return;
+}
+
 static int usb_phy_reset(struct tegra_usb_phy *phy)
 {
 	unsigned long val;
@@ -1075,33 +1085,6 @@ static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 	return 0;
 }
 
-static void usb_phy_wait_for_sof(struct tegra_usb_phy *phy)
-{
-	unsigned long val;
-	void __iomem *base = phy->regs;
-
-	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
-
-	val = readl(base + USB_USBSTS);
-	writel(val, base + USB_USBSTS);
-	udelay(20);
-	/* wait for two SOFs */
-	if (usb_phy_reg_status_wait(base + USB_USBSTS, USB_USBSTS_SRI,
-		USB_USBSTS_SRI, 2500))
-		pr_err("%s: timeout waiting for SOF\n", __func__);
-
-	val = readl(base + USB_USBSTS);
-	writel(val, base + USB_USBSTS);
-	if (usb_phy_reg_status_wait(base + USB_USBSTS, USB_USBSTS_SRI, 0, 2500))
-		pr_err("%s: timeout waiting for SOF\n", __func__);
-
-	if (usb_phy_reg_status_wait(base + USB_USBSTS, USB_USBSTS_SRI,
-			USB_USBSTS_SRI, 2500))
-		pr_err("%s: timeout waiting for SOF\n", __func__);
-
-	udelay(20);
-}
-
 static unsigned int utmi_phy_xcvr_setup_value(struct tegra_usb_phy *phy)
 {
 	struct tegra_utmi_config *cfg = &phy->pdata->u_cfg.utmi;
@@ -1260,6 +1243,7 @@ static int utmi_phy_irq(struct tegra_usb_phy *phy)
 			readl(base + USB_USBMODE), readl(base + USB_USBCMD));
 	}
 
+	usb_phy_fence_read(phy);
 	/* check if there is any remote wake event */
 	if (utmi_phy_remotewake_detected(phy)) {
 		pr_info("%s: utmip remote wake detected\n", __func__);
@@ -1980,16 +1964,6 @@ static bool uhsic_phy_remotewake_detected(struct tegra_usb_phy *phy)
 	return true;
 }
 
-static int uhsic_phy_pre_resume(struct tegra_usb_phy *phy, bool remote_wakeup)
-{
-	DBG("%s(%d)\n", __func__, __LINE__);
-
-	if (!remote_wakeup)
-		usb_phy_wait_for_sof(phy);
-
-	return 0;
-}
-
 static int uhsic_phy_post_resume(struct tegra_usb_phy *phy)
 {
 	unsigned long val;
@@ -2169,6 +2143,7 @@ static void uhsic_phy_close(struct tegra_usb_phy *phy)
 static int uhsic_phy_irq(struct tegra_usb_phy *phy)
 {
 	/* check if there is any remote wake event */
+	usb_phy_fence_read(phy);
 	if (uhsic_phy_remotewake_detected(phy))
 		pr_info("%s: uhsic remote wake detected\n", __func__);
 	return IRQ_HANDLED;
@@ -2238,6 +2213,15 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
 	val = readl(base + UHSIC_PADS_CFG1);
 	val &= ~(UHSIC_PD_TX);
 	writel(val, base + UHSIC_PADS_CFG1);
+
+	/*SUSP_CTRL has to be toggled to enable host PHY clock */
+	val = readl(base + USB_SUSP_CTRL);
+	val |= USB_SUSP_CLR;
+	writel(val, base + USB_SUSP_CTRL);
+
+	val = readl(base + USB_SUSP_CTRL);
+	val &= ~USB_SUSP_CLR;
+	writel(val, base + USB_SUSP_CTRL);
 
 	val = readl(base + USB_USBMODE);
 	val |= USB_USBMODE_HOST;
@@ -3035,7 +3019,6 @@ static struct tegra_usb_phy_ops uhsic_phy_ops = {
 	.irq		= uhsic_phy_irq,
 	.power_on	= uhsic_phy_power_on,
 	.power_off	= uhsic_phy_power_off,
-	.pre_resume = uhsic_phy_pre_resume,
 	.post_resume = uhsic_phy_post_resume,
 	.port_power = uhsic_phy_bus_port_power,
 };

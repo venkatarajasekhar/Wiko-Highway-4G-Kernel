@@ -36,6 +36,7 @@
 #include <asm/mach/time.h>
 #include <asm/localtimer.h>
 #include <asm/sched_clock.h>
+#include <asm/smp_plat.h>
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
@@ -123,24 +124,6 @@ static struct irqaction tegra_lp2wake_irq[] = {
 #endif
 };
 
-#ifdef CONFIG_SMP
-#define hard_smp_processor_id()						\
-	({								\
-		unsigned int cpunum;					\
-		__asm__("\n"						\
-			"1:	mrc p15, 0, %0, c0, c0, 5\n"		\
-			"	.pushsection \".alt.smp.init\", \"a\"\n"\
-			"	.long	1b\n"				\
-			"	mov	%0, #0\n"			\
-			"	.popsection"				\
-			: "=r" (cpunum));				\
-		cpunum &= 0x0F;						\
-	})
-#define cpu_number()	hard_smp_processor_id()
-#else
-#define cpu_number()	0
-#endif
-
 /*
  * To sanity test LP2 timer interrupts for CPU 0-3, enable this flag and check
  * /proc/interrupts for timer interrupts. CPUs 0-3 should have one interrupt
@@ -209,8 +192,12 @@ static void tegra3_suspend_wake_timer(unsigned int cpu)
 {
 	cpumask_clear_cpu(cpu, &wake_timer_ready);
 #ifdef CONFIG_SMP
-	/* Reassign the affinity of the wake IRQ to CPU 0. */
-	(void)irq_set_affinity(tegra_lp2wake_irq[cpu].irq, cpumask_of(0));
+	/* Reassign the affinity of the wake IRQ to any ready CPU. */
+	for_each_cpu_not(cpu, &wake_timer_ready)
+	{
+		(void)irq_set_affinity(tegra_lp2wake_irq[cpu].irq,
+			cpumask_of(cpumask_any(&wake_timer_ready)));
+	}
 #endif
 }
 
@@ -225,7 +212,7 @@ static void tegra3_unregister_wake_timer(unsigned int cpu)
 
 void tegra3_lp2_set_trigger(unsigned long cycles)
 {
-	int cpu = cpu_number();
+	int cpu = cpu_logical_map(smp_processor_id());
 	int base;
 
 	base = lp2_wake_timers[cpu];
@@ -239,7 +226,7 @@ EXPORT_SYMBOL(tegra3_lp2_set_trigger);
 
 unsigned long tegra3_lp2_timer_remain(void)
 {
-	int cpu = cpu_number();
+	int cpu = cpu_logical_map(smp_processor_id());
 
 	if (cpumask_test_and_clear_cpu(cpu, &wake_timer_canceled))
 		return -ETIME;

@@ -1127,6 +1127,11 @@ static int cs42l73_pcm_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_write(codec, CS42L73_SPC(id), priv->config[id].spc);
 	snd_soc_write(codec, CS42L73_MMCC(id), priv->config[id].mmcc);
 
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		snd_soc_update_bits(codec, CS42L73_VSPAIPAA, 0xff, 0);
+		snd_soc_update_bits(codec, CS42L73_VSPBIPBA, 0xff, 0);
+	}
+
 	cs42l73_update_asrc(codec, id, srate);
 
 	return 0;
@@ -1156,6 +1161,7 @@ static int cs42l73_set_bias_level(struct snd_soc_codec *codec,
 
 	case SND_SOC_BIAS_OFF:
 		snd_soc_update_bits(codec, CS42L73_PWRCTL1, PDN, 1);
+		msleep(100);
 		snd_soc_update_bits(codec, CS42L73_DMMCC, MCLKDIS, 1);
 		break;
 	}
@@ -1283,6 +1289,7 @@ static int cs42l73_probe(struct snd_soc_codec *codec)
 	struct cs42l73_private *cs42l73 = snd_soc_codec_get_drvdata(codec);
 
 	codec->control_data = cs42l73->regmap;
+	codec->dapm.idle_bias_off = 1;
 
 	ret = snd_soc_codec_set_cache_io(codec, 8, 8, SND_SOC_REGMAP);
 	if (ret < 0) {
@@ -1312,6 +1319,7 @@ static struct snd_soc_codec_driver soc_codec_dev_cs42l73 = {
 	.suspend = cs42l73_suspend,
 	.resume = cs42l73_resume,
 	.set_bias_level = cs42l73_set_bias_level,
+	.idle_bias_off = true,
 
 	.dapm_widgets = cs42l73_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(cs42l73_dapm_widgets),

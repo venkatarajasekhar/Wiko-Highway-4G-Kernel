@@ -37,6 +37,7 @@
 #include <mach/gpio-tegra.h>
 #include <mach/hardware.h>
 
+#include "clock.h"
 #include "tegra_usb_phy.h"
 #include "fuse.h"
 
@@ -160,7 +161,7 @@ static irqreturn_t usb_phy_dev_vbus_pmu_irq_thr(int irq, void *pdata)
 
 	/* clk is disabled during phy power off and not here*/
 	if (!phy->ctrl_clk_on) {
-		clk_enable(phy->ctrlr_clk);
+		tegra_clk_prepare_enable(phy->ctrlr_clk);
 		phy->ctrl_clk_on = true;
 	}
 
@@ -174,9 +175,9 @@ static void tegra_usb_phy_release_clocks(struct tegra_usb_phy *phy)
 	if (phy->pdata->op_mode == TEGRA_USB_OPMODE_HOST)
 		if (phy->pdata->u_data.host.hot_plug ||
 			phy->pdata->u_data.host.remote_wakeup_supported)
-			clk_disable(phy->ctrlr_clk);
+			tegra_clk_disable_unprepare(phy->ctrlr_clk);
 	clk_put(phy->ctrlr_clk);
-	clk_disable(phy->pllu_clk);
+	tegra_clk_disable_unprepare(phy->pllu_clk);
 	clk_put(phy->pllu_clk);
 }
 
@@ -185,10 +186,10 @@ static int tegra_usb_phy_get_clocks(struct tegra_usb_phy *phy)
 	int err = 0;
 
 	phy->pllu_reg = regulator_get(&phy->pdev->dev, "avdd_usb_pll");
-	if (IS_ERR_OR_NULL(phy->vdd_reg)) {
+	if (IS_ERR_OR_NULL(phy->pllu_reg)) {
 		ERR("Couldn't get regulator avdd_usb_pll: %ld\n",
-			PTR_ERR(phy->vdd_reg));
-		err = PTR_ERR(phy->vdd_reg);
+			PTR_ERR(phy->pllu_reg));
+		err = PTR_ERR(phy->pllu_reg);
 		phy->pllu_reg = NULL;
 		goto fail_pllu_reg;
 	}
@@ -200,7 +201,7 @@ static int tegra_usb_phy_get_clocks(struct tegra_usb_phy *phy)
 		err = PTR_ERR(phy->pllu_clk);
 		goto fail_pll;
 	}
-	clk_enable(phy->pllu_clk);
+	tegra_clk_prepare_enable(phy->pllu_clk);
 
 	phy->ctrlr_clk = clk_get(&phy->pdev->dev, NULL);
 	if (IS_ERR(phy->ctrlr_clk)) {
@@ -212,7 +213,7 @@ static int tegra_usb_phy_get_clocks(struct tegra_usb_phy *phy)
 	if (phy->pdata->op_mode == TEGRA_USB_OPMODE_HOST)
 		if (phy->pdata->u_data.host.hot_plug ||
 			phy->pdata->u_data.host.remote_wakeup_supported)
-			clk_enable(phy->ctrlr_clk);
+			tegra_clk_prepare_enable(phy->ctrlr_clk);
 
 	phy->sys_clk = clk_get(&phy->pdev->dev, "sclk");
 	if (IS_ERR(phy->sys_clk)) {
@@ -243,7 +244,7 @@ fail_sclk:
 	clk_put(phy->ctrlr_clk);
 
 fail_ctrlr_clk:
-	clk_disable(phy->pllu_clk);
+	tegra_clk_disable_unprepare(phy->pllu_clk);
 	clk_put(phy->pllu_clk);
 
 fail_pll:
@@ -270,7 +271,7 @@ void tegra_usb_phy_close(struct usb_phy *x)
 		if (phy->pdata->u_data.dev.vbus_pmu_irq)
 			free_irq(phy->pdata->u_data.dev.vbus_pmu_irq, phy);
 		else
-			clk_disable(phy->ctrlr_clk);
+			tegra_clk_disable_unprepare(phy->ctrlr_clk);
 	} else {
 		usb_host_vbus_enable(phy, false);
 
@@ -346,12 +347,12 @@ int tegra_usb_phy_power_off(struct tegra_usb_phy *phy)
 			phy->pdata->ops->post_phy_off();
 	}
 
-	clk_disable(phy->emc_clk);
-	clk_disable(phy->sys_clk);
+	tegra_clk_disable_unprepare(phy->emc_clk);
+	tegra_clk_disable_unprepare(phy->sys_clk);
 	if (phy->pdata->op_mode == TEGRA_USB_OPMODE_HOST) {
 		if (!phy->pdata->u_data.host.hot_plug &&
 			!phy->pdata->u_data.host.remote_wakeup_supported) {
-			clk_disable(phy->ctrlr_clk);
+			tegra_clk_disable_unprepare(phy->ctrlr_clk);
 			phy->ctrl_clk_on = false;
 			if (phy->vdd_reg && phy->vdd_reg_on) {
 				regulator_disable(phy->vdd_reg);
@@ -365,7 +366,7 @@ int tegra_usb_phy_power_off(struct tegra_usb_phy *phy)
 		 */
 		if (phy->pdata->u_data.dev.vbus_pmu_irq &&
 			phy->pdata->builtin_host_disabled) {
-			clk_disable(phy->ctrlr_clk);
+			tegra_clk_disable_unprepare(phy->ctrlr_clk);
 			phy->ctrl_clk_on = false;
 			if (phy->vdd_reg && phy->vdd_reg_on) {
 				regulator_disable(phy->vdd_reg);
@@ -402,16 +403,16 @@ int tegra_usb_phy_power_on(struct tegra_usb_phy *phy)
 	if (phy->pdata->op_mode == TEGRA_USB_OPMODE_HOST) {
 		if (!phy->pdata->u_data.host.hot_plug &&
 			!phy->pdata->u_data.host.remote_wakeup_supported)
-			clk_enable(phy->ctrlr_clk);
+			tegra_clk_prepare_enable(phy->ctrlr_clk);
 	} else {
 		if (phy->pdata->u_data.dev.vbus_pmu_irq &&
 			!phy->ctrl_clk_on) {
-			clk_enable(phy->ctrlr_clk);
+			tegra_clk_prepare_enable(phy->ctrlr_clk);
 			phy->ctrl_clk_on = true;
 		}
 	}
-	clk_enable(phy->sys_clk);
-	clk_enable(phy->emc_clk);
+	tegra_clk_prepare_enable(phy->sys_clk);
+	tegra_clk_prepare_enable(phy->emc_clk);
 
 	if (phy->ops && phy->ops->power_on) {
 		if (phy->pdata->ops && phy->pdata->ops->pre_phy_on)
@@ -721,7 +722,7 @@ struct tegra_usb_phy *tegra_usb_phy_open(struct platform_device *pdev)
 				goto fail_init;
 			}
 		} else {
-			clk_enable(phy->ctrlr_clk);
+			tegra_clk_prepare_enable(phy->ctrlr_clk);
 		}
 	} else {
 		int gpio = phy->pdata->u_data.host.vbus_gpio;

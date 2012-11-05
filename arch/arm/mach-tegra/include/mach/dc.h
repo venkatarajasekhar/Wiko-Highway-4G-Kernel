@@ -24,6 +24,7 @@
 
 #include <linux/pm.h>
 #include <linux/types.h>
+#include <linux/fb.h>
 #include <drm/drm_fixed.h>
 
 #define TEGRA_MAX_DC		2
@@ -80,6 +81,7 @@ enum {
 enum {
 	TEGRA_DSI_PACKET_CMD,
 	TEGRA_DSI_DELAY_MS,
+	TEGRA_DSI_GPIO_SET,
 };
 
 struct tegra_dsi_cmd {
@@ -88,6 +90,7 @@ struct tegra_dsi_cmd {
 	union {
 		u16 data_len;
 		u16 delay_ms;
+		unsigned gpio;
 		struct {
 			u8 data0;
 			u8 data1;
@@ -97,6 +100,7 @@ struct tegra_dsi_cmd {
 };
 
 #define DSI_GENERIC_LONG_WRITE			0x29
+#define DSI_GENERIC_SHORT_WRITE_1_PARAMS	0x13
 #define DSI_GENERIC_SHORT_WRITE_2_PARAMS	0x23
 #define DSI_DCS_WRITE_0_PARAM			0x05
 #define DSI_DCS_WRITE_1_PARAM			0x15
@@ -104,6 +108,9 @@ struct tegra_dsi_cmd {
 #define DSI_DCS_SET_ADDR_MODE			0x36
 #define DSI_DCS_EXIT_SLEEP_MODE			0x11
 #define DSI_DCS_SET_DISPLAY_ON			0x29
+#define DSI_DCS_SET_TEARING_EFFECT_OFF		0x34
+#define DSI_DCS_SET_TEARING_EFFECT_ON		0x35
+#define DSI_DCS_NO_OP				0x0
 
 #define DSI_CMD_SHORT(di, p0, p1)	{ \
 					.cmd_type = TEGRA_DSI_PACKET_CMD, \
@@ -115,6 +122,12 @@ struct tegra_dsi_cmd {
 			.cmd_type = TEGRA_DSI_DELAY_MS, \
 			.sp_len_dly.delay_ms = ms, \
 			}
+
+#define DSI_GPIO_SET(rst_gpio, on)	{ \
+					.cmd_type = TEGRA_DSI_GPIO_SET, \
+					.data_id = on, \
+					.sp_len_dly.gpio = rst_gpio, \
+					}
 
 #define DSI_CMD_LONG(di, ptr)	{ \
 				.cmd_type = TEGRA_DSI_PACKET_CMD, \
@@ -142,6 +155,52 @@ struct dsi_phy_timing_ns {
 	u16		t_tasure_ns;
 	u16		t_tago_ns;
 };
+
+enum {
+	CMD_VS		= 0x01,
+	CMD_VE		= 0x11,
+
+	CMD_HS		= 0x21,
+	CMD_HE		= 0x31,
+
+	CMD_EOT		= 0x08,
+	CMD_NULL	= 0x09,
+	CMD_SHORTW	= 0x15,
+	CMD_BLNK	= 0x19,
+	CMD_LONGW	= 0x39,
+
+	CMD_RGB		= 0x00,
+	CMD_RGB_16BPP	= 0x0E,
+	CMD_RGB_18BPP	= 0x1E,
+	CMD_RGB_18BPPNP = 0x2E,
+	CMD_RGB_24BPP	= 0x3E,
+};
+
+enum {
+	TEGRA_DSI_DISABLE,
+	TEGRA_DSI_ENABLE,
+};
+
+#define PKT_ID0(id)	((((id) & 0x3f) << 3) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 9))
+#define PKT_LEN0(len)	(((len) & 0x7) << 0)
+#define PKT_ID1(id)	((((id) & 0x3f) << 13) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 19))
+#define PKT_LEN1(len)	(((len) & 0x7) << 10)
+#define PKT_ID2(id)	((((id) & 0x3f) << 23) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 29))
+#define PKT_LEN2(len)	(((len) & 0x7) << 20)
+#define PKT_ID3(id)	((((id) & 0x3f) << 3) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 9))
+#define PKT_LEN3(len)	(((len) & 0x7) << 0)
+#define PKT_ID4(id)	((((id) & 0x3f) << 13) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 19))
+#define PKT_LEN4(len)	(((len) & 0x7) << 10)
+#define PKT_ID5(id)	((((id) & 0x3f) << 23) | \
+			(((TEGRA_DSI_ENABLE) & 0x1) << 29))
+#define PKT_LEN5(len)	(((len) & 0x7) << 20)
+#define PKT_LP		(((TEGRA_DSI_ENABLE) & 0x1) << 30)
+#define NUMOF_PKT_SEQ	12
 
 enum {
 	DSI_VS_0 = 0x0,
@@ -214,6 +273,8 @@ struct tegra_dsi_out {
 	u32		hs_clk_in_lp_cmd_mode_freq_khz;
 	u32		burst_mode_freq_khz;
 	u32		fpga_freq_khz;
+
+	const u32		*pkt_seq;
 
 	struct dsi_phy_timing_ns phy_timing;
 };
@@ -349,6 +410,8 @@ struct tegra_dc_sd_settings {
 	u16 smooth_k_incr;
 
 	bool sd_proc_control;
+	bool soft_clipping_correction;
+	bool use_vpulse2;
 
 	struct tegra_dc_sd_fc fc;
 	struct tegra_dc_sd_blp blp;
@@ -356,7 +419,8 @@ struct tegra_dc_sd_settings {
 	struct tegra_dc_sd_rgb lut[4][9];
 
 	atomic_t *sd_brightness;
-	struct platform_device *bl_device;
+	char *bl_device_name;
+	struct backlight_device *bl_device;
 };
 
 enum {
@@ -419,6 +483,8 @@ struct tegra_dc_out {
 
 	u8			*out_sel_configs;
 	unsigned		n_out_sel_configs;
+	bool			user_needs_vblank;
+	struct completion	user_vblank_comp;
 
 	int	(*enable)(struct device *);
 	int	(*postpoweron)(void);
@@ -440,8 +506,6 @@ struct tegra_dc_out {
 #define TEGRA_DC_OUT_ONE_SHOT_MODE		(1 << 3)
 #define TEGRA_DC_OUT_N_SHOT_MODE		(1 << 4)
 #define TEGRA_DC_OUT_ONE_SHOT_LP_MODE		(1 << 5)
-#define TEGRA_DC_OUT_CMU_DISABLE		(0 << 5)
-#define TEGRA_DC_OUT_CMU_ENABLE			(1 << 5)
 
 #define TEGRA_DC_ALIGN_MSB		0
 #define TEGRA_DC_ALIGN_LSB		1
@@ -449,8 +513,12 @@ struct tegra_dc_out {
 #define TEGRA_DC_ORDER_RED_BLUE		0
 #define TEGRA_DC_ORDER_BLUE_RED		1
 
+/* Errands use the interrupts */
 #define V_BLANK_FLIP		0
 #define V_BLANK_NVSD		1
+
+#define V_PULSE2_FLIP		0
+#define V_PULSE2_NVSD		1
 
 struct tegra_dc;
 struct nvmap_handle_ref;
@@ -586,9 +654,16 @@ struct tegra_dc_platform_data {
 	unsigned long		emc_clk_rate;
 	struct tegra_dc_out	*default_out;
 	struct tegra_fb_data	*fb;
+
+#ifdef CONFIG_TEGRA_DC_CMU
+	bool			cmu_enable;
+	struct tegra_dc_cmu	*cmu;
+#endif
 };
 
 #define TEGRA_DC_FLAG_ENABLED		(1 << 0)
+#define TEGRA_DC_FLAG_CMU_DISABLE	(0 << 1)
+#define TEGRA_DC_FLAG_CMU_ENABLE	(1 << 1)
 
 int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win);
 struct tegra_dc *tegra_dc_get_dc(unsigned idx);
@@ -597,6 +672,8 @@ bool tegra_dc_get_connected(struct tegra_dc *);
 bool tegra_dc_hpd(struct tegra_dc *dc);
 
 
+void tegra_dc_get_fbvblank(struct tegra_dc *dc, struct fb_vblank *vblank);
+int tegra_dc_wait_for_vsync(struct tegra_dc *dc);
 void tegra_dc_blank(struct tegra_dc *dc);
 
 void tegra_dc_enable(struct tegra_dc *dc);

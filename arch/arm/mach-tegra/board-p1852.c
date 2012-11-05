@@ -80,7 +80,6 @@ static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	{ "uarta",		"pll_p",	480000000,	true},
 	{ "uartd",		"pll_p",	480000000,	true},
 	{ "uarte",		"pll_p",	480000000,	true},
-	{ "sdmmc2",		"pll_p",	52000000,	true},
 	{ "sbc1",		"pll_m",	100000000,	true},
 	{ "sbc2",		"pll_m",	100000000,	true},
 	{ "sbc3",		"pll_m",	100000000,	true},
@@ -650,7 +649,9 @@ static void __init tegra_p1852_init(void)
 	p1852_panel_init();
 	p1852_nor_init();
 	p1852_pcie_init();
+	p1852_suspend_init();
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
+
 }
 
 static void __init tegra_p1852_reserve(void)
