@@ -34,7 +34,7 @@ obj-y                                   += timer-t3.o
 ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
 obj-y                                   += wakeups-t3.o
 else
-obj-y					+= wakeups-t11x.o
+obj-y                                   += wakeups-t11x.o
 endif
 ifeq ($(CONFIG_CPU_IDLE),y)
 ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
@@ -93,6 +93,7 @@ ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_speedo.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra14_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_actmon.o
 endif
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra3_actmon.o
@@ -106,22 +107,22 @@ obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += board-dt-tegra30.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += pinmux-t11-tables.o
 obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += pinmux-t14-tables.o
 obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
-obj-y					+= pmc.o
-obj-y					+= flowctrl.o
-obj-$(CONFIG_CPU_IDLE)			+= cpuidle.o
-obj-$(CONFIG_CPU_IDLE)			+= sleep.o
+obj-y                                   += pmc.o
+obj-y                                   += flowctrl.o
+obj-$(CONFIG_CPU_IDLE)                  += cpuidle.o
+obj-$(CONFIG_CPU_IDLE)                  += sleep.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_clocks.o
-obj-$(CONFIG_ARCH_TEGRA_3x_SOC)		+= tegra30_clocks.o
+obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra30_clocks.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_clocks.o
-obj-$(CONFIG_SMP)			+= platsmp.o
-obj-y					+= headsmp.o
-obj-y					+= reset.o
-obj-$(CONFIG_TEGRA_SYSTEM_DMA)		+= dma.o apbio.o
+obj-$(CONFIG_SMP)                       += platsmp.o
+obj-y                                   += headsmp.o
+obj-y                                   += reset.o
+obj-$(CONFIG_TEGRA_SYSTEM_DMA)          += dma.o apbio.o
 obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
 ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
-obj-$(CONFIG_ARCH_TEGRA_3x_SOC)		+= cpuquiet.o
-obj-$(CONFIG_ARCH_TEGRA_11x_SOC)	+= cpuquiet.o
+obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpuquiet.o
+obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += cpuquiet.o
 else
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpu-tegra3.o
 endif
@@ -149,7 +150,7 @@ obj-$(CONFIG_TEGRA_DYNAMIC_PWRDET)      += powerdetect.o
 obj-$(CONFIG_TEGRA_USB_MODEM_POWER)     += tegra_usb_modem_power.o
 obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS)    += tegra_cl_dvfs.o
 
-obj-y					+= board-common.o
+obj-y                                   += board-common.o
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 
 # MC error reporting.
@@ -299,4 +300,4 @@ obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
 obj-${CONFIG_TEGRA_BASEBAND}            += tegra_bb.o
 
-obj-${CONFIG_TEGRA_ISOMGR}		+= isomgr.o
+obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
