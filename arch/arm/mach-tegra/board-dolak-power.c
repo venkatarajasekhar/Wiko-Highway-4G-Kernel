@@ -55,11 +55,11 @@ static struct platform_device dolak_pda_power_device = {
 };
 
 static struct tegra_suspend_platform_data dolak_suspend_data = {
-	.cpu_timer	= 2000,
-	.cpu_off_timer	= 0,
+	.cpu_timer	= 300,
+	.cpu_off_timer	= 300,
 	.suspend_mode	= TEGRA_SUSPEND_LP1,
-	.core_timer	= 0x7e7e,
-	.core_off_timer = 0,
+	.core_timer	= 0x157e,
+	.core_off_timer = 2000,
 	.corereq_high	= false,
 	.sysclkreq_high	= true,
 };
