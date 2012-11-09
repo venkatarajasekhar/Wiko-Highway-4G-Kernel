@@ -362,6 +362,25 @@ static struct tegra_fb_data p1852_hdmi_fb_data = {
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
+static struct tegra_dc_out_pin p1852_dc_out_pins[] = {
+	{
+		.name	= TEGRA_DC_OUT_PIN_H_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_V_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_PIXEL_CLOCK,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name   = TEGRA_DC_OUT_PIN_DATA_ENABLE,
+		.pol    = TEGRA_DC_OUT_PIN_POL_HIGH,
+	},
+};
+
 /* Start of DC_OUT data
  *  disp1 = Primary RGB out
  *  ser1  = Primary LVDS out
@@ -377,6 +396,8 @@ static struct tegra_dc_out p1852_disp1_out = {
 	.n_modes	= ARRAY_SIZE(p1852_panel_modes),
 	.enable		= p1852_panel_enable,
 	.disable	= p1852_panel_disable,
+	.out_pins	= p1852_dc_out_pins,
+	.n_out_pins	= ARRAY_SIZE(p1852_dc_out_pins),
 };
 
 static struct tegra_dc_out p1852_ser1_out = {
@@ -388,6 +409,8 @@ static struct tegra_dc_out p1852_ser1_out = {
 	.n_modes	= ARRAY_SIZE(p1852_panel_modes),
 	.enable		= p1852_lvds_enable,
 	.disable	= p1852_lvds_disable,
+	.out_pins	= p1852_dc_out_pins,
+	.n_out_pins	= ARRAY_SIZE(p1852_dc_out_pins),
 };
 
 static struct tegra_dc_out p1852_ser2_out = {
@@ -404,6 +427,8 @@ static struct tegra_dc_out p1852_ser2_out = {
 	.enable		= p1852_lvds2_enable,
 	.disable	= p1852_lvds2_disable,
 	.dcc_bus	= 3,
+	.out_pins	= p1852_dc_out_pins,
+	.n_out_pins	= ARRAY_SIZE(p1852_dc_out_pins),
 };
 
 static struct tegra_dc_out p1852_hdmi_out = {

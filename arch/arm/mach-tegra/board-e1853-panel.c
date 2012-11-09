@@ -223,6 +223,25 @@ static struct tegra_fb_data e1853_fb_data = {
 
 #endif
 
+static struct tegra_dc_out_pin e1853_dc_out_pins[] = {
+	{
+		.name	= TEGRA_DC_OUT_PIN_H_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_V_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_PIXEL_CLOCK,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name   = TEGRA_DC_OUT_PIN_DATA_ENABLE,
+		.pol    = TEGRA_DC_OUT_PIN_POL_HIGH,
+	},
+};
+
 static struct tegra_dc_out e1853_ser_out = {
 	.align		= TEGRA_DC_ALIGN_MSB,
 	.order		= TEGRA_DC_ORDER_RED_BLUE,
@@ -232,6 +251,8 @@ static struct tegra_dc_out e1853_ser_out = {
 	.n_modes	= ARRAY_SIZE(e1853_panel_modes),
 	.enable		= e1853_lvds_enable,
 	.disable	= e1853_lvds_disable,
+	.out_pins	= e1853_dc_out_pins,
+	.n_out_pins	= ARRAY_SIZE(e1853_dc_out_pins),
 };
 
 static struct tegra_dc_platform_data e1853_disp1_pdata = {
