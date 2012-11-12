@@ -667,4 +667,6 @@ config HID_ZYDACRON
 
 endmenu
 
+source "drivers/hid/i2c-hid/Kconfig"
+
 endif # HID_SUPPORT
