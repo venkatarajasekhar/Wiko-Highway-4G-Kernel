@@ -67,5 +67,7 @@ int tegra_asoc_switch_register(struct switch_dev *sdev);
 void tegra_asoc_switch_unregister(struct switch_dev *sdev);
 #endif
 
+extern int g_is_call_mode;
+
 #endif
 

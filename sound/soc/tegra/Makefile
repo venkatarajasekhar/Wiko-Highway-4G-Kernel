@@ -36,6 +36,7 @@ snd-soc-tegra-rt5640-objs := tegra_rt5640.o
 snd-soc-tegra-max98095-objs := tegra_max98095.o
 snd-soc-tegra-vcm-objs := tegra_vcm.o
 snd-soc-tegra-cs42l73-objs := tegra_cs42l73.o
+snd-soc-tegra-max98090-objs := tegra_max98090.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_WM8903) += snd-soc-tegra-wm8903.o
 obj-$(CONFIG_SND_SOC_TEGRA_TRIMSLICE) += snd-soc-tegra-trimslice.o
@@ -48,3 +49,4 @@ obj-$(CONFIG_SND_SOC_TEGRA_MAX98095) += snd-soc-tegra-max98095.o
 obj-$(CONFIG_SND_SOC_TEGRA_P1852) += snd-soc-tegra-vcm.o
 obj-$(CONFIG_SND_SOC_TEGRA_P852) += snd-soc-tegra-vcm.o
 obj-$(CONFIG_SND_SOC_TEGRA_CS42L73) += snd-soc-tegra-cs42l73.o
+obj-$(CONFIG_SND_SOC_TEGRA_MAX98090) += snd-soc-tegra-max98090.o
