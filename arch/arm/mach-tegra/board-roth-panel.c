@@ -37,18 +37,18 @@
 #include "gpio-names.h"
 #include "tegra11_host1x_devices.h"
 
-int __init roth_host1x_init(void)
+struct platform_device * __init roth_host1x_init(void)
 {
-	int err = -EINVAL;
+	struct platform_device *pdev = NULL;
 
 #ifdef CONFIG_TEGRA_GRHOST
-	err = tegra11_register_host1x_devices();
-	if (err) {
+	pdev = tegra11_register_host1x_devices();
+	if (!pdev) {
 		pr_err("host1x devices registration failed\n");
-		return err;
+		return NULL;
 	}
 #endif
-	return err;
+	return pdev;
 }
 
 #ifdef CONFIG_TEGRA_DC
@@ -74,7 +74,6 @@ static bool gpio_requested;
 static struct regulator *vdd_lcd_s_1v8;
 static struct regulator *vdd_sys_bl_3v7;
 static struct regulator *avdd_lcd_3v0_2v8;
-static struct regulator *avdd_ts_3v0;
 
 static struct regulator *roth_hdmi_vddio;
 
@@ -170,26 +169,6 @@ static u8 panel_ce10[] = {
 static u8 panel_ce11[] = {0x7a, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 static u8 panel_ce12[] = {0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 static u8 panel_ce13[] = {0x7c, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-static tegra_dc_bl_output roth_bl_output_measured = {
-	0, 1, 3, 5, 7, 9, 11, 12,
-	14, 15, 16, 18, 19, 21, 22, 24,
-	25, 26, 27, 28, 29, 30, 31, 32,
-	33, 34, 35, 36, 38, 39, 40, 41,
-	42, 43, 44, 45, 46, 47, 48, 49,
-	50, 51, 51, 52, 52, 53, 54, 55,
-	56, 56, 57, 58, 59, 60, 61, 62,
-	63, 64, 65, 66, 67, 68, 69, 70,
-	71, 72, 73, 74, 75, 76, 76, 77,
-	78, 79, 80, 81, 81, 82, 83, 83,
-	84, 85, 85, 86, 87, 88, 89, 90,
-	91, 92, 93, 94, 95, 96, 96, 97,
-	98, 99, 100, 101, 102, 103, 103, 104,
-	104, 105, 106, 107, 108, 109, 110, 111,
-	112, 113, 114, 115, 116, 117, 118, 119,
-	120, 121, 122, 123, 124, 124, 125, 127
-};
-
-static p_tegra_dc_bl_output bl_output = roth_bl_output_measured;
 
 static struct tegra_dsi_cmd dsi_init_cmd[] = {
 	DSI_CMD_LONG(DSI_GENERIC_LONG_WRITE, panel_dsi_config),
@@ -278,13 +257,6 @@ static int roth_dsi_regulator_get(void)
 	if (reg_requested)
 		return 0;
 
-	avdd_ts_3v0 = regulator_get(NULL, "vdd_ts_3v3");
-	if (IS_ERR_OR_NULL(avdd_ts_3v0)) {
-		pr_err("avdd_ts_3v0 regulator get failed\n");
-		err = PTR_ERR(avdd_ts_3v0);
-		avdd_ts_3v0 = NULL;
-		goto fail;
-	}
 	avdd_lcd_3v0_2v8 = regulator_get(NULL, "avdd_lcd");
 	if (IS_ERR_OR_NULL(avdd_lcd_3v0_2v8)) {
 		pr_err("avdd_lcd regulator get failed\n");
@@ -370,15 +342,6 @@ static int roth_dsi_panel_enable(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	if (avdd_ts_3v0) {
-		err = regulator_enable(avdd_ts_3v0);
-		if (err < 0) {
-			pr_err("avdd_ts_3v0 regulator enable failed\n");
-			goto fail;
-		}
-	}
-	usleep_range(3000, 5000);
-
 	if (vdd_lcd_s_1v8) {
 		err = regulator_enable(vdd_lcd_s_1v8);
 		if (err < 0) {
@@ -421,9 +384,6 @@ static int roth_dsi_panel_disable(void)
 
 	if (vdd_lcd_s_1v8)
 		regulator_disable(vdd_lcd_s_1v8);
-
-	if (avdd_ts_3v0)
-		regulator_disable(avdd_ts_3v0);
 
 	if (avdd_lcd_3v0_2v8)
 		regulator_disable(avdd_lcd_3v0_2v8);
@@ -559,7 +519,7 @@ static struct tegra_dc_platform_data roth_disp2_pdata = {
 	.emc_clk_rate	= 300000000,
 };
 
-static struct nvhost_device roth_disp2_device = {
+static struct platform_device roth_disp2_device = {
 	.name		= "tegradc",
 	.id		= 1,
 	.resource	= roth_disp2_resources,
@@ -569,7 +529,7 @@ static struct nvhost_device roth_disp2_device = {
 	},
 };
 
-static struct nvhost_device roth_disp1_device = {
+static struct platform_device roth_disp1_device = {
 	.name		= "tegradc",
 	.id		= 0,
 	.resource	= roth_disp1_resources,
@@ -626,8 +586,6 @@ static int roth_disp1_bl_notify(struct device *unused, int brightness)
 	/* Apply any backlight response curve */
 	if (brightness > 255)
 		pr_info("Error: Brightness > 255!\n");
-	else
-		brightness = bl_output[brightness];
 
 	return brightness;
 }
@@ -716,6 +674,7 @@ int __init roth_panel_init(void)
 {
 	int err = 0;
 	struct resource __maybe_unused *res;
+	struct platform_device *phost1x;
 
 	sd_settings = roth_sd_settings;
 #ifdef CONFIG_TEGRA_NVMAP
@@ -731,13 +690,13 @@ int __init roth_panel_init(void)
 	}
 #endif
 
-	err = roth_host1x_init();
-	if (err)
-		return err;
+	phost1x = roth_host1x_init();
+	if (!phost1x)
+		return -EINVAL;
 
 	gpio_request(roth_hdmi_hpd, "hdmi_hpd");
 	gpio_direction_input(roth_hdmi_hpd);
-	res = nvhost_get_resource_byname(&roth_disp1_device,
+	res = platform_get_resource_byname(&roth_disp1_device,
 					 IORESOURCE_MEM, "fbmem");
 	res->start = tegra_fb_start;
 	res->end = tegra_fb_start + tegra_fb_size - 1;
@@ -746,18 +705,20 @@ int __init roth_panel_init(void)
 	tegra_move_framebuffer(tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
 
-	res = nvhost_get_resource_byname(&roth_disp2_device,
+	res = platform_get_resource_byname(&roth_disp2_device,
 					 IORESOURCE_MEM, "fbmem");
 	res->start = tegra_fb2_start;
 	res->end = tegra_fb2_start + tegra_fb2_size - 1;
 
-	err = nvhost_device_register(&roth_disp1_device);
+	roth_disp1_device.dev.parent = &phost1x->dev;
+	err = platform_device_register(&roth_disp1_device);
 	if (err) {
 		pr_err("disp1 device registration failed\n");
 		return err;
 	}
 
-	err = nvhost_device_register(&roth_disp2_device);
+	roth_disp2_device.dev.parent = &phost1x->dev;
+	err = platform_device_register(&roth_disp2_device);
 	if (err) {
 		pr_err("disp2 device registration failed\n");
 		return err;
@@ -780,7 +741,8 @@ int __init roth_panel_init(void)
 #endif
 
 #ifdef CONFIG_TEGRA_NVAVP
-	err = nvhost_device_register(&nvavp_device);
+	nvavp_device.dev.parent = &phost1x->dev;
+	err = platform_device_register(&nvavp_device);
 	if (err) {
 		pr_err("nvavp device registration failed\n");
 		return err;
@@ -789,7 +751,7 @@ int __init roth_panel_init(void)
 	return err;
 }
 #else
-int __init roth_panel_init(void)
+struct platform_device * __init roth_panel_init(void)
 {
 	return roth_host1x_init();
 }

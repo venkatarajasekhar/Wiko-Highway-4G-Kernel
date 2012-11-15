@@ -569,6 +569,9 @@ static noinline void emc_set_clock(const struct tegra11_emc_table *next_timing,
 			(u32)emc1_base + emc_trimmer_offs[i]);
 	}
 #endif
+	emc_cfg_reg &= ~EMC_CFG_UPDATE_MASK;
+	emc_cfg_reg |= next_timing->emc_cfg & EMC_CFG_UPDATE_MASK;
+	emc_writel(emc_cfg_reg, EMC_CFG);
 	wmb();
 	barrier();
 

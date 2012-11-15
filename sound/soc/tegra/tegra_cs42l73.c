@@ -904,11 +904,6 @@ static struct snd_soc_jack_pin tegra_cs42l73_hs_jack_pins[] = {
 };
 #endif
 
-/* FIX ME */
-static const struct snd_soc_dapm_route vspin_audio_map[] = {
-	{"VSPIN", NULL, "Int D-Mic"},
-};
-
 static int tegra_cs42l73_event_int_mic(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
@@ -919,13 +914,9 @@ static int tegra_cs42l73_event_int_mic(struct snd_soc_dapm_widget *w,
 
 	if (machine->dmic_reg && machine->dmic_1v8_reg) {
 		if (SND_SOC_DAPM_EVENT_ON(event)) {
-			snd_soc_dapm_add_routes(dapm,
-					vspin_audio_map, 1);
 			regulator_enable(machine->dmic_reg);
 			regulator_enable(machine->dmic_1v8_reg);
 		} else {
-			snd_soc_dapm_weak_routes(dapm,
-					vspin_audio_map, 1);
 			regulator_disable(machine->dmic_reg);
 			regulator_disable(machine->dmic_1v8_reg);
 		}
@@ -992,13 +983,14 @@ static const struct snd_soc_dapm_widget tegra_cs42l73_dapm_widgets[] = {
 /* cs42l73 Audio Map */
 static const struct snd_soc_dapm_route tegra_cs42l73_audio_map[] = {
 	{"Int Spk", NULL, "SPKOUT"},
-	{"MIC1", NULL, "Headset Mic"},
+	{"MIC2", NULL, "Headset Mic"},
 	/* Headphone (L+R)->  HPOUTA, HPOUTB */
 	{"Headphone", NULL, "HPOUTA"},
 	{"Headphone", NULL, "HPOUTB"},
 	/* DMIC -> DMIC Left/Right and VSPIN */
 	{"DMIC Left", NULL, "Int D-Mic"},
 	{"DMIC Right", NULL, "Int D-Mic"},
+	{"VSPIN", NULL, "Int D-Mic"},
 };
 
 static const struct snd_kcontrol_new tegra_cs42l73_controls[] = {

@@ -70,6 +70,7 @@
 
 #define PMC_IO_DPD_REQ			0x1b8
 #define PMC_IO_DPD_STATUS		0x1bc
+#define PMC_SCRATCH1_ECO		0x264
 
 #define CLK_RESET_CCLK_BURST		0x20
 #define CLK_RESET_CCLK_DIVIDER		0x24
@@ -234,6 +235,11 @@ ENDPROC(tegra3_cpu_reset)
  * tegra3_tear_down_core in IRAM
  */
 ENTRY(tegra3_sleep_core_finish)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+	mov	r4, r0
+	bl	tegra_flush_cache
+	mov	r0, r4
+#endif
 	bl	tegra_cpu_exit_coherency
 
 	/* preload all the address literals that are needed for the
@@ -884,6 +890,12 @@ emcself:
 	str	r1, [r0, #EMC_XM2VTTGENPADCTRL2]
 
 	emc_timing_update r1, r0
+
+	/* SCRATCH1_ECO register*/
+	ldr r1, [r4, #PMC_SCRATCH1_ECO]
+	bic r1, r1, #0x3F
+	orr r1, r1, #0x3F
+	str r1, [r4, #PMC_SCRATCH1_ECO]
 
 	ldr	r1, [r4, #PMC_CTRL]
 	tst	r1, #PMC_CTRL_SIDE_EFFECT_LP0

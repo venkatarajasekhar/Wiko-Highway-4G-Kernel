@@ -61,8 +61,10 @@ static char *msenc_get_fw_name(struct platform_device *dev)
 		sprintf(fw_name, "nvhost_msenc03%d.fw", min);
 		break;
 	default:
+		kfree(fw_name);
 		return NULL;
 	}
+
 	dev_info(&dev->dev, "fw name:%s\n", fw_name);
 
 	return fw_name;

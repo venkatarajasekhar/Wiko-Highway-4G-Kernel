@@ -100,7 +100,7 @@ static struct regulator_consumer_supply tps65090_fet3_supply[] = {
 
 static struct regulator_consumer_supply tps65090_fet4_supply[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
-	REGULATOR_SUPPLY("vdd_ts_3v3", NULL),
+	REGULATOR_SUPPLY("avdd", "spi3.2"),
 };
 
 static struct regulator_consumer_supply tps65090_fet5_supply[] = {
@@ -220,7 +220,7 @@ static struct regulator_consumer_supply max77663_sd2_supply[] = {
 	REGULATOR_SUPPLY("vdd_mic_1v8", NULL),
 	REGULATOR_SUPPLY("vdd_nfc_1v8", NULL),
 	REGULATOR_SUPPLY("vdd_ds_1v8", NULL),
-	REGULATOR_SUPPLY("vdd_ts_1v8", NULL),
+	REGULATOR_SUPPLY("dvdd", "spi3.2"),
 	REGULATOR_SUPPLY("vdd_spi_1v8", NULL),
 	REGULATOR_SUPPLY("dvdd_lcd", NULL),
 	REGULATOR_SUPPLY("vdd_com_1v8", NULL),
@@ -1233,27 +1233,7 @@ static struct soctherm_platform_data dalmore_soctherm_data = {
 	},
 };
 
-static struct balanced_throttle tj_throttle = {
-	.throt_tab_size = 10,
-	.throt_tab = {
-		{      0, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 760000, 1000 },
-		{ 760000, 1050 },
-		{1000000, 1050 },
-		{1000000, 1100 },
-	},
-};
-
-static int __init dalmore_soctherm_init(void)
+int __init dalmore_soctherm_init(void)
 {
-	dalmore_soctherm_data.therm[THERM_CPU].cdev =
-			balanced_throttle_register(&tj_throttle);
-
 	return tegra11_soctherm_init(&dalmore_soctherm_data);
 }
-module_init(dalmore_soctherm_init);

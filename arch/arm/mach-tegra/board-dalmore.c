@@ -71,7 +71,6 @@
 #include "board-common.h"
 #include "clock.h"
 #include "board-dalmore.h"
-#include "board-roth.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
@@ -620,19 +619,21 @@ static void __init dalmore_spi_init(void)
 
 static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
 	/* name         parent          rate            enabled */
-	{ "extern2",    "pll_p",        41000000,       true},
-	{ "clk_out_2",  "extern2",      40800000,       true},
+	{ "extern2",    "pll_p",        41000000,       false},
+	{ "clk_out_2",  "extern2",      40800000,       false},
 	{ NULL,         NULL,           0,              0},
 };
 
 struct rm_spi_ts_platform_data rm31080ts_dalmore_data = {
 	.gpio_reset = 0,
 	.config = 0,
+	.platform_id = RM_PLATFORM_D010,
+	.name_of_clock = "clk_out_2",
 };
 
 static struct tegra_spi_device_controller_data dev_cdata = {
 	.rx_clk_tap_delay = 0,
-	.tx_clk_tap_delay = 0,
+	.tx_clk_tap_delay = 16,
 };
 
 struct spi_board_info rm31080a_dalmore_spi_board[1] = {
@@ -640,7 +641,7 @@ struct spi_board_info rm31080a_dalmore_spi_board[1] = {
 	 .modalias = "rm_ts_spidev",
 	 .bus_num = 3,
 	 .chip_select = 2,
-	 .max_speed_hz = 12 * 1000 * 1000,
+	 .max_speed_hz = 18 * 1000 * 1000,
 	 .mode = SPI_MODE_0,
 	 .controller_data = &dev_cdata,
 	 .platform_data = &rm31080ts_dalmore_data,
@@ -658,6 +659,7 @@ static int __init dalmore_touch_init(void)
 		rm31080ts_dalmore_data.platform_id = RM_PLATFORM_P005;
 	else
 		rm31080ts_dalmore_data.platform_id = RM_PLATFORM_D010;
+	mdelay(20);
 	rm31080a_dalmore_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
 	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
 				TOUCH_GPIO_RST_RAYDIUM_SPI,
@@ -669,9 +671,6 @@ static int __init dalmore_touch_init(void)
 
 static void __init tegra_dalmore_init(void)
 {
-	struct board_info board_info;
-
-	tegra_get_display_board_info(&board_info);
 	tegra_battery_edp_init(2500);
 	tegra_clk_init_from_table(dalmore_clk_init_table);
 	tegra_soc_device_init("dalmore");
@@ -691,10 +690,7 @@ static void __init tegra_dalmore_init(void)
 	dalmore_suspend_init();
 	dalmore_emc_init();
 	dalmore_touch_init();
-	if (board_info.board_id == BOARD_E1582)
-		roth_panel_init();
-	else
-		dalmore_panel_init();
+	dalmore_panel_init();
 	dalmore_kbc_init();
 	dalmore_pmon_init();
 	dalmore_setup_bluesleep();
@@ -706,6 +702,7 @@ static void __init tegra_dalmore_init(void)
 #endif
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 	dalmore_sensors_init();
+	dalmore_soctherm_init();
 }
 
 static void __init dalmore_ramconsole_reserve(unsigned long size)
