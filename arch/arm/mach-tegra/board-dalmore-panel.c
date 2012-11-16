@@ -47,7 +47,6 @@ struct platform_device * __init dalmore_host1x_init(void)
 		pr_err("host1x devices registration failed\n");
 		return NULL;
 	}
-	return pdev;
 #endif
 	return pdev;
 }
