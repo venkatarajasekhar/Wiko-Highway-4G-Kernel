@@ -23,7 +23,7 @@
 #include "host1x/host1x.h"
 #include "host1x/hw_host1x02_sync.h"
 
-#include "gr1d_common.c"
+#include "gr2d_common.c"
 
 void nvhost_gr2d_t114_finalize_poweron(struct platform_device *dev)
 {
