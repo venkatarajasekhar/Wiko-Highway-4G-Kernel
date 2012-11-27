@@ -46,8 +46,6 @@
 #include <linux/export.h>
 #include <linux/tegra_audio.h>
 
-#include <trace/events/power.h>
-
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
 #include <asm/idmap.h>
@@ -77,6 +75,10 @@
 #include "timer.h"
 #include "dvfs.h"
 #include "cpu-tegra.h"
+
+#include <trace/events/nvpower.h>
+#define CREATE_TRACE_POINTS
+#include <trace/events/nvpower.h>
 
 struct suspend_context {
 	/*
@@ -602,7 +604,7 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	 * are in LP2 state and irqs are disabled
 	 */
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
-		trace_cpu_cluster(POWER_CPU_CLUSTER_START);
+		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_START);
 		set_power_timers(pdata->cpu_timer, 2,
 			clk_get_rate_all_locked(tegra_pclk));
 		if (flags & TEGRA_POWER_CLUSTER_G) {
@@ -680,9 +682,9 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
 		tegra_cluster_switch_epilog(flags);
 		if (is_idle_task(current))
-			trace_cpu_cluster_rcuidle(POWER_CPU_CLUSTER_DONE);
+			trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_DONE);
 		else
-			trace_cpu_cluster(POWER_CPU_CLUSTER_DONE);
+			trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_DONE);
 	} else {
 		resume_cpu_dfll_mode();
 	}
@@ -931,7 +933,7 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 
 	local_fiq_disable();
 
-	trace_cpu_suspend(CPU_SUSPEND_START);
+	trace_cpu_suspend(CPU_SUSPEND_START, tegra_rtc_read_ms());
 
 	if (mode == TEGRA_SUSPEND_LP0) {
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
@@ -1017,7 +1019,7 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 	if (pdata && pdata->board_resume)
 		pdata->board_resume(mode, TEGRA_RESUME_AFTER_CPU);
 
-	trace_cpu_suspend(CPU_SUSPEND_DONE);
+	trace_cpu_suspend(CPU_SUSPEND_DONE, tegra_rtc_read_ms());
 
 	local_fiq_enable();
 

@@ -87,7 +87,7 @@ static struct regulator_consumer_supply palmas_smps8_supply[] = {
 	REGULATOR_SUPPLY("pwrdet_cam", NULL),
 	REGULATOR_SUPPLY("vdd_gps", NULL),
 	REGULATOR_SUPPLY("vdd_nfc", NULL),
-	REGULATOR_SUPPLY("vdd_sensor", NULL),
+	REGULATOR_SUPPLY("vlogic", "0-0069"),
 	REGULATOR_SUPPLY("vdd_dtv", NULL),
 	REGULATOR_SUPPLY("vdd_bb", NULL),
 	REGULATOR_SUPPLY("vcore1_lpddr", NULL),
@@ -170,6 +170,7 @@ static struct regulator_consumer_supply palmas_ldo6_supply[] = {
 	REGULATOR_SUPPLY("vdd", "0-0044"),
 	REGULATOR_SUPPLY("vdd", "0-004c"),
 	REGULATOR_SUPPLY("avdd", "spi3.2"),
+	REGULATOR_SUPPLY("vdd", "0-0069"),
 };
 
 static struct regulator_consumer_supply palmas_ldo7_supply[] = {
@@ -728,8 +729,6 @@ static struct soctherm_platform_data pluto_soctherm_data = {
 	.sensor_data = {
 		[TSENSE_CPU0] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,
@@ -738,8 +737,6 @@ static struct soctherm_platform_data pluto_soctherm_data = {
 		},
 		[TSENSE_CPU1] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,
@@ -748,8 +745,6 @@ static struct soctherm_platform_data pluto_soctherm_data = {
 		},
 		[TSENSE_CPU2] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,
@@ -758,38 +753,21 @@ static struct soctherm_platform_data pluto_soctherm_data = {
 		},
 		[TSENSE_CPU3] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,
 			.tsample = 163,
 			.pdiv = 10,
 		},
+		/* MEM0/MEM1 won't be used */
 		[TSENSE_MEM0] = {
-			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
-			.tall = 16300,
-			.tiddq = 1,
-			.ten_count = 1,
-			.tsample = 163,
-			.pdiv = 10,
+			.enable = false,
 		},
 		[TSENSE_MEM1] = {
-			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
-			.tall = 16300,
-			.tiddq = 1,
-			.ten_count = 1,
-			.tsample = 163,
-			.pdiv = 10,
+			.enable = false,
 		},
 		[TSENSE_GPU] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,
@@ -798,8 +776,6 @@ static struct soctherm_platform_data pluto_soctherm_data = {
 		},
 		[TSENSE_PLLX] = {
 			.enable = true,
-			.therm_a = 570,
-			.therm_b = -744,
 			.tall = 16300,
 			.tiddq = 1,
 			.ten_count = 1,

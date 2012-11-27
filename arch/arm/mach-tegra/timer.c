@@ -120,6 +120,11 @@ static u32 notrace tegra_read_usec(void)
 	return cyc;
 }
 
+u32 notrace tegra_read_usec_raw(void)
+{
+	return timer_readl(TIMERUS_CNTR_1US);
+}
+
 static u32 notrace tegra_read_sched_clock(void)
 {
 	return tegra_read_usec();
@@ -131,7 +136,7 @@ static u32 notrace tegra_read_sched_clock(void)
  * tegra_rtc driver could be executing to avoid race conditions
  * on the RTC shadow register
  */
-static u64 tegra_rtc_read_ms(void)
+u64 tegra_rtc_read_ms(void)
 {
 	u32 ms = readl(rtc_base + RTC_MILLISECONDS);
 	u32 s = readl(rtc_base + RTC_SHADOW_SECONDS);

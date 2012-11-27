@@ -679,6 +679,7 @@ static struct tegra_dc_mode pluto_dsi_modes[] = {
 	},
 #endif
 #if PANEL_5_SHARP_1080p
+	/* 1080x1920@60Hz */
 	{
 		.pclk = 10000000,
 		.h_ref_to_sync = 4,
@@ -692,6 +693,21 @@ static struct tegra_dc_mode pluto_dsi_modes[] = {
 		.h_front_porch = 100,
 		.v_front_porch = 4,
 	},
+	/* 1080x1920@53Hz */
+	{
+		.pclk = 10000000,
+		.h_ref_to_sync = 4,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 10,
+		.v_sync_width = 2,
+		.h_back_porch = 50,
+		.v_back_porch = 4,
+		.h_active = 1080,
+		.v_active = 1920,
+		.h_front_porch = 100,
+		.v_front_porch = 259,
+	},
+
 #endif
 };
 
@@ -799,6 +815,7 @@ static struct tegra_fb_data pluto_disp1_fb_data = {
 };
 
 #ifdef CONFIG_TEGRA_DC_CMU
+#if PANEL_5_LG_720_1280
 static struct tegra_dc_cmu pluto_lg_cmu = {
 	/* lut1 maps sRGB to linear space. */
 	{
@@ -965,6 +982,7 @@ static struct tegra_dc_cmu pluto_lg_cmu = {
 		253,  253,  254,  254,  254,  254,  255,  255,
 	},
 };
+#endif
 #endif
 
 static struct tegra_dc_platform_data pluto_disp1_pdata = {

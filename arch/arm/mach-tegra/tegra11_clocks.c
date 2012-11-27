@@ -247,18 +247,20 @@
 
 #define PLLCX_MISC_KOEF_LOW_RANGE	\
 	((0x14 << PLLCX_MISC_KA_SHIFT) | (0x38 << PLLCX_MISC_KB_SHIFT))
-#define PLLCX_MISC_KOEF_HIGH_RANGE	\
-	((0x10 << PLLCX_MISC_KA_SHIFT) | (0xA0 << PLLCX_MISC_KB_SHIFT))
+
+#define PLLCX_MISC_DIV_LOW_RANGE	\
+	((0x2 << PLLCX_MISC_SDM_DIV_SHIFT) | (0x2 << PLLCX_MISC_FILT_DIV_SHIFT))
+#define PLLCX_MISC_DIV_HIGH_RANGE	\
+	((0x1 << PLLCX_MISC_SDM_DIV_SHIFT) | (0x1 << PLLCX_MISC_FILT_DIV_SHIFT))
 
 #define PLLCX_MISC_DEFAULT_VALUE	((0x0 << PLLCX_MISC_VCO_GAIN_SHIFT) | \
 					PLLCX_MISC_KOEF_LOW_RANGE | \
 					(0x19 << PLLCX_MISC_ALPHA_SHIFT) | \
-					(0x2 << PLLCX_MISC_SDM_DIV_SHIFT) | \
-					(0x2 << PLLCX_MISC_FILT_DIV_SHIFT) | \
+					PLLCX_MISC_DIV_LOW_RANGE | \
 					PLLCX_MISC_RESET)
 #define PLLCX_MISC1_DEFAULT_VALUE	0x000d2308
-#define PLLCX_MISC2_DEFAULT_VALUE	0x31211200
-#define PLLCX_MISC3_DEFAULT_VALUE	0x0
+#define PLLCX_MISC2_DEFAULT_VALUE	0x30211200
+#define PLLCX_MISC3_DEFAULT_VALUE	0x200
 
 /* PLLX and PLLC (PLLXC)*/
 #define PLLXC_USE_DYN_RAMP		0
@@ -2251,7 +2253,7 @@ static void pllcx_update_dynamic_koef(struct clk *c, unsigned long input_rate,
 
 	switch (input_rate) {
 	case 12000000:
-		n_threshold = 77;
+		n_threshold = 70;
 		break;
 	case 13000000:
 	case 26000000:
@@ -2271,9 +2273,9 @@ static void pllcx_update_dynamic_koef(struct clk *c, unsigned long input_rate,
 	}
 
 	val = clk_readl(c->reg + PLL_MISC(c));
-	val &= ~(PLLCX_MISC_KA_MASK | PLLCX_MISC_KB_MASK);
+	val &= ~(PLLCX_MISC_SDM_DIV_MASK | PLLCX_MISC_FILT_DIV_MASK);
 	val |= n <= n_threshold ?
-		PLLCX_MISC_KOEF_LOW_RANGE : PLLCX_MISC_KOEF_HIGH_RANGE;
+		PLLCX_MISC_DIV_LOW_RANGE : PLLCX_MISC_DIV_HIGH_RANGE;
 	clk_writel(val, c->reg + PLL_MISC(c));
 }
 
@@ -3314,7 +3316,7 @@ static void __init tegra11_dfll_cpu_late_init(struct clk *c)
 	int ret;
 	struct clk *cpu = tegra_get_clock_by_name("cpu");
 
-#ifndef CONFIG_TEGRA_SILICON_PLATFORM
+#ifdef CONFIG_TEGRA_FPGA_PLATFORM
 	u32 netlist, patchid;
 	tegra_get_netlist_revision(&netlist, &patchid);
 	if (netlist < 12) {
@@ -4733,6 +4735,7 @@ static unsigned long tegra11_clk_shared_bus_update(
 	struct clk *slow = NULL;
 	struct clk *top = NULL;
 
+	unsigned long override_rate = 0;
 	unsigned long top_rate = 0;
 	unsigned long rate = bus->min_rate;
 	unsigned long bw = 0;
@@ -4761,6 +4764,10 @@ static unsigned long tegra11_clk_shared_bus_update(
 			case SHARED_CEILING:
 				ceiling = min(request_rate, ceiling);
 				break;
+			case SHARED_OVERRIDE:
+				if (override_rate == 0)
+					override_rate = request_rate;
+				break;
 			case SHARED_AUTO:
 				break;
 			case SHARED_FLOOR:
@@ -4788,7 +4795,7 @@ static unsigned long tegra11_clk_shared_bus_update(
 		bw = (bw < bus->max_rate / 100) ? (bw * 100) : bus->max_rate;
 	}
 
-	rate = min(max(rate, bw), ceiling);
+	rate = override_rate ? : min(max(rate, bw), ceiling);
 
 	if (bus_top)
 		*bus_top = top;
@@ -6365,6 +6372,7 @@ struct clk tegra_list_clks[] = {
 	SHARED_CLK("mon.avp",	"tegra_actmon",		"avp",	&tegra_clk_sbus_cmplx, NULL, 0, 0),
 	SHARED_CLK("cap.sclk",	"cap_sclk",		NULL,	&tegra_clk_sbus_cmplx, NULL, 0, SHARED_CEILING),
 	SHARED_CLK("floor.sclk", "floor_sclk",		NULL,	&tegra_clk_sbus_cmplx, NULL, 0, 0),
+	SHARED_CLK("override.sclk", "override_sclk",	NULL,	&tegra_clk_sbus_cmplx, NULL, 0, SHARED_OVERRIDE),
 	SHARED_CLK("sbc1.sclk", "tegra11-spi.0",	"sclk", &tegra_clk_sbus_cmplx, NULL, 0, 0),
 	SHARED_CLK("sbc2.sclk", "tegra11-spi.1",	"sclk", &tegra_clk_sbus_cmplx, NULL, 0, 0),
 	SHARED_CLK("sbc3.sclk", "tegra11-spi.2",	"sclk", &tegra_clk_sbus_cmplx, NULL, 0, 0),
@@ -6391,6 +6399,7 @@ struct clk tegra_list_clks[] = {
 	SHARED_CLK("camera.emc", "tegra_camera",	"emc",	&tegra_clk_emc, NULL, 0, SHARED_BW),
 	SHARED_CLK("iso.emc",	"iso",			"emc",	&tegra_clk_emc, NULL, 0, SHARED_BW),
 	SHARED_CLK("floor.emc",	"floor.emc",		NULL,	&tegra_clk_emc, NULL, 0, 0),
+	SHARED_CLK("override.emc", "override.emc",	NULL,	&tegra_clk_emc, NULL, 0, SHARED_OVERRIDE),
 
 #ifdef CONFIG_TEGRA_DUAL_CBUS
 	DUAL_CBUS_CLK("3d.cbus",	"tegra_gr3d",		"gr3d",	&tegra_clk_c2bus, "3d",  0, 0),
@@ -6398,6 +6407,7 @@ struct clk tegra_list_clks[] = {
 	DUAL_CBUS_CLK("epp.cbus",	"tegra_gr2d",		"epp",  &tegra_clk_c2bus, "epp", 0, 0),
 	SHARED_CLK("cap.c2bus",		"cap.c2bus",		NULL,	&tegra_clk_c2bus, NULL,  0, SHARED_CEILING),
 	SHARED_CLK("floor.c2bus",	"floor.c2bus",		NULL,	&tegra_clk_c2bus, NULL,  0, 0),
+	SHARED_CLK("override.c2bus",	"override.c2bus",	NULL,	&tegra_clk_c2bus, NULL,  0, SHARED_OVERRIDE),
 
 	DUAL_CBUS_CLK("msenc.cbus",	"tegra_msenc",		"msenc",  &tegra_clk_c3bus, "msenc", 0, 0),
 	DUAL_CBUS_CLK("tsec.cbus",	"tegra_tsec",		"tsec",   &tegra_clk_c3bus, "tsec", 0, 0),
@@ -6405,6 +6415,7 @@ struct clk tegra_list_clks[] = {
 	DUAL_CBUS_CLK("se.cbus",	"tegra11-se",		NULL,	  &tegra_clk_c3bus, "se",  0, 0),
 	SHARED_CLK("cap.c3bus",		"cap.c3bus",		NULL,	&tegra_clk_c3bus, NULL,  0, SHARED_CEILING),
 	SHARED_CLK("floor.c3bus",	"floor.c3bus",		NULL,	&tegra_clk_c3bus, NULL,  0, 0),
+	SHARED_CLK("override.c3bus",	"override.c3bus",	NULL,	&tegra_clk_c3bus, NULL,  0, SHARED_OVERRIDE),
 #else
 	SHARED_CLK("3d.cbus",	"tegra_gr3d",		"gr3d",	&tegra_clk_cbus, "3d",  0, 0),
 	SHARED_CLK("2d.cbus",	"tegra_gr2d",		"gr2d",	&tegra_clk_cbus, "2d",  0, 0),
@@ -6415,6 +6426,7 @@ struct clk tegra_list_clks[] = {
 	SHARED_CLK("se.cbus",	"tegra11-se",		NULL,	&tegra_clk_cbus, "se",  0, 0),
 	SHARED_CLK("cap.cbus",	"cap.cbus",		NULL,	&tegra_clk_cbus, NULL,  0, SHARED_CEILING),
 	SHARED_CLK("floor.cbus", "floor.cbus",		NULL,	&tegra_clk_cbus, NULL,  0, 0),
+	SHARED_CLK("override.cbus", "override.cbus",	NULL,	&tegra_clk_cbus, NULL,  0, SHARED_OVERRIDE),
 #endif
 };
 

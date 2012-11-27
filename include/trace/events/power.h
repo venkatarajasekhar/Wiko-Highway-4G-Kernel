@@ -57,33 +57,25 @@ enum {
 	POWER_CPU_SCALE_DONE,
 };
 
-enum {
-	POWER_CPU_CLUSTER_START,
-	POWER_CPU_CLUSTER_DONE,
-};
-
-enum {
-	POWER_CPU_POWERGATE_ENTRY,
-	POWER_CPU_POWERGATE_EXIT,
-};
-
 #endif
 
 TRACE_EVENT(cpu_suspend,
 
-	TP_PROTO(unsigned int state),
+	TP_PROTO(unsigned int state, unsigned int ts),
 
-	TP_ARGS(state),
+	TP_ARGS(state, ts),
 
 	TP_STRUCT__entry(
 		__field(u32, state)
+		__field(u32, ts)
 	),
 
 	TP_fast_assign(
 		__entry->state = state;
+		__entry->ts = ts;
 	),
 
-	TP_printk("state=%lu", (unsigned long)__entry->state)
+	TP_printk("state %u, time %u", __entry->state, __entry->ts)
 );
 
 TRACE_EVENT(cpu_hotplug,
@@ -128,45 +120,6 @@ TRACE_EVENT(cpu_scale,
 	TP_printk("cpu_id=%lu, freq=%lu, state=%lu",
 		  (unsigned long)__entry->cpu_id,
 		  (unsigned long)__entry->freq,
-		  (unsigned long)__entry->state)
-);
-
-TRACE_EVENT(cpu_cluster,
-
-	TP_PROTO(int state),
-
-	TP_ARGS(state),
-
-	TP_STRUCT__entry(
-		__field(u64, state)
-	),
-
-	TP_fast_assign(
-		__entry->state = state;
-	),
-
-	TP_printk("state=%lu",
-		  (unsigned long)__entry->state)
-);
-
-TRACE_EVENT(cpu_powergate,
-
-	TP_PROTO(unsigned int counter, int state),
-
-	TP_ARGS(counter, state),
-
-	TP_STRUCT__entry(
-		__field(u32, counter)
-		__field(u32, state)
-	),
-
-	TP_fast_assign(
-		__entry->counter = counter;
-		__entry->state = state;
-	),
-
-	TP_printk("counter=%lu, state=%lu",
-		  (unsigned long)__entry->counter,
 		  (unsigned long)__entry->state)
 );
 
