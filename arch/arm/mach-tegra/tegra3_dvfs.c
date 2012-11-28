@@ -551,8 +551,9 @@ static void __init init_dvfs_cold(struct dvfs *d, int nominal_mv_index)
 			cpu_cold_freqs[i] = d->freqs[i] - offs;
 		else {
 			cpu_cold_freqs[i] = d->freqs[i];
-			pr_warn("tegra3_dvfs: cold offset %lu is too high for"
-				" regular dvfs limit %lu\n", offs, d->freqs[i]);
+			if (d->freqs[i] > 1 * MHZ)
+			    pr_warn("tegra3_dvfs: cold offset %lu is too high"
+			    " for regular dvfs limit %lu\n", offs, d->freqs[i]);
 		}
 
 		if (i)
