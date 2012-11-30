@@ -185,6 +185,13 @@ endif
 BASIC_CFLAGS = -Iutil/include -Iarch/$(ARCH)/include -I$(OUTPUT)/util -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 BASIC_LDFLAGS =
 
+ifdef CROSS_COMPILE
+       CROSS_CFLAGS := -I$(CROSS_ROOT)/usr/include
+       ALL_CFLAGS += $(CROSS_CFLAGS)
+       CROSS_LDFLAGS := -L$(CROSS_ROOT)/usr/lib
+       ALL_LDFLAGS += $(CROSS_LDFLAGS)
+endif
+
 # Guard against environment variables
 BUILTIN_OBJS =
 LIB_H =
@@ -470,7 +477,7 @@ ifneq ($(OUTPUT),)
 	BASIC_CFLAGS += -I$(OUTPUT)
 endif
 
-FLAGS_LIBELF=$(ALL_CFLAGS) $(ALL_LDFLAGS) $(EXTLIBS)
+FLAGS_LIBELF=$(ALL_CFLAGS) $(ALL_LDFLAGS) $(CROSS_CFLAGS) $(CROSS_LDFLAGS) $(EXTLIBS)
 ifneq ($(call try-cc,$(SOURCE_LIBELF),$(FLAGS_LIBELF)),y)
 	FLAGS_GLIBC=$(ALL_CFLAGS) $(ALL_LDFLAGS)
 	ifneq ($(call try-cc,$(SOURCE_GLIBC),$(FLAGS_GLIBC)),y)
@@ -639,7 +646,7 @@ else
 		EXTLIBS += -liberty
 		BASIC_CFLAGS += -DHAVE_CPLUS_DEMANGLE
         else
-		FLAGS_BFD=$(ALL_CFLAGS) $(ALL_LDFLAGS) $(EXTLIBS) -lbfd
+		FLAGS_BFD=$(ALL_CFLAGS) $(ALL_LDFLAGS) $(CROSS_CFLAGS) $(CROSS_LDFLAGS) $(EXTLIBS) -lbfd
 		has_bfd := $(call try-cc,$(SOURCE_BFD),$(FLAGS_BFD))
 		ifeq ($(has_bfd),y)
 			EXTLIBS += -lbfd
