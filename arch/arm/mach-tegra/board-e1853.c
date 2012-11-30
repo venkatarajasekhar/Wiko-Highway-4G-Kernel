@@ -65,6 +65,7 @@
 #include "fuse.h"
 #include "common.h"
 #include "pm.h"
+#include <mach/board_id.h>
 
 #define IO_EXPANDER_ADDR	(0x75)
 #define BT_RESET_BIT_POS	(IO_EXP_PIN_0)
@@ -236,11 +237,38 @@ static struct platform_device tegra_rtc_device = {
 };
 #endif
 
-static struct tegra_asoc_vcm_platform_data jetson_audio_pdata = {
+static struct tegra_asoc_vcm_platform_data generic_audio_pdata = {
 	.codec_info[0] = {
 		.codec_dai_name = "dit-hifi",
 		.cpu_dai_name = "tegra30-i2s.0",
 		.codec_name = "spdif-dit.0",
+		.name = "tegra-i2s-1",
+		.pcm_driver = "tegra-pcm-audio",
+		.i2s_format = format_i2s,
+		/* Audio Codec is Master */
+		.master = 1,
+	},
+	.codec_info[1] = {
+		.codec_dai_name = "dit-hifi",
+		.cpu_dai_name = "tegra30-i2s.3",
+		.codec_name = "spdif-dit.1",
+		.name = "tegra-i2s-2",
+		.pcm_driver = "tegra-tdm-pcm-audio",
+		.i2s_format = format_tdm,
+		/* Audio Codec is Master */
+		.master = 1,
+		.num_slots = 8,
+		.slot_width = 32,
+		.tx_mask = 0xff,
+		.rx_mask = 0xff,
+	},
+};
+
+static struct tegra_asoc_vcm_platform_data jetson_audio_pdata = {
+	.codec_info[0] = {
+		.codec_dai_name = "wm8731-hifi",
+		.cpu_dai_name = "tegra30-i2s.0",
+		.codec_name = "wm8731.0-001a",
 		.name = "tegra-i2s-1",
 		.pcm_driver = "tegra-pcm-audio",
 		.i2s_format = format_i2s,
@@ -276,8 +304,12 @@ static struct platform_device tegra_snd_e1853 = {
 	.name       = "tegra-snd-e1853",
 	.id = 0,
 	.dev    = {
-		.platform_data = &jetson_audio_pdata,
+		.platform_data = &generic_audio_pdata,
 	},
+};
+
+static struct i2c_board_info __initdata wm8731_board_info = {
+	I2C_BOARD_INFO("wm8731", 0x1a),
 };
 
 static void e1853_i2s_audio_init(void)
@@ -289,9 +321,15 @@ static void e1853_i2s_audio_init(void)
 	platform_device_register(&tegra_i2s_device0);
 	platform_device_register(&tegra_i2s_device3);
 	platform_device_register(&tegra_ahub_device);
-	platform_device_register(&tegra_snd_e1853);
-}
 
+	if (tegra_is_board(NULL, "61860", NULL, NULL, NULL)) {
+		i2c_register_board_info(0, &wm8731_board_info, 1);
+		tegra_snd_e1853.dev.platform_data = &jetson_audio_pdata;
+		platform_device_register(&tegra_snd_e1853);
+	} else {
+		platform_device_register(&tegra_snd_e1853);
+	}
+}
 
 #if defined(CONFIG_SPI_TEGRA) && defined(CONFIG_SPI_SPIDEV)
 static struct spi_board_info tegra_spi_devices[] __initdata = {
