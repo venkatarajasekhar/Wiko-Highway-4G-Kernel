@@ -37,27 +37,59 @@
 #include "board.h"
 #include "board-dolak.h"
 
-static struct board_info board_info;
-
-static int dolak_camera_init(void)
+static int dolak_imx091_power_on(struct nvc_regulator *vreg)
 {
 	return 0;
 }
 
-static int dolak_imx091_power_on(void)
+static int dolak_imx091_power_off(struct nvc_regulator *vreg)
 {
 	return 0;
 }
 
-static int dolak_imx091_power_off(void)
-{
-	return 0;
-}
-
-struct imx091_platform_data dolak_imx091_data = {
-	.power_on = dolak_imx091_power_on,
-	.power_off = dolak_imx091_power_off,
+static struct nvc_imager_cap imx091_cap = {
+	.identifier		= "IMX091",
+	.sensor_nvc_interface	= 3,
+	.pixel_types[0]		= 0x100,
+	.orientation		= 0,
+	.direction		= 0,
+	.initial_clock_rate_khz	= 6000,
+	.clock_profiles[0] = {
+		.external_clock_khz	= 24000,
+		.clock_multiplier	= 10416667, /* value / 1,000,000 */
+	},
+	.clock_profiles[1] = {
+		.external_clock_khz	= 0,
+		.clock_multiplier	= 0,
+	},
+	.h_sync_edge		= 0,
+	.v_sync_edge		= 0,
+	.mclk_on_vgp0		= 0,
+	.csi_port		= 0,
+	.data_lanes		= 4,
+	.virtual_channel_id	= 0,
+	.discontinuous_clk_mode	= 0,
+	.cil_threshold_settle	= 0xd,
+	.min_blank_time_width	= 16,
+	.min_blank_time_height	= 16,
+	.preferred_mode_index	= 0,
+	.focuser_guid		= 0,
+	.torch_guid		= 0,
+	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
+
+static struct imx091_platform_data dolak_imx091_data = {
+	.num			= 0,
+	.sync			= 0,
+	.dev_name		= "camera",
+	.gpio_count		= 0,
+	.gpio			= 0,
+	.cap			= &imx091_cap,
+	.power_on		= dolak_imx091_power_on,
+	.power_off		= dolak_imx091_power_off,
+};
+
+
 
 static struct i2c_board_info dolak_i2c_board_info[] = {
 	{
@@ -68,7 +100,7 @@ static struct i2c_board_info dolak_i2c_board_info[] = {
 
 int __init dolak_sensors_init(void)
 {
-	i2c_register_board_info(5, dolak_i2c_board_info,
+	i2c_register_board_info(0, dolak_i2c_board_info,
 		ARRAY_SIZE(dolak_i2c_board_info));
 
 	return 0;
