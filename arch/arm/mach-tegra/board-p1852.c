@@ -635,6 +635,7 @@ static void __init tegra_p1852_init(void)
 	tegra_soc_device_init("p1852");
 	p1852_pinmux_init();
 	p1852_i2c_init();
+	p1852_regulator_init();
 	p1852_i2s_audio_init();
 	p1852_gpio_init();
 	p1852_uart_init();

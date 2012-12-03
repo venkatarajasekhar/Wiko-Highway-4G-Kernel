@@ -19,7 +19,7 @@
 #ifndef _MACH_TEGRA_BOARD_P1852_H
 #define _MACH_TEGRA_BOARD_P1852_H
 
-#include <mach/gpio.h>
+#include <mach/gpio-tegra.h>
 #include <mach/irqs.h>
 #include <linux/gpio.h>
 #include <linux/mfd/tps6591x.h>
@@ -105,7 +105,7 @@ int p1852_panel_init(void);
 int p1852_gpio_init(void);
 int p1852_pins_state_init(void);
 int p1852_suspend_init(void);
-
+int p1852_regulator_init(void);
 int p1852_get_skuid(void);
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
