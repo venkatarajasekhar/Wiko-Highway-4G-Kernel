@@ -451,6 +451,7 @@ static struct platform_device *dolak_devices[] __initdata = {
 	&tegra_sim_smc91x_device,
 #endif
 	&tegra_camera,
+	&tegra_mipi_bif_device,
 };
 
 static int __init dolak_touch_init(void)
