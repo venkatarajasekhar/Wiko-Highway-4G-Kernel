@@ -35,6 +35,7 @@
 #include <asm/mach/arch.h>
 
 #include "board.h"
+#include "board-ceres.h"
 #include "board-common.h"
 #include "clock.h"
 #include "devices.h"
@@ -103,6 +104,7 @@ static void __init tegra_ceres_init(void)
 	tegra_enable_pinmux();
 	tegra_smmu_init();
 	tegra_soc_device_init("ceres");
+	ceres_keys_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 }
 
