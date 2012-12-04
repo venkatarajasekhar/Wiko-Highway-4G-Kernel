@@ -107,9 +107,6 @@ struct bus_type {
 	const struct dev_pm_ops *pm;
 
 	struct iommu_ops *iommu_ops;
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	struct dma_iommu_mapping *map;
-#endif
 	struct subsys_private *p;
 };
 
