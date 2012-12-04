@@ -53,6 +53,7 @@ obj-$(CONFIG_CHARGER_MANAGER)	+= charger-manager.o
 obj-$(CONFIG_CHARGER_MAX8997)	+= max8997_charger.o
 obj-$(CONFIG_CHARGER_MAX8998)	+= max8998_charger.o
 obj-$(CONFIG_MAX8907C_CHARGER)	+= max8907c-charger.o
+obj-$(CONFIG_CHARGER_MAX77660)	+= max77660-battery.o
 CFLAGS_tegra_bpc_mgmt.o		= -Werror
 obj-$(CONFIG_TEGRA_BPC_MGMT)	+= tegra_bpc_mgmt.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
