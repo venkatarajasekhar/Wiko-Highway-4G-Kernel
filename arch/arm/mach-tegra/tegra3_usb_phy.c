@@ -267,6 +267,7 @@
 #define PMC_USB_DEBOUNCE			0xec
 #define UTMIP_LINE_DEB_CNT(x)		(((x) & 0xf) << 16)
 #define UHSIC_LINE_DEB_CNT(x)		(((x) & 0xf) << 20)
+#define PMC_USB_DEBOUNCE_VAL(x)		((x) & 0xffff)
 
 #define PMC_USB_AO				0xf0
 
@@ -610,6 +611,7 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val = readl(pmc_base + PMC_USB_DEBOUNCE);
 	val &= ~UTMIP_LINE_DEB_CNT(~0);
 	val |= UTMIP_LINE_DEB_CNT(4);
+	val |= PMC_USB_DEBOUNCE_VAL(2);
 	writel(val, pmc_base + PMC_USB_DEBOUNCE);
 
 	/* Make sure nothing is happening on the line with respect to PMC */
@@ -692,7 +694,7 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val = PMC_TCTRL_VAL(utmip_tctrl_val) | PMC_RCTRL_VAL(utmip_rctrl_val);
 	writel(val, pmc_base + PMC_UTMIP_TERM_PAD_CFG);
 
-	phy->remote_wakeup = false;
+	phy->pmc_remote_wakeup = false;
 
 	/* Turn over pad configuration to PMC  for line wake events*/
 	val = readl(pmc_base + PMC_SLEEP_CFG);
@@ -746,7 +748,7 @@ static void utmip_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
 	val |= UTMIP_CLR_WAKE_ALARM(inst);
 	writel(val, pmc_base + PMC_TRIGGERS);
 
-	phy->remote_wakeup = false;
+	phy->pmc_remote_wakeup = false;
 	PHY_DBG("%s DISABLE_PMC inst = %d\n", __func__, inst);
 }
 
@@ -774,7 +776,7 @@ static bool utmi_phy_remotewake_detected(struct tegra_usb_phy *phy)
 			val = readl(base + UTMIP_PMC_WAKEUP0);
 			val &= ~EVENT_INT_ENB;
 			writel(val, base + UTMIP_PMC_WAKEUP0);
-			phy->remote_wakeup = true;
+			phy->pmc_remote_wakeup = true;
 			return true;
 		}
 	}
@@ -1024,7 +1026,7 @@ static int usb_phy_bringup_host_controller(struct tegra_usb_phy *phy)
 	val |= USB_USBSTS_PCI;
 	writel(val, base + USB_USBSTS);
 
-	if (!phy->remote_wakeup) {
+	if (!phy->pmc_remote_wakeup) {
 		/* Put controller in suspend mode by writing 1 to SUSP bit of PORTSC */
 		val = readl(base + USB_PORTSC);
 		if ((val & USB_PORTSC_PP) && (val & USB_PORTSC_PE)) {
@@ -1678,14 +1680,14 @@ static void utmi_phy_restore_start(struct tegra_usb_phy *phy)
 	   For lp1 case, pmc is not responsible for waking the
 	   system, it's the flow controller and hence
 	   UTMIP_WALK_PTR_VAL(inst) will return 0.
-	   Also, for lp1 case phy->remote_wakeup will already be set
+	   Also, for lp1 case phy->pmc_remote_wakeup will already be set
 	   to true by utmi_phy_irq() when the remote wakeup happens.
 	   Hence change the logic in the else part to enter only
-	   if phy->remote_wakeup is not set to true by the
+	   if phy->pmc_remote_wakeup is not set to true by the
 	   utmi_phy_irq(). */
 	if (UTMIP_WALK_PTR_VAL(inst) & val) {
-		phy->remote_wakeup = true;
-	} else if(!phy->remote_wakeup) {
+		phy->pmc_remote_wakeup = true;
+	} else if (!phy->pmc_remote_wakeup) {
 		val = readl(pmc_base + PMC_SLEEP_CFG);
 		if (val & UTMIP_MASTER_ENABLE(inst))
 			utmip_phy_disable_pmc_bus_ctrl(phy);
@@ -1702,7 +1704,7 @@ static void utmi_phy_restore_end(struct tegra_usb_phy *phy)
 
 	DBG("%s(%d) inst:[%d]\n", __func__, __LINE__, phy->inst);
 	/* check whether we wake up from the remote resume */
-	if (phy->remote_wakeup) {
+	if (phy->pmc_remote_wakeup) {
 		/* wait until SUSPEND and RESUME bit is cleared on remote resume */
 		do {
 			val = readl(base + USB_PORTSC);
@@ -1909,6 +1911,11 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val |= UHSIC_PWR;
 	writel(val, pmc_base + PMC_UTMIP_MASTER_CONFIG);
 
+	/* config debouncer */
+	val = readl(pmc_base + PMC_USB_DEBOUNCE);
+	val |= PMC_USB_DEBOUNCE_VAL(2);
+	writel(val, pmc_base + PMC_USB_DEBOUNCE);
+
 	/* Make sure nothing is happening on the line with respect to PMC */
 	val = readl(pmc_base + PMC_UTMIP_UHSIC_FAKE);
 	val &= ~UHSIC_STROBE_VAL;
@@ -1966,7 +1973,7 @@ static void uhsic_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	val |=  UHSIC_STROBE_RPD_D;
 	writel(val, pmc_base + PMC_SLEEPWALK_UHSIC);
 
-	phy->remote_wakeup = false;
+	phy->pmc_remote_wakeup = false;
 
 	/* Setting Wake event*/
 	val = readl(pmc_base + PMC_SLEEP_CFG);
@@ -2078,7 +2085,7 @@ static void uhsic_phy_disable_pmc_bus_ctrl(struct tegra_usb_phy *phy)
 	val |= (UHSIC_CLR_WALK_PTR_P0 | UHSIC_CLR_WAKE_ALARM_P0);
 	writel(val, pmc_base + PMC_TRIGGERS);
 
-	phy->remote_wakeup = false;
+	phy->pmc_remote_wakeup = false;
 }
 
 static bool uhsic_phy_remotewake_detected(struct tegra_usb_phy *phy)
@@ -2103,7 +2110,7 @@ static bool uhsic_phy_remotewake_detected(struct tegra_usb_phy *phy)
 			val = readl(base + UHSIC_PMC_WAKEUP0);
 			val &= ~EVENT_INT_ENB;
 			writel(val, base + UHSIC_PMC_WAKEUP0);
-			phy->remote_wakeup = true;
+			phy->pmc_remote_wakeup = true;
 			DBG("%s:PMC remote wakeup detected for HSIC\n", __func__);
 			return true;
 		}
@@ -2212,7 +2219,7 @@ static void uhsic_phy_restore_start(struct tegra_usb_phy *phy)
 
 	/* check whether we wake up from the remote resume */
 	if (UHSIC_WALK_PTR_VAL & val) {
-		phy->remote_wakeup = true;
+		phy->pmc_remote_wakeup = true;
 	} else {
 		DBG("%s(%d): setting pretend connect\n", __func__, __LINE__);
 		val = readl(base + UHSIC_CMD_CFG0);
@@ -2231,7 +2238,7 @@ static void uhsic_phy_restore_end(struct tegra_usb_phy *phy)
 	DBG("%s(%d)\n", __func__, __LINE__);
 
 	/* check whether we wake up from the remote resume */
-	if (phy->remote_wakeup) {
+	if (phy->pmc_remote_wakeup) {
 		/* wait until FPR bit is set automatically on remote resume */
 		do {
 			val = readl(base + USB_PORTSC);

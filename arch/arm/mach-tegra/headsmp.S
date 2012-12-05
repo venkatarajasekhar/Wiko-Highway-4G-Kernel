@@ -57,8 +57,11 @@ ENTRY(tegra_secondary_startup)
 	mrc	p15, 0, r0, c9, c12, 0
 	lsr	r0, #11
 	and	r0, r0, #0x1f
-	movt	r0, #0x8000
-	mcr	p15, 0, r0, c9, c14, 2
+	mov	r1, #1
+	lsl	r1, r1, r0
+	sub	r1, r1, #1
+	movt	r1, #0x8000
+	mcr	p15, 0, r1, c9, c14, 2
 	mov	r0, #1
 	mcr	p15, 0, r0, c9, c14, 0
 
@@ -76,6 +79,13 @@ ENDPROC(tegra_secondary_startup)
  *	  re-enabling sdram.
  */
 ENTRY(tegra_resume)
+#ifdef CONFIG_TRUSTED_FOUNDATIONS
+	mov32	r1, TEGRA_TMRUS_BASE
+	ldr	r0, [r1]
+	adr	r1, tegra_resume_entry_time
+	str	r0, [r1]
+#endif
+
 	bl	__invalidate_cpu_state
 
 	cpu_id	r0
@@ -104,12 +114,39 @@ ENTRY(tegra_resume)
 #endif
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
+	mov32	r1, TEGRA_TMRUS_BASE
+	ldr	r0, [r1]
+	adr	r1, tegra_resume_smc_entry_time
+	str	r0, [r1]
+
 	/* wake up (should have specified args?) */
 	bl	tegra_generic_smc
+
+	mov32	r1, TEGRA_TMRUS_BASE
+	ldr	r0, [r1]
+	adr	r1, tegra_resume_smc_exit_time
+	str	r0, [r1]
 #endif
 
 	b	cpu_resume
 ENDPROC(tegra_resume)
+
+#ifdef CONFIG_TRUSTED_FOUNDATIONS
+	.globl tegra_resume_timestamps_start
+	.globl tegra_resume_smc_entry_time
+	.globl tegra_resume_smc_exit_time
+	.globl tegra_resume_entry_time
+	.globl tegra_resume_timestamps_end
+tegra_resume_timestamps_start:
+tegra_resume_smc_entry_time:
+	.long	0
+tegra_resume_smc_exit_time:
+	.long	0
+tegra_resume_entry_time:
+	.long	0
+tegra_resume_timestamps_end:
+ENTRY(__tegra_resume_timestamps_end)
+#endif
 #endif
 
 /*
@@ -118,12 +155,18 @@ ENDPROC(tegra_resume)
  *	  Invalidates volatile CPU state (SCU tags, caches, branch address
  *	  arrays, exclusive monitor, etc.) so that they can be safely enabled
  *	  instruction caching and branch predicition enabled
+ *
+ *	  For tegra chips with CONFIG_HAVE_ARM_SCU undefined, it means there is
+ *	  an integrated SCU in L2 memory system, this is true for Cortex-A15
+ *	  MP processors. In this case, we only need to set the correct L2 cache
+ *	  data RAM latency and enable i-cache/branch prediction
  */
 __invalidate_cpu_state:
 	clrex
 	mov	r0, #0
 	mcr	p15, 0, r0, c1, c0, 1	@ disable SMP, prefetch, broadcast
 	isb
+#if defined(CONFIG_HAVE_ARM_SCU)
 	mcr	p15, 0, r0, c7, c5, 0	@ invalidate BTAC, i-cache
 	mcr	p15, 0, r0, c7, c5, 6	@ invalidate branch pred array
 	mcr	p15, 0, r0, c8, c5, 0	@ invalidate instruction TLB
@@ -132,7 +175,6 @@ __invalidate_cpu_state:
 	dsb
 	isb
 
-#if defined(CONFIG_HAVE_ARM_SCU)
 	cpu_id	r0
 	cmp	r0, #0
 	mov32	r1, (TEGRA_ARM_PERIF_BASE + 0xC)
@@ -140,27 +182,31 @@ __invalidate_cpu_state:
 	movne	r2, #0xf
 	movne	r2, r2, lsl r0
 	strne	r2, [r1]		@ invalidate SCU tags for CPU
-#else
-	/*	This is only needed for cluster 0 with integrated L2 cache */
-	mov32	r0, TEGRA_FLOW_CTRL_BASE+0x2c	@ CLUSTER_CONTROL
-	ldr	r0, [r0]
-	tst	r0, #1
-	movne	pc, lr
-	mrc	p15, 0x1, r0, c9, c0, 2
-	and	r1, r0, #7
-	cmp	r1, #2
-	moveq	pc, lr
-	bic	r0, r0, #7
-	orr	r0, r0, #2
-	mcr	p15, 0x1, r0, c9, c0, 2
-	mov	pc, lr
-#endif
 
 	dsb
 	mov	r0, #0x1800
 	mcr	p15, 0, r0, c1, c0, 0	@ enable branch prediction, i-cache
 	isb
 	/* fall through */
+#else
+	/*	This is only needed for cluster 0 with integrated L2 cache */
+	mov32	r0, TEGRA_FLOW_CTRL_BASE+0x2c	@ CLUSTER_CONTROL
+	ldr	r0, [r0]
+	tst	r0, #1
+	bne	__enable_i_cache_branch_pred
+	mrc	p15, 0x1, r0, c9, c0, 2
+	and	r1, r0, #7
+	cmp	r1, #2
+	beq	__enable_i_cache_branch_pred
+	bic	r0, r0, #7
+	orr	r0, r0, #2
+	mcr	p15, 0x1, r0, c9, c0, 2
+__enable_i_cache_branch_pred:
+	mov	r0, #0x1800
+	mcr	p15, 0, r0, c1, c0, 0	@ enable branch prediction, i-cache
+	mov	pc, lr
+	/* no fall through, just return to the caller */
+#endif
 
 /*
  *	tegra_invalidate_cache

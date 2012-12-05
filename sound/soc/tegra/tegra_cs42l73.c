@@ -133,7 +133,7 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 	if (machine->is_device_bt)
 		codec_index = BT_SCO;
 	else
-		codec_index = HIFI_CODEC;
+		codec_index = VOICE_CODEC;
 
 	if (is_call_mode_new) {
 		if (machine->codec_info[codec_index].rate == 0 ||
@@ -145,11 +145,11 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 
 		tegra30_make_voice_call_connections(
 			&machine->codec_info[codec_index],
-			&machine->codec_info[BASEBAND]);
+			&machine->codec_info[BASEBAND], 1);
 	} else {
 		tegra30_break_voice_call_connections(
 			&machine->codec_info[codec_index],
-			&machine->codec_info[BASEBAND]);
+			&machine->codec_info[BASEBAND], 1);
 
 		for (i = 0; i < machine->pcard->num_links; i++)
 			machine->pcard->dai_link[i].ignore_suspend = 0;
@@ -271,8 +271,8 @@ static int tegra_cs42l73_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	a2220_port_path_change(pdata->i2s_param[HIFI_CODEC].is_i2s_master ?
-						   A100_msg_PortC_A_PASS :
-						   A100_msg_PortA_C_PASS);
+						   A100_msg_PortC_D_PASS :
+						   A100_msg_PortD_C_PASS);
 
 	err = tegra_asoc_utils_set_rate(&machine->util_data, srate, mclk);
 	if (err < 0) {
@@ -307,9 +307,11 @@ static int tegra_cs42l73_hw_params(struct snd_pcm_substream *substream,
 	}
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		tegra_cs42l73_set_dam_cif(i2s->dam_ifc, srate,
-			params_channels(params), sample_size, 0, 0, 0, 0);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (i2s->dam_ifc)
+			tegra_cs42l73_set_dam_cif(i2s->dam_ifc, srate,
+			  params_channels(params), sample_size, 0, 0, 0, 0);
+	}
 #endif
 
 	return 0;
@@ -448,9 +450,10 @@ static int tegra_bt_hw_params(struct snd_pcm_substream *substream,
 	}
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+	    i2s->dam_ifc)
 		tegra_cs42l73_set_dam_cif(i2s->dam_ifc, params_rate(params),
-			params_channels(params), sample_size, 0, 0, 0, 0);
+		  params_channels(params), sample_size, 0, 0, 0, 0);
 #endif
 
 	return 0;
@@ -475,6 +478,7 @@ static int tegra_cs42l73_startup(struct snd_pcm_substream *substream)
 	struct tegra_cs42l73 *machine = snd_soc_card_get_drvdata(rtd->card);
 	struct codec_config *codec_info;
 	struct codec_config *bb_info;
+	struct codec_config *hifi_info;
 	int codec_index;
 
 	if (!i2s->is_dam_used)
@@ -505,7 +509,6 @@ static int tegra_cs42l73_startup(struct snd_pcm_substream *substream)
 		tegra30_dam_enable(i2s->dam_ifc, TEGRA30_DAM_ENABLE,
 				TEGRA30_DAM_CHIN1);
 	} else {
-
 		i2s->is_call_mode_rec = machine->is_call_mode;
 
 		if (!i2s->is_call_mode_rec)
@@ -514,10 +517,11 @@ static int tegra_cs42l73_startup(struct snd_pcm_substream *substream)
 		if (machine->is_device_bt)
 			codec_index = BT_SCO;
 		else
-			codec_index = HIFI_CODEC;
+			codec_index = VOICE_CODEC;
 
 		codec_info = &machine->codec_info[codec_index];
 		bb_info = &machine->codec_info[BASEBAND];
+		hifi_info = &machine->codec_info[HIFI_CODEC];
 
 		/* allocate a dam for voice call recording */
 
@@ -535,7 +539,6 @@ static int tegra_cs42l73_startup(struct snd_pcm_substream *substream)
 			bb_info->channels, bb_info->bitsize);
 
 		/* setup the connections for voice call record */
-
 		tegra30_ahub_unset_rx_cif_source(i2s->rxcif);
 		tegra30_ahub_set_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0 +
 			(i2s->call_record_dam_ifc*2),
@@ -582,7 +585,6 @@ static void tegra_cs42l73_shutdown(struct snd_pcm_substream *substream)
 		if (!i2s->dam_ch_refcount)
 			tegra30_dam_free_controller(i2s->dam_ifc);
 	 } else {
-
 		if (!i2s->is_call_mode_rec)
 			return;
 
@@ -619,6 +621,7 @@ static int tegra_voice_call_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_cs42l73 *machine = snd_soc_card_get_drvdata(card);
@@ -649,10 +652,10 @@ static int tegra_voice_call_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	i2s_daifmt = SND_SOC_DAIFMT_NB_NF;
-	i2s_daifmt |= pdata->i2s_param[HIFI_CODEC].is_i2s_master ?
+	i2s_daifmt |= pdata->i2s_param[VOICE_CODEC].is_i2s_master ?
 			SND_SOC_DAIFMT_CBS_CFS : SND_SOC_DAIFMT_CBM_CFM;
 
-	switch (pdata->i2s_param[HIFI_CODEC].i2s_mode) {
+	switch (pdata->i2s_param[VOICE_CODEC].i2s_mode) {
 	case TEGRA_DAIFMT_I2S:
 		i2s_daifmt |= SND_SOC_DAIFMT_I2S;
 		break;
@@ -672,6 +675,10 @@ static int tegra_voice_call_hw_params(struct snd_pcm_substream *substream,
 		dev_err(card->dev, "Can't configure i2s format\n");
 		return -EINVAL;
 	}
+
+	a2220_port_path_change(pdata->i2s_param[VOICE_CODEC].is_i2s_master ?
+						   A100_msg_PortB_A_PASS :
+						   A100_msg_PortA_B_PASS);
 
 	err = tegra_asoc_utils_set_rate(&machine->util_data, srate, mclk);
 	if (err < 0) {
@@ -693,6 +700,12 @@ static int tegra_voice_call_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
+	err = snd_soc_dai_set_fmt(cpu_dai, i2s_daifmt);
+	if (err < 0) {
+		dev_err(card->dev, "cpu_dai fmt not set\n");
+		return err;
+	}
+
 	err = snd_soc_dai_set_sysclk(codec_dai, 0, rate, SND_SOC_CLOCK_IN);
 	if (err < 0) {
 		dev_err(card->dev, "codec_dai clock not set\n");
@@ -701,8 +714,8 @@ static int tegra_voice_call_hw_params(struct snd_pcm_substream *substream,
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 	/* codec configuration */
-	machine->codec_info[HIFI_CODEC].rate = params_rate(params);
-	machine->codec_info[HIFI_CODEC].channels = params_channels(params);
+	machine->codec_info[VOICE_CODEC].rate = params_rate(params);
+	machine->codec_info[VOICE_CODEC].channels = params_channels(params);
 #endif
 
 	machine->is_device_bt = 0;
@@ -717,8 +730,8 @@ static void tegra_voice_call_shutdown(struct snd_pcm_substream *substream)
 			snd_soc_card_get_drvdata(rtd->codec->card);
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
-	machine->codec_info[HIFI_CODEC].rate = 0;
-	machine->codec_info[HIFI_CODEC].channels = 0;
+	machine->codec_info[VOICE_CODEC].rate = 0;
+	machine->codec_info[VOICE_CODEC].channels = 0;
 #endif
 
 	return;
@@ -871,9 +884,11 @@ static int tegra_cs42l73_jack_notifier(struct notifier_block *self,
 	case SND_JACK_HEADPHONE:
 		/*For now force headset mic mode*/
 		/*state = BIT_HEADSET_NO_MIC; */
+		snd_soc_update_bits(codec, CS42L73_PWRCTL2, PDN_MIC2_BIAS, 0);
 		state = BIT_HEADSET;
 		break;
 	case SND_JACK_HEADSET:
+		snd_soc_update_bits(codec, CS42L73_PWRCTL2, PDN_MIC2_BIAS, 0);
 		state = BIT_HEADSET;
 		break;
 	case SND_JACK_MICROPHONE:
@@ -984,13 +999,14 @@ static const struct snd_soc_dapm_widget tegra_cs42l73_dapm_widgets[] = {
 static const struct snd_soc_dapm_route tegra_cs42l73_audio_map[] = {
 	{"Int Spk", NULL, "SPKOUT"},
 	{"MIC2", NULL, "Headset Mic"},
+	{"ADC Left", NULL, "Headset Mic"},
+	{"ADC Right", NULL, "Headset Mic"},
 	/* Headphone (L+R)->  HPOUTA, HPOUTB */
 	{"Headphone", NULL, "HPOUTA"},
 	{"Headphone", NULL, "HPOUTB"},
-	/* DMIC -> DMIC Left/Right and VSPIN */
+	/* DMIC -> DMIC Left/Right */
 	{"DMIC Left", NULL, "Int D-Mic"},
 	{"DMIC Right", NULL, "Int D-Mic"},
-	{"VSPIN", NULL, "Int D-Mic"},
 };
 
 static const struct snd_kcontrol_new tegra_cs42l73_controls[] = {
@@ -1012,8 +1028,11 @@ static int tegra_cs42l73_init(struct snd_soc_pcm_runtime *rtd)
 	int ret;
 
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
+
 	if (machine->codec_info[BASEBAND].i2s_id != -1)
 		i2s->is_dam_used = true;
+
+	i2s->is_dam_used = false;
 #endif
 
 	if (machine->init_done)
@@ -1070,11 +1089,11 @@ static int tegra_cs42l73_init(struct snd_soc_pcm_runtime *rtd)
 static struct snd_soc_dai_link tegra_cs42l73_dai[NUM_DAI_LINKS] = {
 	[DAI_LINK_HIFI] = {
 			.name = "CS42L73",
-			.stream_name = "VSP Playback Record",
+			.stream_name = "ASP Playback Record",
 			.codec_name = "cs42l73.0-004a",
 			.platform_name = "tegra-pcm-audio",
 		    .cpu_dai_name = "tegra30-i2s.1",
-			.codec_dai_name = "cs42l73-vsp",
+			.codec_dai_name = "cs42l73-asp",
 			.init = tegra_cs42l73_init,
 			.ops = &tegra_cs42l73_ops,
 		},
@@ -1302,6 +1321,9 @@ static __devinit int tegra_cs42l73_driver_probe(struct platform_device *pdev)
 
 	tegra_cs42l73_dai[DAI_LINK_BTSCO].cpu_dai_name =
 	tegra_cs42l73_i2s_dai_name[machine->codec_info[BT_SCO].i2s_id];
+
+	tegra_cs42l73_dai[DAI_LINK_VOICE_CALL].cpu_dai_name =
+	tegra_cs42l73_i2s_dai_name[machine->codec_info[VOICE_CODEC].i2s_id];
 #endif
 	card->dapm.idle_bias_off = 1;
 	ret = snd_soc_register_card(card);

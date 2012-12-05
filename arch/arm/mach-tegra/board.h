@@ -175,14 +175,17 @@ void tegra_get_board_info(struct board_info *);
 void tegra_get_pmu_board_info(struct board_info *bi);
 void tegra_get_display_board_info(struct board_info *bi);
 void tegra_get_camera_board_info(struct board_info *bi);
+int tegra_get_board_panel_id(void);
 
 int get_core_edp(void);
 enum panel_type get_panel_type(void);
+int tegra_get_usb_port_owner_info(void);
 int tegra_get_modem_id(void);
 int tegra_get_commchip_id(void);
 enum power_supply_type get_power_supply_type(void);
 enum audio_codec_type get_audio_codec_type(void);
 int get_maximum_cpu_current_supported(void);
+int get_maximum_core_current_supported(void);
 void tegra_enable_pinmux(void);
 enum image_type get_tegra_image_type(void);
 int tegra_get_cvb_alignment_uV(void);

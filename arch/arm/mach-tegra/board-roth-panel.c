@@ -31,6 +31,7 @@
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
+#include <asm/mach-types.h>
 
 #include "board.h"
 #include "devices.h"
@@ -58,7 +59,6 @@ struct platform_device * __init roth_host1x_init(void)
 #define DSI_PANEL_RESET		1
 
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
-#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
 #define DSI_PANEL_BL_PWM	TEGRA_GPIO_PH1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
@@ -72,7 +72,8 @@ static bool reg_requested;
 static bool gpio_requested;
 
 static struct regulator *vdd_lcd_s_1v8;
-static struct regulator *vdd_sys_bl_3v7;
+static struct regulator *vdd_lcd_bl;
+static struct regulator *vdd_lcd_bl_en;
 static struct regulator *avdd_lcd_3v0_2v8;
 
 static struct regulator *roth_hdmi_reg;
@@ -274,14 +275,23 @@ static int roth_dsi_regulator_get(struct device *dev)
 		goto fail;
 	}
 
-	vdd_sys_bl_3v7 = regulator_get(dev, "vdd_lcd_bl");
-	if (IS_ERR_OR_NULL(vdd_sys_bl_3v7)) {
-		pr_err("vdd_sys_bl regulator get failed\n");
-		err = PTR_ERR(vdd_sys_bl_3v7);
-		vdd_sys_bl_3v7 = NULL;
-		goto fail;
+	if (machine_is_dalmore()) {
+		vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
+		if (IS_ERR_OR_NULL(vdd_lcd_bl)) {
+			pr_err("vdd_lcd_bl regulator get failed\n");
+			err = PTR_ERR(vdd_lcd_bl);
+			vdd_lcd_bl = NULL;
+			goto fail;
+		}
 	}
 
+	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
+	if (IS_ERR_OR_NULL(vdd_lcd_bl_en)) {
+		pr_err("vdd_lcd_bl_en regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_bl_en);
+		vdd_lcd_bl_en = NULL;
+		goto fail;
+	}
 	reg_requested = true;
 	return 0;
 fail:
@@ -298,12 +308,6 @@ static int roth_dsi_gpio_get(void)
 	err = gpio_request(DSI_PANEL_RST_GPIO, "panel rst");
 	if (err < 0) {
 		pr_err("panel reset gpio request failed\n");
-		goto fail;
-	}
-
-	err = gpio_request(DSI_PANEL_BL_EN_GPIO, "panel backlight");
-	if (err < 0) {
-		pr_err("panel backlight gpio request failed\n");
 		goto fail;
 	}
 
@@ -347,10 +351,18 @@ static int roth_dsi_panel_enable(struct device *dev)
 	}
 	usleep_range(3000, 5000);
 
-	if (vdd_sys_bl_3v7) {
-		err = regulator_enable(vdd_sys_bl_3v7);
+	if (vdd_lcd_bl) {
+		err = regulator_enable(vdd_lcd_bl);
 		if (err < 0) {
-			pr_err("vdd_sys_bl_3v7 regulator enable failed\n");
+			pr_err("vdd_lcd_bl regulator enable failed\n");
+			goto fail;
+		}
+	}
+
+	if (vdd_lcd_bl_en) {
+		err = regulator_enable(vdd_lcd_bl_en);
+		if (err < 0) {
+			pr_err("vdd_lcd_bl_en regulator enable failed\n");
 			goto fail;
 		}
 	}
@@ -364,8 +376,6 @@ static int roth_dsi_panel_enable(struct device *dev)
 	msleep(20);
 #endif
 
-	gpio_direction_output(DSI_PANEL_BL_EN_GPIO, 1);
-
 	return 0;
 fail:
 	return err;
@@ -373,10 +383,11 @@ fail:
 
 static int roth_dsi_panel_disable(void)
 {
-	gpio_set_value(DSI_PANEL_BL_EN_GPIO, 0);
+	if (vdd_lcd_bl)
+		regulator_disable(vdd_lcd_bl);
 
-	if (vdd_sys_bl_3v7)
-		regulator_disable(vdd_sys_bl_3v7);
+	if (vdd_lcd_bl_en)
+		regulator_disable(vdd_lcd_bl_en);
 
 	if (vdd_lcd_s_1v8)
 		regulator_disable(vdd_lcd_s_1v8);
@@ -400,11 +411,11 @@ static struct tegra_dc_mode roth_dsi_modes[] = {
 		.v_ref_to_sync = 1,
 		.h_sync_width = 4,
 		.v_sync_width = 4,
-		.h_back_porch = 82,
+		.h_back_porch = 112,
 		.v_back_porch = 7,
 		.h_active = 720,
 		.v_active = 1280,
-		.h_front_porch = 4,
+		.h_front_porch = 12,
 		.v_front_porch = 20,
 	},
 };
@@ -728,8 +739,10 @@ int __init roth_panel_init(void)
 #endif
 
 	phost1x = roth_host1x_init();
-	if (!phost1x)
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 
 	gpio_request(roth_hdmi_hpd, "hdmi_hpd");
 	gpio_direction_input(roth_hdmi_hpd);
@@ -788,8 +801,11 @@ int __init roth_panel_init(void)
 	return err;
 }
 #else
-struct platform_device * __init roth_panel_init(void)
+int __init roth_panel_init(void)
 {
-	return roth_host1x_init();
+	if (roth_host1x_init())
+		return 0;
+	else
+		return -EINVAL;
 }
 #endif

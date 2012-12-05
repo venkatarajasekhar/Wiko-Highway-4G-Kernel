@@ -668,15 +668,17 @@ static int __init get_core_nominal_mv_index(int speedo_id)
 {
 	int i;
 	int mv = tegra_core_speedo_mv();
-	int core_edp_limit = get_core_edp();
+	int core_edp_voltage = get_core_edp();
 
 	/*
 	 * Start with nominal level for the chips with this speedo_id. Then,
 	 * make sure core nominal voltage is below edp limit for the board
 	 * (if edp limit is set).
 	 */
-	if (core_edp_limit)
-		mv = min(mv, core_edp_limit);
+	if (!core_edp_voltage)
+		core_edp_voltage = 1200;	/* default 1.2V EDP limit */
+
+	mv = min(mv, core_edp_voltage);
 
 	/* Round nominal level down to the nearest core scaling step */
 	for (i = 0; i < core_dvfs_data->num_voltages; i++) {
@@ -816,7 +818,6 @@ static int __init of_read_dvfs_data(struct device_node *np,
 
 	return ret;
 }
-#endif /* CONFIG_OF */
 
 static int __init of_read_cpu_g_dvfs_data(struct device_node *np)
 {
@@ -863,6 +864,7 @@ static const __initconst struct of_device_id dvfs_match[] = {
 				.data = of_read_core_dvfs_data, },
 	{}
 };
+#endif /* CONFIG_OF */
 
 void __init tegra3_init_dvfs(void)
 {
@@ -882,16 +884,20 @@ void __init tegra3_init_dvfs(void)
 	tegra_dvfs_cpu_disabled = true;
 #endif
 
+#ifdef CONFIG_OF
 	if (!of_tegra_dvfs_init(dvfs_match) && of_cpu_data.num_tables > 0 &&
 				of_core_data.num_tables > 0) {
 		cpu_dvfs_data = &of_cpu_data;
 		cpu_0_dvfs_data = &of_cpu_0_data;
 		core_dvfs_data = &of_core_data;
 	} else {
+#endif
 		cpu_dvfs_data = &tegra30_cpu_data;
 		cpu_0_dvfs_data = &tegra30_cpu_0_data;
 		core_dvfs_data = &tegra30_core_data;
+#ifdef CONFIG_OF
 	}
+#endif
 
 	for (i = 0; i < cpu_dvfs_data->num_voltages; i++)
 		cpu_millivolts_aged[i] = cpu_dvfs_data->millivolts[i];

@@ -25,7 +25,9 @@
 #include <linux/input/max77665-haptic.h>
 #include <linux/power/max17042_battery.h>
 #include <linux/nct1008.h>
+#include <linux/interrupt.h>
 #include <mach/edp.h>
+#include <linux/edp.h>
 #include <mach/gpio-tegra.h>
 #include <mach/pinmux-t11.h>
 #include <mach/pinmux.h>
@@ -43,6 +45,7 @@
 
 #define NTC_10K_TGAIN   0xE6A2
 #define NTC_10K_TOFF    0x2694
+#define MAX77665_CHARGER_INT	TEGRA_GPIO_PJ2
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
@@ -99,6 +102,17 @@ static struct max17042_config_data conf_data = {
 	},
 };
 
+static unsigned int bat_depl_states[] = {
+	900, 800, 700, 600, 500, 400, 300, 200, 100, 0
+};
+
+static struct edp_client bat_depl_client = {
+	.states = bat_depl_states,
+	.num_states = ARRAY_SIZE(bat_depl_states),
+	.e0_index = 0,
+	.priority = EDP_MAX_PRIO
+};
+
 static struct max17042_platform_data max17042_pdata = {
 	.config_data = &conf_data,
 	.init_data  = NULL,
@@ -106,6 +120,7 @@ static struct max17042_platform_data max17042_pdata = {
 	.enable_por_init = 1, /* Use POR init from Maxim appnote */
 	.enable_current_sense = 1,
 	.r_sns = 0,
+	.edp_client = &bat_depl_client
 };
 
 static struct i2c_board_info max17042_device[] = {
@@ -118,7 +133,15 @@ static struct i2c_board_info max17042_device[] = {
 static struct max77665_f_platform_data pluto_max77665_flash_pdata = {
 	.config		= {
 		.led_mask		= 3,
-		.flash_on_torch         = true,
+		/* set to true only when using the torch strobe input
+		 * to trigger the flash.
+		 */
+		.flash_on_torch         = false,
+		/* use ONE-SHOOT flash mode - flash triggered at the
+		 * raising edge of strobe or strobe signal.
+		 */
+		.flash_mode		= 1,
+		/* .flash_on_torch         = true, */
 		.max_total_current_mA	= 1000,
 		.max_peak_current_mA	= 600,
 		},
@@ -177,11 +200,12 @@ static struct max77665_charger_plat_data max77665_charger = {
 };
 
 static struct max77665_muic_platform_data max77665_muic = {
-	.irq_base = 0,
+	.irq_base = MAX77665_TEGRA_IRQ_BASE,
 };
 
 static struct max77665_platform_data pluto_max77665_pdata = {
-	.irq_base = 0,
+	.irq_base = MAX77665_TEGRA_IRQ_BASE,
+	.irq_flag = IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
 	.muic_platform_data = {
 		.pdata = &max77665_muic,
 		.size =	sizeof(max77665_muic),
@@ -200,7 +224,7 @@ static struct max77665_platform_data pluto_max77665_pdata = {
 		},
 };
 
-static const struct i2c_board_info pluto_i2c_board_info_max77665[] = {
+static struct i2c_board_info pluto_i2c_board_info_max77665[] = {
 	{
 		I2C_BOARD_INFO("max77665", 0x66),
 		.platform_data = &pluto_max77665_pdata,
@@ -470,7 +494,7 @@ static struct nvc_imager_cap imx091_cap = {
 	.preferred_mode_index	= 0,
 	.focuser_guid		= NVC_FOCUS_GUID(0),
 	.torch_guid		= NVC_TORCH_GUID(0),
-	.cap_end		= NVC_IMAGER_CAPABILITIES_END,
+	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
 
@@ -481,6 +505,10 @@ static struct imx091_platform_data imx091_pdata = {
 	.dev_name		= "camera",
 	.gpio_count		= ARRAY_SIZE(imx091_gpio_pdata),
 	.gpio			= imx091_gpio_pdata,
+	.flash_cap		= {
+		.sdo_trigger_enabled = 1,
+		.adjustable_flash_timing = 1,
+	},
 	.cap			= &imx091_cap,
 	.power_on		= pluto_imx091_power_on,
 	.power_off		= pluto_imx091_power_off,
@@ -704,7 +732,8 @@ static int pluto_nct1008_init(void)
 		}
 #endif
 
-		pluto_i2c4_nct1008_board_info[0].irq = gpio_to_irq(nct1008_port);
+		pluto_i2c4_nct1008_board_info[0].irq =
+				gpio_to_irq(nct1008_port);
 		pr_info("%s: pluto nct1008 irq %d", __func__, pluto_i2c4_nct1008_board_info[0].irq);
 
 		ret = gpio_request(nct1008_port, "temp_alert");
@@ -804,6 +833,33 @@ static int __init pluto_skin_init(void)
 late_initcall(pluto_skin_init);
 #endif
 
+void __init max77665_init(void)
+{
+	int err;
+
+	err = gpio_request(MAX77665_CHARGER_INT, "CHARGER_INT");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, err);
+		goto fail_init_irq;
+	}
+
+	err = gpio_direction_input(MAX77665_CHARGER_INT);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n", __func__, err);
+		goto fail_init_irq;
+	}
+
+	pluto_i2c_board_info_max77665[0].irq =
+				gpio_to_irq(MAX77665_CHARGER_INT);
+fail_init_irq:
+	err = i2c_register_board_info(4, pluto_i2c_board_info_max77665,
+		ARRAY_SIZE(pluto_i2c_board_info_max77665));
+	if (err)
+		pr_err("%s: max77665 device register failed.\n", __func__);
+
+	return;
+}
+
 int __init pluto_sensors_init(void)
 {
 	int err;
@@ -823,11 +879,8 @@ int __init pluto_sensors_init(void)
 		pr_err("%s: isl board register failed.\n", __func__);
 
 	mpuirq_init();
-
-	err = i2c_register_board_info(4, pluto_i2c_board_info_max77665,
-		ARRAY_SIZE(pluto_i2c_board_info_max77665));
-	if (err)
-		pr_err("%s: max77665 device register failed.\n", __func__);
+	max77665_init();
+	pluto_i2c_board_info_max77665[0].irq = gpio_to_irq(TEGRA_GPIO_PJ0);
 
 	err = i2c_register_board_info(0, max17042_device,
 				ARRAY_SIZE(max17042_device));

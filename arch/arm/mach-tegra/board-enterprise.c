@@ -39,7 +39,7 @@
 #include <linux/memblock.h>
 #include <linux/rfkill-gpio.h>
 #include <linux/mfd/tlv320aic3262-registers.h>
-#include <linux/mfd/tlv320aic3262-core.h>
+#include <linux/mfd/tlv320aic3xxx-core.h>
 
 #include <linux/nfc/pn544.h>
 #include <linux/of_platform.h>
@@ -106,6 +106,7 @@ static noinline void __init enterprise_bt_st(void)
        platform_device_register(&btwilink_device);
 }
 
+#ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data enterprise_bt_rfkill_pdata[] = {
 	{
 		.name           = "bt_rfkill",
@@ -187,7 +188,55 @@ static void __init enterprise_setup_bluesleep(void)
 	}
 	return;
 }
+#elif defined CONFIG_BLUEDROID_PM
+static struct resource enterprise_bluedroid_pm_resources[] = {
+	[0] = {
+		.name   = "shutdown_gpio",
+		.start  = TEGRA_GPIO_PE6,
+		.end    = TEGRA_GPIO_PE6,
+		.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+	[2] = {
+		.name = "gpio_ext_wake",
+		.start  = TEGRA_GPIO_PE7,
+		.end    = TEGRA_GPIO_PE7,
+		.flags  = IORESOURCE_IO,
+	},
+	[3] = {
+		.name = "gpio_host_wake",
+		.start  = TEGRA_GPIO_PS2,
+		.end    = TEGRA_GPIO_PS2,
+		.flags  = IORESOURCE_IO,
+	},
+};
 
+static struct platform_device enterprise_bluedroid_pm_device = {
+	.name = "bluedroid_pm",
+	.id             = 0,
+	.num_resources  = ARRAY_SIZE(enterprise_bluedroid_pm_resources),
+	.resource       = enterprise_bluedroid_pm_resources,
+};
+
+static void __init enterprise_bluedroid_pm(void)
+{
+	struct board_info board_info;
+	tegra_get_board_info(&board_info);
+
+	enterprise_bluedroid_pm_resources[1].start =
+		enterprise_bluedroid_pm_resources[1].end =
+				gpio_to_irq(TEGRA_GPIO_PS2);
+	if (board_info.board_id == BOARD_E1239)
+		enterprise_bluedroid_pm_resources[1].start =
+			enterprise_bluedroid_pm_resources[1].end =
+							TEGRA_GPIO_PF4;
+	platform_device_register(&enterprise_bluedroid_pm_device);
+	return;
+}
+#endif
 static __initdata struct tegra_clk_init_table enterprise_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
@@ -199,10 +248,10 @@ static __initdata struct tegra_clk_init_table enterprise_clk_init_table[] = {
 	{ "i2s1",	"pll_a_out0",	0,		false},
 	{ "i2s3",	"pll_a_out0",	0,		false},
 	{ "spdif_out",	"pll_a_out0",	0,		false},
-	{ "d_audio",	"clk_m",	12000000,	false},
-	{ "dam0",	"clk_m",	12000000,	false},
-	{ "dam1",	"clk_m",	12000000,	false},
-	{ "dam2",	"clk_m",	12000000,	false},
+	{ "d_audio",	"clk_m",	13000000,	false},
+	{ "dam0",	"clk_m",	13000000,	false},
+	{ "dam1",	"clk_m",	13000000,	false},
+	{ "dam2",	"clk_m",	13000000,	false},
 	{ "audio0",	"i2s0_sync",	0,		false},
 	{ "audio1",	"i2s1_sync",	0,		false},
 	{ "audio2",	"i2s2_sync",	0,		false},
@@ -257,7 +306,7 @@ static struct aic3262_gpio_setup aic3262_gpio[] = {
 	},
 };
 
-static struct aic3262_pdata aic3262_codec_pdata = {
+static struct aic3xxx_pdata aic3262_codec_pdata = {
 	.gpio_irq	= 1,
 	.gpio_reset	= TEGRA_GPIO_CODEC_RST,
 	.gpio		= aic3262_gpio,
@@ -565,6 +614,7 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 		.is_i2s_master	= 0,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
+		.channels	    = 2,
 	},
 	.i2s_param[BASEBAND]	= {
 		.audio_port_id	= 2,
@@ -573,6 +623,7 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 		.sample_size	= 16,
 		.rate		= 8000,
 		.channels	= 1,
+		.bit_clk    = 2048000,
 	},
 	.i2s_param[BT_SCO]	= {
 		.audio_port_id	= 3,
@@ -1066,9 +1117,10 @@ static void __init tegra_enterprise_init(void)
 	enterprise_i2c_init();
 	enterprise_uart_init();
 	enterprise_usb_init();
+#ifdef CONFIG_BT_BLUESLEEP
 	if (board_info.board_id == BOARD_E1239)
 		enterprise_bt_rfkill_pdata[0].shutdown_gpio = TEGRA_GPIO_PF4;
-
+#endif
 	platform_add_devices(enterprise_devices, ARRAY_SIZE(enterprise_devices));
 	tegra_ram_console_debug_init();
 	enterprise_regulator_init();
@@ -1086,8 +1138,12 @@ static void __init tegra_enterprise_init(void)
 	if (tegra_get_commchip_id() == COMMCHIP_TI_WL18XX)
 		enterprise_bt_st();
 	else
+#ifdef CONFIG_BT_BLUESLEEP
 		enterprise_bt_rfkill();
 	enterprise_setup_bluesleep();
+#elif defined CONFIG_BLUEDROID_PM
+		enterprise_bluedroid_pm();
+#endif
 	enterprise_emc_init();
 	enterprise_sensors_init();
 	enterprise_suspend_init();
@@ -1101,8 +1157,10 @@ static void __init tegra_enterprise_dt_init(void)
 {
 	tegra_enterprise_init();
 
+#ifdef CONFIG_USE_OF
 	of_platform_populate(NULL,
 		of_default_bus_match_table, NULL, NULL);
+#endif
 }
 
 static void __init tegra_enterprise_reserve(void)

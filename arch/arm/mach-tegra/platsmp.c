@@ -163,20 +163,12 @@ static bool is_cpu_powered(unsigned int cpu)
 		return tegra_powergate_is_powered(TEGRA_CPU_POWERGATE_ID(cpu));
 }
 
-static bool is_clamp_removed(unsigned int cpu)
-{
-	u32 reg;
-
-	reg = pmc_readl(CLAMP_STATUS);
-
-	return !((reg >> TEGRA_CPU_POWERGATE_ID(cpu)) & 1);
-}
-
 static void __cpuinit tegra_secondary_init(unsigned int cpu)
 {
 	gic_secondary_init(0);
 
 	cpumask_set_cpu(cpu, to_cpumask(tegra_cpu_init_bits));
+	cpumask_set_cpu(cpu, tegra_cpu_power_mask);
 	if (!tegra_all_cpus_booted)
 		if (cpumask_equal(tegra_cpu_init_mask, cpu_present_mask))
 			tegra_all_cpus_booted = true;
@@ -265,20 +257,15 @@ fail:
 
 static int tegra11x_power_up_cpu(unsigned int cpu)
 {
-	int ret;
-	unsigned long timeout;
-
 	BUG_ON(cpu == smp_processor_id());
 	BUG_ON(is_lp_cluster());
 
 	cpu = cpu_logical_map(cpu);
 
 	if (cpu_isset(cpu, tegra_cpu_power_map)) {
-
 		/* set SCLK as event trigger for flow conroller */
 		flowctrl_write_cpu_csr(cpu, 0x1);
 		flowctrl_write_cpu_halt(cpu, 0x48000000);
-
 	} else {
 		u32 reg;
 
@@ -286,24 +273,7 @@ static int tegra11x_power_up_cpu(unsigned int cpu)
 		pmc_writel(reg, PWRGATE_TOGGLE);
 	}
 
-	ret = -ETIMEDOUT;
-
-	/* Wait for the power to come up. */
-	timeout = jiffies + msecs_to_jiffies(2000);
-	do {
-		if (is_cpu_powered(cpu) && is_clamp_removed(cpu)) {
-			cpumask_set_cpu(cpu, tegra_cpu_power_mask);
-			wmb();
-			ret = 0;
-			break;
-		}
-		udelay(10);
-	} while (time_before(jiffies, timeout));
-
-	/* Clear flow controller CSR. */
-	flowctrl_write_cpu_csr(cpu, 0);
-
-	return ret;
+	return 0;
 }
 
 static int tegra14x_power_up_cpu(unsigned int cpu)
@@ -380,7 +350,7 @@ int tegra_boot_secondary(unsigned int cpu, struct task_struct *idle)
 				clk_get_min_rate(cpu_g_clk) / 1000);
 			tegra_update_cpu_speed(speed);
 #endif
-			status = clk_set_parent(cpu_clk, cpu_g_clk);
+			status = tegra_cluster_switch(cpu_clk, cpu_g_clk);
 		}
 
 		if (status)

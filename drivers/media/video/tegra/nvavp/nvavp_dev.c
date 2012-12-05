@@ -1032,9 +1032,16 @@ err_exit:
 	return ret;
 }
 
+#define TIMER_PTV	0
+#define TIMER_EN	(1 << 31)
+#define TIMER_PERIODIC	(1 << 30)
+#define TIMER_PCR	0x4
+#define TIMER_PCR_INTR	(1 << 30)
+
 static void nvavp_uninit(struct nvavp_info *nvavp)
 {
 	int video_initialized, audio_initialized = 0;
+	unsigned int reg;
 
 	video_initialized = nvavp_get_video_init_status(nvavp);
 
@@ -1075,6 +1082,18 @@ static void nvavp_uninit(struct nvavp_info *nvavp)
 		nvavp_pushbuffer_deinit(nvavp);
 		nvavp_halt_avp(nvavp);
 	}
+
+	/*
+	 * WAR: turn off TMR2 for fix LP1 wake up by TMR2.
+	 * turn off the periodic interrupt and the timer temporarily
+	 */
+	reg = readl(IO_ADDRESS(TEGRA_TMR2_BASE + TIMER_PTV));
+	reg &= ~(TIMER_EN | TIMER_PERIODIC);
+	writel(reg, IO_ADDRESS(TEGRA_TMR2_BASE + TIMER_PTV));
+
+	/* write a 1 to the intr_clr field to clear the interrupt */
+	reg = TIMER_PCR_INTR;
+	writel(reg, IO_ADDRESS(TEGRA_TMR2_BASE + TIMER_PCR));
 }
 
 static int nvavp_set_clock_ioctl(struct file *filp, unsigned int cmd,
@@ -1768,7 +1787,12 @@ static int tegra_nvavp_probe(struct platform_device *ndev)
 	nvavp->nvhost_dev = ndev;
 	platform_set_drvdata(ndev, nvavp);
 
-	device_create_file(&ndev->dev, &dev_attr_boost_sclk);
+	ret = device_create_file(&ndev->dev, &dev_attr_boost_sclk);
+	if (ret) {
+		dev_err(&ndev->dev,
+			"%s: device_create_file failed\n", __func__);
+		goto err_req_irq_pend;
+	}
 
 	return 0;
 

@@ -88,6 +88,8 @@ obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_dvfs.o
 obj-$(CONFIG_TEGRA_LATENCY_ALLOWANCE)   += latency_allowance.o
 obj-$(CONFIG_TEGRA_EDP_LIMITS)          += edp.o
+obj-$(CONFIG_TEGRA_CORE_EDP_LIMITS)     += edp_core.o
+obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_edp.o
 endif
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_speedo.o
@@ -295,6 +297,9 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-panel.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-kbc.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-sensors.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-powermon.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += panel-l-720p-5.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += panel-j-720p-4-7.o
+obj-${CONFIG_MACH_TEGRA_PLUTO}          += panel-s-1080p-5.o
 
 obj-${CONFIG_MACH_CERES}                += board-ceres.o
 
@@ -306,3 +311,13 @@ obj-${CONFIG_TEGRA_BASEBAND}            += tegra_bb.o
 obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 
 obj-${CONFIG_TEGRA_NVDUMPER}            += nvdumper.o
+
+obj-${CONFIG_MACH_ROTH}                 += board-roth.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-memory.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-pinmux.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-power.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-powermon.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-sdhci.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-panel.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-kbc.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-sensors.o

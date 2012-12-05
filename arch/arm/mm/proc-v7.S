@@ -407,13 +407,18 @@ __v7_ca7mp_setup:
 __v7_ca15mp_setup:
 	mov	r10, #0
 1:
-#ifdef CONFIG_SMP
+#ifdef CONFIG_SMP || CONFIG_ARCH_TEGRA
 	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
 	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
 	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
 	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
 	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
+#ifdef CONFIG_ARCH_TEGRA
+	orr	r0, #(1<<24)			@ Enable non-cacheable streaming enhancement
+	mcr	p15, 0, r0, c1, c0, 1
+#else
 	mcreq	p15, 0, r0, c1, c0, 1
+#endif
 #endif
 __v7_setup:
 	adr	r12, __v7_setup_stack		@ the local stack
@@ -507,10 +512,11 @@ __v7_setup:
 1:
 #endif
 #ifdef CONFIG_ARM_ERRATA_752520
-	cmp	r6, #0x29			@ present prior to r2p9
-	mrclt	p15, 0, r10, c15, c0, 1		@ read diagnostic register
-	orrlt	r10, r10, #1 << 20		@ set bit #20
-	mcrlt	p15, 0, r10, c15, c0, 1		@ write diagnostic register
+	cmp	r6, #0x28			@ present prior to r2p9
+	teqlt	r5, #0x00200000			@ present from r2p0
+	mrceq	p15, 0, r10, c15, c0, 1		@ read diagnostic register
+	orreq	r10, r10, #1 << 20		@ set bit #20
+	mcreq	p15, 0, r10, c15, c0, 1		@ write diagnostic register
 #endif
 #endif
 

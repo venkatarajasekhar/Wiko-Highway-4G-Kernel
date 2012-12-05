@@ -88,11 +88,13 @@ enum dfll_range {
 
 struct dvfs_dfll_data {
 	u32		tune0;
+	u32		tune0_high_mv;
 	u32		tune1;
 	unsigned long	droop_rate_min;
 	unsigned long	use_dfll_rate_min;
 	unsigned long	out_rate_min;
 	unsigned long	max_rate_boost;
+	int tune_high_min_millivolts;
 	int min_millivolts;
 	enum dfll_range	range;
 };
@@ -138,8 +140,10 @@ struct cpu_cvb_dvfs_table {
 
 struct cpu_cvb_dvfs {
 	int speedo_id;
+	int process_id;
+
+	struct dvfs_dfll_data dfll_tune_data;
 	int max_mv;
-	int min_dfll_mv;
 	int freqs_mult;
 	int speedo_scale;
 	int voltage_scale;

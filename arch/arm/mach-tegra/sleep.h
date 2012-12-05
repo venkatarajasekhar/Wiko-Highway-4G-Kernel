@@ -50,6 +50,8 @@
 #define TEGRA_POWER_CLUSTER_PART_DEFAULT 0
 #endif
 #define TEGRA_POWER_CLUSTER_PART_SHIFT	24
+#define TEGRA_POWER_CLUSTER_FORCE_SHIFT	2
+#define TEGRA_POWER_CLUSTER_FORCE_MASK	(1 << TEGRA_POWER_CLUSTER_FORCE_SHIFT)
 
 #define TEGRA_POWER_SDRAM_SELFREFRESH	(1 << 26) /* SDRAM is in self-refresh */
 #define TEGRA_POWER_HOTPLUG_SHUTDOWN	(1 << 27) /* Hotplug shutdown */
@@ -210,6 +212,14 @@ extern unsigned int lp1_register_core_highvolt;
 int tegra3_sleep_core_finish(unsigned long int);
 int tegra3_sleep_cpu_secondary_finish(unsigned long int);
 void tegra3_hotplug_shutdown(void);
+#endif
+
+#ifdef CONFIG_TRUSTED_FOUNDATIONS
+extern unsigned long tegra_resume_timestamps_start;
+extern unsigned long tegra_resume_timestamps_end;
+extern unsigned long tegra_resume_smc_entry_time;
+extern unsigned long tegra_resume_smc_exit_time;
+extern unsigned long tegra_resume_entry_time;
 #endif
 
 static inline void *tegra_iram_start(void)

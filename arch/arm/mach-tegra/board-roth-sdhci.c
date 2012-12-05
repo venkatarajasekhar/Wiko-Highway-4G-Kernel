@@ -37,10 +37,11 @@
 #include "board.h"
 #include "board-roth.h"
 
-
 #define ROTH_WLAN_PWR	TEGRA_GPIO_PCC5
-#define ROTH_WLAN_RST	TEGRA_GPIO_PX7
+#define ROTH_WLAN_RST	TEGRA_GPIO_INVALID
 #define ROTH_WLAN_WOW	TEGRA_GPIO_PU5
+#define ROTH_SD_CD		TEGRA_GPIO_PV2
+
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 static int roth_wifi_status_register(void (*callback)(int , void *), void *);
@@ -124,7 +125,7 @@ static struct embedded_sdio_data embedded_sdio_data0 = {
 	},
 	.cis  = {
 		.vendor	 = 0x02d0,
-		.device	 = 0x4329,
+		.device	 = 0x4324,
 	},
 };
 #endif
@@ -150,7 +151,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
-	.cd_gpio = -1,
+	.cd_gpio = ROTH_SD_CD,
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.tap_delay = 0x3,
@@ -224,8 +225,8 @@ static int roth_wifi_set_carddetect(int val)
 
 static struct regulator *roth_vdd_com_3v3;
 static struct regulator *roth_vddio_com_1v8;
-#define ROTH_VDD_WIFI_3V3 "vdd_wifi_3v3"
-#define ROTH_VDD_WIFI_1V8 "vddio_wifi_1v8"
+#define ROTH_VDD_WIFI_3V3 "vdd_wl_pa"
+#define ROTH_VDD_WIFI_1V8 "vddio"
 
 
 static int roth_wifi_regulator_enable(void)
@@ -234,7 +235,8 @@ static int roth_wifi_regulator_enable(void)
 
 	/* Enable COM's vdd_com_3v3 regulator*/
 	if (IS_ERR_OR_NULL(roth_vdd_com_3v3)) {
-		roth_vdd_com_3v3 = regulator_get(NULL, ROTH_VDD_WIFI_3V3);
+		roth_vdd_com_3v3 = regulator_get(&roth_wifi_device.dev,
+					ROTH_VDD_WIFI_3V3);
 		if (IS_ERR_OR_NULL(roth_vdd_com_3v3)) {
 			pr_err("Couldn't get regulator "
 				ROTH_VDD_WIFI_3V3 "\n");
@@ -253,7 +255,7 @@ static int roth_wifi_regulator_enable(void)
 
 	/* Enable COM's vddio_com_1v8 regulator*/
 	if (IS_ERR_OR_NULL(roth_vddio_com_1v8)) {
-		roth_vddio_com_1v8 = regulator_get(NULL,
+		roth_vddio_com_1v8 = regulator_get(&roth_wifi_device.dev,
 			ROTH_VDD_WIFI_1V8);
 		if (IS_ERR_OR_NULL(roth_vddio_com_1v8)) {
 			pr_err("Couldn't get regulator "
@@ -385,9 +387,6 @@ static int __init roth_wifi_init(void)
 #ifdef CONFIG_TEGRA_PREPOWER_WIFI
 static int __init roth_wifi_prepower(void)
 {
-	if (!machine_is_roth())
-		return 0;
-
 	roth_wifi_power(1);
 
 	return 0;

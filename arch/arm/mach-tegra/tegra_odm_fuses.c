@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra_odm_fuses.c
  *
- * Copyright (c) 2010-2011, NVIDIA Corporation.
+ * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,7 +71,7 @@
 #define FUSE_REG_ADDR		0x004
 #define FUSE_REG_READ		0x008
 #define FUSE_REG_WRITE		0x00C
-#define FUSE_TIME_PGM		0x01C
+#define FUSE_TIME_PGM2		0x01C
 #define FUSE_PRIV2INTFC		0x020
 #define FUSE_DIS_PGM		0x02C
 #define FUSE_WRITE_ACCESS	0x030
@@ -467,7 +467,7 @@ static void fuse_program_array(int pgm_cycles)
 	 */
 	if (pgm_cycles > 0) {
 		reg = pgm_cycles;
-		tegra_fuse_writel(reg, FUSE_TIME_PGM);
+		tegra_fuse_writel(reg, FUSE_TIME_PGM2);
 	}
 	fuse_val[0] = (0x1 & ~fuse_val[0]);
 	fuse_val[1] = (0x1 & ~fuse_val[1]);
@@ -564,7 +564,11 @@ EXPORT_SYMBOL(tegra_fuse_regulator_en);
 #define PMC_OSC_OVERRIDE	BIT(0)
 #define PMC_OSC_FREQ_MASK	(BIT(2) | BIT(3))
 #define PMC_OSC_FREQ_SHIFT	2
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define CAR_OSC_FREQ_SHIFT	30
+#else
+#define CAR_OSC_FREQ_SHIFT	28
+#endif
 
 #define FUSE_SENSE_DONE_BIT	BIT(30)
 #define START_DATA		BIT(0)
@@ -574,9 +578,12 @@ EXPORT_SYMBOL(tegra_fuse_regulator_en);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 /* cycles corresponding to 13MHz, 19.2MHz, 12MHz, 26MHz */
 static int fuse_pgm_cycles[] = {130, 192, 120, 260};
-#else
+#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 /* cycles corresponding to 13MHz, 16.8MHz, 19.2MHz, 38.4MHz, 12MHz, 48MHz, 26MHz */
 static int fuse_pgm_cycles[] = {130, 168, 0, 0, 192, 384, 0, 0, 120, 480, 0, 0, 260};
+#else
+/* cycles corresponding to 13MHz, 16.8MHz, 19.2MHz, 38.4MHz, 12MHz, 48MHz, 26MHz */
+static int fuse_pgm_cycles[] = {143, 185, 0, 0, 212, 423, 0, 0, 132, 528, 0, 0, 286};
 #endif
 
 int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
@@ -599,7 +606,8 @@ int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
 	}
 
 	if (fuse_odm_prod_mode() && (flags != FLAGS_ODMRSVD)) {
-		pr_err("reserved odm fuses aren't allowed in secure mode");
+		pr_err("Non ODM reserved fuses cannot be burnt after "
+			"ODM production mode/secure mode fuse is burnt");
 		return -EPERM;
 	}
 
@@ -652,6 +660,10 @@ int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
 	}
 
 	pr_debug("%s: use %d programming cycles\n", __func__, fuse_pgm_cycles[index]);
+
+	/* FIXME: Ideally, this delay should not be present */
+	mdelay(1);
+
 	fuse_program_array(fuse_pgm_cycles[index]);
 
 	memset(&fuse_info, 0, sizeof(fuse_info));
@@ -731,8 +743,11 @@ static ssize_t fuse_store(struct kobject *kobj, struct kobj_attribute *attr,
 	raw_data = ((u32 *)&data) + fuse_info_tbl[param].data_offset;
 	raw_byte_data = (u8 *)raw_data;
 
-	if (fuse_odm_prod_mode()) {
-		pr_err("%s: device locked. odm fuse already blown\n", __func__);
+	if (fuse_odm_prod_mode() && (param != ODM_RSVD)) {
+		pr_err("%s: Non ODM reserved fuses cannot be burnt "
+			"after ODM production mode/secure mode fuse is burnt\n"
+			, __func__);
+
 		return -EPERM;
 	}
 
@@ -794,7 +809,6 @@ static ssize_t fuse_store(struct kobject *kobj, struct kobj_attribute *attr,
 		CHK_ERR(sysfs_chmod_file(kobj, &sbk_attr.attr, 0440));
 		CHK_ERR(sysfs_chmod_file(kobj, &sw_rsvd_attr.attr, 0440));
 		CHK_ERR(sysfs_chmod_file(kobj, &ignore_dev_sel_straps_attr.attr, 0440));
-		CHK_ERR(sysfs_chmod_file(kobj, &odm_rsvd_attr.attr, 0440));
 	}
 
 done:
@@ -878,9 +892,9 @@ static int __init tegra_fuse_program_init(void)
 		sbk_attr.attr.mode = 0640;
 		sw_rsvd_attr.attr.mode = 0640;
 		ignore_dev_sel_straps_attr.attr.mode = 0640;
-		odm_rsvd_attr.attr.mode = 0640;
 		odm_prod_mode_attr.attr.mode = 0644;
 	}
+	odm_rsvd_attr.attr.mode = 0640;
 
 	CHK_ERR(sysfs_create_file(fuse_kobj, &odm_prod_mode_attr.attr));
 	CHK_ERR(sysfs_create_file(fuse_kobj, &devkey_attr.attr));

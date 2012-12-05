@@ -11,6 +11,7 @@ obj-$(CONFIG_HTC_EGPIO)		+= htc-egpio.o
 obj-$(CONFIG_HTC_PASIC3)	+= htc-pasic3.o
 obj-$(CONFIG_HTC_I2CPLD)	+= htc-i2cpld.o
 
+obj-$(CONFIG_MFD_BQ2419X)		+= bq2419x.o
 obj-$(CONFIG_MFD_DAVINCI_VOICECODEC)	+= davinci_voicecodec.o
 obj-$(CONFIG_MFD_DM355EVM_MSP)	+= dm355evm_msp.o
 obj-$(CONFIG_MFD_TI_SSP)	+= ti-ssp.o
@@ -52,8 +53,7 @@ obj-$(CONFIG_TWL4030_POWER)    += twl4030-power.o
 obj-$(CONFIG_MFD_TWL4030_AUDIO)	+= twl4030-audio.o
 obj-$(CONFIG_TWL6030_PWM)	+= twl6030-pwm.o
 obj-$(CONFIG_TWL6040_CORE)	+= twl6040-core.o twl6040-irq.o
-obj-$(CONFIG_AIC3262_CODEC)	+= tlv320aic3262-core.o tlv320aic3262-irq.o
-
+obj-$(CONFIG_AIC3XXX_CORE)	+= tlv320aic3xxx-i2c.o tlv320aic3xxx-spi.o tlv320aic3xxx-core.o tlv320aic3xxx-irq.o
 obj-$(CONFIG_MFD_MC13XXX)	+= mc13xxx-core.o
 
 obj-$(CONFIG_MFD_CORE)		+= mfd-core.o

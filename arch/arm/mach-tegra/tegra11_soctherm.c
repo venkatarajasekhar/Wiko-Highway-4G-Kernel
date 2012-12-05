@@ -281,7 +281,9 @@ static void __iomem *clk_reset_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 	__raw_readl((u32)reg_soctherm_base + (reg))
 
 static struct soctherm_platform_data plat_data;
+#ifdef CONFIG_THERMAL
 static struct thermal_zone_device *thz[THERM_SIZE];
+#endif
 static struct workqueue_struct *workqueue;
 static struct work_struct work;
 
@@ -323,6 +325,7 @@ static inline long temp_translate(int readback)
 	return (abs * 1000 + lsb * 500) * (sign * -2 + 1);
 }
 
+#ifdef CONFIG_THERMAL
 static int soctherm_set_limits(enum soctherm_therm_id therm,
 				long lo_limit, long hi_limit)
 {
@@ -337,7 +340,6 @@ static int soctherm_set_limits(enum soctherm_therm_id therm,
 	return 0;
 }
 
-#ifdef CONFIG_THERMAL
 static void soctherm_update(void)
 {
 	struct thermal_zone_device *dev = thz[THERM_CPU];
@@ -487,6 +489,7 @@ static int __init soctherm_thermal_init(void)
 					0,
 					(void *)i,
 					&soctherm_ops,
+					NULL,
 					0, 0, 0, 0);
 		}
 	}
@@ -500,6 +503,7 @@ static int __init soctherm_thermal_init(void)
 					plat_data.therm[i].cdev ? 0x1 : 0,
 					(void *)TSENSE_SIZE + i,
 					&soctherm_ops,
+					NULL,
 					plat_data.therm[i].passive_delay,
 					0);
 	}
@@ -631,7 +635,7 @@ static int soctherm_clk_enable(bool enable)
 	return 0;
 }
 
-static int __init soctherm_fuse_read_tsensor(enum soctherm_sense sensor)
+static int soctherm_fuse_read_tsensor(enum soctherm_sense sensor)
 {
 	u32 calib;
 	u32 fuse_base_cp;

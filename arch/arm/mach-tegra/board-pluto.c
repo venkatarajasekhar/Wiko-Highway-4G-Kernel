@@ -48,6 +48,7 @@
 #include <linux/mfd/max8831.h>
 #include <linux/of_platform.h>
 #include <linux/a2220.h>
+#include <linux/edp.h>
 
 #include <asm/hardware/gic.h>
 
@@ -55,7 +56,7 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/pinmux.h>
-#include <mach/pinmux-tegra30.h>
+#include <mach/pinmux-t11.h>
 #include <mach/iomap.h>
 #include <mach/io.h>
 #include <mach/io_dpd.h>
@@ -67,7 +68,6 @@
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
 #include <mach/tegra-bb-power.h>
-#include <mach/edp.h>
 #include <mach/tegra_usb_modem_power.h>
 
 #include "board.h"
@@ -75,15 +75,18 @@
 #include "board-touch-raydium.h"
 #include "clock.h"
 #include "board-pluto.h"
+#include "tegra-board-id.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
 #include "pm.h"
 #include "common.h"
 
+#ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data pluto_bt_rfkill_pdata = {
 	.name           = "bt_rfkill",
 	.shutdown_gpio  = TEGRA_GPIO_PQ7,
+	.reset_gpio	= TEGRA_GPIO_PQ6,
 	.type           = RFKILL_TYPE_BLUETOOTH,
 };
 
@@ -97,11 +100,6 @@ static struct platform_device pluto_bt_rfkill_device = {
 
 static noinline void __init pluto_setup_bt_rfkill(void)
 {
-	if ((tegra_get_commchip_id() == COMMCHIP_BROADCOM_BCM43241) ||
-				(tegra_get_commchip_id() == COMMCHIP_DEFAULT))
-		pluto_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_INVALID;
-	else
-		pluto_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_PU6;
 	platform_device_register(&pluto_bt_rfkill_device);
 }
 
@@ -139,6 +137,54 @@ static noinline void __init pluto_setup_bluesleep(void)
 	platform_device_register(&pluto_bluesleep_device);
 	return;
 }
+#elif defined CONFIG_BLUEDROID_PM
+static struct resource pluto_bluedroid_pm_resources[] = {
+	[0] = {
+		.name   = "shutdown_gpio",
+		.start  = TEGRA_GPIO_PQ7,
+		.end    = TEGRA_GPIO_PQ7,
+		.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+	[2] = {
+		.name = "gpio_ext_wake",
+		.start  = TEGRA_GPIO_PEE1,
+		.end    = TEGRA_GPIO_PEE1,
+		.flags  = IORESOURCE_IO,
+	},
+	[3] = {
+		.name = "gpio_host_wake",
+		.start  = TEGRA_GPIO_PU6,
+		.end    = TEGRA_GPIO_PU6,
+		.flags  = IORESOURCE_IO,
+	},
+	[4] = {
+		.name = "reset_gpio",
+		.start  = TEGRA_GPIO_PQ6,
+		.end    = TEGRA_GPIO_PQ6,
+		.flags  = IORESOURCE_IO,
+	},
+};
+
+static struct platform_device pluto_bluedroid_pm_device = {
+	.name = "bluedroid_pm",
+	.id             = 0,
+	.num_resources  = ARRAY_SIZE(pluto_bluedroid_pm_resources),
+	.resource       = pluto_bluedroid_pm_resources,
+};
+
+static noinline void __init pluto_setup_bluedroid_pm(void)
+{
+	pluto_bluedroid_pm_resources[1].start =
+		pluto_bluedroid_pm_resources[1].end =
+					gpio_to_irq(TEGRA_GPIO_PU6);
+	platform_device_register(&pluto_bluedroid_pm_device);
+}
+#endif
+
 static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
@@ -154,6 +200,7 @@ static __initdata struct tegra_clk_init_table pluto_clk_init_table[] = {
 	{ "dam0",	"clk_m",	12000000,	false},
 	{ "dam1",	"clk_m",	12000000,	false},
 	{ "dam2",	"clk_m",	12000000,	false},
+	{ "audio0",	"i2s0_sync",	0,		false},
 	{ "audio1",	"i2s1_sync",	0,		false},
 	{ "audio2",	"i2s2_sync",	0,		false},
 	{ "audio3",	"i2s3_sync",	0,		false},
@@ -374,6 +421,14 @@ static struct tegra_asoc_platform_data pluto_audio_pdata = {
 		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
 		.sample_size	= 16,
 	},
+	.i2s_param[VOICE_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.rate		= 16000,
+		.channels	= 2,
+	},
 };
 
 static struct platform_device pluto_audio_device = {
@@ -452,6 +507,7 @@ static struct tegra_usb_platform_data tegra_ehci3_hsic_smsc_hub_pdata = {
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.builtin_host_disabled = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_DEVICE,
 	.u_data.dev = {
@@ -476,12 +532,13 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.builtin_host_disabled = true,
 	.unaligned_dma_buf_supported = false,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = true,
+		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -506,15 +563,6 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 static struct regulator *baseband_reg;
 static struct gpio modem_gpios[] = { /* i500 modem */
 	{MDM_RST, GPIOF_OUT_INIT_LOW, "MODEM RESET"},
-	{MDM_ACK, GPIOF_OUT_INIT_HIGH, "MODEM ACK1"},
-};
-
-static void baseband_post_phy_on(void);
-static void baseband_pre_phy_off(void);
-
-static struct tegra_usb_phy_platform_ops baseband_plat_ops = {
-	.pre_phy_off = baseband_pre_phy_off,
-	.post_phy_on = baseband_post_phy_on,
 };
 
 static struct gpio modem2_gpios[] = {
@@ -544,7 +592,6 @@ static struct tegra_usb_platform_data tegra_ehci2_hsic_baseband_pdata = {
 		.remote_wakeup_supported = false,
 		.power_off_on_suspend = false,
 	},
-	.ops = &baseband_plat_ops,
 };
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -657,16 +704,6 @@ static struct platform_device tegra_bb_oem1 = {
 };
 #endif
 
-static void baseband_post_phy_on(void)
-{
-	gpio_set_value(MDM_ACK, 0);
-}
-
-static void baseband_pre_phy_off(void)
-{
-	gpio_set_value(MDM_ACK, 1);
-}
-
 static int baseband_init(void)
 {
 	int ret;
@@ -699,8 +736,7 @@ static const struct tegra_modem_operations baseband_operations = {
 
 static struct tegra_usb_modem_power_platform_data baseband_pdata = {
 	.ops = &baseband_operations,
-	.wake_gpio = MDM_REQ,
-	.wake_irq_flags = IRQF_TRIGGER_FALLING,
+	.wake_gpio = -1,
 	.boot_gpio = MDM_COLDBOOT,
 	.boot_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 	.autosuspend_delay = 2000,
@@ -799,42 +835,60 @@ static struct platform_device icera_baseband2_device = {
 
 static void pluto_usb_init(void)
 {
-	int modem_id = tegra_get_modem_id();
+	int usb_port_owner_info = tegra_get_usb_port_owner_info();
 
-	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
-	platform_device_register(&tegra_otg_device);
+	if (!(usb_port_owner_info & UTMI1_PORT_OWNER_XUSB)) {
+		tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
+		platform_device_register(&tegra_otg_device);
 
-	/* Setup the udc platform data */
-	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
-
-	if (!modem_id) {
-		tegra_ehci3_device.dev.platform_data =
-			&tegra_ehci3_hsic_smsc_hub_pdata;
-		platform_device_register(&tegra_ehci3_device);
+		/* Setup the udc platform data */
+		tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 	}
 }
 
 static void pluto_modem_init(void)
 {
 	int modem_id = tegra_get_modem_id();
+	struct board_info board_info;
+	int usb_port_owner_info = tegra_get_usb_port_owner_info();
 
+	tegra_get_board_info(&board_info);
 	pr_info("%s: modem_id = %d\n", __func__, modem_id);
 
 	switch (modem_id) {
 	case TEGRA_BB_I500: /* on board i500 HSIC */
-		platform_device_register(&icera_baseband_device);
+		if (!(usb_port_owner_info & HSIC1_PORT_OWNER_XUSB))
+			platform_device_register(&icera_baseband_device);
 		break;
 	case TEGRA_BB_I500SWD: /* i500 SWD HSIC */
-		platform_device_register(&icera_baseband2_device);
+		if (!(usb_port_owner_info & HSIC2_PORT_OWNER_XUSB))
+			platform_device_register(&icera_baseband2_device);
 		break;
 #ifdef CONFIG_TEGRA_BB_OEM1
 	case TEGRA_BB_OEM1:	/* OEM1 HSIC */
-		tegra_hsic_pdata.ops = &oem1_hsic_pops;
-		tegra_ehci3_device.dev.platform_data
-			= &tegra_hsic_pdata;
-		platform_device_register(&tegra_bb_oem1);
+		if ((board_info.board_id == BOARD_E1575) ||
+			((board_info.board_id == BOARD_E1580) &&
+				(board_info.fab >= BOARD_FAB_A03))) {
+			tegra_pinmux_set_tristate(TEGRA_PINGROUP_GPIO_X1_AUD,
+							TEGRA_TRI_NORMAL);
+			bb_gpio_oem1.oem1.pwron = BB_OEM1_GPIO_ON_V;
+		}
+		if (!(usb_port_owner_info & HSIC2_PORT_OWNER_XUSB)) {
+			tegra_hsic_pdata.ops = &oem1_hsic_pops;
+			tegra_ehci3_device.dev.platform_data
+				= &tegra_hsic_pdata;
+			platform_device_register(&tegra_bb_oem1);
+		}
 		break;
 #endif
+	case TEGRA_BB_HSIC_HUB: /* i500 SWD HSIC */
+		if (!(usb_port_owner_info & HSIC2_PORT_OWNER_XUSB)) {
+			tegra_ehci3_device.dev.platform_data =
+				&tegra_ehci3_hsic_smsc_hub_pdata;
+			platform_device_register(&tegra_ehci3_device);
+		}
+		break;
+
 	default:
 		return;
 	}
@@ -851,8 +905,6 @@ static void pluto_audio_init(void)
 
 	tegra_get_board_info(&board_info);
 
-	pluto_audio_pdata.codec_name = "cs42l73.0-004a";
-	pluto_audio_pdata.codec_dai_name = "cs42l73-vsp";
 }
 
 static struct platform_device *pluto_spi_devices[] __initdata = {
@@ -947,9 +999,45 @@ static int __init pluto_touch_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_EDP_FRAMEWORK
+static struct edp_manager battery_edp_manager = {
+	.name = "battery",
+	.imax = 3250
+};
+
+static void __init pluto_battery_edp_init(void)
+{
+	struct edp_governor *g;
+	int r;
+
+	r = edp_register_manager(&battery_edp_manager);
+	if (r)
+		goto err_ret;
+
+	/* start with priority governor */
+	g = edp_get_governor("priority");
+	if (!g) {
+		r = -EFAULT;
+		goto err_ret;
+	}
+
+	r = edp_set_governor(&battery_edp_manager, g);
+	if (r)
+		goto err_ret;
+
+	return;
+
+err_ret:
+	pr_err("Battery EDP init failed with error %d\n", r);
+	WARN_ON(1);
+}
+#else
+static inline void pluto_battery_edp_init(void) {}
+#endif
+
 static void __init tegra_pluto_init(void)
 {
-	tegra_battery_edp_init(3250);
+	pluto_battery_edp_init();
 	tegra_clk_init_from_table(pluto_clk_init_table);
 	tegra_soc_device_init("tegra_pluto");
 	tegra_enable_pinmux();
@@ -957,7 +1045,6 @@ static void __init tegra_pluto_init(void)
 	pluto_i2c_init();
 	pluto_spi_init();
 	pluto_usb_init();
-	pluto_edp_init();
 	pluto_uart_init();
 	pluto_audio_init();
 	platform_add_devices(pluto_devices, ARRAY_SIZE(pluto_devices));
@@ -968,11 +1055,16 @@ static void __init tegra_pluto_init(void)
 	pluto_suspend_init();
 	pluto_touch_init();
 	pluto_emc_init();
+	pluto_edp_init();
 	pluto_panel_init();
 	pluto_pmon_init();
 	pluto_kbc_init();
+#ifdef CONFIG_BT_BLUESLEEP
 	pluto_setup_bluesleep();
 	pluto_setup_bt_rfkill();
+#elif defined CONFIG_BLUEDROID_PM
+	pluto_setup_bluedroid_pm();
+#endif
 	tegra_release_bootloader_fb();
 	pluto_modem_init();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
@@ -992,10 +1084,11 @@ static void __init tegra_pluto_dt_init(void)
 {
 	tegra_pluto_init();
 
+#ifdef CONFIG_USE_OF
 	of_platform_populate(NULL,
 		of_default_bus_match_table, NULL, NULL);
+#endif
 }
-
 static void __init tegra_pluto_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)

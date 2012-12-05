@@ -46,6 +46,7 @@
 #include <linux/leds.h>
 #include <linux/i2c/at24.h>
 #include <linux/of_platform.h>
+#include <linux/edp.h>
 
 #include <asm/hardware/gic.h>
 
@@ -64,7 +65,7 @@
 #include <mach/usb_phy.h>
 #include <mach/gpio-tegra.h>
 #include <mach/tegra_fiq_debugger.h>
-#include <mach/edp.h>
+#include <mach/tegra_usb_modem_power.h>
 
 #include "board-touch-raydium.h"
 #include "board.h"
@@ -78,9 +79,11 @@
 #include "common.h"
 #include "tegra-board-id.h"
 
+#ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data dalmore_bt_rfkill_pdata = {
 		.name           = "bt_rfkill",
 		.shutdown_gpio  = TEGRA_GPIO_PQ7,
+		.reset_gpio	= TEGRA_GPIO_PQ6,
 		.type           = RFKILL_TYPE_BLUETOOTH,
 };
 
@@ -120,11 +123,6 @@ static struct platform_device dalmore_bluesleep_device = {
 
 static noinline void __init dalmore_setup_bt_rfkill(void)
 {
-	if ((tegra_get_commchip_id() == COMMCHIP_BROADCOM_BCM43241) ||
-		(tegra_get_commchip_id() == COMMCHIP_DEFAULT))
-		dalmore_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_INVALID;
-	else
-		dalmore_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_PQ6;
 	platform_device_register(&dalmore_bt_rfkill_device);
 }
 
@@ -136,6 +134,54 @@ static noinline void __init dalmore_setup_bluesleep(void)
 	platform_device_register(&dalmore_bluesleep_device);
 	return;
 }
+#elif defined CONFIG_BLUEDROID_PM
+static struct resource dalmore_bluedroid_pm_resources[] = {
+	[0] = {
+		.name   = "shutdown_gpio",
+		.start  = TEGRA_GPIO_PQ7,
+		.end    = TEGRA_GPIO_PQ7,
+		.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+	[2] = {
+		.name = "gpio_ext_wake",
+		.start  = TEGRA_GPIO_PEE1,
+		.end    = TEGRA_GPIO_PEE1,
+		.flags  = IORESOURCE_IO,
+	},
+	[3] = {
+		.name = "gpio_host_wake",
+		.start  = TEGRA_GPIO_PU6,
+		.end    = TEGRA_GPIO_PU6,
+		.flags  = IORESOURCE_IO,
+	},
+	[4] = {
+		.name = "reset_gpio",
+		.start  = TEGRA_GPIO_PQ6,
+		.end    = TEGRA_GPIO_PQ6,
+		.flags  = IORESOURCE_IO,
+	},
+};
+
+static struct platform_device dalmore_bluedroid_pm_device = {
+	.name = "bluedroid_pm",
+	.id             = 0,
+	.num_resources  = ARRAY_SIZE(dalmore_bluedroid_pm_resources),
+	.resource       = dalmore_bluedroid_pm_resources,
+};
+
+static noinline void __init dalmore_setup_bluedroid_pm(void)
+{
+	dalmore_bluedroid_pm_resources[1].start =
+		dalmore_bluedroid_pm_resources[1].end =
+				gpio_to_irq(TEGRA_GPIO_PU6);
+	platform_device_register(&dalmore_bluedroid_pm_device);
+}
+#endif
+
 static __initdata struct tegra_clk_init_table dalmore_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
@@ -416,20 +462,6 @@ static struct platform_device *dalmore_devices[] __initdata = {
 };
 
 #ifdef CONFIG_USB_SUPPORT
-static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.unaligned_dma_buf_supported = false,
-	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.hot_plug = false,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-	},
-};
-
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
@@ -462,7 +494,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = true,
+		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -487,7 +519,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = true,
+		.hot_plug = false,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -511,47 +543,87 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 
 static void dalmore_usb_init(void)
 {
-	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
-	platform_device_register(&tegra_otg_device);
+	int usb_port_owner_info = tegra_get_usb_port_owner_info();
+	if (!(usb_port_owner_info & UTMI1_PORT_OWNER_XUSB)) {
+		tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
+		platform_device_register(&tegra_otg_device);
+		/* Setup the udc platform data */
+		tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
+	}
 
-	/* Setup the udc platform data */
-	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
-
-	tegra_ehci2_device.dev.platform_data =
-		&tegra_ehci2_hsic_smsc_hub_pdata;
-	platform_device_register(&tegra_ehci2_device);
-
-	tegra_ehci3_device.dev.platform_data = &tegra_ehci3_utmi_pdata;
-	platform_device_register(&tegra_ehci3_device);
+	if (!(usb_port_owner_info & UTMI2_PORT_OWNER_XUSB)) {
+		tegra_ehci3_device.dev.platform_data = &tegra_ehci3_utmi_pdata;
+		platform_device_register(&tegra_ehci3_device);
+	}
 }
 
-static void dalmore_modem_init(void)
+static struct gpio modem_gpios[] = { /* Nemo modem */
+	{MODEM_EN, GPIOF_OUT_INIT_HIGH, "MODEM EN"},
+	{MDM_RST, GPIOF_OUT_INIT_LOW, "MODEM RESET"},
+};
+
+static struct tegra_usb_platform_data tegra_ehci2_hsic_baseband_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+};
+
+static int baseband_init(void)
 {
 	int ret;
 
-	ret = gpio_request(TEGRA_GPIO_W_DISABLE, "w_disable_gpio");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_W_DISABLE);
-	else
-		gpio_direction_output(TEGRA_GPIO_W_DISABLE, 1);
+	ret = gpio_request_array(modem_gpios, ARRAY_SIZE(modem_gpios));
+	if (ret) {
+		pr_warn("%s:gpio request failed\n", __func__);
+		return ret;
+	}
 
+	/* enable pull-down for MDM_COLD_BOOT */
+	tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_KB_COL5,
+				    TEGRA_PUPD_PULL_DOWN);
 
-	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD1, "Port_V_PIN_0");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_MODEM_RSVD1);
-	else
-		gpio_direction_input(TEGRA_GPIO_MODEM_RSVD1);
+	/* export GPIO for user space access through sysfs */
+	gpio_export(MDM_RST, false);
 
+	return 0;
+}
 
-	ret = gpio_request(TEGRA_GPIO_MODEM_RSVD2, "Port_H_PIN_7");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-			__func__, TEGRA_GPIO_MODEM_RSVD2);
-	else
-		gpio_direction_output(TEGRA_GPIO_MODEM_RSVD2, 1);
+static const struct tegra_modem_operations baseband_operations = {
+	.init = baseband_init,
+};
 
+static struct tegra_usb_modem_power_platform_data baseband_pdata = {
+	.ops = &baseband_operations,
+	.wake_gpio = -1,
+	.boot_gpio = MDM_COLDBOOT,
+	.boot_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+	.autosuspend_delay = 2000,
+	.short_autosuspend_delay = 50,
+	.tegra_ehci_device = &tegra_ehci2_device,
+	.tegra_ehci_pdata = &tegra_ehci2_hsic_baseband_pdata,
+};
+
+static struct platform_device icera_nemo_device = {
+	.name = "tegra_usb_modem_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &baseband_pdata,
+	},
+};
+
+static void dalmore_modem_init(void)
+{
+	int usb_port_owner_info = tegra_get_usb_port_owner_info();
+	if (!(usb_port_owner_info & HSIC1_PORT_OWNER_XUSB))
+		platform_device_register(&icera_nemo_device);
 }
 
 #else
@@ -669,12 +741,47 @@ static int __init dalmore_touch_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_EDP_FRAMEWORK
+static struct edp_manager battery_edp_manager = {
+	.name = "battery",
+	.imax = 2500
+};
+
+static void __init dalmore_battery_edp_init(void)
+{
+	struct edp_governor *g;
+	int r;
+
+	r = edp_register_manager(&battery_edp_manager);
+	if (r)
+		goto err_ret;
+
+	/* start with priority governor */
+	g = edp_get_governor("priority");
+	if (!g) {
+		r = -EFAULT;
+		goto err_ret;
+	}
+
+	r = edp_set_governor(&battery_edp_manager, g);
+	if (r)
+		goto err_ret;
+
+	return;
+
+err_ret:
+	pr_err("Battery EDP init failed with error %d\n", r);
+	WARN_ON(1);
+}
+#else
+static inline void dalmore_battery_edp_init(void) {}
+#endif
 static void __init tegra_dalmore_init(void)
 {
 	struct board_info board_info;
 
 	tegra_get_display_board_info(&board_info);
-	tegra_battery_edp_init(2500);
+	dalmore_battery_edp_init();
 	tegra_clk_init_from_table(dalmore_clk_init_table);
 	tegra_soc_device_init("dalmore");
 	tegra_enable_pinmux();
@@ -682,7 +789,6 @@ static void __init tegra_dalmore_init(void)
 	dalmore_i2c_init();
 	dalmore_spi_init();
 	dalmore_usb_init();
-	dalmore_edp_init();
 	dalmore_uart_init();
 	dalmore_audio_init();
 	platform_add_devices(dalmore_devices, ARRAY_SIZE(dalmore_devices));
@@ -692,6 +798,7 @@ static void __init tegra_dalmore_init(void)
 	dalmore_sdhci_init();
 	dalmore_suspend_init();
 	dalmore_emc_init();
+	dalmore_edp_init();
 	dalmore_touch_init();
 	if (board_info.board_id == BOARD_E1582)
 		roth_panel_init();
@@ -699,8 +806,12 @@ static void __init tegra_dalmore_init(void)
 		dalmore_panel_init();
 	dalmore_kbc_init();
 	dalmore_pmon_init();
+#ifdef CONFIG_BT_BLUESLEEP
 	dalmore_setup_bluesleep();
 	dalmore_setup_bt_rfkill();
+#elif defined CONFIG_BLUEDROID_PM
+	dalmore_setup_bluedroid_pm();
+#endif
 	tegra_release_bootloader_fb();
 	dalmore_modem_init();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
@@ -720,15 +831,17 @@ static void __init tegra_dalmore_dt_init(void)
 {
 	tegra_dalmore_init();
 
+#ifdef CONFIG_USE_OF
 	of_platform_populate(NULL,
 		of_default_bus_match_table, NULL, NULL);
+#endif
 }
 
 static void __init tegra_dalmore_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	/* 1920*1200*4*2 = 18432000 bytes */
-	tegra_reserve(0, SZ_16M + SZ_2M, SZ_4M);
+	tegra_reserve(0, SZ_16M + SZ_2M, SZ_16M);
 #else
 	tegra_reserve(SZ_128M, SZ_16M + SZ_2M, SZ_4M);
 #endif

@@ -46,6 +46,14 @@ config MFD_ASIC3
 	  This driver supports the ASIC3 multifunction chip found on many
 	  PDAs (mainly iPAQ and HTC based ones)
 
+config MFD_BQ2419X
+	bool "Support for bq24190, bq24911, bq24192"
+	depends on I2C=y
+	select MFD_CORE
+	select REGMAP_I2C
+	help
+	  This supports the bq24190, bq24911, bq24192 drivers.
+
 config MFD_DAVINCI_VOICECODEC
 	tristate
 	select MFD_CORE
@@ -279,10 +287,18 @@ config TWL6040_CORE
 	  additional drivers must be enabled in order to use the
 	  functionality of the device (audio, vibra).
 
-config AIC3262_CODEC
-	bool
+config AIC3XXX_CORE
+	bool "Support for AIC3XXX audio codec"
+	depends on I2C=y && GENERIC_HARDIRQS
 	select MFD_CORE
+	select REGMAP_I2C
 	default n
+	help
+	  Say yes here if you want support for Texas Instruments AIC3XXX audio
+	  codec.
+	  This driver provides common support for accessing the device,
+	  additional drivers must be enabled in order to use the
+	  functionality of the device (audio, vibra).
 
 config MFD_STMPE
 	bool "Support STMicroelectronics STMPE"

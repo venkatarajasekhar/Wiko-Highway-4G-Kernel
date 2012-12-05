@@ -454,6 +454,7 @@ int tegra_usb_phy_pre_suspend(struct tegra_usb_phy *phy)
 
 	return status;
 }
+EXPORT_SYMBOL_GPL(tegra_usb_phy_pre_suspend);
 
 int tegra_usb_phy_suspend(struct tegra_usb_phy *phy)
 {
@@ -583,11 +584,11 @@ bool tegra_usb_phy_hw_accessible(struct tegra_usb_phy *phy)
 }
 EXPORT_SYMBOL_GPL(tegra_usb_phy_hw_accessible);
 
-bool tegra_usb_phy_remote_wakeup(struct tegra_usb_phy *phy)
+bool tegra_usb_phy_pmc_wakeup(struct tegra_usb_phy *phy)
 {
-	return phy->remote_wakeup;
+	return phy->pmc_remote_wakeup || phy->pmc_hotplug_wakeup;
 }
-EXPORT_SYMBOL_GPL(tegra_usb_phy_remote_wakeup);
+EXPORT_SYMBOL_GPL(tegra_usb_phy_pmc_wakeup);
 
 bool tegra_usb_phy_has_hostpc(struct tegra_usb_phy *phy)
 {

@@ -38,6 +38,7 @@
 #include <mach/iomap.h>
 #include <mach/io.h>
 #include <mach/hardware.h>
+#include <mach/edp.h>
 
 #include "board.h"
 #include "clock.h"
@@ -460,6 +461,8 @@ int clk_set_parent_locked(struct clk *c, struct clk *parent)
 	if (ret)
 		goto out;
 
+	trace_clock_set_parent(c->name, parent->name);
+
 	if (clk_is_auto_dvfs(c) && c->refcnt > 0 &&
 			new_rate < old_rate)
 		ret = tegra_dvfs_set_rate(c, new_rate);
@@ -767,7 +770,7 @@ void __init tegra_init_max_rate(struct clk *c, unsigned long max_rate)
 
 	/* skip message if shared bus user */
 	if (!c->parent || !c->parent->ops || !c->parent->ops->shared_bus_update)
-		pr_warning("Lowering %s maximum rate from %lu to %lu\n",
+		pr_info("Lowering %s maximum rate from %lu to %lu\n",
 			c->name, c->max_rate, max_rate);
 
 	c->max_rate = max_rate;
@@ -871,6 +874,7 @@ static int __init tegra_clk_late_init(void)
 	if (!tegra_dvfs_late_init())
 		tegra_dfll_cpu_start();	/* after successful dvfs init only */
 	tegra_sync_cpu_clock();		/* after attempt to get dfll ready */
+	tegra_recalculate_cpu_edp_limits();
 	return 0;
 }
 late_initcall(tegra_clk_late_init);

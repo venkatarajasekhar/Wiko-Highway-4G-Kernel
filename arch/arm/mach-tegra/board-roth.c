@@ -31,22 +31,16 @@
 #include <linux/gpio.h>
 #include <linux/input.h>
 #include <linux/platform_data/tegra_usb.h>
-#include <linux/spi/spi.h>
-#include <linux/spi/rm31080a_ts.h>
 #include <linux/tegra_uart.h>
 #include <linux/memblock.h>
-#include <linux/spi-tegra.h>
-#include <linux/nfc/pn544.h>
 #include <linux/rfkill-gpio.h>
 #include <linux/skbuff.h>
 #include <linux/ti_wilink_st.h>
 #include <linux/regulator/consumer.h>
-#include <linux/smb349-charger.h>
 #include <linux/max17048_battery.h>
 #include <linux/leds.h>
 #include <linux/i2c/at24.h>
 #include <linux/of_platform.h>
-
 #include <asm/hardware/gic.h>
 
 #include <mach/clk.h>
@@ -66,11 +60,9 @@
 #include <mach/tegra_fiq_debugger.h>
 #include <mach/edp.h>
 
-#include "board-touch-raydium.h"
 #include "board.h"
 #include "board-common.h"
 #include "clock.h"
-#include "board-roth.h"
 #include "board-roth.h"
 #include "devices.h"
 #include "gpio-names.h"
@@ -79,6 +71,7 @@
 #include "common.h"
 #include "tegra-board-id.h"
 
+#ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data roth_bt_rfkill_pdata = {
 		.name           = "bt_rfkill",
 		.shutdown_gpio  = TEGRA_GPIO_PQ7,
@@ -121,10 +114,6 @@ static struct platform_device roth_bluesleep_device = {
 
 static noinline void __init roth_setup_bt_rfkill(void)
 {
-	if ((tegra_get_commchip_id() == COMMCHIP_BROADCOM_BCM43241) ||
-		(tegra_get_commchip_id() == COMMCHIP_DEFAULT))
-		roth_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_INVALID;
-	else
 		roth_bt_rfkill_pdata.reset_gpio = TEGRA_GPIO_PQ6;
 	platform_device_register(&roth_bt_rfkill_device);
 }
@@ -137,6 +126,47 @@ static noinline void __init roth_setup_bluesleep(void)
 	platform_device_register(&roth_bluesleep_device);
 	return;
 }
+#elif defined CONFIG_BLUEDROID_PM
+static struct resource roth_bluedroid_pm_resources[] = {
+	[0] = {
+		.name   = "shutdown_gpio",
+		.start  = TEGRA_GPIO_PU0,
+		.end    = TEGRA_GPIO_PU0,
+		.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+	[2] = {
+		.name = "gpio_ext_wake",
+		.start  = TEGRA_GPIO_PEE1,
+		.end    = TEGRA_GPIO_PEE1,
+		.flags  = IORESOURCE_IO,
+	},
+	[3] = {
+		.name = "gpio_host_wake",
+		.start  = TEGRA_GPIO_PU6,
+		.end    = TEGRA_GPIO_PU6,
+		.flags  = IORESOURCE_IO,
+	},
+};
+
+static struct platform_device roth_bluedroid_pm_device = {
+	.name = "bluedroid_pm",
+	.id             = 0,
+	.num_resources  = ARRAY_SIZE(roth_bluedroid_pm_resources),
+	.resource       = roth_bluedroid_pm_resources,
+};
+
+static noinline void __init roth_setup_bluedroid_pm(void)
+{
+	roth_bluedroid_pm_resources[1].start =
+		roth_bluedroid_pm_resources[1].end =
+				gpio_to_irq(TEGRA_GPIO_PQ6);
+	platform_device_register(&roth_bluedroid_pm_device);
+}
+#endif
 static __initdata struct tegra_clk_init_table roth_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
@@ -214,22 +244,19 @@ static struct tegra_i2c_platform_data roth_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
-#if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_11x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 static struct i2c_board_info __initdata rt5640_board_info = {
 	I2C_BOARD_INFO("rt5640", 0x1c),
 };
+
+static struct i2c_board_info __initdata roth_codec_tfa9887R_info = {
+	I2C_BOARD_INFO("tfa9887R", 0x37),
+};
+
+static struct i2c_board_info __initdata roth_codec_tfa9887L_info = {
+	I2C_BOARD_INFO("tfa9887L", 0x36),
+};
 #endif
-
-static struct pn544_i2c_platform_data nfc_pdata = {
-	.irq_gpio = TEGRA_GPIO_PW2,
-	.ven_gpio = TEGRA_GPIO_PQ3,
-	.firm_gpio = TEGRA_GPIO_PH0,
-};
-
-static struct i2c_board_info __initdata nfc_board_info = {
-	I2C_BOARD_INFO("pn544", 0x28),
-	.platform_data = &nfc_pdata,
-};
 
 static void roth_i2c_init(void)
 {
@@ -239,9 +266,6 @@ static void roth_i2c_init(void)
 	tegra11_i2c_device4.dev.platform_data = &roth_i2c4_platform_data;
 	tegra11_i2c_device5.dev.platform_data = &roth_i2c5_platform_data;
 
-	nfc_board_info.irq = gpio_to_irq(TEGRA_GPIO_PW2);
-	i2c_register_board_info(0, &nfc_board_info, 1);
-
 	platform_device_register(&tegra11_i2c_device5);
 	platform_device_register(&tegra11_i2c_device4);
 	platform_device_register(&tegra11_i2c_device3);
@@ -249,6 +273,8 @@ static void roth_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device1);
 
 	i2c_register_board_info(0, &rt5640_board_info, 1);
+	i2c_register_board_info(0, &roth_codec_tfa9887R_info, 1);
+	i2c_register_board_info(0, &roth_codec_tfa9887L_info, 1);
 }
 
 static struct platform_device *roth_uart_devices[] __initdata = {
@@ -435,7 +461,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.vbus_gpio = -1,
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
+		.power_off_on_suspend = false,
 	},
 	.u_cfg.utmi = {
 		.hssync_start_delay = 0,
@@ -460,7 +486,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 		.vbus_gpio = -1,
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
+		.power_off_on_suspend = false,
 	},
 	.u_cfg.utmi = {
 	.hssync_start_delay = 0,
@@ -507,114 +533,14 @@ static void roth_audio_init(void)
 }
 
 
-static struct platform_device *roth_spi_devices[] __initdata = {
-        &tegra11_spi_device4,
-};
-
-struct spi_clk_parent spi_parent_clk_roth[] = {
-        [0] = {.name = "pll_p"},
-#ifndef CONFIG_TEGRA_PLLM_RESTRICTED
-        [1] = {.name = "pll_m"},
-        [2] = {.name = "clk_m"},
-#else
-        [1] = {.name = "clk_m"},
-#endif
-};
-
-static struct tegra_spi_platform_data roth_spi_pdata = {
-	.is_dma_based           = false,
-	.max_dma_buffer         = 16 * 1024,
-        .is_clkon_always        = false,
-        .max_rate               = 25000000,
-};
-
-static void __init roth_spi_init(void)
-{
-        int i;
-        struct clk *c;
-        struct board_info board_info, display_board_info;
-
-        tegra_get_board_info(&board_info);
-        tegra_get_display_board_info(&display_board_info);
-
-        for (i = 0; i < ARRAY_SIZE(spi_parent_clk_roth); ++i) {
-                c = tegra_get_clock_by_name(spi_parent_clk_roth[i].name);
-                if (IS_ERR_OR_NULL(c)) {
-                        pr_err("Not able to get the clock for %s\n",
-                                                spi_parent_clk_roth[i].name);
-                        continue;
-                }
-                spi_parent_clk_roth[i].parent_clk = c;
-                spi_parent_clk_roth[i].fixed_clk_rate = clk_get_rate(c);
-        }
-        roth_spi_pdata.parent_clk_list = spi_parent_clk_roth;
-        roth_spi_pdata.parent_clk_count = ARRAY_SIZE(spi_parent_clk_roth);
-	tegra11_spi_device4.dev.platform_data = &roth_spi_pdata;
-        platform_add_devices(roth_spi_devices,
-                                ARRAY_SIZE(roth_spi_devices));
-}
-
-static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
-	/* name         parent          rate            enabled */
-	{ "extern2",    "pll_p",        41000000,       true},
-	{ "clk_out_2",  "extern2",      40800000,       true},
-	{ NULL,         NULL,           0,              0},
-};
-
-struct rm_spi_ts_platform_data rm31080ts_roth_data = {
-	.gpio_reset = 0,
-	.config = 0,
-};
-
-static struct tegra_spi_device_controller_data dev_cdata = {
-	.rx_clk_tap_delay = 0,
-	.tx_clk_tap_delay = 0,
-};
-
-struct spi_board_info rm31080a_roth_spi_board[1] = {
-	{
-	 .modalias = "rm_ts_spidev",
-	 .bus_num = 3,
-	 .chip_select = 2,
-	 .max_speed_hz = 12 * 1000 * 1000,
-	 .mode = SPI_MODE_0,
-	 .controller_data = &dev_cdata,
-	 .platform_data = &rm31080ts_roth_data,
-	 },
-};
-
-static int __init roth_touch_init(void)
-{
-	struct board_info board_info;
-
-	tegra_get_display_board_info(&board_info);
-	tegra_clk_init_from_table(touch_clk_init_table);
-	clk_enable(tegra_get_clock_by_name("clk_out_2"));
-	if (board_info.board_id == BOARD_E1582)
-		rm31080ts_roth_data.platform_id = RM_PLATFORM_P005;
-	else
-		rm31080ts_roth_data.platform_id = RM_PLATFORM_D010;
-	rm31080a_roth_spi_board[0].irq = gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
-	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
-				TOUCH_GPIO_RST_RAYDIUM_SPI,
-				&rm31080ts_roth_data,
-				&rm31080a_roth_spi_board[0],
-				ARRAY_SIZE(rm31080a_roth_spi_board));
-	return 0;
-}
-
 static void __init tegra_roth_init(void)
 {
-
-	tegra_battery_edp_init(2500);
 	tegra_clk_init_from_table(roth_clk_init_table);
 	tegra_soc_device_init("roth");
 	tegra_enable_pinmux();
 	roth_pinmux_init();
 	roth_i2c_init();
-	roth_spi_init();
 	roth_usb_init();
-	roth_edp_init();
 	roth_uart_init();
 	roth_audio_init();
 	platform_add_devices(roth_devices, ARRAY_SIZE(roth_devices));
@@ -624,17 +550,22 @@ static void __init tegra_roth_init(void)
 	roth_sdhci_init();
 	roth_suspend_init();
 	roth_emc_init();
-	roth_touch_init();
+	roth_edp_init();
 	roth_panel_init();
-	roth_pmon_init();
+	roth_kbc_init();
+#ifdef CONFIG_BT_BLUESLEEP
 	roth_setup_bluesleep();
 	roth_setup_bt_rfkill();
+#elif defined CONFIG_BLUEDROID_PM
+	roth_setup_bluedroid_pm();
+#endif
 	tegra_release_bootloader_fb();
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
 	tegra_wdt_recovery_init();
 #endif
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 	roth_sensors_init();
+	roth_soctherm_init();
 }
 
 static void __init roth_ramconsole_reserve(unsigned long size)
@@ -646,8 +577,10 @@ static void __init tegra_roth_dt_init(void)
 {
 	tegra_roth_init();
 
+#ifdef CONFIG_USE_OF
 	of_platform_populate(NULL,
 		of_default_bus_match_table, NULL, NULL);
+#endif
 }
 
 static void __init tegra_roth_reserve(void)

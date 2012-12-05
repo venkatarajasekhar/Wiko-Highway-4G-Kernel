@@ -33,6 +33,7 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/io_dpd.h>
+#include <mach/edp.h>
 
 #include <asm/smp_plat.h>
 #include <asm/cputype.h>
@@ -481,6 +482,83 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 	local_irq_restore(irq_flags);
 
 	DEBUG_CLUSTER(("%s: %s\r\n", __func__, is_lp_cluster() ? "LP" : "G"));
+
+	return 0;
+}
+
+int tegra_switch_to_lp_cluster()
+{
+	struct clk *cpu_clk = tegra_get_clock_by_name("cpu");
+	struct clk *cpu_lp_clk = tegra_get_clock_by_name("cpu_lp");
+	int rate = clk_get_rate(cpu_clk);
+	int e;
+
+	if (is_lp_cluster())
+		return 0;
+
+	/* Change the Clock Rate to desired LP CPU's clock rate */
+
+	if (rate > cpu_lp_clk->max_rate) {
+		e = clk_set_rate(cpu_clk, cpu_lp_clk->max_rate);
+		if (e) {
+			pr_err("cluster_swtich: Failed to set clock %d", e);
+			return e;
+		}
+	}
+
+	e = clk_set_parent(cpu_clk, cpu_lp_clk);
+	if (e) {
+		pr_err("cluster switching request failed (%d)\n", e);
+		return e;
+	}
+	return e;
+}
+
+int tegra_switch_to_g_cluster()
+{
+	struct clk *cpu_clk = tegra_get_clock_by_name("cpu");
+	struct clk *cpu_g_clk = tegra_get_clock_by_name("cpu_g");
+	int e;
+
+	if (!is_lp_cluster())
+		return 0;
+
+	e = clk_set_parent(cpu_clk, cpu_g_clk);
+	if (e) {
+		pr_err("cluster switching request failed (%d)\n", e);
+		return e;
+	}
+
+	/* Switch back to G Cluster Cpu Max Clock rate */
+
+	e = clk_set_rate(cpu_clk, cpu_g_clk->max_rate);
+	if (e) {
+		pr_err("cluster_swtich: Failed to increase the clock %d\n", e);
+		return e;
+	}
+	return e;
+}
+
+int tegra_cluster_switch(struct clk *cpu_clk, struct clk *new_cluster_clk)
+{
+	int ret;
+	bool is_target_lp = is_lp_cluster() ^
+		(clk_get_parent(cpu_clk) != new_cluster_clk);
+
+	/* Update core edp limits before switch to LP cluster; abort on error */
+	if (is_target_lp) {
+		ret = tegra_core_edp_cpu_state_update(is_target_lp);
+		if (ret)
+			return ret;
+	}
+
+	ret = clk_set_parent(cpu_clk, new_cluster_clk);
+	if (ret)
+		return ret;
+
+	/* Update core edp limits after switch to G cluster; ignore error */
+	if (!is_target_lp)
+		tegra_core_edp_cpu_state_update(is_target_lp);
 
 	return 0;
 }

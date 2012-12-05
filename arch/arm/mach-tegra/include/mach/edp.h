@@ -55,9 +55,29 @@ struct tegra_edp_freq_voltage_table {
 	int voltage_mV;
 };
 
+enum tegra_core_edp_profiles {
+	CORE_EDP_PROFILE_BALANCED = 0,
+	CORE_EDP_PROFILE_FAVOR_GPU,
+	CORE_EDP_PROFILE_FAVOR_EMC,
+
+	CORE_EDP_PROFILES_NUM,
+};
+
+struct tegra_core_edp_limits {
+	int sku;
+	struct clk **cap_clocks;
+	int cap_clocks_num;
+	int *temperatures;
+	int temperature_ranges;
+	int core_modules_states;
+	unsigned long *cap_rates_scpu_on;
+	unsigned long *cap_rates_scpu_off;
+};
+
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 struct thermal_cooling_device *edp_cooling_device_create(void *v);
 void tegra_init_cpu_edp_limits(unsigned int regulator_mA);
+void tegra_recalculate_cpu_edp_limits(void);
 void tegra_init_system_edp_limits(unsigned int power_limit_mW);
 void tegra_get_cpu_edp_limits(const struct tegra_edp_limits **limits, int *size);
 unsigned int tegra_get_edp_limit(int *get_edp_thermal_index);
@@ -69,6 +89,8 @@ static inline struct thermal_cooling_device *edp_cooling_device_create(
 	int index)
 { return NULL; }
 static inline void tegra_init_cpu_edp_limits(int regulator_mA)
+{}
+static inline void tegra_recalculate_cpu_edp_limits(void)
 {}
 static inline void tegra_init_system_edp_limits(int power_limit_mW)
 {}
@@ -90,10 +112,26 @@ static inline void tegra_edp_throttle_cpu_now(u8 factor)
 void tegra_edp_throttle_cpu_now(u8 factor);
 #endif
 
-#if defined(CONFIG_TEGRA_EDP_LIMITS) && defined(CONFIG_EDP_FRAMEWORK)
-void __init tegra_battery_edp_init(unsigned int cap);
+#ifdef CONFIG_TEGRA_CORE_EDP_LIMITS
+void tegra_init_core_edp_limits(unsigned int regulator_mA);
+int tegra_core_edp_debugfs_init(struct dentry *edp_dir);
+int tegra_core_edp_cpu_state_update(bool scpu_state);
 #else
-static inline void tegra_battery_edp_init(unsigned int cap) {}
+static inline void tegra_init_core_edp_limits(unsigned int regulator_mA)
+{}
+static inline int tegra_core_edp_debugfs_init(struct dentry *edp_dir)
+{ return 0; }
+static inline int tegra_core_edp_cpu_state_update(bool scpu_state)
+{ return 0; }
+#endif
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+int tegra11x_select_core_edp_table(unsigned int regulator_mA,
+				   struct tegra_core_edp_limits *limits);
+#else
+static inline int tegra11x_select_core_edp_table(
+	unsigned int regulator_mA, struct tegra_core_edp_limits *limits)
+{ return -ENOSYS; }
 #endif
 
 #endif	/* __MACH_EDP_H */

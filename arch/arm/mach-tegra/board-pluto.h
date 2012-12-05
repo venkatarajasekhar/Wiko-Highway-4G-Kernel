@@ -40,6 +40,7 @@
 /* External peripheral act as interrupt controller */
 /* PLUTO IRQs */
 #define PALMAS_TEGRA_IRQ_BASE	TEGRA_NR_IRQS
+#define MAX77665_TEGRA_IRQ_BASE	(PALMAS_TEGRA_IRQ_BASE + PALMAS_NUM_IRQ)
 
 /* I2C related GPIOs */
 #define TEGRA_GPIO_I2C1_SCL		TEGRA_GPIO_PC4
@@ -81,8 +82,6 @@
 /* Modem1 related GPIOs */
 #define MDM_RST				TEGRA_GPIO_PR3
 #define MDM_COLDBOOT			TEGRA_GPIO_PO5
-#define MDM_REQ				TEGRA_GPIO_PO4
-#define MDM_ACK				TEGRA_GPIO_PO1
 
 /* Modem2 related GPIOs */
 #define MDM2_PWR_ON			TEGRA_GPIO_PX1
@@ -95,6 +94,7 @@
 
 #define BB_OEM1_GPIO_RST		TEGRA_GPIO_PR5
 #define BB_OEM1_GPIO_ON			TEGRA_GPIO_PR6
+#define BB_OEM1_GPIO_ON_V		TEGRA_GPIO_PX1
 #define BB_OEM1_GPIO_AWR		TEGRA_GPIO_PG2
 #define BB_OEM1_GPIO_CWR		TEGRA_GPIO_PV1
 #define BB_OEM1_GPIO_SPARE		TEGRA_GPIO_PO2
@@ -129,4 +129,9 @@ enum tegra_bb_type {
 	TEGRA_BB_OEM3,
 	TEGRA_BB_HSIC_HUB,
 };
+
+#define UTMI1_PORT_OWNER_XUSB	0x1
+#define HSIC1_PORT_OWNER_XUSB	0x4
+#define HSIC2_PORT_OWNER_XUSB	0x8
+
 #endif

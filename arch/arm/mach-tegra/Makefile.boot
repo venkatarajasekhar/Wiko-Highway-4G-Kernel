@@ -18,3 +18,5 @@ dtb-$(CONFIG_ARCH_TEGRA_3x_SOC) += tegra30-cardhu.dtb
 dtb-$(CONFIG_ARCH_TEGRA_3x_SOC) += tegra30-enterprise.dtb
 dtb-$(CONFIG_ARCH_TEGRA_3x_SOC) += tegra30-tai.dtb
 dtb-$(CONFIG_ARCH_TEGRA_14x_SOC) += tegra148-ceres.dtb
+dtb-$(CONFIG_ARCH_TEGRA_11x_SOC) += tegra114-dalmore.dtb
+dtb-$(CONFIG_ARCH_TEGRA_11x_SOC) += tegra114-pluto.dtb

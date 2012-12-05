@@ -482,7 +482,7 @@ int edp_find_speedo_idx(int cpu_speedo_id, unsigned int *cpu_speedo_idx)
 	return -EINVAL;
 }
 
-int init_cpu_edp_limits_calculated(int cpu_speedo_id)
+static int init_cpu_edp_limits_calculated(void)
 {
 	unsigned int temp_idx, n_cores_idx;
 	unsigned int cpu_g_minf, cpu_g_maxf;
@@ -492,6 +492,7 @@ int init_cpu_edp_limits_calculated(int cpu_speedo_id)
 	struct tegra_edp_cpu_leakage_params *params;
 	int ret;
 	struct clk *clk_cpu_g = tegra_get_clock_by_name("cpu_g");
+	int cpu_speedo_id = tegra_cpu_speedo_id();
 
 	/* Determine all inputs to EDP formula */
 	iddq_mA = tegra_get_cpu_iddq_value();
@@ -553,12 +554,13 @@ int init_cpu_edp_limits_calculated(int cpu_speedo_id)
 	return 0;
 }
 
-int __init init_cpu_edp_limits_lookup(int cpu_speedo_id)
+static int __init init_cpu_edp_limits_lookup(void)
 {
 	int i, j;
 	struct tegra_edp_limits *e;
 	struct tegra_edp_vdd_cpu_entry *t;
 	int tsize;
+	int cpu_speedo_id = tegra_cpu_speedo_id();
 
 	t = (struct tegra_edp_vdd_cpu_entry *)tegra_edp_vdd_cpu_map;
 	tsize = sizeof(tegra_edp_vdd_cpu_map)
@@ -601,14 +603,18 @@ int __init init_cpu_edp_limits_lookup(int cpu_speedo_id)
 	return 0;
 }
 
+void tegra_recalculate_cpu_edp_limits(void)
+{
+	if (tegra_chip_id == TEGRA11X)
+		init_cpu_edp_limits_calculated();
+}
+
 /*
  * Specify regulator current in mA, e.g. 5000mA
  * Use 0 for default
  */
 void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 {
-	int cpu_speedo_id = tegra_cpu_speedo_id();
-
 	if (!regulator_mA) {
 		edp_limits = edp_default_limits;
 		edp_limits_size = ARRAY_SIZE(edp_default_limits);
@@ -618,11 +624,11 @@ void __init tegra_init_cpu_edp_limits(unsigned int regulator_mA)
 
 	switch (tegra_chip_id) {
 	case TEGRA30:
-		if (init_cpu_edp_limits_lookup(cpu_speedo_id) == 0)
+		if (init_cpu_edp_limits_lookup() == 0)
 			return;
 		break;
 	case TEGRA11X:
-		if (init_cpu_edp_limits_calculated(cpu_speedo_id) == 0)
+		if (init_cpu_edp_limits_calculated() == 0)
 			return;
 		break;
 	case TEGRA20:
@@ -692,42 +698,6 @@ void tegra_get_system_edp_limits(const unsigned int **limits)
 	*limits = system_edp_limits;
 }
 
-#ifdef CONFIG_EDP_FRAMEWORK
-
-static struct edp_manager battery_edp_manager = {
-	.name = "battery"
-};
-
-void __init tegra_battery_edp_init(unsigned int cap)
-{
-	struct edp_governor *g;
-	int r;
-
-	battery_edp_manager.imax = cap;
-	r = edp_register_manager(&battery_edp_manager);
-	if (r)
-		goto err_ret;
-
-	/* start with priority governor */
-	g = edp_get_governor("priority");
-	if (!g) {
-		r = -EFAULT;
-		goto err_ret;
-	}
-
-	r = edp_set_governor(&battery_edp_manager, g);
-	if (r)
-		goto err_ret;
-
-	return;
-
-err_ret:
-	pr_err("Battery EDP init failed with error %d\n", r);
-	WARN_ON(1);
-}
-
-#endif
-
 #ifdef CONFIG_DEBUG_FS
 
 static int edp_limit_debugfs_show(struct seq_file *s, void *data)
@@ -782,7 +752,6 @@ static int edp_reg_override_write(struct file *file,
 	char buf[32], *end;
 	unsigned int edp_reg_override_mA_temp;
 	unsigned int edp_reg_override_mA_prev = edp_reg_override_mA;
-	int cpu_speedo_id;
 
 	if (sizeof(buf) <= count)
 		goto override_err;
@@ -806,8 +775,7 @@ static int edp_reg_override_write(struct file *file,
 		return count;
 
 	edp_reg_override_mA = edp_reg_override_mA_temp;
-	cpu_speedo_id = tegra_cpu_speedo_id();
-	if (init_cpu_edp_limits_calculated(cpu_speedo_id)) {
+	if (init_cpu_edp_limits_calculated()) {
 		/* Revert to previous override value if new value fails */
 		edp_reg_override_mA = edp_reg_override_mA_prev;
 		goto override_err;
@@ -902,6 +870,9 @@ static int __init tegra_edp_debugfs_init(void)
 				&edp_reg_override_debugfs_fops);
 
 	if (!d_edp_reg_override)
+		goto edp_reg_override_err;
+
+	if (tegra_core_edp_debugfs_init(edp_dir))
 		goto edp_reg_override_err;
 
 	return 0;

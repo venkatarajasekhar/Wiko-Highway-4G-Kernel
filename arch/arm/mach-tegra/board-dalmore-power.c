@@ -32,9 +32,11 @@
 #include <linux/regulator/tps65090-regulator.h>
 #include <linux/regulator/tps51632-regulator.h>
 #include <linux/gpio.h>
+#include <linux/interrupt.h>
 #include <linux/regulator/userspace-consumer.h>
 
 #include <asm/mach-types.h>
+#include <linux/power/sbs-battery.h>
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
@@ -53,7 +55,7 @@
 
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)
-
+#define TPS65090_CHARGER_INT	TEGRA_GPIO_PJ0
 /*TPS65090 consumer rails */
 static struct regulator_consumer_supply tps65090_dcdc1_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_5v0", NULL),
@@ -114,7 +116,7 @@ static struct regulator_consumer_supply tps65090_fet6_supply[] = {
 static struct regulator_consumer_supply tps65090_fet7_supply[] = {
 	REGULATOR_SUPPLY("vdd_wifi_3v3", "bcm4329_wlan.1"),
 	REGULATOR_SUPPLY("vdd_gps_3v3", "reg-userspace-consumer.2"),
-	REGULATOR_SUPPLY("vdd_bt_3v3", "reg-userspace-consumer.1"),
+	REGULATOR_SUPPLY("vdd_bt_3v3", "bluedroid_pm.0"),
 };
 
 #define TPS65090_PDATA_INIT(_id, _name, _supply_reg,			\
@@ -173,10 +175,17 @@ static struct tps65090_regulator_platform_data *tps65090_reg_pdata[] = {
 	ADD_TPS65090_REG(fet7),
 };
 
+static struct tps65090_charger_data bcharger_pdata = {
+	.irq_base = TPS65090_TEGRA_IRQ_BASE,
+	.update_status = sbs_update,
+};
+
 static struct tps65090_platform_data tps65090_pdata = {
-	.irq_base = -1,
+	.irq_base = TPS65090_TEGRA_IRQ_BASE,
+	.irq_flag = IRQF_ONESHOT | IRQF_TRIGGER_FALLING,
 	.num_reg_pdata =  ARRAY_SIZE(tps65090_reg_pdata),
-	.reg_pdata = tps65090_reg_pdata
+	.reg_pdata = tps65090_reg_pdata,
+	.charger_pdata = &bcharger_pdata,
 };
 
 /* MAX77663 consumer rails */
@@ -225,7 +234,7 @@ static struct regulator_consumer_supply max77663_sd2_supply[] = {
 	REGULATOR_SUPPLY("vdd_com_1v8", NULL),
 	REGULATOR_SUPPLY("vddio_wifi_1v8", "bcm4329_wlan.1"),
 	REGULATOR_SUPPLY("vdd_gps_1v8", "reg-userspace-consumer.2"),
-	REGULATOR_SUPPLY("vddio_bt_1v8", "reg-userspace-consumer.1"),
+	REGULATOR_SUPPLY("vddio_bt_1v8", "bluedroid_pm.0"),
 	REGULATOR_SUPPLY("vdd_dtv_1v8", NULL),
 	REGULATOR_SUPPLY("vlogic", "0-0069"),
 };
@@ -735,10 +744,16 @@ static struct palmas_pmic_platform_data pmic_platform = {
 	.disabe_ldo8_tracking_suspend = true,
 };
 
+static struct palmas_rtc_platform_data rtc_platform = {
+	.enable_charging = 1,
+	.charging_current_ua = 100,
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
 	.pmic_pdata = &pmic_platform,
+	.rtc_pdata = &rtc_platform,
 	.mux_from_pdata = true,
 	.pad1 = 0,
 	.pad2 = 0,
@@ -786,6 +801,10 @@ static struct regulator_consumer_supply fixed_reg_en_1v8_cam_e1611_supply[] = {
 
 static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
 	REGULATOR_SUPPLY("vdd_hdmi_5v0", "tegradc.1"),
+};
+
+static struct regulator_consumer_supply fixed_reg_lcd_bl_en_supply[] = {
+	REGULATOR_SUPPLY("vdd_lcd_bl_en", NULL),
 };
 
 /* EN_USB1_VBUS From TEGRA GPIO PN4 PR3(T30) */
@@ -883,6 +902,10 @@ FIXED_REG(7,	en_1v8_cam_e1611,	en_1v8_cam_e1611,
 FIXED_REG(8,	dvdd_ts,	dvdd_ts,
 	palmas_rails(smps3),	0,	0,
 	TEGRA_GPIO_PH5,	false,	false,	1,	1800);
+
+FIXED_REG(9,	lcd_bl_en,	lcd_bl_en,
+	NULL,	0,	0,
+	TEGRA_GPIO_PH2,	false,	true,	0,	5000);
 /*
  * Creating the fixed regulator device tables
  */
@@ -892,7 +915,8 @@ FIXED_REG(8,	dvdd_ts,	dvdd_ts,
 #define DALMORE_COMMON_FIXED_REG		\
 	ADD_FIXED_REG(usb1_vbus),		\
 	ADD_FIXED_REG(usb3_vbus),		\
-	ADD_FIXED_REG(vdd_hdmi_5v0),
+	ADD_FIXED_REG(vdd_hdmi_5v0),		\
+	ADD_FIXED_REG(lcd_bl_en),
 
 #define E1612_FIXED_REG				\
 	ADD_FIXED_REG(avdd_usb_hdmi),		\
@@ -1073,28 +1097,6 @@ static struct platform_device dalmore_gps_regulator_device = {
 	},
 };
 
-static struct regulator_bulk_data dalmore_bt_regulator_supply[] = {
-	[0] = {
-		.supply	= "vdd_bt_3v3",
-	},
-	[1] = {
-		.supply	= "vddio_bt_1v8",
-	},
-};
-
-static struct regulator_userspace_consumer_data dalmore_bt_regulator_pdata = {
-	.num_supplies	= ARRAY_SIZE(dalmore_bt_regulator_supply),
-	.supplies	= dalmore_bt_regulator_supply,
-};
-
-static struct platform_device dalmore_bt_regulator_device = {
-	.name	= "reg-userspace-consumer",
-	.id	= 1,
-	.dev	= {
-			.platform_data = &dalmore_bt_regulator_pdata,
-	},
-};
-
 static int __init dalmore_fixed_regulator_init(void)
 {
 	struct board_info board_info;
@@ -1114,11 +1116,34 @@ static int __init dalmore_fixed_regulator_init(void)
 }
 subsys_initcall_sync(dalmore_fixed_regulator_init);
 
+static void dalmore_tps65090_init(void)
+{
+	int err;
+
+	err = gpio_request(TPS65090_CHARGER_INT, "CHARGER_INT");
+	if (err < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, err);
+		goto fail_init_irq;
+	}
+
+	err = gpio_direction_input(TPS65090_CHARGER_INT);
+	if (err < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n", __func__, err);
+		goto fail_init_irq;
+	}
+
+	tps65090_regulators[0].irq = gpio_to_irq(TPS65090_CHARGER_INT);
+fail_init_irq:
+	i2c_register_board_info(4, tps65090_regulators,
+			ARRAY_SIZE(tps65090_regulators));
+	return;
+}
+
 int __init dalmore_regulator_init(void)
 {
 	struct board_info board_info;
-	i2c_register_board_info(4, tps65090_regulators,
-			ARRAY_SIZE(tps65090_regulators));
+
+	dalmore_tps65090_init();
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
 	dalmore_cl_dvfs_init();
 #endif
@@ -1131,7 +1156,6 @@ int __init dalmore_regulator_init(void)
 
 	i2c_register_board_info(4, tps51632_boardinfo, 1);
 	platform_device_register(&dalmore_pda_power_device);
-	platform_device_register(&dalmore_bt_regulator_device);
 	platform_device_register(&dalmore_gps_regulator_device);
 	return 0;
 }
@@ -1144,7 +1168,6 @@ int __init dalmore_suspend_init(void)
 
 int __init dalmore_edp_init(void)
 {
-#ifdef CONFIG_TEGRA_EDP_LIMITS
 	unsigned int regulator_mA;
 
 	regulator_mA = get_maximum_cpu_current_supported();
@@ -1152,9 +1175,15 @@ int __init dalmore_edp_init(void)
 		regulator_mA = 15000;
 
 	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
-
 	tegra_init_cpu_edp_limits(regulator_mA);
-#endif
+
+	regulator_mA = get_maximum_core_current_supported();
+	if (!regulator_mA)
+		regulator_mA = 4000;
+
+	pr_info("%s: core regulator %d mA\n", __func__, regulator_mA);
+	tegra_init_core_edp_limits(regulator_mA);
+
 	return 0;
 }
 

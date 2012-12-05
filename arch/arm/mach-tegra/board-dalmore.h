@@ -23,6 +23,7 @@
 #include <mach/gpio.h>
 #include <mach/irqs.h>
 #include <linux/mfd/max77663-core.h>
+#include <linux/mfd/tps65090.h>
 #include "gpio-names.h"
 
 /* External peripheral act as gpio */
@@ -50,10 +51,13 @@
 #define TEGRA_GPIO_MODEM_RSVD1		TEGRA_GPIO_PV0
 #define TEGRA_GPIO_MODEM_RSVD2		TEGRA_GPIO_PH7
 
+#define TPS65090_TEGRA_IRQ_BASE TEGRA_NR_IRQS
+#define TPS65090_TEGRA_IRQ_END	(TPS65090_TEGRA_IRQ_BASE + TPS65090_NUM_IRQ)
 /* External peripheral act as interrupt controller */
 /* MAX77663 IRQs */
-#define PALMAS_TEGRA_IRQ_BASE   TEGRA_NR_IRQS
-#define MAX77663_IRQ_BASE	TEGRA_NR_IRQS
+#define PALMAS_TEGRA_IRQ_BASE   TPS65090_TEGRA_IRQ_END
+#define PALMAS_TEGRA_IRQ_END	(PALMAS_TEGRA_IRQ_BASE + PALMAS_NUM_IRQ)
+#define MAX77663_IRQ_BASE	TPS65090_TEGRA_IRQ_END
 #define MAX77663_IRQ_END	(MAX77663_IRQ_BASE + MAX77663_IRQ_NR)
 #define MAX77663_IRQ_ACOK_RISING MAX77663_IRQ_ONOFF_ACOK_RISING
 
@@ -99,6 +103,10 @@
 #define MPU_COMPASS_BUS_NUM     0
 #define MPU_COMPASS_ORIENTATION { 0, 1, 0, -1, 0, 0, 0, 0, 1 }
 
+/* Modem related GPIOs */
+#define MODEM_EN		TEGRA_GPIO_PP2
+#define MDM_RST			TEGRA_GPIO_PP0
+#define MDM_COLDBOOT		TEGRA_GPIO_PQ5
 
 int dalmore_regulator_init(void);
 int dalmore_suspend_init(void);
@@ -112,5 +120,9 @@ int roth_panel_init(void);
 int dalmore_kbc_init(void);
 int dalmore_pmon_init(void);
 int dalmore_soctherm_init(void);
+
+#define UTMI1_PORT_OWNER_XUSB	0x1
+#define UTMI2_PORT_OWNER_XUSB	0x2
+#define HSIC1_PORT_OWNER_XUSB	0x4
 
 #endif

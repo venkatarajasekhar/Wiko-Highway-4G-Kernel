@@ -95,8 +95,10 @@
 #include <media/ad5816.h>
 
 #define AD5816_ID			0x04
-#define AD5816_FOCAL_LENGTH		(4.570f)
-#define AD5816_FNUMBER			(2.8f)
+#define AD5816_FOCAL_LENGTH_FLOAT	(4.570f)
+#define AD5816_FNUMBER_FLOAT		(2.8f)
+#define AD5816_FOCAL_LENGTH			(0x40923D71) /* 4.570f */
+#define AD5816_FNUMBER				(0x40333333) /* 2.8f */
 #define AD5816_SLEW_RATE		1
 #define AD5816_ACTUATOR_RANGE		1023
 #define AD5816_SETTLETIME		30
@@ -294,6 +296,7 @@ static int ad5816_pm_wr(struct ad5816_info *info, int pwr)
 	case NVC_PWR_ON:
 		if (info->pdata && info->pdata->power_on)
 			info->pdata->power_on(&info->power);
+		usleep_range(1000, 1020);
 		ad5816_set_arc_mode(info);
 		break;
 	default:
@@ -309,9 +312,6 @@ static int ad5816_pm_wr(struct ad5816_info *info, int pwr)
 	info->pwr_dev = pwr;
 	dev_dbg(&info->i2c_client->dev, "%s pwr_dev=%d\n", __func__,
 		info->pwr_dev);
-
-	if (err > 0)
-		return 0;
 
 	return err;
 }
@@ -787,8 +787,8 @@ static void ad5816_sdata_init(struct ad5816_info *info)
 	memcpy(&info->cap, &ad5816_default_cap, sizeof(info->cap));
 
 	info->config.settle_time = AD5816_SETTLETIME;
-	info->config.focal_length = AD5816_FOCAL_LENGTH;
-	info->config.fnumber = AD5816_FNUMBER;
+	info->config.focal_length = AD5816_FOCAL_LENGTH_FLOAT;
+	info->config.fnumber = AD5816_FNUMBER_FLOAT;
 	info->config.pos_low = AD5816_POS_LOW_DEFAULT;
 	info->config.pos_high = AD5816_POS_HIGH_DEFAULT;
 

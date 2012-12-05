@@ -116,6 +116,7 @@
 
 #define CL_DVFS_I2C_VDD_REG_ADDR	0x44
 #define CL_DVFS_I2C_STS			0x48
+#define CL_DVFS_I2C_STS_I2C_LAST_SHIFT	1
 #define CL_DVFS_I2C_STS_I2C_REQ_PENDING	0x1
 
 #define CL_DVFS_INTR_STS		0x5c
@@ -131,12 +132,22 @@
 #define CL_DVFS_OUTPUT_LUT		0x200
 
 #define CL_DVFS_OUTPUT_PENDING_TIMEOUT	1000
+#define CL_DVFS_OUTPUT_RAMP_DELAY	100
+#define CL_DVFS_TUNE_HIGH_DELAY		2000
+
+#define CL_DVFS_TUNE_HIGH_MARGIN	20
 
 enum tegra_cl_dvfs_ctrl_mode {
 	TEGRA_CL_DVFS_UNINITIALIZED = 0,
 	TEGRA_CL_DVFS_DISABLED = 1,
 	TEGRA_CL_DVFS_OPEN_LOOP = 2,
 	TEGRA_CL_DVFS_CLOSED_LOOP = 3,
+};
+
+enum tegra_cl_dvfs_tune_state {
+	TEGRA_CL_DVFS_TUNE_LOW = 0,
+	TEGRA_CL_DVFS_TUNE_HIGH_REQUEST,
+	TEGRA_CL_DVFS_TUNE_HIGH,
 };
 
 struct dfll_rate_req {
@@ -153,6 +164,7 @@ struct tegra_cl_dvfs {
 	struct clk			*soc_clk;
 	struct clk			*ref_clk;
 	struct clk			*i2c_clk;
+	struct clk			*dfll_clk;
 	unsigned long			ref_rate;
 	unsigned long			i2c_rate;
 
@@ -164,10 +176,16 @@ struct tegra_cl_dvfs {
 	struct voltage_reg_map		*out_map[MAX_CL_DVFS_VOLTAGES];
 	u8				num_voltages;
 	u8				safe_ouput;
+	u8				tune_high_out_start;
+	u8				tune_high_out_min;
+	unsigned long			dfll_rate_min;
 
 	struct dfll_rate_req		last_req;
-	unsigned long			dfll_rate_min;
+	enum tegra_cl_dvfs_tune_state	tune_state;
 	enum tegra_cl_dvfs_ctrl_mode	mode;
+
+	struct timer_list		tune_timer;
+	unsigned long			tune_delay;
 };
 
 /* Conversion macros (different scales for frequency request, and monitored
@@ -252,6 +270,125 @@ static inline void set_mode(struct tegra_cl_dvfs *cld,
 	cld->mode = mode;
 	cl_dvfs_writel(cld, mode - 1, CL_DVFS_CTRL);
 	cl_dvfs_wmb(cld);
+}
+
+#define set_tune_state(cld, state) \
+	do {								\
+		cld->tune_state = state;				\
+		pr_debug("%s: set tune state %d\n", __func__, state);	\
+	} while (0)
+
+static void set_ol_config(struct tegra_cl_dvfs *cld)
+{
+	u32 val;
+
+	if (cld->tune_state != TEGRA_CL_DVFS_TUNE_LOW) {
+		set_tune_state(cld, TEGRA_CL_DVFS_TUNE_LOW);
+		cl_dvfs_writel(cld, cld->safe_dvfs->dfll_data.tune0,
+			       CL_DVFS_TUNE0);
+		cl_dvfs_wmb(cld);
+
+		val = cl_dvfs_readl(cld, CL_DVFS_OUTPUT_CFG);
+		val &= ~CL_DVFS_OUTPUT_CFG_MIN_MASK;
+		cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_CFG);
+	}
+}
+
+static void set_cl_config(struct tegra_cl_dvfs *cld, struct dfll_rate_req *req)
+{
+	u32 val, out_max, out_min;
+
+	val = cl_dvfs_readl(cld, CL_DVFS_OUTPUT_CFG);
+	out_max = max(req->output, (u8)(cld->safe_ouput + 1));
+	out_min = (val >> CL_DVFS_OUTPUT_CFG_MIN_SHIFT) & OUT_MASK;
+
+	switch (cld->tune_state) {
+	case TEGRA_CL_DVFS_TUNE_LOW:
+		if (req->output > cld->tune_high_out_start) {
+			set_tune_state(cld, TEGRA_CL_DVFS_TUNE_HIGH_REQUEST);
+			out_min = cld->tune_high_out_min;
+			mod_timer(&cld->tune_timer, jiffies + cld->tune_delay);
+		}
+		break;
+
+	case TEGRA_CL_DVFS_TUNE_HIGH:
+	case TEGRA_CL_DVFS_TUNE_HIGH_REQUEST:
+		if (req->output <= cld->tune_high_out_start) {
+			set_tune_state(cld, TEGRA_CL_DVFS_TUNE_LOW);
+			cl_dvfs_writel(cld, cld->safe_dvfs->dfll_data.tune0,
+				       CL_DVFS_TUNE0);
+			cl_dvfs_wmb(cld);
+			out_min = 0;
+		}
+		break;
+	default:
+		BUG();
+	}
+
+	out_max = max(out_max, out_min);
+	val &= ~(CL_DVFS_OUTPUT_CFG_MAX_MASK | CL_DVFS_OUTPUT_CFG_MIN_MASK);
+	val |= out_max << CL_DVFS_OUTPUT_CFG_MAX_SHIFT;
+	val |= out_min << CL_DVFS_OUTPUT_CFG_MIN_SHIFT;
+	cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_CFG);
+}
+
+static void tune_timer_cb(unsigned long data)
+{
+	unsigned long flags;
+	u32 val, out_min, out_last;
+	struct tegra_cl_dvfs *cld = (struct tegra_cl_dvfs *)data;
+
+	clk_lock_save(cld->dfll_clk, &flags);
+
+	/* FIXME: PWM output control */
+	if (cld->tune_state == TEGRA_CL_DVFS_TUNE_HIGH_REQUEST) {
+		val = cl_dvfs_readl(cld, CL_DVFS_OUTPUT_CFG);
+		out_min = (val >> CL_DVFS_OUTPUT_CFG_MIN_SHIFT) & OUT_MASK;
+		val = cl_dvfs_readl(cld, CL_DVFS_I2C_STS);
+		out_last = (val >> CL_DVFS_I2C_STS_I2C_LAST_SHIFT) & OUT_MASK;
+
+		if ((out_last >= cld->tune_high_out_min)  &&
+		    (out_min >= cld->tune_high_out_min)) {
+			udelay(CL_DVFS_OUTPUT_RAMP_DELAY);
+			set_tune_state(cld, TEGRA_CL_DVFS_TUNE_HIGH);
+			val = cld->safe_dvfs->dfll_data.tune0_high_mv;
+			cl_dvfs_writel(cld, val, CL_DVFS_TUNE0);
+		} else {
+			mod_timer(&cld->tune_timer, jiffies + cld->tune_delay);
+		}
+	}
+	clk_unlock_restore(cld->dfll_clk, &flags);
+}
+
+static void set_request(struct tegra_cl_dvfs *cld, struct dfll_rate_req *req)
+{
+	u32 val;
+	int force_val = req->output - cld->safe_ouput;
+	int coef = 128; /* FIXME: cld->p_data->cfg_param->cg_scale? */;
+
+	force_val = force_val * coef / cld->p_data->cfg_param->cg;
+	force_val = clamp(force_val, FORCE_MIN, FORCE_MAX);
+
+	val = req->freq << CL_DVFS_FREQ_REQ_FREQ_SHIFT;
+	val |= req->scale << CL_DVFS_FREQ_REQ_SCALE_SHIFT;
+	val |= ((u32)force_val << CL_DVFS_FREQ_REQ_FORCE_SHIFT) &
+		CL_DVFS_FREQ_REQ_FORCE_MASK;
+	val |= CL_DVFS_FREQ_REQ_FREQ_VALID | CL_DVFS_FREQ_REQ_FORCE_ENABLE;
+
+	cl_dvfs_writel(cld, val, CL_DVFS_FREQ_REQ);
+}
+
+static u8 find_mv_out_cap(struct tegra_cl_dvfs *cld, int mv)
+{
+	u8 cap;
+	int uv;
+
+	for (cap = 0; cap < cld->num_voltages; cap++) {
+		uv = cld->out_map[cap]->reg_uV;
+		if (uv >= mv * 1000)
+			return cap;
+	}
+	return cap - 1;	/* maximum possible output */
 }
 
 static int find_safe_output(
@@ -373,15 +510,35 @@ static void cl_dvfs_init_i2c_if(struct tegra_cl_dvfs *cld)
 	cl_dvfs_wmb(cld);
 }
 
+static void cl_dvfs_init_tuning_thresholds(struct tegra_cl_dvfs *cld)
+{
+	int mv;
+
+	/*
+	 * Convert high tuning voltage threshold into output LUT index, and
+	 * add necessary margin.  If voltage threshold is outside operating
+	 * range set it at maximum output level to effectively disable tuning
+	 * parameters adjustment.
+	 */
+	cld->tune_high_out_min = cld->num_voltages - 1;
+	cld->tune_high_out_start = cld->num_voltages - 1;
+	mv = cld->safe_dvfs->dfll_data.tune_high_min_millivolts;
+	if (mv >= cld->safe_dvfs->dfll_data.min_millivolts) {
+		cld->tune_high_out_min = find_mv_out_cap(cld, mv);
+		cld->tune_high_out_start = find_mv_out_cap(
+			cld, mv + CL_DVFS_TUNE_HIGH_MARGIN);
+	}
+}
+
 static void cl_dvfs_init_out_if(struct tegra_cl_dvfs *cld)
 {
 	int i;
 	u32 val;
 
-	/* disable output, and set output limits, use medium volatge
-	   level as safe; disable and clear limit interrupts */
-	cld->safe_ouput = cld->num_voltages / 2;
-	val = ((cld->num_voltages / 2) << CL_DVFS_OUTPUT_CFG_SAFE_SHIFT) |
+	/* disable output, and set output limits; use one step above minimum
+	   voltage level as safe value; disable and clear limit interrupts */
+	cld->safe_ouput = 1;
+	val = (cld->safe_ouput << CL_DVFS_OUTPUT_CFG_SAFE_SHIFT) |
 		((cld->num_voltages - 1) << CL_DVFS_OUTPUT_CFG_MAX_SHIFT);
 	cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_CFG);
 	cl_dvfs_wmb(cld);
@@ -397,6 +554,9 @@ static void cl_dvfs_init_out_if(struct tegra_cl_dvfs *cld)
 		cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_LUT + i * 4);
 	}
 	cl_dvfs_wmb(cld);
+
+	/* setup output range thresholds for dynamic tuning */
+	cl_dvfs_init_tuning_thresholds(cld);
 
 	/* configure transport */
 	if (cld->p_data->pmu_if == TEGRA_CL_DVFS_PMU_I2C)
@@ -426,6 +586,7 @@ static void cl_dvfs_init_cntrl_logic(struct tegra_cl_dvfs *cld)
 
 	cl_dvfs_writel(cld, cld->safe_dvfs->dfll_data.tune0, CL_DVFS_TUNE0);
 	cl_dvfs_writel(cld, cld->safe_dvfs->dfll_data.tune1, CL_DVFS_TUNE1);
+	cld->tune_state = TEGRA_CL_DVFS_TUNE_LOW;
 
 	/* configure droop (skipper 1) and scale (skipper 2) */
 	val = GET_DROOP_FREQ(cld->safe_dvfs->dfll_data.droop_rate_min,
@@ -511,6 +672,12 @@ static int cl_dvfs_init(struct tegra_cl_dvfs *cld)
 	cld->ref_rate = clk_get_rate(cld->ref_clk);
 	BUG_ON(!cld->ref_rate);
 
+	/* init tuning timer */
+	init_timer(&cld->tune_timer);
+	cld->tune_timer.function = tune_timer_cb;
+	cld->tune_timer.data = (unsigned long)cld;
+	cld->tune_delay = usecs_to_jiffies(CL_DVFS_TUNE_HIGH_DELAY);
+
 	/* Get ready ouput voltage mapping*/
 	cl_dvfs_init_maps(cld);
 
@@ -552,7 +719,7 @@ static int __init tegra_cl_dvfs_probe(struct platform_device *pdev)
 	struct tegra_cl_dvfs_platform_data *p_data;
 	struct resource *res;
 	struct tegra_cl_dvfs *cld;
-	struct clk *ref_clk, *soc_clk, *i2c_clk, *safe_dvfs_clk;
+	struct clk *ref_clk, *soc_clk, *i2c_clk, *safe_dvfs_clk, *dfll_clk;
 
 	/* Get resources */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -571,6 +738,7 @@ static int __init tegra_cl_dvfs_probe(struct platform_device *pdev)
 	soc_clk = clk_get(&pdev->dev, "soc");
 	i2c_clk = clk_get(&pdev->dev, "i2c");
 	safe_dvfs_clk = clk_get(&pdev->dev, "safe_dvfs");
+	dfll_clk = clk_get(&pdev->dev, p_data->dfll_clk_name);
 	if (IS_ERR(ref_clk) || IS_ERR(soc_clk) || IS_ERR(i2c_clk)) {
 		dev_err(&pdev->dev, "missing control clock\n");
 		return -ENODEV;
@@ -578,6 +746,10 @@ static int __init tegra_cl_dvfs_probe(struct platform_device *pdev)
 	if (IS_ERR(safe_dvfs_clk)) {
 		dev_err(&pdev->dev, "missing safe dvfs source clock\n");
 		return PTR_ERR(safe_dvfs_clk);
+	}
+	if (IS_ERR(dfll_clk)) {
+		dev_err(&pdev->dev, "missing target dfll clock\n");
+		return PTR_ERR(dfll_clk);
 	}
 
 
@@ -593,6 +765,7 @@ static int __init tegra_cl_dvfs_probe(struct platform_device *pdev)
 	cld->ref_clk = ref_clk;
 	cld->soc_clk = soc_clk;
 	cld->i2c_clk = i2c_clk;
+	cld->dfll_clk = dfll_clk;
 	cld->safe_dvfs = safe_dvfs_clk->dvfs;
 
 	/* Initialize cl_dvfs */
@@ -637,8 +810,9 @@ void tegra_cl_dvfs_disable(struct tegra_cl_dvfs *cld)
 	    (cld->mode == TEGRA_CL_DVFS_DISABLED))
 		return;
 
-	output_disable(cld);
+	set_ol_config(cld);
 	set_mode(cld, TEGRA_CL_DVFS_DISABLED);
+	output_disable(cld);
 	cl_dvfs_disable_clocks(cld);
 }
 
@@ -662,7 +836,6 @@ int tegra_cl_dvfs_enable(struct tegra_cl_dvfs *cld)
 /* Switch from OPEN_LOOP state to CLOSED_LOOP state */
 int tegra_cl_dvfs_lock(struct tegra_cl_dvfs *cld)
 {
-	u32 val;
 	struct dfll_rate_req *req = &cld->last_req;
 
 	switch (cld->mode) {
@@ -677,26 +850,13 @@ int tegra_cl_dvfs_lock(struct tegra_cl_dvfs *cld)
 
 		/*
 		 * Update control logic setting with last rate request;
-		 * use request safe output to set safe volatge as well as
-		 * maximum voltage limit
+		 * use request safe output to set maximum voltage limit.
+		 * Make sure we have at least one LUT step above and one
+		 * below safe value.
 		 */
-		val = cl_dvfs_readl(cld, CL_DVFS_OUTPUT_CFG);
-		val &= ~(CL_DVFS_OUTPUT_CFG_SAFE_MASK |
-			 CL_DVFS_OUTPUT_CFG_MAX_MASK);
-
-		/* make sure we have at least one LUT step above and
-		   one below new safe value */
-		cld->safe_ouput = (req->output >= 2) ? (req->output - 1) : 1;
-		val |= (cld->safe_ouput + 1) << CL_DVFS_OUTPUT_CFG_MAX_SHIFT;
-		val |= cld->safe_ouput << CL_DVFS_OUTPUT_CFG_SAFE_SHIFT;
-		cl_dvfs_writel(cld, val, CL_DVFS_OUTPUT_CFG);
-
-		val = req->freq << CL_DVFS_FREQ_REQ_FREQ_SHIFT;
-		val |= req->scale << CL_DVFS_FREQ_REQ_SCALE_SHIFT;
-		val |= CL_DVFS_FREQ_REQ_FREQ_VALID |
-			CL_DVFS_FREQ_REQ_FORCE_ENABLE;
-		cl_dvfs_writel(cld, val, CL_DVFS_FREQ_REQ);
-
+		BUG_ON(!cld->safe_ouput);
+		set_cl_config(cld, req);
+		set_request(cld, req);
 		output_enable(cld);
 		set_mode(cld, TEGRA_CL_DVFS_CLOSED_LOOP);
 		return 0;
@@ -713,9 +873,16 @@ int tegra_cl_dvfs_lock(struct tegra_cl_dvfs *cld)
 int tegra_cl_dvfs_unlock(struct tegra_cl_dvfs *cld)
 {
 	int ret;
+	u32 val;
 
 	switch (cld->mode) {
 	case TEGRA_CL_DVFS_CLOSED_LOOP:
+		/* 1:1 scaling in open loop */
+		val = cl_dvfs_readl(cld, CL_DVFS_FREQ_REQ);
+		val |= (SCALE_MAX - 1) << CL_DVFS_FREQ_REQ_SCALE_SHIFT;
+		cl_dvfs_writel(cld, val, CL_DVFS_FREQ_REQ);
+
+		set_ol_config(cld);
 		set_mode(cld, TEGRA_CL_DVFS_OPEN_LOOP);
 		ret = output_disable(cld);
 		return ret;
@@ -737,7 +904,7 @@ int tegra_cl_dvfs_unlock(struct tegra_cl_dvfs *cld)
  */
 int tegra_cl_dvfs_request_rate(struct tegra_cl_dvfs *cld, unsigned long rate)
 {
-	u32 val, outp;
+	u32 val;
 	struct dfll_rate_req req;
 
 	if (cld->mode == TEGRA_CL_DVFS_UNINITIALIZED) {
@@ -778,29 +945,14 @@ int tegra_cl_dvfs_request_rate(struct tegra_cl_dvfs *cld, unsigned long rate)
 
 	/*
 	 * Save validated request, and in CLOSED_LOOP mode actually update
-	 * control logic settings; use request safe output to set forced
-	 * voltage as well as maximum voltage limit
+	 * control logic settings; use request output to set maximum voltage
+	 * limit, but keep one LUT step room above safe voltage
 	 */
 	cld->last_req = req;
 
 	if (cld->mode == TEGRA_CL_DVFS_CLOSED_LOOP) {
-		int force_val = req.output - cld->safe_ouput;
-		int coef = 128; /* FIXME: cld->p_data->cfg_param->cg_scale? */;
-		force_val = force_val * coef / cld->p_data->cfg_param->cg;
-		force_val = clamp(force_val, FORCE_MIN, FORCE_MAX);
-		val |= ((u32)force_val << CL_DVFS_FREQ_REQ_FORCE_SHIFT) &
-					CL_DVFS_FREQ_REQ_FORCE_MASK;
-
-		val |= req.scale << CL_DVFS_FREQ_REQ_SCALE_SHIFT;
-		val |= CL_DVFS_FREQ_REQ_FREQ_VALID |
-			CL_DVFS_FREQ_REQ_FORCE_ENABLE;
-
-		outp = cl_dvfs_readl(cld, CL_DVFS_OUTPUT_CFG);
-		outp &= ~CL_DVFS_OUTPUT_CFG_MAX_MASK;
-		outp |= req.output << CL_DVFS_OUTPUT_CFG_MAX_SHIFT;
-		cl_dvfs_writel(cld, outp, CL_DVFS_OUTPUT_CFG);
-
-		cl_dvfs_writel(cld, val, CL_DVFS_FREQ_REQ);
+		set_cl_config(cld, &req);
+		set_request(cld, &req);
 		cl_dvfs_wmb(cld);
 	}
 	return 0;
@@ -849,6 +1001,31 @@ static int monitor_get(void *data, u64 *val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 
+static int tune_high_mv_get(void *data, u64 *val)
+{
+	struct tegra_cl_dvfs *cld = ((struct clk *)data)->u.dfll.cl_dvfs;
+	*val = cld->safe_dvfs->dfll_data.tune_high_min_millivolts;
+	return 0;
+}
+static int tune_high_mv_set(void *data, u64 val)
+{
+	unsigned long flags;
+	struct clk *c = (struct clk *)data;
+	struct tegra_cl_dvfs *cld = c->u.dfll.cl_dvfs;
+
+	clk_lock_save(c, &flags);
+
+	set_ol_config(cld);
+	cld->safe_dvfs->dfll_data.tune_high_min_millivolts = val;
+	cl_dvfs_init_tuning_thresholds(cld);
+	if (cld->mode == TEGRA_CL_DVFS_CLOSED_LOOP)
+		set_cl_config(cld, &cld->last_req);
+
+	clk_unlock_restore(c, &flags);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(tune_high_mv_fops, tune_high_mv_get, tune_high_mv_set,
+			"%llu\n");
 
 static int cl_register_show(struct seq_file *s, void *data)
 {
@@ -941,6 +1118,10 @@ static int __init tegra_cl_dvfs_debug_init(void)
 
 	if (!debugfs_create_file("monitor", S_IRUGO,
 		cpu_cl_dvfs_dentry, dfll_cpu, &monitor_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("tune_high_mv", S_IRUGO,
+		cpu_cl_dvfs_dentry, dfll_cpu, &tune_high_mv_fops))
 		goto err_out;
 
 	if (!debugfs_create_file("registers", S_IRUGO | S_IWUSR,
