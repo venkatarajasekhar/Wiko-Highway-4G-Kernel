@@ -272,8 +272,8 @@ static struct tegra_asoc_vcm_platform_data jetson_audio_pdata = {
 		.name = "tegra-i2s-1",
 		.pcm_driver = "tegra-pcm-audio",
 		.i2s_format = format_i2s,
-		/* Audio Codec is Master */
-		.master = 1,
+		/* Audio Codec is Slave */
+		.master = 0,
 	},
 	.codec_info[1] = {
 		.codec_dai_name = "dit-hifi",
