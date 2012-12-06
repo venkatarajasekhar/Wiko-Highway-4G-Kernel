@@ -130,7 +130,11 @@ DT_MACHINE_START(CERES, "Ceres")
 	.soc			= &tegra_soc_desc,
 	.map_io			= tegra_map_common_io,
 	.reserve		= tegra_ceres_reserve,
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	.init_early		= tegra11x_init_early,
+#else
 	.init_early		= tegra14x_init_early,
+#endif
 	.init_irq		= tegra_init_irq,
 	.handle_irq		= gic_handle_irq,
 	.timer			= &tegra_timer,
