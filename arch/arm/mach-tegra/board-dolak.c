@@ -615,17 +615,6 @@ static void __init dolak_hs_uart_init(void)
 #if defined(CONFIG_TEGRA_BASEBAND)
 static void dolak_tegra_bb_init(void)
 {
-	/*
-	   Real AP device
-	   ToDo: match sizes to reserve sizes when MC has final value
-	   This 16/32M mapping is needed on Qt due to memory limitation
-	   if you map all 64/64M reserved today, kernel will panic
-	   Modem still access 64/64M so memory is unusable by AP
-	*/
-	dolak_tegra_bb_data.ipc_base = tegra_bb_ipc_start;
-	dolak_tegra_bb_data.ipc_size = SZ_16M;
-	dolak_tegra_bb_data.priv_base = tegra_bb_priv_start;
-	dolak_tegra_bb_data.priv_size = SZ_32M;
 	dolak_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
 	platform_device_register(&dolak_tegra_bb_device);
 }
@@ -662,10 +651,6 @@ static void __init tegra_dolak_init(void)
 
 static void __init tegra_dolak_reserve(void)
 {
-#if defined(CONFIG_TEGRA_BASEBAND)
-	/* ToDo: match reserve sizes to final boot rom value */
-	tegra_reserve_shmem(SZ_64M, SZ_64M);
-#endif
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	tegra_reserve(0, SZ_4M, 0);
 #else
