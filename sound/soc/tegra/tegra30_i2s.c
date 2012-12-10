@@ -108,6 +108,9 @@ static int tegra30_i2s_show(struct seq_file *s, void *unused)
 		REG(TEGRA30_I2S_LCOEF_2_4_0),
 		REG(TEGRA30_I2S_LCOEF_2_4_1),
 		REG(TEGRA30_I2S_LCOEF_2_4_2),
+#ifndef CONFIG_ARCH_TEGRA_3x_SOC
+		REG(TEGRA30_I2S_SLOT_CTRL2),
+#endif
 	};
 #undef REG
 
