@@ -93,6 +93,9 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&spdif_dit_device,
 	&bluetooth_dit_device,
 	&baseband_dit_device,
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
+	&tegra11_se_device,
+#endif
 	&tegra_hda_device,
 };
 
