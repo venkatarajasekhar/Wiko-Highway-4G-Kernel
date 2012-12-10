@@ -219,6 +219,11 @@ static inline int tegra_dma_init(void)
 	return 0;
 }
 
+static inline int tegra_dma_late_init(void)
+{
+	return 0;
+}
+
 #endif
 
 #endif
