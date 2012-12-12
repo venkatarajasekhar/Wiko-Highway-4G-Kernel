@@ -323,7 +323,7 @@ static void __init tegra_m2601_init(void)
 MACHINE_START(M2601, "m2601")
 	.atag_offset    = 0x100,
 	.soc            = &tegra_soc_desc,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.init_early     = tegra30_init_early,
 	.init_machine   = tegra_m2601_init,
 	.map_io         = tegra_map_common_io,
