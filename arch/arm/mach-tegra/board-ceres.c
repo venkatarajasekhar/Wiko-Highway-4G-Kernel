@@ -25,6 +25,8 @@
 #include <linux/gpio.h>
 #include <linux/memblock.h>
 #include <linux/of_platform.h>
+#include <linux/serial_8250.h>
+#include <linux/tegra_uart.h>
 
 #include <asm/hardware/gic.h>
 
@@ -33,6 +35,7 @@
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
+#include <mach/tegra_fiq_debugger.h>
 
 #include "board.h"
 #include "board-ceres.h"
@@ -98,14 +101,77 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ NULL,		NULL,		0,		0},
 };
 
+static struct platform_device *ceres_uart_devices[] __initdata = {
+	&tegra_uarta_device,
+	&tegra_uartb_device,
+	&tegra_uartc_device,
+	&tegra_uartd_device,
+};
+static struct uart_clk_parent uart_parent_clk[] = {
+	[0] = {.name = "clk_m"},
+	[1] = {.name = "pll_p"},
+#ifndef CONFIG_TEGRA_PLLM_RESTRICTED
+	[2] = {.name = "pll_m"},
+#endif
+};
+
+static struct tegra_uart_platform_data ceres_uart_pdata;
+static struct tegra_uart_platform_data ceres_loopback_uart_pdata;
+
+static void __init uart_debug_init(void)
+{
+	int debug_port_id;
+
+	debug_port_id = uart_console_debug_init(3);
+	if (debug_port_id < 0)
+		return;
+	ceres_uart_devices[debug_port_id] = uart_console_debug_device;
+}
+
+static void __init ceres_uart_init(void)
+{
+	struct clk *c;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(uart_parent_clk); ++i) {
+		c = tegra_get_clock_by_name(uart_parent_clk[i].name);
+		if (IS_ERR_OR_NULL(c)) {
+			pr_err("Not able to get the clock for %s\n",
+						uart_parent_clk[i].name);
+			continue;
+		}
+		uart_parent_clk[i].parent_clk = c;
+		uart_parent_clk[i].fixed_clk_rate = clk_get_rate(c);
+	}
+	ceres_uart_pdata.parent_clk_list = uart_parent_clk;
+	ceres_uart_pdata.parent_clk_count = ARRAY_SIZE(uart_parent_clk);
+	ceres_loopback_uart_pdata.parent_clk_list = uart_parent_clk;
+	ceres_loopback_uart_pdata.parent_clk_count =
+						ARRAY_SIZE(uart_parent_clk);
+	ceres_loopback_uart_pdata.is_loopback = true;
+	tegra_uarta_device.dev.platform_data = &ceres_uart_pdata;
+	tegra_uartb_device.dev.platform_data = &ceres_uart_pdata;
+	tegra_uartc_device.dev.platform_data = &ceres_uart_pdata;
+	tegra_uartd_device.dev.platform_data = &ceres_uart_pdata;
+
+	/* Register low speed only if it is selected */
+	if (!is_tegra_debug_uartport_hs())
+		uart_debug_init();
+
+	platform_add_devices(ceres_uart_devices,
+				ARRAY_SIZE(ceres_uart_devices));
+}
+
 static void __init tegra_ceres_init(void)
 {
 	tegra_clk_init_from_table(ceres_clk_init_table);
 	tegra_enable_pinmux();
+	ceres_uart_init();
 	tegra_smmu_init();
 	tegra_soc_device_init("ceres");
 	ceres_keys_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
+	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 }
 
 static void __init tegra_ceres_dt_init(void)
