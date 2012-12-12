@@ -374,6 +374,9 @@ static int send_key_to_dongle(struct net_device *ndev,
 	struct brcmf_wsec_key_le key_le;
 
 	convert_key_from_CPU(key, &key_le);
+
+	brcmf_netdev_wait_pend8021x(ndev);
+
 	err = brcmf_exec_dcmd(ndev, BRCMF_C_SET_KEY, &key_le, sizeof(key_le));
 	if (err)
 		WL_ERR("WLC_SET_KEY error (%d)\n", err);
