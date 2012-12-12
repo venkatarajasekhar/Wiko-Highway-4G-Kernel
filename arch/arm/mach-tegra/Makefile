@@ -308,6 +308,7 @@ obj-${CONFIG_MACH_TEGRA_PLUTO}          += panel-s-1080p-5.o
 obj-${CONFIG_MACH_CERES}                += board-ceres.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-kbc.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sdhci.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-power.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

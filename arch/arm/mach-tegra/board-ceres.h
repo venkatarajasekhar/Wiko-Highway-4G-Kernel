@@ -27,4 +27,6 @@
 
 int ceres_keys_init(void);
 int ceres_sdhci_init(void);
+int ceres_regulator_init(void);
+int ceres_suspend_init(void);
 #endif
