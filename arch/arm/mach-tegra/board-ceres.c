@@ -30,7 +30,8 @@
 #include <linux/tegra_uart.h>
 #include <linux/i2c.h>
 #include <linux/i2c-tegra.h>
-
+#include <linux/spi/spi.h>
+#include <linux/spi-tegra.h>
 #include <asm/hardware/gic.h>
 
 #include <mach/iomap.h>
@@ -72,6 +73,53 @@ static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
 	.id = -1,
 };
+
+static struct platform_device *ceres_spi_devices[] __initdata = {
+	&tegra11_spi_device4,
+};
+
+struct spi_clk_parent spi_parent_clk_ceres[] = {
+	[0] = {.name = "pll_p"},
+#ifndef CONFIG_TEGRA_PLLM_RESTRICTED
+	[1] = {.name = "pll_m"},
+	[2] = {.name = "clk_m"},
+#else
+	[1] = {.name = "clk_m"},
+#endif
+};
+
+static struct tegra_spi_platform_data ceres_spi_pdata = {
+	.is_dma_based           = false,
+	.max_dma_buffer         = 16 * 1024,
+	.is_clkon_always        = false,
+	.max_rate               = 25000000,
+};
+
+static void __init ceres_spi_init(void)
+{
+	int i;
+	struct clk *c;
+	struct board_info board_info, display_board_info;
+
+	tegra_get_board_info(&board_info);
+	tegra_get_display_board_info(&display_board_info);
+
+	for (i = 0; i < ARRAY_SIZE(spi_parent_clk_ceres); ++i) {
+		c = tegra_get_clock_by_name(spi_parent_clk_ceres[i].name);
+		if (IS_ERR_OR_NULL(c)) {
+			pr_err("Not able to get the clock for %s\n",
+			       spi_parent_clk_ceres[i].name);
+			continue;
+		}
+		spi_parent_clk_ceres[i].parent_clk = c;
+		spi_parent_clk_ceres[i].fixed_clk_rate = clk_get_rate(c);
+	}
+	ceres_spi_pdata.parent_clk_list = spi_parent_clk_ceres;
+	ceres_spi_pdata.parent_clk_count = ARRAY_SIZE(spi_parent_clk_ceres);
+	tegra11_spi_device4.dev.platform_data = &ceres_spi_pdata;
+	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
+}
+
 
 static struct platform_device *ceres_devices[] __initdata = {
 	&tegra_pmu_device,
@@ -286,6 +334,7 @@ static void __init tegra_ceres_init(void)
 	tegra_clk_init_from_table(ceres_clk_init_table);
 	tegra_enable_pinmux();
 	ceres_i2c_init();
+	ceres_spi_init();
 	ceres_uart_init();
 	tegra_smmu_init();
 	ceres_usb_init();
