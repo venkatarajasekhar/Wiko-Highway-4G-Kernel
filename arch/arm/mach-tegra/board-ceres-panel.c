@@ -73,10 +73,17 @@ struct platform_device * __init ceres_host1x_init(void)
 #ifdef CONFIG_TEGRA_DC
 
 /* hdmi pins for hotplug */
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define ceres_hdmi_hpd		TEGRA_GPIO_PN7
+#else
+/* FIXME: T148 ceres has this GPIO from PMIC */
+#endif
 
 /* hdmi related regulators */
+static struct regulator *ceres_hdmi_reg;
+static struct regulator *ceres_hdmi_pll;
 static struct regulator *ceres_hdmi_vddio;
+static struct regulator *ceres_hdmi_1v8;
 
 static struct resource ceres_disp1_resources[] = {
 	{
@@ -147,13 +154,77 @@ static struct tegra_dc_out ceres_disp1_out = {
 
 static int ceres_hdmi_enable(struct device *dev)
 {
-	/* TODO */
+	int ret;
+	if (!ceres_hdmi_reg) {
+			ceres_hdmi_reg = regulator_get(dev, "avdd_hdmi");
+			if (IS_ERR_OR_NULL(ceres_hdmi_reg)) {
+				pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
+				ceres_hdmi_reg = NULL;
+				return PTR_ERR(ceres_hdmi_reg);
+			}
+	}
+	ret = regulator_enable(ceres_hdmi_reg);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi\n");
+		return ret;
+	}
+	if (!ceres_hdmi_pll) {
+		ceres_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
+		if (IS_ERR_OR_NULL(ceres_hdmi_pll)) {
+			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
+			ceres_hdmi_pll = NULL;
+			regulator_put(ceres_hdmi_reg);
+			ceres_hdmi_reg = NULL;
+			return PTR_ERR(ceres_hdmi_pll);
+		}
+	}
+	ret = regulator_enable(ceres_hdmi_pll);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi_pll\n");
+		return ret;
+	}
+
+	if (!ceres_hdmi_1v8) {
+		ceres_hdmi_1v8 = regulator_get(dev, "vdd_1v8_hdmi");
+		if (IS_ERR_OR_NULL(ceres_hdmi_1v8)) {
+			pr_err("hdmi: couldn't get regulator vdd_1v8_hdmi\n");
+			ceres_hdmi_1v8 = NULL;
+			regulator_put(ceres_hdmi_pll);
+			ceres_hdmi_pll = NULL;
+			regulator_put(ceres_hdmi_reg);
+			ceres_hdmi_reg = NULL;
+			return PTR_ERR(ceres_hdmi_1v8);
+		}
+	}
+	ret = regulator_enable(ceres_hdmi_1v8);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator vdd_1v8_hdmi\n");
+		return ret;
+	}
+
 	return 0;
 }
 
 static int ceres_hdmi_disable(void)
 {
-	/* TODO */
+	if (ceres_hdmi_reg) {
+		regulator_disable(ceres_hdmi_reg);
+		regulator_put(ceres_hdmi_reg);
+		ceres_hdmi_reg = NULL;
+	}
+
+	if (ceres_hdmi_pll) {
+		regulator_disable(ceres_hdmi_pll);
+		regulator_put(ceres_hdmi_pll);
+		ceres_hdmi_pll = NULL;
+	}
+
+	if (ceres_hdmi_1v8) {
+		regulator_disable(ceres_hdmi_1v8);
+		regulator_put(ceres_hdmi_1v8);
+		ceres_hdmi_1v8 = NULL;
+	}
+
 	return 0;
 }
 
@@ -420,8 +491,11 @@ int __init ceres_panel_init(void)
 		return err;
 	}
 #endif
+
+#ifdef CONFIG_ARCH_TEGRA_T11x_SOC
 	gpio_request(ceres_hdmi_hpd, "hdmi_hpd");
 	gpio_direction_input(ceres_hdmi_hpd);
+#endif
 
 	phost1x = ceres_host1x_init();
 	if (!phost1x) {
