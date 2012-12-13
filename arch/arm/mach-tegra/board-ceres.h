@@ -26,4 +26,5 @@
 #include "gpio-names.h"
 
 int ceres_keys_init(void);
+int ceres_sdhci_init(void);
 #endif

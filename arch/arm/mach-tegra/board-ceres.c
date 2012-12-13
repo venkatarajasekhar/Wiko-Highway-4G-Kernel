@@ -170,6 +170,7 @@ static void __init tegra_ceres_init(void)
 	tegra_smmu_init();
 	tegra_soc_device_init("ceres");
 	ceres_keys_init();
+	ceres_sdhci_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 }
