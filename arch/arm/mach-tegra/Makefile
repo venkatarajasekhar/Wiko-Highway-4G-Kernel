@@ -317,6 +317,8 @@ obj-${CONFIG_MACH_CERES}                += board-ceres-sdhci.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-power.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-pinmux.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sensors.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-panel.o
+obj-${CONFIG_MACH_CERES}                += panel-s-1080p-5.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
