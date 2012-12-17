@@ -345,7 +345,6 @@ module_param(op_mode, int, 0644);
 extern int wl_control_wl_start(struct net_device *dev);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 struct semaphore dhd_registration_sem;
-struct semaphore dhd_chipup_sem;
 int dhd_registration_check = FALSE;
 
 #define DHD_REGISTRATION_TIMEOUT  12000  /* msec : allowed time to finished dhd registration */
@@ -2757,9 +2756,6 @@ dhd_osl_detach(osl_t *osh)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 	dhd_registration_check = FALSE;
 	up(&dhd_registration_sem);
-#if	defined(BCMLXSDMMC)
-	up(&dhd_chipup_sem);
-#endif
 #endif
 }
 
