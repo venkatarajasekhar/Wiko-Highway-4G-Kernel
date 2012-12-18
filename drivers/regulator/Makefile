@@ -34,6 +34,7 @@ obj-$(CONFIG_REGULATOR_MAX8997) += max8997.o
 obj-$(CONFIG_REGULATOR_MAX8998) += max8998.o
 obj-$(CONFIG_REGULATOR_MAX8907C) += max8907c-regulator.o
 obj-$(CONFIG_REGULATOR_MAX77663) += max77663-regulator.o
+obj-$(CONFIG_REGULATOR_AS3720) += as3720-regulator.o
 obj-$(CONFIG_REGULATOR_WM831X) += wm831x-dcdc.o
 obj-$(CONFIG_REGULATOR_WM831X) += wm831x-isink.o
 obj-$(CONFIG_REGULATOR_WM831X) += wm831x-ldo.o
