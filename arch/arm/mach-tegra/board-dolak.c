@@ -453,14 +453,6 @@ static struct platform_device *dolak_devices[] __initdata = {
 	&tegra_camera,
 };
 
-static void dolak_keys_init(void)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(dolak_keys); i++)
-		tegra_gpio_enable(dolak_keys[i].gpio);
-}
-
 static int __init dolak_touch_init(void)
 {
 	return 0;
@@ -656,7 +648,6 @@ static void __init tegra_dolak_init(void)
 	dolak_regulator_init();
 	dolak_suspend_init();
 	dolak_touch_init();
-	/* dolak_keys_init(); */
 	dolak_usb_init();
 	dolak_panel_init();
 	dolak_hs_uart_init();

@@ -444,9 +444,6 @@ static __initdata struct tegra_clk_init_table spi_clk_init_table[] = {
 
 static int __init e1853_touch_init(void)
 {
-	tegra_gpio_enable(TOUCH_GPIO_IRQ_ATMEL_T9);
-	tegra_gpio_enable(TOUCH_GPIO_RST_ATMEL_T9);
-
 	gpio_request(TOUCH_GPIO_IRQ_ATMEL_T9, "atmel-irq");
 	gpio_direction_input(TOUCH_GPIO_IRQ_ATMEL_T9);
 
