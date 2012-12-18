@@ -707,14 +707,14 @@ static struct platform_device *enterprise_devices[] __initdata = {
 #endif
 };
 
-#define MXT_CFG_NAME            "Android_Enterprise_2012-01-31.cfg"
+#define MXT_CFG_NAME            "Android_Enterprise_2012-12-18.cfg"
 static u8 read_chg(void)
 {
 	return gpio_get_value(TEGRA_GPIO_PH6);
 }
 
 static struct mxt_platform_data atmel_mxt_info = {
-	.irqflags       = IRQF_TRIGGER_FALLING,
+	.irqflags       = IRQF_ONESHOT | IRQF_TRIGGER_LOW,
 	.read_chg       = &read_chg,
 	.mxt_cfg_name	= MXT_CFG_NAME,
 };
