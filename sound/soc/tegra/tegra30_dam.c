@@ -684,9 +684,13 @@ int tegra30_dam_set_acif(int ifc, int chid, unsigned int audio_channels,
 		return -EINVAL;
 
 #ifndef CONFIG_ARCH_TEGRA_3x_SOC
-	/*ch0 takes input as mono/32bit always*/
+	/*ch0 takes input as mono always*/
 	if ((chid == dam_ch_in0) &&
-		((client_channels != 1) || (client_bits != 32)))
+		((client_channels != 1)))
+		return -EINVAL;
+	/*as per dam spec file chout is fixed to 32 bits*/
+	/*so accept ch0, ch1 and chout as 32bit always*/
+	if (client_bits != 32)
 		return -EINVAL;
 #else
 	/*ch0 takes input as mono/16bit always*/
@@ -960,14 +964,14 @@ void tegra30_dam_enable(int ifc, int on, int chid)
 
 		if (!on) {
 			if (chid == dam_ch_in0) {
-				while (tegra30_ahub_dam_ch0_is_enabled(ifc)
+				while (!tegra30_ahub_dam_ch0_is_empty(ifc)
 					&& dcnt--)
 					udelay(100);
 
 				dcnt = 10;
 			}
 			else {
-				while (tegra30_ahub_dam_ch1_is_enabled(ifc)
+				while (!tegra30_ahub_dam_ch1_is_empty(ifc)
 					&& dcnt--)
 					udelay(100);
 
@@ -978,14 +982,12 @@ void tegra30_dam_enable(int ifc, int on, int chid)
 
 	if (old_val_dam != val_dam) {
 		tegra30_dam_writel(dam, val_dam, TEGRA30_DAM_CTRL);
-
 		if (!on) {
-			while (tegra30_ahub_dam_tx_is_enabled(ifc) && dcnt--)
+			while (!tegra30_ahub_dam_tx_is_empty(ifc) && dcnt--)
 				udelay(100);
 
 			dcnt = 10;
 		}
-
 	}
 }
 
@@ -1052,7 +1054,7 @@ static int __devinit tegra30_dam_probe(struct platform_device *pdev)
 		goto err_free;
 	}
 	clkm_rate = clk_get_rate(clk_get_parent(dam->dam_clk));
-	while (clkm_rate > 12000000)
+	while (clkm_rate > 13000000)
 		clkm_rate >>= 1;
 
 	clk_set_rate(dam->dam_clk,clkm_rate);

@@ -15,10 +15,13 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
 #include <linux/list.h>
+#include <linux/edp.h>
 #include <media/imx091.h>
 
 #define IMX091_ID			0x0091
@@ -67,6 +70,8 @@ struct imx091_info {
 	struct list_head list;
 	struct nvc_gpio gpio[ARRAY_SIZE(imx091_gpios)];
 	struct nvc_regulator vreg[ARRAY_SIZE(imx091_vregs)];
+	struct edp_client *edpc;
+	unsigned edp_state;
 	int pwr_api;
 	int pwr_dev;
 	u8 s_mode;
@@ -79,6 +84,10 @@ struct imx091_info {
 	struct nvc_imager_static_nvc sdata;
 	u8 i2c_buf[IMX091_SIZEOF_I2C_BUF];
 	u8 bin_en;
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *debugfs_root;
+	u16	i2c_reg;
+#endif
 };
 
 struct imx091_reg {
@@ -928,7 +937,7 @@ static struct imx091_mode_data imx091_524x390 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0x20,
+		.pll_mult		= 0x2F,
 		.pll_div		= 0x2,
 	},
 	.p_mode_i2c			= imx091_524X390_i2c,
@@ -1099,6 +1108,85 @@ static int imx091_i2c_wr_table(struct imx091_info *info,
 	return 0;
 }
 
+static void imx091_edp_lowest(struct imx091_info *info)
+{
+	if (!info->edpc)
+		return;
+
+	info->edp_state = info->edpc->num_states - 1;
+	dev_dbg(&info->i2c_client->dev, "%s %d\n", __func__, info->edp_state);
+	if (edp_update_client_request(info->edpc, info->edp_state, NULL)) {
+		dev_err(&info->i2c_client->dev, "THIS IS NOT LIKELY HAPPEN!\n");
+		dev_err(&info->i2c_client->dev,
+			"UNABLE TO SET LOWEST EDP STATE!\n");
+	}
+}
+
+static void imx091_edp_register(struct imx091_info *info)
+{
+	struct edp_manager *edp_manager;
+	struct edp_client *edpc = &info->pdata->edpc_config;
+	int ret;
+
+	info->edpc = NULL;
+	if (!edpc->num_states) {
+		dev_warn(&info->i2c_client->dev,
+			"%s: NO edp states defined.\n", __func__);
+		return;
+	}
+
+	strncpy(edpc->name, "imx091", EDP_NAME_LEN - 1);
+	edpc->name[EDP_NAME_LEN - 1] = 0;
+	edpc->private_data = info;
+
+	dev_dbg(&info->i2c_client->dev, "%s: %s, e0 = %d, p %d\n",
+		__func__, edpc->name, edpc->e0_index, edpc->priority);
+	for (ret = 0; ret < edpc->num_states; ret++)
+		dev_dbg(&info->i2c_client->dev, "e%d = %d mA",
+			ret - edpc->e0_index, edpc->states[ret]);
+
+	edp_manager = edp_get_manager("battery");
+	if (!edp_manager) {
+		dev_err(&info->i2c_client->dev,
+			"unable to get edp manager: battery\n");
+		return;
+	}
+
+	ret = edp_register_client(edp_manager, edpc);
+	if (ret) {
+		dev_err(&info->i2c_client->dev,
+			"unable to register edp client\n");
+		return;
+	}
+
+	info->edpc = edpc;
+	/* set to lowest state at init */
+	imx091_edp_lowest(info);
+}
+
+static int imx091_edp_req(struct imx091_info *info, unsigned new_state)
+{
+	unsigned approved;
+	int ret = 0;
+
+	if (!info->edpc)
+		return 0;
+
+	dev_dbg(&info->i2c_client->dev, "%s %d\n", __func__, new_state);
+	ret = edp_update_client_request(info->edpc, new_state, &approved);
+	if (ret) {
+		dev_err(&info->i2c_client->dev, "E state transition failed\n");
+		return ret;
+	}
+
+	if (approved > new_state) {
+		dev_err(&info->i2c_client->dev, "EDP no enough current\n");
+		return -ENODEV;
+	}
+
+	info->edp_state = approved;
+	return 0;
+}
 
 static inline void imx091_frame_length_reg(struct imx091_reg *regs,
 					   u32 frame_length)
@@ -1255,7 +1343,10 @@ static int imx091_set_flash_output(struct imx091_info *info)
 	if (fcfg->sdo_trigger_enabled)
 		val |= 0x02;
 	dev_dbg(&info->i2c_client->dev, "%s: %02x\n", __func__, val);
-	ret = imx091_i2c_wr8(info, 0x3240, val);
+	/* disable all flash pulse output */
+	ret = imx091_i2c_wr8(info, 0x304A, 0);
+	/* config XVS/SDO pin output mode */
+	ret |= imx091_i2c_wr8(info, 0x3240, val);
 	/* set the control pulse width settings - Gain + Step
 	 * Pulse width(sec) = 64 * 2^(Gain) * (Step + 1) / Logic Clk
 	 * Logic Clk = ExtClk * PLL Multipiler / Pre_Div / Post_Div
@@ -1291,7 +1382,7 @@ static int imx091_flash_control(
 	if (!info->pdata)
 		return -EFAULT;
 
-	ret = imx091_i2c_wr8(info, 0x304a, 0);
+	ret = imx091_i2c_wr8(info, 0x304A, 0);
 	f_tim = 0;
 	f_cntl = 0;
 	if (fm->settings.enable) {
@@ -1536,6 +1627,7 @@ static int imx091_pm_wr(struct imx091_info *info, int pwr)
 		imx091_gpio_reset(info, 0);
 		info->mode_valid = false;
 		info->bin_en = 0;
+		imx091_edp_lowest(info);
 		break;
 
 	case NVC_PWR_STDBY:
@@ -1734,6 +1826,15 @@ static int imx091_mode_wr_full(struct imx091_info *info, u32 mode_index)
 {
 	int err;
 
+	/* the state num is temporary assigned, should be updated later as
+	per-mode basis */
+	err = imx091_edp_req(info, 0);
+	if (err) {
+		dev_err(&info->i2c_client->dev,
+			"%s: ERROR cannot set edp state! %d\n",	__func__, err);
+		goto mode_wr_full_end;
+	}
+
 	imx091_pm_dev_wr(info, NVC_PWR_ON);
 	imx091_bin_wr(info, 0);
 	err = imx091_i2c_wr_table(info,
@@ -1744,6 +1845,8 @@ static int imx091_mode_wr_full(struct imx091_info *info, u32 mode_index)
 	} else {
 		info->mode_valid = false;
 	}
+
+mode_wr_full_end:
 	return err;
 }
 
@@ -2548,10 +2651,109 @@ static int imx091_remove(struct i2c_client *client)
 	struct imx091_info *info = i2c_get_clientdata(client);
 
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
+#ifdef CONFIG_DEBUG_FS
+	if (info->debugfs_root)
+		debugfs_remove_recursive(info->debugfs_root);
+#endif
 	misc_deregister(&info->miscdev);
 	imx091_del(info);
 	return 0;
 }
+
+#ifdef CONFIG_DEBUG_FS
+static int i2ca_get(void *data, u64 *val)
+{
+	struct imx091_info *info = (struct imx091_info *)(data);
+	*val = (u64)info->i2c_reg;
+	return 0;
+}
+
+static int i2ca_set(void *data, u64 val)
+{
+	struct imx091_info *info = (struct imx091_info *)(data);
+
+	if (val > 0x36FF) {
+		dev_err(&info->i2c_client->dev, "ERR:%s out of range\n",
+				__func__);
+		return -EIO;
+	}
+
+	info->i2c_reg = (u16) val;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i2ca_fops, i2ca_get, i2ca_set, "0x%02llx\n");
+
+static int i2cr_get(void *data, u64 *val)
+{
+	u8 temp = 0;
+	struct imx091_info *info = (struct imx091_info *)(data);
+
+	if (imx091_i2c_rd8(info, info->i2c_reg, &temp)) {
+		dev_err(&info->i2c_client->dev, "ERR:%s failed\n", __func__);
+		return -EIO;
+	}
+	*val = (u64)temp;
+	return 0;
+}
+
+static int i2cr_set(void *data, u64 val)
+{
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i2cr_fops, i2cr_get, i2cr_set, "0x%02llx\n");
+
+static int i2cw_get(void *data, u64 *val)
+{
+	return 0;
+}
+
+static int i2cw_set(void *data, u64 val)
+{
+	struct imx091_info *info = (struct imx091_info *)(data);
+
+	val &= 0xFF;
+	if (imx091_i2c_wr8(info, info->i2c_reg, val)) {
+		dev_err(&info->i2c_client->dev, "ERR:%s failed\n", __func__);
+		return -EIO;
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(i2cw_fops, i2cw_get, i2cw_set, "0x%02llx\n");
+
+static int imx091_debug_init(struct imx091_info *info)
+{
+	dev_dbg(&info->i2c_client->dev, "%s", __func__);
+
+	info->i2c_reg = 0;
+	info->debugfs_root = debugfs_create_dir(info->miscdev.name, NULL);
+
+	if (!info->debugfs_root)
+		goto err_out;
+
+	if (!debugfs_create_file("i2ca", S_IRUGO | S_IWUSR,
+				info->debugfs_root, info, &i2ca_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("i2cr", S_IRUGO,
+				info->debugfs_root, info, &i2cr_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("i2cw", S_IWUSR,
+				info->debugfs_root, info, &i2cw_fops))
+		goto err_out;
+
+	return 0;
+
+err_out:
+	dev_err(&info->i2c_client->dev, "ERROR:%s failed", __func__);
+	if (info->debugfs_root)
+		debugfs_remove_recursive(info->debugfs_root);
+	return -ENOMEM;
+}
+#endif
 
 static int imx091_probe(
 	struct i2c_client *client,
@@ -2618,6 +2820,8 @@ static int imx091_probe(
 			info->pdata->probe_clock(0);
 	}
 
+	imx091_edp_register(info);
+
 	if (info->pdata->dev_name != 0)
 		strcpy(dname, info->pdata->dev_name);
 	else
@@ -2634,6 +2838,10 @@ static int imx091_probe(
 		imx091_del(info);
 		return -ENODEV;
 	}
+
+#ifdef CONFIG_DEBUG_FS
+	imx091_debug_init(info);
+#endif
 	dev_dbg(&client->dev, "%s -----\n", __func__);
 	return 0;
 }

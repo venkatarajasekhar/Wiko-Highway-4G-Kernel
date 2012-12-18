@@ -84,20 +84,20 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return NULL;
-	ctx->restore = mem_op().alloc(memmgr, p->restore_size * 4, 32,
+	ctx->restore = nvhost_memmgr_alloc(memmgr, p->restore_size * 4, 32,
 		map_restore ? mem_mgr_flag_write_combine
 			    : mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(ctx->restore))
 		goto fail_alloc;
 
 	if (map_restore) {
-		ctx->restore_virt = mem_op().mmap(ctx->restore);
+		ctx->restore_virt = nvhost_memmgr_mmap(ctx->restore);
 		if (IS_ERR_OR_NULL(ctx->restore_virt))
 			goto fail_mmap;
 	} else
 		ctx->restore_virt = NULL;
 
-	ctx->restore_sgt = mem_op().pin(memmgr, ctx->restore);
+	ctx->restore_sgt = nvhost_memmgr_pin(memmgr, ctx->restore);
 	if (IS_ERR_OR_NULL(ctx->restore_sgt))
 		goto fail_pin;
 	ctx->restore_phys = sg_dma_address(ctx->restore_sgt->sgl);
@@ -116,9 +116,9 @@ struct host1x_hwctx *nvhost_3dctx_alloc_common(struct host1x_hwctx_handler *p,
 
 fail_pin:
 	if (map_restore)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 fail_mmap:
-	mem_op().put(memmgr, ctx->restore);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 fail_alloc:
 	kfree(ctx);
 	return NULL;
@@ -136,10 +136,10 @@ void nvhost_3dctx_free(struct kref *ref)
 	struct mem_mgr *memmgr = nvhost_get_host(nctx->channel->dev)->memmgr;
 
 	if (ctx->restore_virt)
-		mem_op().munmap(ctx->restore, ctx->restore_virt);
+		nvhost_memmgr_munmap(ctx->restore, ctx->restore_virt);
 
-	mem_op().unpin(memmgr, ctx->restore, ctx->restore_sgt);
-	mem_op().put(memmgr, ctx->restore);
+	nvhost_memmgr_unpin(memmgr, ctx->restore, ctx->restore_sgt);
+	nvhost_memmgr_put(memmgr, ctx->restore);
 	kfree(ctx);
 }
 
@@ -230,7 +230,7 @@ static int __devinit gr3d_probe(struct platform_device *dev)
 
 	pdata->pdev = dev;
 	index = (int)(platform_get_device_id(dev)->driver_data);
-	BUG_ON(index > gr3d_03);
+	WARN_ON(index > gr3d_03);
 
 	pdata->finalize_poweron		= gr3d[index].finalize_poweron;
 	pdata->busy			= gr3d[index].busy;
@@ -254,28 +254,37 @@ static int __exit gr3d_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int gr3d_suspend(struct platform_device *dev, pm_message_t state)
+static int gr3d_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int gr3d_resume(struct platform_device *dev)
+static int gr3d_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops gr3d_pm_ops = {
+	.suspend = gr3d_suspend,
+	.resume = gr3d_resume,
+};
+
+#define GR3D_PM_OPS	(&gr3d_pm_ops)
+
+#else
+
+#define GR3D_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver gr3d_driver = {
 	.probe = gr3d_probe,
 	.remove = __exit_p(gr3d_remove),
-#ifdef CONFIG_PM
-	.suspend = gr3d_suspend,
-	.resume = gr3d_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr3d",
+		.pm = GR3D_PM_OPS,
 	},
 	.id_table = gr3d_id,
 };

@@ -35,13 +35,16 @@
 #include <media/imx091.h>
 #include <media/imx132.h>
 #include <media/ad5816.h>
+#include <asm/mach-types.h>
 
 #include "gpio-names.h"
 #include "board.h"
+#include "board-common.h"
 #include "board-pluto.h"
 #include "cpu-tegra.h"
 #include "devices.h"
 #include "tegra-board-id.h"
+#include "dvfs.h"
 
 #define NTC_10K_TGAIN   0xE6A2
 #define NTC_10K_TOFF    0x2694
@@ -130,6 +133,27 @@ static struct i2c_board_info max17042_device[] = {
 	},
 };
 
+static struct nvc_torch_lumi_level_v1 pluto_max77665_lumi_tbl[] = {
+	{0, 100000},
+	{1, 201690},
+	{2, 298080},
+	{3, 387700},
+	{4, 479050},
+	{5, 562000},
+	{6, 652560},
+	{7, 732150},
+	{8, 816050},
+	{9, 896710},
+	{10, 976890},
+	{11, 1070160},
+	{12, 1151000},
+	{13, 1227790},
+	{14, 1287690},
+	{15, 1375060},
+};
+
+static unsigned max77665_f_estates[] = {1000, 800, 600, 400, 200, 100, 0};
+
 static struct max77665_f_platform_data pluto_max77665_flash_pdata = {
 	.config		= {
 		.led_mask		= 3,
@@ -144,6 +168,18 @@ static struct max77665_f_platform_data pluto_max77665_flash_pdata = {
 		/* .flash_on_torch         = true, */
 		.max_total_current_mA	= 1000,
 		.max_peak_current_mA	= 600,
+		.led_config[0] = {
+			.flash_torch_ratio = 18100,
+			.granularity = 1000,
+			.flash_levels = ARRAY_SIZE(pluto_max77665_lumi_tbl),
+			.lumi_levels = pluto_max77665_lumi_tbl,
+			},
+		.led_config[1] = {
+			.flash_torch_ratio = 18100,
+			.granularity = 1000,
+			.flash_levels = ARRAY_SIZE(pluto_max77665_lumi_tbl),
+			.lumi_levels = pluto_max77665_lumi_tbl,
+			},
 		},
 	.pinstate	= {
 		.mask	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
@@ -151,6 +187,12 @@ static struct max77665_f_platform_data pluto_max77665_flash_pdata = {
 		},
 	.dev_name	= "torch",
 	.gpio_strobe	= CAM_FLASH_STROBE,
+	.edpc_config	= {
+		.states = max77665_f_estates,
+		.num_states = ARRAY_SIZE(max77665_f_estates),
+		.e0_index = 3,
+		.priority = EDP_MAX_PRIO - 2,
+		},
 };
 
 static struct max77665_haptic_platform_data max77665_haptic_pdata = {
@@ -263,24 +305,35 @@ static struct balanced_throttle tj_throttle = {
 	},
 };
 
+static int __init pluto_throttle_init(void)
+{
+	if (machine_is_tegra_pluto())
+		balanced_throttle_register(&tj_throttle, "pluto-nct");
+	return 0;
+}
+module_init(pluto_throttle_init);
+
 static struct nct1008_platform_data pluto_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x08,
-	.offset = 80, /* 4 * 20C. Bug 844025 - 1C for device accuracies */
-	.shutdown_ext_limit = 90, /* C */
+	.offset = 0,
+	.shutdown_ext_limit = 85, /* C */
 	.shutdown_local_limit = 120, /* C */
 
-	/* Thermal Throttling */
-	.passive = {
-		.create_cdev = (struct thermal_cooling_device *(*)(void *))
-				balanced_throttle_register,
-		.cdev_data = &tj_throttle,
-		.trip_temp = 80000,
-		.tc1 = 0,
-		.tc2 = 1,
-		.passive_delay = 2000,
-	}
+	.passive_delay = 2000,
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "pluto-nct",
+			.trip_temp = 75000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
 };
 
 static struct i2c_board_info pluto_i2c4_nct1008_board_info[] = {
@@ -497,7 +550,7 @@ static struct nvc_imager_cap imx091_cap = {
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
-
+static unsigned imx091_estates[] = {200, 100, 2};
 
 static struct imx091_platform_data imx091_pdata = {
 	.num			= 0,
@@ -510,6 +563,12 @@ static struct imx091_platform_data imx091_pdata = {
 		.adjustable_flash_timing = 1,
 	},
 	.cap			= &imx091_cap,
+	.edpc_config	= {
+		.states = imx091_estates,
+		.num_states = ARRAY_SIZE(imx091_estates),
+		.e0_index = 0,
+		.priority = EDP_MAX_PRIO - 1,
+		},
 	.power_on		= pluto_imx091_power_on,
 	.power_off		= pluto_imx091_power_off,
 };
@@ -693,7 +752,6 @@ static int pluto_nct1008_init(void)
 	int nct1008_port = -1;
 	int ret = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	if (board_info.board_id == BOARD_E1580 ||
 	    board_info.board_id == BOARD_E1575) {
 		nct1008_port = TEGRA_GPIO_PX6;
@@ -702,35 +760,41 @@ static int pluto_nct1008_init(void)
 		pr_err("Warning: nct alert port assumed TEGRA_GPIO_PX6 for unknown pluto board id E%d\n",
 		       board_info.board_id);
 	}
-#else
-	/* pluto + AP30 interposer has SPI2_CS0 gpio */
-	nct1008_port = TEGRA_GPIO_PX3;
-#endif
 
 	if (nct1008_port >= 0) {
+		struct nct1008_platform_data *data = &pluto_nct1008_pdata;
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 		const struct tegra_edp_limits *cpu_edp_limits;
-		struct nct1008_cdev *active_cdev;
 		int cpu_edp_limits_size;
 		int i;
+		int trip;
+		struct nct_trip_temp *trip_state;
 
 		/* edp capping */
 		tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
 
-		if ((cpu_edp_limits_size > MAX_THROT_TABLE_SIZE) ||
-			(cpu_edp_limits_size > MAX_ACTIVE_TEMP_STATE))
+		if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
 			BUG();
 
-		active_cdev = &pluto_nct1008_pdata.active;
-		active_cdev->create_cdev = edp_cooling_device_create;
-		active_cdev->hysteresis = 1000;
-
 		for (i = 0; i < cpu_edp_limits_size-1; i++) {
-			active_cdev->states[i].trip_temp =
-				cpu_edp_limits[i].temperature * 1000;
-			active_cdev->states[i].state = i + 1;
+			trip = data->num_trips;
+			trip_state = &data->trips[trip];
+
+			trip_state->cdev_type = "edp";
+			trip_state->trip_temp =
+					cpu_edp_limits[i].temperature * 1000;
+			trip_state->trip_type = THERMAL_TRIP_ACTIVE;
+			trip_state->state = i + 1;
+			trip_state->hysteresis = 1000;
+
+			data->num_trips++;
+
+			if (data->num_trips > NCT_MAX_TRIPS)
+				BUG();
 		}
 #endif
+		nct1008_add_cdev_trips(data, tegra_core_edp_get_cdev());
+		nct1008_add_cdev_trips(data, tegra_dvfs_get_cpu_dfll_cdev());
 
 		pluto_i2c4_nct1008_board_info[0].irq =
 				gpio_to_irq(nct1008_port);
@@ -822,7 +886,7 @@ static int __init pluto_skin_init(void)
 {
 	struct thermal_cooling_device *skin_cdev;
 
-	skin_cdev = balanced_throttle_register(&skin_throttle);
+	skin_cdev = balanced_throttle_register(&skin_throttle, "pluto-skin");
 
 	skin_data.cdev = skin_cdev;
 	tegra_skin_therm_est_device.dev.platform_data = &skin_data;

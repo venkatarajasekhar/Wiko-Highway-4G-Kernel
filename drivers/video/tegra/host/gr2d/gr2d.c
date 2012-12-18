@@ -62,7 +62,7 @@ static int __devinit gr2d_probe(struct platform_device *dev)
 	dev_set_name(&dev->dev, "%s", "gr2d");
 
 	index = (int)(platform_get_device_id(dev)->driver_data);
-	BUG_ON(index > gr2d_02);
+	WARN_ON(index > gr2d_02);
 
 	pdata->pdev = dev;
 	pdata->finalize_poweron = gr2d[index].finalize_poweron;
@@ -79,28 +79,37 @@ static int __exit gr2d_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int gr2d_suspend(struct platform_device *dev, pm_message_t state)
+static int gr2d_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int gr2d_resume(struct platform_device *dev)
+static int gr2d_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
-#endif
+
+static const struct dev_pm_ops gr2d_pm_ops = {
+	.suspend = gr2d_suspend,
+	.resume = gr2d_resume,
+};
+
+#define GR2D_PM_OPS	(&gr2d_pm_ops)
+
+#else
+
+#define GR2D_PM_OPS	NULL
+
+#endif /* CONFIG_PM */
 
 static struct platform_driver gr2d_driver = {
 	.probe = gr2d_probe,
 	.remove = __exit_p(gr2d_remove),
-#ifdef CONFIG_PM
-	.suspend = gr2d_suspend,
-	.resume = gr2d_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr2d",
+		.pm = GR2D_PM_OPS,
 	},
 	.id_table = gr2d_id,
 };

@@ -42,54 +42,88 @@
 
 #include "gpio-names.h"
 #include "board.h"
+#include "board-common.h"
 #include "board-roth.h"
 #include "cpu-tegra.h"
 #include "devices.h"
 #include "tegra-board-id.h"
+#include "dvfs.h"
 
 static struct board_info board_info;
 
 static struct balanced_throttle tj_throttle = {
-	.throt_tab_size = 10,
+	.throt_tab_size = 19,
 	.throt_tab = {
 		{      0, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 640000, 1000 },
-		{ 760000, 1000 },
-		{ 760000, 1050 },
-		{1000000, 1050 },
-		{1000000, 1100 },
+		{  51000, 1000 },
+		{ 102000, 1000 },
+		{ 204000, 1000 },
+		{ 252000, 1000 },
+		{ 288000, 1000 },
+		{ 372000, 1000 },
+		{ 468000, 1000 },
+		{ 510000, 1000 },
+		{ 612000, 1000 },
+		{ 714000, 1050 },
+		{ 816000, 1050 },
+		{ 918000, 1050 },
+		{1020000, 1100 },
+		{1122000, 1100 },
+		{1224000, 1100 },
+		{1326000, 1100 },
+		{1428000, 1100 },
+		{1530000, 1100 },
 	},
 };
+
+static int __init roth_throttle_init(void)
+{
+	if (machine_is_roth())
+		balanced_throttle_register(&tj_throttle, "roth-nct");
+	return 0;
+}
+module_init(roth_throttle_init);
 
 static struct nct1008_platform_data roth_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x08,
-	.offset = 80, /* 4 * 20C. Bug 844025 - 1C for device accuracies */
-	.shutdown_ext_limit = 90, /* C */
+	.offset = 0,
+	.shutdown_ext_limit = 85, /* C */
 	.shutdown_local_limit = 120, /* C */
+	.loc_name = "soc",
 
-	/* Thermal Throttling */
-	.passive = {
-		.create_cdev = (struct thermal_cooling_device *(*)(void *))
-				balanced_throttle_register,
-		.cdev_data = &tj_throttle,
-		.trip_temp = 80000,
-		.tc1 = 0,
-		.tc2 = 1,
-		.passive_delay = 2000,
-	}
+	.passive_delay = 2000,
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "roth-nct",
+			.trip_temp = 75000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
 };
 
-static struct nct1008_platform_data roth_nct1008_lr_pdata = {
+static struct nct1008_platform_data roth_nct1008_left_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x08,
 	.offset = 0,
+	.loc_name = "left",
+	.shutdown_ext_limit = 90, /* C */
+	.shutdown_local_limit = 120, /* C */
+};
+
+static struct nct1008_platform_data roth_nct1008_right_pdata = {
+	.supported_hwrev = true,
+	.ext_range = true,
+	.conv_rate = 0x08,
+	.offset = 0,
+	.loc_name = "right",
 	.shutdown_ext_limit = 90, /* C */
 	.shutdown_local_limit = 120, /* C */
 };
@@ -105,12 +139,12 @@ static struct i2c_board_info roth_i2c4_nct1008_board_info[] = {
 static struct i2c_board_info roth_i2c4_nct1008_lr_board_info[] = {
 	{
 		I2C_BOARD_INFO("nct1008", 0x4C),
-		.platform_data = &roth_nct1008_lr_pdata,
+		.platform_data = &roth_nct1008_left_pdata,
 		.irq = -1,
 	},
 	{
 		I2C_BOARD_INFO("nct1008", 0x4D),
-		.platform_data = &roth_nct1008_lr_pdata,
+		.platform_data = &roth_nct1008_right_pdata,
 		.irq = -1,
 	}
 };
@@ -178,30 +212,41 @@ static int roth_nct1008_init(void)
 {
 	int nct1008_port = TEGRA_GPIO_PX6;
 	int ret = 0;
+	struct nct1008_platform_data *data = &roth_nct1008_pdata;
 
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 		const struct tegra_edp_limits *cpu_edp_limits;
-		struct nct1008_cdev *active_cdev;
 		int cpu_edp_limits_size;
 		int i;
+		int trip;
+		struct nct_trip_temp *trip_state;
 
 		/* edp capping */
 		tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
 
-		if ((cpu_edp_limits_size > MAX_THROT_TABLE_SIZE) ||
-			(cpu_edp_limits_size > MAX_ACTIVE_TEMP_STATE))
+		if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
 			BUG();
 
-		active_cdev = &roth_nct1008_pdata.active;
-		active_cdev->create_cdev = edp_cooling_device_create;
-		active_cdev->hysteresis = 1000;
-
 		for (i = 0; i < cpu_edp_limits_size-1; i++) {
-			active_cdev->states[i].trip_temp =
-				cpu_edp_limits[i].temperature * 1000;
-			active_cdev->states[i].state = i + 1;
+			trip = data->num_trips;
+			trip_state = &data->trips[trip];
+
+			trip_state->cdev_type = "edp";
+			trip_state->trip_temp =
+					cpu_edp_limits[i].temperature * 1000;
+			trip_state->trip_type = THERMAL_TRIP_ACTIVE;
+			trip_state->state = i + 1;
+			trip_state->hysteresis = 1000;
+
+			data->num_trips++;
+
+			if (data->num_trips > NCT_MAX_TRIPS)
+				BUG();
 		}
 #endif
+
+	nct1008_add_cdev_trips(data, tegra_core_edp_get_cdev());
+	nct1008_add_cdev_trips(data, tegra_dvfs_get_cpu_dfll_cdev());
 
 	roth_i2c4_nct1008_board_info[0].irq = gpio_to_irq(nct1008_port);
 	pr_info("%s: roth nct1008 irq %d", __func__, \
@@ -300,7 +345,7 @@ static int __init roth_skin_init(void)
 {
 	struct thermal_cooling_device *skin_cdev;
 
-	skin_cdev = balanced_throttle_register(&skin_throttle);
+	skin_cdev = balanced_throttle_register(&skin_throttle, "roth-skin");
 
 	skin_data.cdev = skin_cdev;
 	tegra_skin_therm_est_device.dev.platform_data = &skin_data;
@@ -311,6 +356,69 @@ static int __init roth_skin_init(void)
 late_initcall(roth_skin_init);
 #endif
 
+static int roth_fan_est_match(struct thermal_zone_device *thz, void *data)
+{
+	return (strcmp((char *)data, thz->type) == 0);
+}
+
+static int roth_fan_est_get_temp(void *data, long *temp)
+{
+	struct thermal_zone_device *thz;
+
+	thz = thermal_zone_device_find(data, roth_fan_est_match);
+
+	if (!thz || thz->ops->get_temp(thz, temp))
+		*temp = 25000;
+
+	return 0;
+}
+
+static struct therm_fan_est_data fan_est_data = {
+	.toffset = 0,
+	.polling_period = 1100,
+	.ndevs = 2,
+	.devs = {
+			{
+				.dev_data = "nct_ext_soc",
+				.get_temp = roth_fan_est_get_temp,
+				.coeffs = {
+					100, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0
+				},
+			},
+			{
+				.dev_data = "nct_int_soc",
+				.get_temp = roth_fan_est_get_temp,
+				.coeffs = {
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0
+				},
+			},
+	},
+	.active_trip_temps = {57000, 58000, 59000, 60000, 61000, 62000, 63000,
+		64000, 65000, 68000},
+};
+
+static struct platform_device roth_fan_therm_est_device = {
+	.name   = "therm-fan-est",
+	.id     = -1,
+	.num_resources  = 0,
+	.dev = {
+		.platform_data = &fan_est_data,
+	},
+};
+
+static int __init roth_fan_est_init(void)
+{
+	platform_device_register(&roth_fan_therm_est_device);
+	return 0;
+}
 int __init roth_sensors_init(void)
 {
 	int err;
@@ -321,8 +429,9 @@ int __init roth_sensors_init(void)
 	if (err)
 		return err;
 
-	if (0)
-		mpuirq_init();
+	mpuirq_init();
+
+	roth_fan_est_init();
 
 	if (0)
 		i2c_register_board_info(0, bq20z45_pdata,

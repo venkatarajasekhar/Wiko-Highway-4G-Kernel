@@ -38,6 +38,7 @@ config ARCH_TEGRA_2x_SOC
 	select ARM_ERRATA_754327
 	select ARM_ERRATA_764369
 	select ARM_ERRATA_742230 if SMP
+	select ARM_ERRATA_761320 if SMP
 	select PL310_ERRATA_769419 if CACHE_L2X0
 	select CPU_FREQ_TABLE if CPU_FREQ
 	select USB_ARCH_HAS_EHCI if USB_SUPPORT
@@ -49,6 +50,7 @@ config ARCH_TEGRA_2x_SOC
 	select ARM_ERRATA_716044
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
 	select NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+	select NVMAP_DEFERRED_CACHE_MAINT
 	select SOC_BUS
 	help
 	  Support for NVIDIA Tegra AP20 and T20 processors, based on the
@@ -82,12 +84,14 @@ config ARCH_TEGRA_3x_SOC
 	select ARM_ERRATA_751472
 	select ARM_ERRATA_754322
 	select ARM_ERRATA_764369
+	select ARM_ERRATA_761320 if SMP
 	select PL310_ERRATA_769419 if CACHE_L2X0
 	select CPU_FREQ_TABLE if CPU_FREQ
 	select TEGRA_LP2_CPU_TIMER if HAVE_ARM_TWD && !TEGRA_RAIL_OFF_MULTIPLE_CPUS
 	select CPA
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
 	select NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+	select NVMAP_DEFERRED_CACHE_MAINT
 	select PL310_ERRATA_727915
 	select TEGRA_LATENCY_ALLOWANCE if !TEGRA_FPGA_PLATFORM
 	select TEGRA_LATENCY_ALLOWANCE_SCALING if !TEGRA_FPGA_PLATFORM
@@ -115,6 +119,7 @@ config ARCH_TEGRA_11x_SOC
 	select TEGRA_LP2_CPU_TIMER if !TEGRA_RAIL_OFF_MULTIPLE_CPUS
 	select CPA
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
+	select NVMAP_DEFERRED_CACHE_MAINT
 	select ARCH_TEGRA_HAS_CL_DVFS
 	select TEGRA_DYNAMIC_CBUS
 	select TEGRA_DUAL_CBUS
@@ -373,6 +378,7 @@ config TEGRA_SILICON_PLATFORM
 
 config TEGRA_SIMULATION_PLATFORM
         bool "Simulation"
+        select TEGRA_PRE_SILICON_SUPPORT
 	select LESS_GCC_OPT if DEBUG_KERNEL
         help
           This enables support for a Tegra simulation platform.
@@ -381,11 +387,19 @@ config TEGRA_SIMULATION_PLATFORM
 
 config TEGRA_FPGA_PLATFORM
         bool "FPGA"
+        select TEGRA_PRE_SILICON_SUPPORT
         help
           This enables support for a Tegra FPGA platform.
           Select this only if you are an NVIDIA developer working
           on a FPGA platform.
 endchoice
+
+config TEGRA_PRE_SILICON_SUPPORT
+        bool "Enable pre-silicon platform support"
+        help
+          This enables support for Tegra early development platforms.
+          Select this only if you are an NVIDIA developer working on
+          FPGA, Emulation or Simulation.
 
 source "arch/arm/mach-tegra/p852/Kconfig"
 
@@ -650,6 +664,14 @@ config TEGRA_EDP_EXACT_FREQ
 	  When enabled the cpu will run at the exact frequency
 	  specified in the EDP table when EDP capping is applied; when
 	  disabled the next lower cpufreq frequency will be used.
+
+config TEGRA_WAKEUP_MONITOR
+	bool "Enable tegra wakeup monitor"
+	depends on PM_SLEEP
+	help
+	  This option enables support for the monitor of tegra wakeups, it will
+	  send out wakeup source and uevents which indicate suspend_prepare and
+	  post_suspend.
 
 config TEGRA_USB_MODEM_POWER
 	bool "Enable tegra usb modem power management"

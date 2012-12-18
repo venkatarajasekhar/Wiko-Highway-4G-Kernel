@@ -881,7 +881,6 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_dc_hdmi_data, work);
 	struct tegra_dc *dc = hdmi->dc;
 
-	tegra_dc_unpowergate_locked(hdmi->dc);
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	/* Set default videomode on dc before enabling it*/
 	tegra_dc_set_default_videomode(dc);
@@ -893,7 +892,6 @@ static void tegra_dc_hdmi_detect_worker(struct work_struct *work)
 		tegra_fb_update_monspecs(dc->fb, NULL, NULL);
 
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
-		tegra_dc_powergate_locked(hdmi->dc);
 	}
 }
 
@@ -1448,12 +1446,14 @@ int tegra_hdmi_setup_hda_presence()
 
 	if (hdmi->clk_enabled && hdmi->eld_retrieved) {
 		/* If HDA_PRESENCE is already set reset it */
+		tegra_dc_unpowergate_locked(hdmi->dc);
 		if (tegra_hdmi_readl(hdmi,
 				     HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0))
 			tegra_hdmi_writel(hdmi, 0,
 				     HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0);
 
 		tegra_dc_hdmi_setup_eld_buff(hdmi->dc);
+		tegra_dc_powergate_locked(hdmi->dc);
 		return 0;
 	}
 	return -ENODEV;
@@ -1913,6 +1913,29 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_dvfs_set_rate(hdmi->clk, 0);
 }
 
+static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	unsigned long rate;
+	struct clk *parent_clk = clk_get_sys(NULL,
+		dc->out->parent_clk ? : "pll_d_out0");
+	struct clk *base_clk = clk_get_parent(parent_clk);
+
+	/*
+	 * Providing dynamic frequency rate setting for T20/T30 HDMI.
+	 * The required rate needs to be setup at 4x multiplier,
+	 * as out0 is 1/2 of the actual PLL output.
+	 */
+
+	rate = dc->mode.pclk * 4;
+	if (rate != clk_get_rate(base_clk))
+		clk_set_rate(base_clk, rate);
+
+	if (clk_get_parent(clk) != parent_clk)
+		clk_set_parent(clk, parent_clk);
+
+	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.init = tegra_dc_hdmi_init,
 	.destroy = tegra_dc_hdmi_destroy,
@@ -1922,6 +1945,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi_ops = {
 	.suspend = tegra_dc_hdmi_suspend,
 	.resume = tegra_dc_hdmi_resume,
 	.mode_filter = tegra_dc_hdmi_mode_filter,
+	.setup_clk = tegra_dc_hdmi_setup_clk,
 };
 
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)

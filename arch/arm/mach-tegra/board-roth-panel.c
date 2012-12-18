@@ -406,7 +406,7 @@ static int roth_dsi_panel_postsuspend(void)
 
 static struct tegra_dc_mode roth_dsi_modes[] = {
 	{
-		.pclk = 10000000,
+		.pclk = 66700000,
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
 		.h_sync_width = 4,
@@ -752,7 +752,8 @@ int __init roth_panel_init(void)
 	res->end = tegra_fb_start + tegra_fb_size - 1;
 
 	/* Copy the bootloader fb to the fb. */
-	tegra_move_framebuffer(tegra_fb_start, tegra_bootloader_fb_start,
+	__tegra_move_framebuffer(&roth_nvmap_device,
+		tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
 
 	res = platform_get_resource_byname(&roth_disp2_device,

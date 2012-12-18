@@ -37,6 +37,7 @@
 #include <mach/gpio-tegra.h>
 #include <mach/sdhci.h>
 #include <mach/io_dpd.h>
+#include <mach/pinmux.h>
 
 #include "sdhci-pltfm.h"
 
@@ -54,6 +55,7 @@
 #define SDHCI_VENDOR_MISC_CNTRL_ENABLE_SDR50_SUPPORT	0x10
 #define SDHCI_VENDOR_MISC_CNTRL_ENABLE_DDR50_SUPPORT	0x200
 #define SDHCI_VENDOR_MISC_CNTRL_ENABLE_SD_3_0	0x20
+#define SDHCI_VENDOR_MISC_CNTRL_INFINITE_ERASE_TIMEOUT	0x1
 
 #define SDMMC_SDMEMCOMPPADCTRL	0x1E0
 #define SDMMC_SDMEMCOMPPADCTRL_VREF_SEL_MASK	0xF
@@ -67,6 +69,8 @@
 
 #define SDMMC_AUTO_CAL_STATUS	0x1EC
 #define SDMMC_AUTO_CAL_STATUS_AUTO_CAL_ACTIVE	0x80000000
+#define SDMMC_AUTO_CAL_STATUS_PULLDOWN_OFFSET	24
+#define PULLUP_ADJUSTMENT_OFFSET	20
 
 #define SDHOST_1V8_OCR_MASK	0x8
 #define SDHOST_HIGH_VOLT_MIN	2700000
@@ -125,6 +129,7 @@ static struct tegra_sdhci_hw_ops tegra_11x_sdhci_ops = {
 #define NVQUIRK_ENABLE_BLOCK_GAP_DET		BIT(1)
 #define NVQUIRK_DISABLE_AUTO_CALIBRATION	BIT(2)
 #define NVQUIRK_SET_CALIBRATION_OFFSETS	BIT(3)
+#define NVQUIRK_SET_DRIVE_STRENGTH		BIT(4)
 
 struct sdhci_tegra_soc_data {
 	struct sdhci_pltfm_data *pdata;
@@ -317,6 +322,7 @@ static void tegra11x_sdhci_post_reset_init(struct sdhci_host *sdhci)
 	misc_ctrl |= SDHCI_VENDOR_MISC_CNTRL_ENABLE_SDR104_SUPPORT |
 		SDHCI_VENDOR_MISC_CNTRL_ENABLE_SDR50_SUPPORT |
 		SDHCI_VENDOR_MISC_CNTRL_ENABLE_DDR50_SUPPORT;
+	misc_ctrl |= SDHCI_VENDOR_MISC_CNTRL_INFINITE_ERASE_TIMEOUT;
 	sdhci_writew(sdhci, misc_ctrl, SDHCI_VENDOR_MISC_CNTRL);
 }
 #endif
@@ -366,10 +372,24 @@ static void tegra_sdhci_reset_exit(struct sdhci_host *sdhci, u8 mask)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
+	const struct tegra_sdhci_platform_data *plat = tegra_host->plat;
 
 	if (mask & SDHCI_RESET_ALL) {
 		if (tegra_host->hw_ops->sdhost_init)
 			tegra_host->hw_ops->sdhost_init(sdhci);
+
+		/* Mask the support for any UHS modes if specified */
+		if (plat->uhs_mask & MMC_UHS_MASK_SDR104)
+			sdhci->mmc->caps &= ~MMC_CAP_UHS_SDR104;
+
+		if (plat->uhs_mask & MMC_UHS_MASK_DDR50)
+			sdhci->mmc->caps &= ~MMC_CAP_UHS_DDR50;
+
+		if (plat->uhs_mask & MMC_UHS_MASK_SDR50)
+			sdhci->mmc->caps &= ~MMC_CAP_UHS_SDR50;
+
+		if (plat->uhs_mask & MMC_UHS_MASK_SDR25)
+			sdhci->mmc->caps &= ~MMC_CAP_UHS_SDR25;
 	}
 }
 
@@ -659,6 +679,10 @@ static void tegra_sdhci_do_calibration(struct sdhci_host *sdhci)
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 	unsigned int timeout = 10;
 
+	/* No Calibration for sdmmc4 */
+	if (tegra_host->instance == 3)
+		return;
+
 	/*
 	 * Do not enable auto calibration if the platform doesn't
 	 * support it.
@@ -704,6 +728,39 @@ static void tegra_sdhci_do_calibration(struct sdhci_host *sdhci)
 	val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
 	val &= ~SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
 	sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
+
+	if (unlikely(soc_data->nvquirks & NVQUIRK_SET_DRIVE_STRENGTH)) {
+		unsigned int pulldown_code;
+		unsigned int pullup_code;
+		int pg;
+		int err;
+
+		pg = tegra_drive_get_pingroup(mmc_dev(sdhci->mmc));
+		if (pg != -1) {
+			/* Get the pull down codes from auto cal status reg */
+			pulldown_code = (
+				sdhci_readl(sdhci, SDMMC_AUTO_CAL_STATUS) >>
+				SDMMC_AUTO_CAL_STATUS_PULLDOWN_OFFSET);
+			/* Set the pull down in the pinmux reg */
+			err = tegra_drive_pinmux_set_pull_down(pg,
+				pulldown_code);
+			if (err)
+				dev_err(mmc_dev(sdhci->mmc),
+				"Failed to set pulldown codes %d err %d\n",
+				pulldown_code, err);
+
+			/* Calculate the pull up codes */
+			pullup_code = pulldown_code + PULLUP_ADJUSTMENT_OFFSET;
+			if (pullup_code >= TEGRA_MAX_PULL)
+				pullup_code = TEGRA_MAX_PULL - 1;
+			/* Set the pull up code in the pinmux reg */
+			err = tegra_drive_pinmux_set_pull_up(pg, pullup_code);
+			if (err)
+				dev_err(mmc_dev(sdhci->mmc),
+				"Failed to set pullup codes %d err %d\n",
+				pullup_code, err);
+		}
+	}
 }
 
 static int tegra_sdhci_signal_voltage_switch(struct sdhci_host *sdhci,
@@ -746,9 +803,12 @@ static int tegra_sdhci_signal_voltage_switch(struct sdhci_host *sdhci,
 		if (rc) {
 			dev_err(mmc_dev(sdhci->mmc), "switching to 1.8V"
 			"failed . Switching back to 3.3V\n");
-			regulator_set_voltage(tegra_host->vdd_io_reg,
+			rc = regulator_set_voltage(tegra_host->vdd_io_reg,
 				SDHOST_HIGH_VOLT_MIN,
 				SDHOST_HIGH_VOLT_MAX);
+			if (rc)
+				dev_err(mmc_dev(sdhci->mmc),
+				"switching to 3.3V also failed\n");
 		}
 	}
 
@@ -1100,6 +1160,8 @@ static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 	.pdata = &sdhci_tegra20_pdata,
 	.nvquirks = NVQUIRK_FORCE_SDHCI_SPEC_200 |
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC)
+		    NVQUIRK_SET_DRIVE_STRENGTH |
+#elif defined(CONFIG_ARCH_TEGRA_2x_SOC)
 		    NVQUIRK_DISABLE_AUTO_CALIBRATION |
 #elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		    NVQUIRK_SET_CALIBRATION_OFFSETS |
@@ -1392,6 +1454,9 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	rc = sdhci_add_host(host);
 	if (rc)
 		goto err_add_host;
+
+	/* Enable async suspend/resume to reduce LP0 latency */
+	device_enable_async_suspend(&pdev->dev);
 
 	return 0;
 

@@ -19,6 +19,7 @@
 #define _MACH_TERA_PM_IRQ_H_
 
 #ifdef CONFIG_PM_SLEEP
+u64 tegra_read_pmc_wake_status(void);
 int tegra_pm_irq_set_wake(int wake, int enable);
 int tegra_pm_irq_set_wake_type(int wake, int flow_type);
 bool tegra_pm_irq_lp0_allowed(void);
@@ -44,4 +45,5 @@ static inline int tegra_disable_wake_source(int wake)
 	return 0;
 }
 #endif
+void tegra_set_usb_wake_source(void);
 #endif

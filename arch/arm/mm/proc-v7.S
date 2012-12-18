@@ -129,7 +129,7 @@ ENDPROC(cpu_v7_dcache_clean_area)
 #endif
 
 .globl	cpu_v7_suspend_size
-.equ	cpu_v7_suspend_size, (4 * 15) + cpu_v7_debug_suspend_size
+.equ	cpu_v7_suspend_size, (4 * 17) + cpu_v7_debug_suspend_size
 #ifdef CONFIG_ARM_CPU_SUSPEND
 ENTRY(cpu_v7_do_suspend)
 	stmfd	sp!, {r3 - r10, lr}
@@ -144,7 +144,9 @@ ENTRY(cpu_v7_do_suspend)
 	mrc	p15, 0, r7, c9, c13, 2	@ PMXEVCNTR, event counter
 	mrc	p15, 0, r8, c9, c13, 1	@ PMXEVTYPER or PMCCFILTR
 	mrc	p15, 0, r9, c9, c13, 0	@ PMCCNTR, cycle counter
-	stmia	r0!, {r4 - r9}
+	mrc	p15, 0, r10, c9, c12, 0	@ PMCR, control register
+	mrc	p15, 0, r11, c9, c12, 1	@ PMCNTENSET, counter enable set
+	stmia	r0!, {r4 - r11}
 
 	mrc	p15, 0, r6, c3, c0, 0	@ Domain ID
 	mrc	p15, 0, r7, c2, c0, 1	@ TTB 1
@@ -255,13 +257,15 @@ ENTRY(cpu_v7_do_resume)
 	mcr	p15, 0, r6, c15, c0, 1	@ diag
 #endif
 
-	ldmia	r0!, {r4 - r9}
+	ldmia	r0!, {r4 - r11}
 	mcr	p15, 0, r4, c9, c14, 2	@ PMINTENCLR
 	mcr	p15, 0, r5, c9, c14, 0	@ PMUSEREN
 	mcr	p15, 0, r6, c9, c12, 5	@ PMSELR, event counter selection
 	mcr	p15, 0, r7, c9, c13, 2	@ PMXEVCNTR, event counter
 	mcr	p15, 0, r8, c9, c13, 1	@ PMXEVTYPER or PMCCFILTR
 	mcr	p15, 0, r9, c9, c13, 0	@ PMCCNTR, cycle counter
+	mcr	p15, 0, r10, c9, c12, 0	@ PMCR, control register
+	mcr	p15, 0, r11, c9, c12, 1	@ PMCNTENSET, counter enable set
 
 	ldmia	r0!, {r6 - r11}
 	mcr	p15, 0, r6, c3, c0, 0	@ Domain ID
@@ -403,30 +407,37 @@ __v7_ca5mp_setup:
 __v7_ca9mp_setup:
 	mov	r10, #(1 << 0)			@ TLB ops broadcasting
 	b	1f
-__v7_ca7mp_setup:
 __v7_ca15mp_setup:
+#ifdef CONFIG_ARCH_TEGRA
+	mrc	p15, 0, r0, c1, c0, 1
+	orr	r0, #(1<<24)			@ Enable NCSE in ACTLR
+	mcr	p15, 0, r0, c1, c0, 1
+#endif
+__v7_ca7mp_setup:
 	mov	r10, #0
 1:
-#ifdef CONFIG_SMP || CONFIG_ARCH_TEGRA
+#ifdef CONFIG_SMP
 	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
 	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
 	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
 	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
 	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
-#ifdef CONFIG_ARCH_TEGRA
-	orr	r0, #(1<<24)			@ Enable non-cacheable streaming enhancement
-	mcr	p15, 0, r0, c1, c0, 1
-#else
 	mcreq	p15, 0, r0, c1, c0, 1
-#endif
 #endif
 __v7_setup:
 	adr	r12, __v7_setup_stack		@ the local stack
+	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
+	ubfx	r10, r0, #4, #28
+	ldr	r6, =0x00f0000
+	bic	r10, r10, r6
+	ldr	r6, =0x410fc0f			@ ARM cortex A15
+	teq	r10, r6
+	beq	4f
 	stmia	r12, {r0-r5, r7, r9, r11, lr}
 	bl	v7_flush_dcache_all
 	ldmia	r12, {r0-r5, r7, r9, r11, lr}
 
-	mrc	p15, 0, r0, c0, c0, 0		@ read main ID register
+4:
 	and	r10, r0, #0xff000000		@ ARM?
 	teq	r10, #0x41000000
 	bne	3f
@@ -517,6 +528,12 @@ __v7_setup:
 	mrceq	p15, 0, r10, c15, c0, 1		@ read diagnostic register
 	orreq	r10, r10, #1 << 20		@ set bit #20
 	mcreq	p15, 0, r10, c15, c0, 1		@ write diagnostic register
+#endif
+#ifdef CONFIG_ARM_ERRATA_761320
+	cmp	r6, #0x30			@ only present up to r3p0
+	mrcle	p15, 0, r10, c15, c0, 1		@ read diagnostic register
+	orrle	r10, r10, #1 << 21		@ set bit #21
+	mcrle	p15, 0, r10, c15, c0, 1		@ write diagnostic register
 #endif
 #endif
 

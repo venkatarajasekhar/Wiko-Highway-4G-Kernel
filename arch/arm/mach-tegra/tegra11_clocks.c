@@ -1541,7 +1541,7 @@ static void tegra11_sbus_cmplx_init(struct clk *c)
 
 /* This special sbus round function is implemented because:
  *
- * (a) fractional 1 : 1.5 divider can not be used to derive system bus clock
+ * (a) sbus complex clock source is selected automatically based on rate
  *
  * (b) since sbus is a shared bus, and its frequency is set to the highest
  * enabled shared_bus_user clock, the target rate should be rounded up divider
@@ -3657,7 +3657,7 @@ static void tegra11_periph_clk_init(struct clk *c)
 	} else {
 		if (c->flags & PLLU) {
 			/* for xusb_hs clock enforce PLLU source during init */
-			val &= periph_clk_source_mask(c);
+			val &= ~periph_clk_source_mask(c);
 			val |= c->inputs[0].value << periph_clk_source_shift(c);
 			clk_writel_delay(val, c->reg);
 		}
@@ -4215,7 +4215,7 @@ static int tegra11_emc_clk_set_rate(struct clk *c, unsigned long rate)
 static int tegra11_clk_emc_bus_update(struct clk *bus)
 {
 	struct clk *p = NULL;
-	unsigned long rate, parent_rate, backup_rate;
+	unsigned long rate, old_rate, parent_rate, backup_rate;
 
 	if (detach_shared_bus)
 		return 0;
@@ -4223,25 +4223,36 @@ static int tegra11_clk_emc_bus_update(struct clk *bus)
 	rate = tegra11_clk_shared_bus_update(bus, NULL, NULL);
 	rate = clk_round_rate_locked(bus, rate);
 
-	if (rate == clk_get_rate_locked(bus))
+	old_rate = clk_get_rate_locked(bus);
+	if (rate == old_rate)
 		return 0;
 
 	if (!tegra_emc_is_parent_ready(rate, &p, &parent_rate, &backup_rate)) {
 		if (bus->parent == p) {
 			/* need backup to re-lock current parent */
-			if (IS_ERR_VALUE(backup_rate) ||
-			    clk_set_rate_locked(bus, backup_rate)) {
-				pr_err("%s: Failed to backup %s for rate %lu\n",
+			int ret;
+			if (IS_ERR_VALUE(backup_rate)) {
+				pr_err("%s: No backup for %s rate %lu\n",
 				       __func__, bus->name, rate);
 				return -EINVAL;
 			}
 
-			if (p->refcnt) {
-				pr_err("%s: %s has other than emc child\n",
-				       __func__, p->name);
+			if (backup_rate < old_rate) /* skip lowering voltage */
+				bus->auto_dvfs = false;
+			ret = clk_set_rate_locked(bus, backup_rate);
+			bus->auto_dvfs = true;
+			if (ret) {
+				pr_err("%s: Failed to backup %s for rate %lu\n",
+				       __func__, bus->name, rate);
 				return -EINVAL;
 			}
 		}
+		if (p->refcnt) {
+			pr_err("%s: %s has other than emc child\n",
+			       __func__, p->name);
+			return -EINVAL;
+		}
+
 		if (clk_set_rate(p, parent_rate)) {
 			pr_err("%s: Failed to set %s rate %lu\n",
 			       __func__, p->name, parent_rate);
@@ -4592,6 +4603,7 @@ static int tegra11_clk_cbus_update(struct clk *bus)
 	struct clk *slow = NULL;
 	struct clk *top = NULL;
 	unsigned long rate;
+	unsigned long old_rate;
 
 	if (detach_shared_bus)
 		return 0;
@@ -4629,9 +4641,12 @@ static int tegra11_clk_cbus_update(struct clk *bus)
 		}
 	}
 
-	ret = bus->ops->set_rate(bus, rate);
-	if (ret)
-		return ret;
+	old_rate = clk_get_rate_locked(bus);
+	if (old_rate != rate) {
+		ret = bus->ops->set_rate(bus, rate);
+		if (ret)
+			return ret;
+	}
 
 	if (bus->dvfs) {
 		if (bus->refcnt && (mv <= 0)) {
@@ -4641,6 +4656,7 @@ static int tegra11_clk_cbus_update(struct clk *bus)
 		}
 	}
 
+	clk_rate_change_notify(bus, rate);
 	return 0;
 };
 #else
@@ -5068,6 +5084,7 @@ static struct clk tegra_pll_ref = {
 };
 
 static struct clk_pll_freq_table tegra_pll_c_freq_table[] = {
+	{ 12000000, 624000000, 104, 1, 2},
 	{ 12000000, 600000000, 100, 1, 2},
 	{ 13000000, 600000000,  92, 1, 2},	/* actual: 598.0 MHz */
 	{ 16800000, 600000000,  71, 1, 2},	/* actual: 596.4 MHz */
@@ -5190,7 +5207,7 @@ static struct clk tegra_pll_m = {
 static struct clk tegra_pll_m_out1 = {
 	.name      = "pll_m_out1",
 	.ops       = &tegra_pll_div_ops,
-	.flags     = DIV_U71,
+	.flags     = DIV_U71 | DIV_U71_INT,
 	.parent    = &tegra_pll_m,
 	.reg       = 0x94,
 	.reg_shift = 0,
@@ -5238,7 +5255,7 @@ static struct clk tegra_pll_p_out1 = {
 static struct clk tegra_pll_p_out2 = {
 	.name      = "pll_p_out2",
 	.ops       = &tegra_pll_div_ops,
-	.flags     = DIV_U71 | DIV_U71_FIXED,
+	.flags     = DIV_U71 | DIV_U71_FIXED | DIV_U71_INT,
 	.parent    = &tegra_pll_p,
 	.reg       = 0xa4,
 	.reg_shift = 16,
@@ -6293,7 +6310,7 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("csite",	"csite",		NULL,	73,	0x1d4,	144000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("la",	"la",			NULL,	76,	0x1f8,	26000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("trace",	"trace",		NULL,	77,	0x634,	26000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
-	PERIPH_CLK("owr",	"tegra_w1",		NULL,	71,	0x1cc,	26000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
+	PERIPH_CLK("owr",	"tegra_w1",		NULL,	71,	0x1cc,	12000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("nor",	"tegra-nor",		NULL,	42,	0x1d0,	127000000, mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("mipi",	"mipi",			NULL,	50,	0x174,	60000000,  mux_pllp_pllc_pllm_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("i2c1",	"tegra11-i2c.0",	"div-clk",	12,	0x124,	136000000, mux_pllp_clkm,	MUX | DIV_U16 | PERIPH_ON_APB),
@@ -6344,7 +6361,7 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("dsialp",	"tegradc.0",		"dsialp", 147,	0x620,	102000000, mux_pllp_pllc_clkm,		MUX | DIV_U71),
 	PERIPH_CLK("dsiblp",	"tegradc.1",		"dsiblp", 148,	0x624,	102000000, mux_pllp_pllc_clkm,		MUX | DIV_U71),
 
-	PERIPH_CLK("tsensor",	"tegra-tsensor",	NULL,	100,	0x3b8,	216000000, mux_pllp_pllc_clkm_clk32,	MUX | DIV_U71 | PERIPH_ON_APB),
+	PERIPH_CLK("tsensor",	"tegra-tsensor",	NULL,	100,	0x3b8,	 12000000, mux_pllp_pllc_clkm_clk32,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("actmon",	"actmon",		NULL,	119,	0x3e8,	216000000, mux_pllp_pllc_clk32_clkm,	MUX | DIV_U71),
 	PERIPH_CLK("extern1",	"extern1",		NULL,	120,	0x3ec,	216000000, mux_plla_clk32_pllp_clkm_plle,	MUX | MUX8 | DIV_U71),
 	PERIPH_CLK("extern2",	"extern2",		NULL,	121,	0x3f0,	216000000, mux_plla_clk32_pllp_clkm_plle,	MUX | MUX8 | DIV_U71),
@@ -6437,11 +6454,11 @@ struct clk tegra_list_clks[] = {
 #define XUSB_ID "tegra_xhci"
 
 static struct clk tegra_xusb_source_clks[] = {
-	PERIPH_CLK("xusb_host_src",	XUSB_ID, "host_src",	143,	0x600,	120000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 | PERIPH_NO_RESET | PERIPH_ON_APB),
-	PERIPH_CLK("xusb_falcon_src",	XUSB_ID, "falcon_src",	143,	0x604,	350000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 | PERIPH_NO_RESET),
-	PERIPH_CLK("xusb_fs_src",	XUSB_ID, "fs_src",	143,	0x608,	 48000000, mux_clkm_48M_pllp_480M,	MUX | DIV_U71 | PERIPH_NO_RESET),
-	PERIPH_CLK("xusb_ss_src",	XUSB_ID, "ss_src",	143,	0x610,	120000000, mux_clkm_pllre_clk32_480M_pllc_ref,	MUX | MUX8 | DIV_U71 | PERIPH_NO_RESET),
-	PERIPH_CLK("xusb_dev_src",	XUSB_ID, "dev_src",	95,	0x60c,	120000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 | PERIPH_NO_RESET | PERIPH_ON_APB),
+	PERIPH_CLK("xusb_host_src",	XUSB_ID, "host_src",	143,	0x600,	120000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 | DIV_U71_INT | PERIPH_NO_RESET | PERIPH_ON_APB),
+	PERIPH_CLK("xusb_falcon_src",	XUSB_ID, "falcon_src",	143,	0x604,	350000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 | DIV_U71_INT | PERIPH_NO_RESET),
+	PERIPH_CLK("xusb_fs_src",	XUSB_ID, "fs_src",	143,	0x608,	 48000000, mux_clkm_48M_pllp_480M,	MUX | DIV_U71 | DIV_U71_INT | PERIPH_NO_RESET),
+	PERIPH_CLK("xusb_ss_src",	XUSB_ID, "ss_src",	143,	0x610,	120000000, mux_clkm_pllre_clk32_480M_pllc_ref,	MUX | MUX8 | DIV_U71 | DIV_U71_INT | PERIPH_NO_RESET),
+	PERIPH_CLK("xusb_dev_src",	XUSB_ID, "dev_src",	95,	0x60c,	120000000, mux_clkm_pllp_pllc_pllre,	MUX | MUX8 | DIV_U71 |  DIV_U71_INT | PERIPH_NO_RESET | PERIPH_ON_APB),
 	{
 		.name      = "xusb_hs_src",
 		.lookup    = {
@@ -6454,7 +6471,7 @@ static struct clk tegra_xusb_source_clks[] = {
 		.flags     = PLLU | PERIPH_NO_ENB,
 		.max_rate  = 60000000,
 		.u.periph = {
-			.src_mask  = 0x1,
+			.src_mask  = 0x1 << 25,
 			.src_shift = 25,
 		},
 	},

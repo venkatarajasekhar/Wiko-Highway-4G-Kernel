@@ -76,6 +76,7 @@
 #include "gpio-names.h"
 #include "fuse.h"
 #include "pm.h"
+#include "pm-irq.h"
 #include "common.h"
 #include "tegra-board-id.h"
 
@@ -259,11 +260,9 @@ static struct tegra_i2c_platform_data dalmore_i2c5_platform_data = {
 	.arb_recovery = arb_lost_recovery,
 };
 
-#if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_11x_SOC)
 static struct i2c_board_info __initdata rt5640_board_info = {
 	I2C_BOARD_INFO("rt5640", 0x1c),
 };
-#endif
 
 static struct pn544_i2c_platform_data nfc_pdata = {
 	.irq_gpio = TEGRA_GPIO_PW2,
@@ -281,18 +280,6 @@ static void dalmore_i2c_init(void)
 	struct board_info board_info;
 
 	tegra_get_board_info(&board_info);
-#ifndef CONFIG_ARCH_TEGRA_11x_SOC
-	tegra_i2c_device1.dev.platform_data = &dalmore_i2c1_platform_data;
-	tegra_i2c_device2.dev.platform_data = &dalmore_i2c2_platform_data;
-	tegra_i2c_device3.dev.platform_data = &dalmore_i2c3_platform_data;
-	tegra_i2c_device4.dev.platform_data = &dalmore_i2c4_platform_data;
-	tegra_i2c_device5.dev.platform_data = &dalmore_i2c5_platform_data;
-	platform_device_register(&tegra_i2c_device5);
-	platform_device_register(&tegra_i2c_device4);
-	platform_device_register(&tegra_i2c_device3);
-	platform_device_register(&tegra_i2c_device2);
-	platform_device_register(&tegra_i2c_device1);
-#else
 	tegra11_i2c_device1.dev.platform_data = &dalmore_i2c1_platform_data;
 	tegra11_i2c_device2.dev.platform_data = &dalmore_i2c2_platform_data;
 	tegra11_i2c_device3.dev.platform_data = &dalmore_i2c3_platform_data;
@@ -307,7 +294,6 @@ static void dalmore_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device3);
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
-#endif
 
 	i2c_register_board_info(0, &rt5640_board_info, 1);
 }
@@ -544,6 +530,10 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 static void dalmore_usb_init(void)
 {
 	int usb_port_owner_info = tegra_get_usb_port_owner_info();
+
+	/* Set USB wake sources for dalmore */
+	tegra_set_usb_wake_source();
+
 	if (!(usb_port_owner_info & UTMI1_PORT_OWNER_XUSB)) {
 		tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
 		platform_device_register(&tegra_otg_device);
@@ -713,7 +703,7 @@ struct spi_board_info rm31080a_dalmore_spi_board[1] = {
 	 .modalias = "rm_ts_spidev",
 	 .bus_num = 3,
 	 .chip_select = 2,
-	 .max_speed_hz = 18 * 1000 * 1000,
+	 .max_speed_hz = 12 * 1000 * 1000,
 	 .mode = SPI_MODE_0,
 	 .controller_data = &dev_cdata,
 	 .platform_data = &rm31080ts_dalmore_data,
@@ -858,11 +848,7 @@ MACHINE_START(DALMORE, "dalmore")
 	.soc		= &tegra_soc_desc,
 	.map_io		= tegra_map_common_io,
 	.reserve	= tegra_dalmore_reserve,
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	.init_early     = tegra30_init_early,
-#else
 	.init_early	= tegra11x_init_early,
-#endif
 	.init_irq	= tegra_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer		= &tegra_timer,

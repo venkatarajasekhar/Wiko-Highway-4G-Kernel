@@ -85,7 +85,7 @@
 #define AHB_GIZMO_SE		0x4c
 #define   IMMEDIATE	BIT(18)
 
-#define AHB_MEM_PREFETCH_CFG5	0xc4
+#define AHB_MEM_PREFETCH_CFG5	0xc8
 #define AHB_MEM_PREFETCH_CFG3	0xe0
 #define AHB_MEM_PREFETCH_CFG4	0xe4
 #define AHB_MEM_PREFETCH_CFG1	0xec
@@ -363,7 +363,7 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 	{ "pll_u",	NULL,		480000000,	true },
 	{ "pll_re_vco",	NULL,		312000000,	false },
 	{ "sdmmc1",	"pll_p",	48000000,	false},
-	{ "sdmmc3",	"pll_p",	48000000,	true},
+	{ "sdmmc3",	"pll_p",	48000000,	false},
 	{ "sdmmc4",	"pll_p",	48000000,	false},
 	{ "sbc1.sclk",	NULL,		40000000,	false},
 	{ "sbc2.sclk",	NULL,		40000000,	false},
@@ -607,6 +607,18 @@ static void __init tegra_perf_init(void)
 	asm volatile("mcr p15, 0, %0, c9, c14, 0" : : "r"(reg));
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+static void __init tegra_ramrepair_init(void)
+{
+	if (tegra_spare_fuse(10) & tegra_spare_fuse(11) & 1) {
+		u32 reg;
+		reg = readl(FLOW_CTRL_RAM_REPAIR);
+		reg &= ~FLOW_CTRL_RAM_REPAIR_BYPASS_EN;
+		writel(reg, FLOW_CTRL_RAM_REPAIR);
+	}
+}
+#endif
+
 static void __init tegra_init_power(void)
 {
 #ifdef CONFIG_ARCH_TEGRA_HAS_SATA
@@ -654,20 +666,31 @@ static void __init tegra_init_ahb_gizmo_settings(void)
 	gizmo_writel(val, AHB_GIZMO_USB3);
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	val = gizmo_readl(AHB_GIZMO_SDMMC4);
-	val |= IMMEDIATE;
-	gizmo_writel(val, AHB_GIZMO_SDMMC4);
-
 	val = gizmo_readl(AHB_GIZMO_SE);
 	val |= IMMEDIATE;
 	gizmo_writel(val, AHB_GIZMO_SE);
+#endif
+
+	/*
+	 * SDMMC controller is removed from AHB interface in T124 and
+	 * later versions of Tegra. Configure AHB prefetcher for SDMMC4
+	 * in T11x and T14x SOCs.
+	 */
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	val = gizmo_readl(AHB_GIZMO_SDMMC4);
+	val |= IMMEDIATE;
+	gizmo_writel(val, AHB_GIZMO_SDMMC4);
 #endif
 
 	val = gizmo_readl(AHB_ARBITRATION_PRIORITY_CTRL);
 	val |= PRIORITY_SELECT_USB | PRIORITY_SELECT_USB2 | PRIORITY_SELECT_USB3
 				| AHB_PRIORITY_WEIGHT(7);
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	val |= PRIORITY_SELECT_SE | PRIORITY_SELECT_SDMMC4;
+	val |= PRIORITY_SELECT_SE;
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	val |= PRIORITY_SELECT_SDMMC4;
 #endif
 	gizmo_writel(val, AHB_ARBITRATION_PRIORITY_CTRL);
 
@@ -695,13 +718,20 @@ static void __init tegra_init_ahb_gizmo_settings(void)
 		INACTIVITY_TIMEOUT(0x1000);
 	gizmo_writel(val, AHB_MEM_PREFETCH_CFG4);
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	/*
+	 * SDMMC controller is removed from AHB interface in T124 and
+	 * later versions of Tegra. Configure AHB prefetcher for SDMMC4
+	 * in T11x and T14x SOCs.
+	 */
+#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	val = gizmo_readl(AHB_MEM_PREFETCH_CFG5);
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | SDMMC4_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
 	gizmo_writel(val, AHB_MEM_PREFETCH_CFG5);
+#endif
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	val = gizmo_readl(AHB_MEM_PREFETCH_CFG6);
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | SE_MST_ID | ADDR_BNDRY(0xc) |
@@ -773,6 +803,7 @@ void __init tegra11x_init_early(void)
 #endif
 	tegra_perf_init();
 	tegra_init_fuse();
+	tegra_ramrepair_init();
 	tegra11x_init_clocks();
 	tegra11x_init_dvfs();
 	tegra_common_init_clock();
@@ -1235,7 +1266,8 @@ void __init tegra_protected_aperture_init(unsigned long aperture)
  * highmem, or outside the memory map) to a physical address that is outside
  * the memory map.
  */
-void tegra_move_framebuffer(unsigned long to, unsigned long from,
+void __tegra_move_framebuffer(struct platform_device *pdev,
+	unsigned long to, unsigned long from,
 	unsigned long size)
 {
 	struct page *page;

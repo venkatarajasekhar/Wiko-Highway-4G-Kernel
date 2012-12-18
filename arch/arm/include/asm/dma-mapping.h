@@ -187,7 +187,7 @@ static inline void dma_iova_free(struct device *dev, dma_addr_t addr,
 	ops->iova_free(dev, addr, size);
 }
 
-static inline dma_addr_t dma_iova_alloc_at(struct device *dev, dma_addr_t addr,
+static inline dma_addr_t dma_iova_alloc_at(struct device *dev, dma_addr_t *addr,
 					   size_t size)
 {
 	struct dma_map_ops *ops = get_dma_ops(dev);
@@ -212,16 +212,25 @@ static inline size_t dma_iova_get_free_max(struct device *dev)
 	return ops->iova_get_free_max(dev);
 }
 
-static inline dma_addr_t dma_map_linear_attrs(struct device *dev, void *va,
-				      size_t size, enum dma_data_direction dir,
-				      struct dma_attrs *attrs)
+static inline dma_addr_t
+dma_map_linear_attrs(struct device *dev, phys_addr_t pa, size_t size,
+		     enum dma_data_direction dir, struct dma_attrs *attrs)
 {
-	dma_addr_t da;
+	dma_addr_t da, req = pa;
+	void *va = phys_to_virt(pa);
 
-	da = dma_iova_alloc_at(dev, (dma_addr_t)va, size);
-	if (da == DMA_ERROR_CODE)
-		return DMA_ERROR_CODE;
-
+	da = dma_iova_alloc_at(dev, &req, size);
+	if (da == DMA_ERROR_CODE) {
+		switch (req) {
+		case -ENXIO:
+			/* Allow to map outside of map */
+			da = (dma_addr_t)pa;
+			break;
+		case -EINVAL:
+		default:
+			return DMA_ERROR_CODE;
+		}
+	}
 	return dma_map_single_at_attrs(dev, va, da, size, dir, attrs);
 }
 

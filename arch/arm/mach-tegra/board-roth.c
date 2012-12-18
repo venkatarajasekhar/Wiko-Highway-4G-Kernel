@@ -130,8 +130,8 @@ static noinline void __init roth_setup_bluesleep(void)
 static struct resource roth_bluedroid_pm_resources[] = {
 	[0] = {
 		.name   = "shutdown_gpio",
-		.start  = TEGRA_GPIO_PU0,
-		.end    = TEGRA_GPIO_PU0,
+		.start  = TEGRA_GPIO_PQ7,
+		.end    = TEGRA_GPIO_PQ7,
 		.flags  = IORESOURCE_IO,
 	},
 	[1] = {
@@ -163,7 +163,7 @@ static noinline void __init roth_setup_bluedroid_pm(void)
 {
 	roth_bluedroid_pm_resources[1].start =
 		roth_bluedroid_pm_resources[1].end =
-				gpio_to_irq(TEGRA_GPIO_PQ6);
+				gpio_to_irq(TEGRA_GPIO_PU6);
 	platform_device_register(&roth_bluedroid_pm_device);
 }
 #endif
@@ -172,7 +172,7 @@ static __initdata struct tegra_clk_init_table roth_clk_init_table[] = {
 	{ "pll_m",	NULL,		0,		false},
 	{ "hda",	"pll_p",	108000000,	false},
 	{ "hda2codec_2x", "pll_p",	48000000,	false},
-	{ "pwm",	"pll_p",	3187500,	false},
+	{ "pwm",	"pll_p",	37000000,	false},
 	{ "blink",	"clk_32k",	32768,		true},
 	{ "i2s1",	"pll_a_out0",	0,		false},
 	{ "i2s3",	"pll_a_out0",	0,		false},
@@ -254,12 +254,21 @@ static struct i2c_board_info __initdata roth_codec_tfa9887R_info = {
 };
 
 static struct i2c_board_info __initdata roth_codec_tfa9887L_info = {
-	I2C_BOARD_INFO("tfa9887L", 0x36),
+	I2C_BOARD_INFO("tfa9887L", 0x34),
+};
+
+/* On A01, Left Speaker is moved to 0x34 */
+static struct i2c_board_info __initdata roth_codec_tfa9887L_info_a01 = {
+	I2C_BOARD_INFO("tfa9887L", 0x34),
 };
 #endif
 
 static void roth_i2c_init(void)
 {
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+
 	tegra11_i2c_device1.dev.platform_data = &roth_i2c1_platform_data;
 	tegra11_i2c_device2.dev.platform_data = &roth_i2c2_platform_data;
 	tegra11_i2c_device3.dev.platform_data = &roth_i2c3_platform_data;
@@ -274,7 +283,11 @@ static void roth_i2c_init(void)
 
 	i2c_register_board_info(0, &rt5640_board_info, 1);
 	i2c_register_board_info(0, &roth_codec_tfa9887R_info, 1);
-	i2c_register_board_info(0, &roth_codec_tfa9887L_info, 1);
+
+	if (board_info.fab >= BOARD_FAB_A01)
+		i2c_register_board_info(0, &roth_codec_tfa9887L_info_a01, 1);
+	else
+		i2c_register_board_info(0, &roth_codec_tfa9887L_info, 1);
 }
 
 static struct platform_device *roth_uart_devices[] __initdata = {
@@ -553,6 +566,7 @@ static void __init tegra_roth_init(void)
 	roth_edp_init();
 	roth_panel_init();
 	roth_kbc_init();
+	roth_pmon_init();
 #ifdef CONFIG_BT_BLUESLEEP
 	roth_setup_bluesleep();
 	roth_setup_bt_rfkill();
@@ -566,6 +580,7 @@ static void __init tegra_roth_init(void)
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 	roth_sensors_init();
 	roth_soctherm_init();
+	roth_fan_init();
 }
 
 static void __init roth_ramconsole_reserve(unsigned long size)
