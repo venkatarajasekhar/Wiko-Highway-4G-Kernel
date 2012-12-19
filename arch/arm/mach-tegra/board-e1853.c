@@ -751,7 +751,7 @@ late_initcall(e1853_bt_init);
 MACHINE_START(E1853, "e1853")
 	.atag_offset    = 0x100,
 	.soc		= &tegra_soc_desc,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.init_early     = tegra30_init_early,
 	.init_machine   = tegra_e1853_init,
 	.map_io         = tegra_map_common_io,

@@ -677,7 +677,7 @@ MACHINE_START(DOLAK, DOLAK_BOARD_NAME)
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_dolak_reserve,
 	.init_early	= tegra14x_init_early,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.handle_irq     = gic_handle_irq,
 	.timer          = &tegra_timer,
 	.init_machine   = tegra_dolak_init,

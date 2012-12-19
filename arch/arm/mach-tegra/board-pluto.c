@@ -437,9 +437,6 @@ static struct platform_device *pluto_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
-	&tegra_smmu_device,
-#endif
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
 #endif
@@ -1012,6 +1009,7 @@ static void __init tegra_pluto_init(void)
 {
 	pluto_battery_edp_init();
 	tegra_clk_init_from_table(pluto_clk_init_table);
+	tegra_smmu_init();
 	tegra_soc_device_init("tegra_pluto");
 	tegra_enable_pinmux();
 	pluto_pinmux_init();
@@ -1084,7 +1082,7 @@ MACHINE_START(TEGRA_PLUTO, "tegra_pluto")
 	.map_io		= tegra_map_common_io,
 	.reserve	= tegra_pluto_reserve,
 	.init_early     = tegra11x_init_early,
-	.init_irq	= tegra_init_irq,
+	.init_irq	= tegra_dt_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer		= &tegra_timer,
 	.init_machine	= tegra_pluto_dt_init,

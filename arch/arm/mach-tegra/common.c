@@ -24,7 +24,6 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <linux/of_irq.h>
 #include <linux/highmem.h>
 #include <linux/memblock.h>
 #include <linux/bitops.h>
@@ -151,19 +150,6 @@ u32 tegra_uart_config[3] = {
 	/* Debug UART virtual address */
 	(u32)(IO_APB_VIRT + TEGRA_DEBUG_UART_OFFSET),
 };
-
-#ifdef CONFIG_OF
-static const struct of_device_id tegra_dt_irq_match[] __initconst = {
-	{ .compatible = "arm,cortex-a9-gic", .data = gic_of_init },
-	{ }
-};
-
-void __init tegra_dt_init_irq(void)
-{
-	tegra_init_irq();
-	of_irq_init(tegra_dt_irq_match);
-}
-#endif
 
 static unsigned long tegra_bb_priv_size;
 static unsigned long tegra_bb_ipc_size;
