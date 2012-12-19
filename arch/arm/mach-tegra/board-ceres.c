@@ -32,6 +32,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c-tegra.h>
 #include <linux/spi/spi.h>
+#include <linux/nfc/bcm2079x.h>
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi-tegra.h>
 #include <asm/hardware/gic.h>
@@ -51,6 +52,122 @@
 #include "clock.h"
 #include "devices.h"
 #include "common.h"
+
+#ifdef CONFIG_BT_BLUESLEEP
+static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
+	.name           = "bt_rfkill",
+	.shutdown_gpio  = TEGRA_GPIO_PQ7,
+	.reset_gpio	= TEGRA_GPIO_PQ6,
+	.type           = RFKILL_TYPE_BLUETOOTH,
+};
+
+static struct platform_device ceres_bt_rfkill_device = {
+	.name = "rfkill_gpio",
+	.id             = -1,
+	.dev = {
+		.platform_data = &ceres_bt_rfkill_pdata,
+	},
+};
+
+static noinline void __init ceres_setup_bt_rfkill(void)
+{
+	platform_device_register(&ceres_bt_rfkill_device);
+}
+
+static struct resource ceres_bluesleep_resources[] = {
+	[0] = {
+		.name = "gpio_host_wake",
+			.start  = TEGRA_GPIO_PU6,
+			.end    = TEGRA_GPIO_PU6,
+			.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "gpio_ext_wake",
+			.start  = TEGRA_GPIO_PEE1,
+			.end    = TEGRA_GPIO_PEE1,
+			.flags  = IORESOURCE_IO,
+	},
+	[2] = {
+		.name = "host_wake",
+			.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+};
+
+static struct platform_device ceres_bluesleep_device = {
+	.name           = "bluesleep",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(ceres_bluesleep_resources),
+	.resource       = ceres_bluesleep_resources,
+};
+
+static noinline void __init ceres_setup_bluesleep(void)
+{
+	ceres_bluesleep_resources[2].start =
+		ceres_bluesleep_resources[2].end =
+			gpio_to_irq(TEGRA_GPIO_PU6);
+	platform_device_register(&ceres_bluesleep_device);
+	return;
+}
+#elif defined CONFIG_BLUEDROID_PM
+static struct resource ceres_bluedroid_pm_resources[] = {
+	[0] = {
+		.name   = "shutdown_gpio",
+		.start  = TEGRA_GPIO_PQ7,
+		.end    = TEGRA_GPIO_PQ7,
+		.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "host_wake",
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+	[2] = {
+		.name = "gpio_ext_wake",
+		.start  = TEGRA_GPIO_PEE1,
+		.end    = TEGRA_GPIO_PEE1,
+		.flags  = IORESOURCE_IO,
+	},
+	[3] = {
+		.name = "gpio_host_wake",
+		.start  = TEGRA_GPIO_PU6,
+		.end    = TEGRA_GPIO_PU6,
+		.flags  = IORESOURCE_IO,
+	},
+	[4] = {
+		.name = "reset_gpio",
+		.start  = TEGRA_GPIO_PQ6,
+		.end    = TEGRA_GPIO_PQ6,
+		.flags  = IORESOURCE_IO,
+	},
+};
+
+static struct platform_device ceres_bluedroid_pm_device = {
+	.name = "bluedroid_pm",
+	.id             = 0,
+	.num_resources  = ARRAY_SIZE(ceres_bluedroid_pm_resources),
+	.resource       = ceres_bluedroid_pm_resources,
+};
+
+static noinline void __init ceres_setup_bluedroid_pm(void)
+{
+	ceres_bluedroid_pm_resources[1].start =
+		ceres_bluedroid_pm_resources[1].end =
+					gpio_to_irq(TEGRA_GPIO_PU6);
+	platform_device_register(&ceres_bluedroid_pm_device);
+}
+#endif
+
+static struct bcm2079x_platform_data nfc_pdata = {
+	.irq_gpio = TEGRA_GPIO_PW2,
+	.en_gpio = TEGRA_GPIO_PU4,
+	.wake_gpio = TEGRA_GPIO_PX7,
+	};
+
+static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
+	{
+		I2C_BOARD_INFO("bcm2079x-i2c", 0x77),
+		.platform_data = &nfc_pdata,
+	},
+};
 
 
 static struct resource tegra_rtc_resources[] = {
@@ -360,6 +477,8 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device3);
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
+	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(TEGRA_GPIO_PW2);
+	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
 
 static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
@@ -431,6 +550,12 @@ static void __init tegra_ceres_init(void)
 	ceres_sensors_init();
 	tegra_register_fuse();
 	ceres_soctherm_init();
+#ifdef CONFIG_BT_BLUESLEEP
+	ceres_setup_bluesleep();
+	ceres_setup_bt_rfkill();
+#elif defined CONFIG_BLUEDROID_PM
+	ceres_setup_bluedroid_pm();
+#endif
 }
 
 static void __init tegra_ceres_dt_init(void)

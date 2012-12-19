@@ -23,7 +23,6 @@
 #include <linux/gpio.h>
 #include <linux/clk.h>
 #include <linux/err.h>
-#include <linux/regulator/consumer.h>
 #include <linux/mmc/host.h>
 #include <linux/wl12xx.h>
 
@@ -32,7 +31,6 @@
 #include <mach/iomap.h>
 #include <mach/sdhci.h>
 #include<mach/gpio-tegra.h>
-#include <mach/io_dpd.h>
 
 #include "gpio-names.h"
 #include "board.h"
@@ -40,7 +38,6 @@
 
 
 #define CERES_WLAN_PWR	TEGRA_GPIO_PCC5
-#define CERES_WLAN_RST	TEGRA_GPIO_PX7
 #define CERES_WLAN_WOW	TEGRA_GPIO_PU5
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
@@ -149,6 +146,9 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.tap_delay = 0x2,
 	.trim_delay = 0x2,
 	.ddr_clk_limit = 41000000,
+	/* FIXME remove uhs_mask for T148 silicon */
+	.uhs_mask = MMC_UHS_MASK_SDR104 |
+		MMC_UHS_MASK_DDR50,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
@@ -225,127 +225,14 @@ static int ceres_wifi_set_carddetect(int val)
 	return 0;
 }
 
-static struct regulator *ceres_vdd_com_3v3;
-static struct regulator *ceres_vddio_com_1v8;
-#define CERES_VDD_WIFI_3V3 "vdd_wifi_3v3"
-#define CERES_VDD_WIFI_1V8 "vddio_wifi_1v8"
-
-static int ceres_wifi_regulator_enable(void)
-{
-	int ret = 0;
-
-	/* Enable COM's vdd_com_3v3 regulator*/
-	if (IS_ERR_OR_NULL(ceres_vdd_com_3v3)) {
-		ceres_vdd_com_3v3 = regulator_get(&ceres_wifi_device.dev,
-							CERES_VDD_WIFI_3V3);
-		if (IS_ERR_OR_NULL(ceres_vdd_com_3v3)) {
-			pr_err("Couldn't get regulator "
-				CERES_VDD_WIFI_3V3 "\n");
-			return PTR_ERR(ceres_vdd_com_3v3);
-		}
-
-		ret = regulator_enable(ceres_vdd_com_3v3);
-		if (ret < 0) {
-			pr_err("Couldn't enable regulator "
-				CERES_VDD_WIFI_3V3 "\n");
-			regulator_put(ceres_vdd_com_3v3);
-			ceres_vdd_com_3v3 = NULL;
-			return ret;
-		}
-	}
-
-	/* Enable COM's vddio_com_1v8 regulator*/
-	if (IS_ERR_OR_NULL(ceres_vddio_com_1v8)) {
-		ceres_vddio_com_1v8 = regulator_get(&ceres_wifi_device.dev,
-			CERES_VDD_WIFI_1V8);
-		if (IS_ERR_OR_NULL(ceres_vddio_com_1v8)) {
-			pr_err("Couldn't get regulator "
-				CERES_VDD_WIFI_1V8 "\n");
-			regulator_disable(ceres_vdd_com_3v3);
-
-			regulator_put(ceres_vdd_com_3v3);
-			ceres_vdd_com_3v3 = NULL;
-			return PTR_ERR(ceres_vddio_com_1v8);
-		}
-
-		ret = regulator_enable(ceres_vddio_com_1v8);
-		if (ret < 0) {
-			pr_err("Couldn't enable regulator "
-				CERES_VDD_WIFI_1V8 "\n");
-			regulator_put(ceres_vddio_com_1v8);
-			ceres_vddio_com_1v8 = NULL;
-
-			regulator_disable(ceres_vdd_com_3v3);
-			regulator_put(ceres_vdd_com_3v3);
-			ceres_vdd_com_3v3 = NULL;
-			return ret;
-		}
-	}
-
-	return ret;
-}
-
-static void ceres_wifi_regulator_disable(void)
-{
-	/* Disable COM's vdd_com_3v3 regulator*/
-	if (!IS_ERR_OR_NULL(ceres_vdd_com_3v3)) {
-		regulator_disable(ceres_vdd_com_3v3);
-		regulator_put(ceres_vdd_com_3v3);
-		ceres_vdd_com_3v3 = NULL;
-	}
-
-	/* Disable COM's vddio_com_1v8 regulator*/
-	if (!IS_ERR_OR_NULL(ceres_vddio_com_1v8)) {
-		regulator_disable(ceres_vddio_com_1v8);
-		regulator_put(ceres_vddio_com_1v8);
-		ceres_vddio_com_1v8 = NULL;
-	}
-}
-
 static int ceres_wifi_power(int on)
 {
-	struct tegra_io_dpd *sd_dpd;
-	int ret = 0;
+	pr_err("%s: %d\n", __func__, on);
 
-	pr_debug("%s: %d\n", __func__, on);
-	/* Enable COM's regulators on wi-fi poer on*/
-	if (on == 1) {
-		ret = ceres_wifi_regulator_enable();
-		if (ret < 0) {
-			pr_err("Failed to enable COM regulators\n");
-			return ret;
-		}
-	}
-
-	/*
-	 * FIXME : we need to revisit IO DPD code
-	 * on how should multiple pins under DPD get controlled
-	 *
-	 * ceres GPIO WLAN enable is part of SDMMC3 pin group
-	 */
-	sd_dpd = tegra_io_dpd_get(&tegra_sdhci_device2.dev);
-	if (sd_dpd) {
-		mutex_lock(&sd_dpd->delay_lock);
-		tegra_io_dpd_disable(sd_dpd);
-		mutex_unlock(&sd_dpd->delay_lock);
-	}
 	gpio_set_value(CERES_WLAN_PWR, on);
 	mdelay(100);
-	gpio_set_value(CERES_WLAN_RST, on);
-	mdelay(200);
-	if (sd_dpd) {
-		mutex_lock(&sd_dpd->delay_lock);
-		tegra_io_dpd_enable(sd_dpd);
-		mutex_unlock(&sd_dpd->delay_lock);
-	}
 
-	/* Disable COM's regulators on wi-fi poer off*/
-	if (on != 1) {
-		pr_debug("Disabling COM regulators\n");
-		ceres_wifi_regulator_disable();
-	}
-
-	return ret;
+	return 0;
 }
 
 static int ceres_wifi_reset(int on)
@@ -361,9 +248,6 @@ static int __init ceres_wifi_init(void)
 	rc = gpio_request(CERES_WLAN_PWR, "wlan_power");
 	if (rc)
 		pr_err("WLAN_PWR gpio request failed:%d\n", rc);
-	rc = gpio_request(CERES_WLAN_RST, "wlan_rst");
-	if (rc)
-		pr_err("WLAN_RST gpio request failed:%d\n", rc);
 	rc = gpio_request(CERES_WLAN_WOW, "bcmsdh_sdmmc");
 	if (rc)
 		pr_err("WLAN_WOW gpio request failed:%d\n", rc);
@@ -371,9 +255,6 @@ static int __init ceres_wifi_init(void)
 	rc = gpio_direction_output(CERES_WLAN_PWR, 0);
 	if (rc)
 		pr_err("WLAN_PWR gpio direction configuration failed:%d\n", rc);
-	gpio_direction_output(CERES_WLAN_RST, 0);
-	if (rc)
-		pr_err("WLAN_RST gpio direction configuration failed:%d\n", rc);
 	rc = gpio_direction_input(CERES_WLAN_WOW);
 	if (rc)
 		pr_err("WLAN_WOW gpio direction configuration failed:%d\n", rc);
@@ -388,9 +269,8 @@ static int __init ceres_wifi_init(void)
 #ifdef CONFIG_TEGRA_PREPOWER_WIFI
 static int __init ceres_wifi_prepower(void)
 {
-	if (!machine_is_ceres())
+	if (!of_machine_is_compatible("nvidia,ceres"))
 		return 0;
-
 	ceres_wifi_power(1);
 
 	return 0;
