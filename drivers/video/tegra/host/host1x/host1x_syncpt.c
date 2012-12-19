@@ -91,7 +91,6 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	u32 reg_offset = id / 32;
 
-	BUG_ON(!nvhost_module_powered(dev->dev));
 	if (!nvhost_syncpt_client_managed(sp, id)
 			&& nvhost_syncpt_min_eq_max(sp, id)) {
 		dev_err(&syncpt_to_dev(sp)->dev->dev,
@@ -102,7 +101,6 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 	}
 	writel(BIT_MASK(id), dev->sync_aperture +
 			host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4);
-	wmb();
 }
 
 /* remove a wait pointed to by patch_addr */

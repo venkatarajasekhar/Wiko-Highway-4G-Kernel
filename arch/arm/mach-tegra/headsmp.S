@@ -114,6 +114,7 @@ ENTRY(tegra_resume)
 #endif
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	mov32	r1, TEGRA_TMRUS_BASE
 	ldr	r0, [r1]
 	adr	r1, tegra_resume_smc_entry_time
@@ -127,21 +128,25 @@ ENTRY(tegra_resume)
 	adr	r1, tegra_resume_smc_exit_time
 	str	r0, [r1]
 #endif
-
+#endif
 	b	cpu_resume
 ENDPROC(tegra_resume)
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
 	.globl tegra_resume_timestamps_start
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	.globl tegra_resume_smc_entry_time
 	.globl tegra_resume_smc_exit_time
+#endif
 	.globl tegra_resume_entry_time
 	.globl tegra_resume_timestamps_end
 tegra_resume_timestamps_start:
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 tegra_resume_smc_entry_time:
 	.long	0
 tegra_resume_smc_exit_time:
 	.long	0
+#endif
 tegra_resume_entry_time:
 	.long	0
 tegra_resume_timestamps_end:
@@ -201,6 +206,9 @@ __invalidate_cpu_state:
 	bic	r0, r0, #7
 	orr	r0, r0, #2
 	mcr	p15, 0x1, r0, c9, c0, 2
+	mrc	p15, 0x1, r0, c15, c0, 0
+	orr	r0, r0, #0x80
+	mcr	p15, 0x1, r0, c15, c0, 0
 __enable_i_cache_branch_pred:
 	mov	r0, #0x1800
 	mcr	p15, 0, r0, c1, c0, 0	@ enable branch prediction, i-cache

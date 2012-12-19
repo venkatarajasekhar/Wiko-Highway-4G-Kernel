@@ -230,9 +230,6 @@ static int __init dolak_wifi_init(void)
 	gpio_request(DOLAK_WLAN_PWR, "wlan_power");
 	gpio_request(DOLAK_WLAN_RST, "wlan_rst");
 
-	tegra_gpio_enable(DOLAK_WLAN_PWR);
-	tegra_gpio_enable(DOLAK_WLAN_RST);
-
 	gpio_direction_output(DOLAK_WLAN_PWR, 0);
 	gpio_direction_output(DOLAK_WLAN_RST, 0);
 

@@ -58,10 +58,9 @@ enum {
 };
 
 #define EMC_CLK_DIV_SHIFT		0
-#define EMC_CLK_DIV_MAX_VALUE		0xFF
 #define EMC_CLK_DIV_MASK		(0xFF << EMC_CLK_DIV_SHIFT)
 #define EMC_CLK_SOURCE_SHIFT		29
-#define EMC_CLK_SOURCE_MAX_VALUE	3
+#define EMC_CLK_SOURCE_MASK		(0x7 << EMC_CLK_SOURCE_SHIFT)
 #define EMC_CLK_LOW_JITTER_ENABLE	(0x1 << 31)
 #define	EMC_CLK_MC_SAME_FREQ		(0x1 << 16)
 
@@ -320,6 +319,14 @@ static inline void ccfifo_writel(u32 val, unsigned long addr)
 	writel(addr, (u32)emc_base + EMC_CCFIFO_ADDR);
 }
 
+static int last_round_idx;
+static inline int get_start_idx(unsigned long rate)
+{
+	if (tegra_emc_table[last_round_idx].rate == rate)
+		return last_round_idx;
+	return 0;
+}
+
 static void emc_last_stats_update(int last_sel)
 {
 	unsigned long flags;
@@ -409,10 +416,7 @@ static inline bool dqs_preset(const struct tegra11_emc_table *next_timing,
 	} while (0)
 
 	DQS_SET(XM2DQSPADCTRL2, VREF);
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	DQS_SET_TRIM(XM2DQSPADCTRL3, VREF, 0);
-	DQS_SET_TRIM(XM2DQSPADCTRL3, VREF, 1);
-#endif
+
 	return ret;
 }
 
@@ -513,7 +517,7 @@ static noinline void emc_set_clock(const struct tegra11_emc_table *next_timing,
 {
 #ifndef EMULATE_CLOCK_SWITCH
 	int i, dll_change, pre_wait;
-	bool dyn_sref_enabled, vref_cal_toggle, zcal_long;
+	bool dyn_sref_enabled, zcal_long;
 
 	u32 emc_cfg_reg = emc_readl(EMC_CFG);
 
@@ -547,13 +551,7 @@ static noinline void emc_set_clock(const struct tegra11_emc_table *next_timing,
 		udelay(pre_wait);
 	}
 
-	/* 3. disable auto-cal if vref mode is switching */
-	vref_cal_toggle = (next_timing->emc_acal_interval != 0) &&
-		((next_timing->burst_regs[EMC_XM2COMPPADCTRL_INDEX] ^
-		  last_timing->burst_regs[EMC_XM2COMPPADCTRL_INDEX]) &
-		 EMC_XM2COMPPADCTRL_VREF_CAL_ENABLE);
-	if (vref_cal_toggle)
-		auto_cal_disable();
+	/* 3. disable auto-cal if vref mode is switching - removed */
 
 	/* 4. program burst shadow registers */
 	for (i = 0; i < next_timing->burst_regs_num; i++) {
@@ -634,10 +632,7 @@ static noinline void emc_set_clock(const struct tegra11_emc_table *next_timing,
 		wmb();
 	}
 
-	/* 15. restore auto-cal */
-	if (vref_cal_toggle)
-		emc_writel(next_timing->emc_acal_interval,
-			   EMC_AUTO_CAL_INTERVAL);
+	/* 15. restore auto-cal - removed */
 
 	/* 16. restore dynamic self-refresh */
 	if (next_timing->emc_cfg & EMC_CFG_DYN_SREF_ENABLE) {
@@ -710,7 +705,8 @@ int tegra_emc_set_rate(unsigned long rate)
 	/* Table entries specify rate in kHz */
 	rate = rate / 1000;
 
-	for (i = 0; i < tegra_emc_table_size; i++) {
+	i = get_start_idx(rate);
+	for (; i < tegra_emc_table_size; i++) {
 		if (tegra_emc_clk_sel[i].input == NULL)
 			continue;	/* invalid entry */
 
@@ -764,13 +760,15 @@ long tegra_emc_round_rate(unsigned long rate)
 	/* Table entries specify rate in kHz */
 	rate = rate / 1000;
 
-	for (i = 0; i < tegra_emc_table_size; i++) {
+	i = get_start_idx(rate);
+	for (; i < tegra_emc_table_size; i++) {
 		if (tegra_emc_clk_sel[i].input == NULL)
 			continue;	/* invalid entry */
 
 		if (tegra_emc_table[i].rate >= rate) {
 			pr_debug("%s: using %lu\n",
 				 __func__, tegra_emc_table[i].rate);
+			last_round_idx = i;
 			return tegra_emc_table[i].rate * 1000;
 		}
 	}
@@ -795,7 +793,8 @@ struct clk *tegra_emc_predict_parent(unsigned long rate, u32 *div_value)
 	/* Table entries specify rate in kHz */
 	rate = rate / 1000;
 
-	for (i = 0; i < tegra_emc_table_size; i++) {
+	i = get_start_idx(rate);
+	for (; i < tegra_emc_table_size; i++) {
 		if (tegra_emc_table[i].rate == rate) {
 			struct clk *p = tegra_emc_clk_sel[i].input;
 
@@ -826,7 +825,8 @@ bool tegra_emc_is_parent_ready(unsigned long rate, struct clk **parent,
 	/* Table entries specify rate in kHz */
 	rate = rate / 1000;
 
-	for (i = 0; i < tegra_emc_table_size; i++) {
+	i = get_start_idx(rate);
+	for (; i < tegra_emc_table_size; i++) {
 		if (tegra_emc_table[i].rate == rate) {
 			p = tegra_emc_clk_sel[i].input;
 			if (!p)
@@ -843,6 +843,20 @@ bool tegra_emc_is_parent_ready(unsigned long rate, struct clk **parent,
 	if (!p)
 		return true;
 
+#ifdef CONFIG_TEGRA_PLLM_SCALED
+	/*
+	 * Table match found, but parent is not ready - check if backup entry
+	 * was found during initialization, and return the respective backup
+	 * rate
+	 */
+	if (emc->shared_bus_backup.input &&
+	    (emc->shared_bus_backup.input != p)) {
+		*parent = p;
+		*parent_rate = p_rate;
+		*backup_rate = emc->shared_bus_backup.bus_rate;
+		return false;
+	}
+#else
 	/*
 	 * Table match found, but parent is not ready - continue search
 	 * for backup rate: min rate above requested that has different
@@ -862,77 +876,97 @@ bool tegra_emc_is_parent_ready(unsigned long rate, struct clk **parent,
 			return false;
 		}
 	}
-
+#endif
 	/* Parent is not ready, and no backup found */
 	*backup_rate = -EINVAL;
 	return false;
 }
 
-/* FIXME: take advantage of table->src_sel_reg */
-static int find_matching_input(const struct tegra11_emc_table *table,
-			struct clk *pll_c, struct emc_sel *emc_clk_sel)
+static inline const struct clk_mux_sel *get_emc_input(u32 val)
 {
-	u32 div_value = 0;
-	unsigned long input_rate = 0;
-	unsigned long table_rate = table->rate * 1000; /* table rate in kHz */
-	struct clk *src = tegra_get_clock_by_name(table->src_name);
 	const struct clk_mux_sel *sel;
 
 	for (sel = emc->inputs; sel->input != NULL; sel++) {
-		if (sel->input != src)
-			continue;
-		/*
-		 * PLLC is a scalable source. For rates below PLL_C_DIRECT_FLOOR
-		 * configure PLLC at double rate and set 1:2 divider, otherwise
-		 * configure PLLC at target rate with divider 1:1.
-		 */
-		if (src == pll_c) {
-#ifdef CONFIG_TEGRA_DUAL_CBUS
-			if (table_rate < PLL_C_DIRECT_FLOOR) {
-				input_rate = 2 * table_rate;
-				div_value = 2;
-			} else {
-				input_rate = table_rate;
-				div_value = 0;
-			}
+		if (sel->value == val)
 			break;
-#else
-			continue;	/* pll_c is used for cbus - skip */
-#endif
-		}
-
-		/*
-		 * All other clock sources are fixed rate sources, and must
-		 * run at rate that is an exact multiple of the target.
-		 */
-		input_rate = clk_get_rate(src);
-
-		if ((input_rate >= table_rate) &&
-		     (input_rate % table_rate == 0)) {
-			div_value = 2 * input_rate / table_rate - 2;
-			break;
-		}
 	}
+	return sel;
+}
 
-	if (!sel->input || (sel->value > EMC_CLK_SOURCE_MAX_VALUE) ||
-	    (div_value > EMC_CLK_DIV_MAX_VALUE)) {
+static int find_matching_input(const struct tegra11_emc_table *table,
+			struct clk *pll_c, struct emc_sel *emc_clk_sel)
+{
+	u32 div_value = (table->src_sel_reg & EMC_CLK_DIV_MASK) >>
+		EMC_CLK_DIV_SHIFT;
+	u32 src_value = (table->src_sel_reg & EMC_CLK_SOURCE_MASK) >>
+		EMC_CLK_SOURCE_SHIFT;
+	unsigned long input_rate = 0;
+	unsigned long table_rate = table->rate * 1000; /* table rate in kHz */
+	const struct clk_mux_sel *sel = get_emc_input(src_value);
+
+#ifdef CONFIG_TEGRA_PLLM_SCALED
+	struct clk *scalable_pll = emc->parent; /* pll_m is a boot parent */
+#else
+	struct clk *scalable_pll = pll_c;
+#endif
+	pr_info_once("tegra: %s is selected as scalable EMC clock source\n",
+		     scalable_pll->name);
+
+	if (div_value & 0x1) {
+		pr_warn("tegra: invalid odd divider for EMC rate %lu\n",
+			table_rate);
+		return -EINVAL;
+	}
+	if (!sel->input) {
 		pr_warn("tegra: no matching input found for EMC rate %lu\n",
 			table_rate);
 		return -EINVAL;
 	}
+	if (div_value && (table->src_sel_reg & EMC_CLK_LOW_JITTER_ENABLE)) {
+		pr_warn("tegra: invalid LJ path for EMC rate %lu\n",
+			table_rate);
+		return -EINVAL;
+	}
+	if (!(table->src_sel_reg & EMC_CLK_MC_SAME_FREQ) !=
+	    !(MC_EMEM_ARB_MISC0_EMC_SAME_FREQ &
+	      table->burst_regs[MC_EMEM_ARB_MISC0_INDEX])) {
+		pr_warn("tegra: ambiguous EMC to MC ratio for EMC rate %lu\n",
+			table_rate);
+		return -EINVAL;
+	}
 
+#ifndef CONFIG_TEGRA_DUAL_CBUS
+	if (sel->input == pll_c) {
+		pr_warn("tegra: %s is cbus source: no EMC rate %lu support\n",
+			sel->input->name, table_rate);
+		return -EINVAL;
+	}
+#endif
+
+	if (sel->input == scalable_pll) {
+		input_rate = table_rate * (1 + div_value / 2);
+	} else {
+		/* all other sources are fixed, must exactly match the rate */
+		input_rate = clk_get_rate(sel->input);
+		if (input_rate != (table_rate * (1 + div_value / 2))) {
+			pr_warn("tegra: EMC rate %lu does not match %s rate %lu\n",
+				table_rate, sel->input->name, input_rate);
+			return -EINVAL;
+		}
+	}
+
+#ifdef CONFIG_TEGRA_PLLM_SCALED
+		if (sel->input == pll_c) {
+			/* maybe overwritten in a loop - end up at max rate
+			   from pll_c */
+			emc->shared_bus_backup.input = pll_c;
+			emc->shared_bus_backup.bus_rate = table_rate;
+		}
+#endif
+	/* Get ready emc clock selection settings for this table rate */
 	emc_clk_sel->input = sel->input;
 	emc_clk_sel->input_rate = input_rate;
-
-	/* Get ready emc clock selection settings for this table rate */
-	emc_clk_sel->value = sel->value << EMC_CLK_SOURCE_SHIFT;
-	emc_clk_sel->value |= (div_value << EMC_CLK_DIV_SHIFT);
-	if ((div_value == 0) && (emc_clk_sel->input == emc->parent))
-		emc_clk_sel->value |= EMC_CLK_LOW_JITTER_ENABLE;
-
-	if (MC_EMEM_ARB_MISC0_EMC_SAME_FREQ &
-	    table->burst_regs[MC_EMEM_ARB_MISC0_INDEX])
-		emc_clk_sel->value |= EMC_CLK_MC_SAME_FREQ;
+	emc_clk_sel->value = table->src_sel_reg;
 
 	return 0;
 }
@@ -962,6 +996,38 @@ static void adjust_emc_dvfs_table(const struct tegra11_emc_table *table,
 		emc->dvfs->freqs[i] = rate * 1000;
 	}
 }
+
+#ifdef CONFIG_TEGRA_PLLM_SCALED
+/* When pll_m is scaled, pll_c must provide backup rate;
+   if not - remove rates that require pll_m scaling */
+static void purge_emc_table(void)
+{
+	int i;
+
+	if (emc->shared_bus_backup.input)
+		return;
+
+	pr_warn("tegra: selected pll_m scaling option but no backup source:\n");
+	pr_warn("       removed not supported entries from the table:\n");
+
+	/* made all entries with non matching rate invalid */
+	for (i = 0; i < tegra_emc_table_size; i++) {
+		struct emc_sel *sel = &tegra_emc_clk_sel[i];
+		if (sel->input) {
+			if (clk_get_rate(sel->input) != sel->input_rate) {
+				pr_warn("       EMC rate %lu\n",
+					tegra_emc_table[i].rate * 1000);
+				sel->input = NULL;
+				sel->input_rate = 0;
+				sel->value = 0;
+			}
+		}
+	}
+}
+#else
+/* When pll_m is fixed @ max EMC rate, it always provides backup for pll_c */
+#define purge_emc_table()
+#endif
 
 static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 {
@@ -998,6 +1064,7 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 	tegra_emc_table_size = min(table_size, TEGRA_EMC_TABLE_MAX_SIZE);
 	switch (table[0].rev) {
 	case 0x40:
+	case 0x41:
 		start_timing.burst_regs_num = table[0].burst_regs_num;
 		start_timing.emc_trimmers_num = table[0].emc_trimmers_num;
 		break;
@@ -1025,8 +1092,10 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 		if (table_rate == boot_rate)
 			emc_stats.last_sel = i;
 
-		if (table_rate == max_rate)
+		if (table_rate == max_rate) {
 			max_entry = true;
+			break;
+		}
 	}
 
 	/* Validate EMC rate and voltage limits */
@@ -1049,6 +1118,8 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 			return -ENODATA;
 		}
 	}
+
+	purge_emc_table();
 
 	pr_info("tegra: validated EMC DFS table\n");
 

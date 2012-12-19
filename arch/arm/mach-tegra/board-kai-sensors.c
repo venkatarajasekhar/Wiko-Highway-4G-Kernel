@@ -56,6 +56,14 @@ static struct balanced_throttle tj_throttle = {
 	},
 };
 
+static int __init kai_throttle_init(void)
+{
+	if (machine_is_kai())
+		balanced_throttle_register(&tj_throttle, "kai-nct");
+	return 0;
+}
+module_init(kai_throttle_init);
+
 static struct nct1008_platform_data kai_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
@@ -65,16 +73,17 @@ static struct nct1008_platform_data kai_nct1008_pdata = {
 	.shutdown_ext_limit = 90, /* C */
 	.shutdown_local_limit = 100, /* C */
 
-	/* Thermal Throttling */
-	.passive = {
-		.create_cdev = (struct thermal_cooling_device *(*)(void *))
-				balanced_throttle_register,
-		.cdev_data = &tj_throttle,
-		.trip_temp = 85000,
-		.tc1 = 0,
-		.tc2 = 1,
-		.passive_delay = 2000,
-	}
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "kai-nct",
+			.trip_temp = 80000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
 };
 
 static struct i2c_board_info kai_i2c4_nct1008_board_info[] = {
@@ -89,25 +98,32 @@ static struct i2c_board_info kai_i2c4_nct1008_board_info[] = {
 static void kai_init_edp_cdev(void)
 {
 	const struct tegra_edp_limits *cpu_edp_limits;
-	struct nct1008_cdev *active_cdev;
 	int cpu_edp_limits_size;
 	int i;
+	int trip;
+	struct nct1008_platform_data *data = &kai_nct1008_pdata;
+	struct nct_trip_temp *trip_state;
 
 	/* edp capping */
 	tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
 
-	if ((cpu_edp_limits_size > MAX_THROT_TABLE_SIZE) ||
-		(cpu_edp_limits_size > MAX_ACTIVE_TEMP_STATE))
+	if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
 		BUG();
 
-	active_cdev = &kai_nct1008_pdata.active;
-	active_cdev->create_cdev = edp_cooling_device_create;
-	active_cdev->hysteresis = 1000;
-
 	for (i = 0; i < cpu_edp_limits_size-1; i++) {
-		active_cdev->states[i].trip_temp =
-			cpu_edp_limits[i].temperature * 1000;
-		active_cdev->states[i].state = i + 1;
+		trip = data->num_trips;
+		trip_state = &data->trips[trip];
+
+		trip_state->cdev_type = "edp";
+		trip_state->trip_temp = cpu_edp_limits[i].temperature * 1000;
+		trip_state->trip_type = THERMAL_TRIP_ACTIVE;
+		trip_state->state = i + 1;
+		trip_state->hysteresis = 1000;
+
+		data->num_trips++;
+
+		if (data->num_trips > NCT_MAX_TRIPS)
+			BUG();
 	}
 }
 #else

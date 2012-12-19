@@ -79,7 +79,10 @@ struct mc_client mc_clients[] = {
 	client("gr3d_fdc3"),		client("gr3d_fdc3"),
 	client("emucif"),		client("emucif"),
 	client("tsec"),			client("tsec"),
+	client("unknown"),
 };
+
+int mc_client_last = ARRAY_SIZE(mc_clients) - 1;
 
 static const char *mcerr_t11x_info(u32 stat)
 {
@@ -123,7 +126,8 @@ static void mcerr_t11x_print(const char *mc_type, u32 err, u32 addr,
 			     const struct mc_client *client, int is_secure,
 			     int is_write, const char *mc_err_info)
 {
-	pr_err("%s [0x%p -> 0x%p] %s (%s %s %s)\n", mc_type,
+	pr_err("%s (0x%08lx) [0x%p -> 0x%p] %s (%s %s %s)\n", mc_type,
+	       (unsigned long) err,
 	       (void *)(addr & ~0x1f), (void *)(addr | 0x1f),
 	       (client) ? client->name : "unknown",
 	       (is_secure) ? "secure" : "non-secure",

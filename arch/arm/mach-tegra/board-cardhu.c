@@ -1432,7 +1432,7 @@ MACHINE_START(CARDHU, "cardhu")
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_cardhu_reserve,
 	.init_early	= tegra30_init_early,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
 	.init_machine   = tegra_cardhu_dt_init,

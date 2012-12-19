@@ -22,7 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
-
+#include <linux/i2c/ds90uh925q_ser.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -34,140 +34,31 @@
 #include "gpio-names.h"
 
 #define E1853_HDMI_HPD TEGRA_GPIO_PB2
-#define E1853_LVDS_SER_ADDR  0xd
 
-#define LVDS_SER_REG_CONFIG_1                   0x4
-#define LVDS_SER_REG_CONFIG_1_BKWD_OVERRIDE     3
-#define LVDS_SER_REG_CONFIG_1_BKWD              2
-
-#define LVDS_SER_REG_DATA_PATH_CTRL             0x12
-#define LVDS_SER_REG_DATA_PATH_CTRL_PASS_RGB    6
-
-#define LVDS_SER_REG_CONFIG_0                   0x3
-#define LVDS_SER_REG_CONFIG_0_TRFB              0
-
-static int ser_i2c_read(struct i2c_client *client,
-						u8 reg_addr, u8 *pval)
-{
-	struct i2c_msg msg[] = {
-		{
-			.addr = client->addr,
-			.flags = 0,
-			.len = 1,
-			.buf = &reg_addr,
-		},
-		{
-			.addr = client->addr,
-			.flags = I2C_M_RD,
-			.len = 1,
-			.buf = pval,
-		},
-	};
-
-	return i2c_transfer(client->adapter, msg, 2);
-}
-
-static int ser_i2c_write(struct i2c_client *client,
-						u8 reg_addr, u8 val)
-{
-	u8 buffer[] = {reg_addr, val};
-	struct i2c_msg msg[] = {
-		{
-			.addr = client->addr,
-			.flags = 0,
-			.len = 2,
-			.buf = buffer,
-		},
-	};
-
-	return i2c_transfer(client->adapter, msg, 1);
-}
-
-static int lvds_ser_init(struct i2c_client *client,
-						bool is_fpdlinkII,
-						bool support_hdcp,
-						bool clk_rise_edge)
-{
-	u8 val;
-	int err = 0;
-
-	if (is_fpdlinkII) {
-		err = ser_i2c_read(client, LVDS_SER_REG_CONFIG_1, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_CONFIG_1_BKWD_OVERRIDE);
-		val |= (1 << LVDS_SER_REG_CONFIG_1_BKWD);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_CONFIG_1, val);
-		if (err < 0)
-			return err;
-	} else if (!support_hdcp) {
-		err = ser_i2c_read(client, LVDS_SER_REG_DATA_PATH_CTRL, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_DATA_PATH_CTRL_PASS_RGB);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_DATA_PATH_CTRL, val);
-		if (err < 0)
-			return err;
-	}
-
-	if (clk_rise_edge) {
-		err = ser_i2c_read(client, LVDS_SER_REG_CONFIG_0, &val);
-		if (err < 0)
-			return err;
-
-		val |= (1 << LVDS_SER_REG_CONFIG_0_TRFB);
-
-		err = ser_i2c_write(client, LVDS_SER_REG_CONFIG_0, val);
-	}
-
-	return (err < 0 ? err : 0);
-}
-
-/* enable primary LVDS */
+/* dc related */
 static int e1853_lvds_enable(struct device *dev)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_board_info info = { {0} };
-	static struct i2c_client *client;
-	int err = -1;
-
-	/* Program the serializer */
-	if (!client) {
-		adapter = i2c_get_adapter(1);
-		if (!adapter)
-			pr_warning("%s: adapter is null\n", __func__);
-		else {
-			info.addr = E1853_LVDS_SER_ADDR;
-			client = i2c_new_device(adapter, &info);
-			i2c_put_adapter(adapter);
-		}
-	}
-
-	if (!client)
-		pr_warning("%s: client is null\n", __func__);
-	else {
-		err = lvds_ser_init(client,
-					true,  /* is_fpdlinkII*/
-					false, /* support_hdcp */
-					true); /* clk_rise_edge */
-		if (err)
-			pr_warning("%s: lvds failed\n", __func__);
-	}
-
-	return err;
-}
-
-/* Disable primary LVDS */
-static int e1853_lvds_disable(void)
-{
-	/* Turn off serializer chip */
-
 	return 0;
 }
+
+static int e1853_lvds_disable(void)
+{
+	return 0;
+}
+
+static struct ds90uh925q_platform_data lvds_ser_platform = {
+	.has_lvds_en_gpio = false,
+	.is_fpdlinkII  = true,
+	.support_hdcp  = false,
+	.clk_rise_edge = true,
+};
+
+static struct i2c_board_info __initdata lvds_ser_info[] = {
+	{
+		I2C_BOARD_INFO("ds90uh925q", 0xd),
+		.platform_data = &lvds_ser_platform,
+	}
+};
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
 
@@ -223,6 +114,25 @@ static struct tegra_fb_data e1853_fb_data = {
 
 #endif
 
+static struct tegra_dc_out_pin e1853_dc_out_pins[] = {
+	{
+		.name	= TEGRA_DC_OUT_PIN_H_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_V_SYNC,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name	= TEGRA_DC_OUT_PIN_PIXEL_CLOCK,
+		.pol	= TEGRA_DC_OUT_PIN_POL_LOW,
+	},
+	{
+		.name   = TEGRA_DC_OUT_PIN_DATA_ENABLE,
+		.pol    = TEGRA_DC_OUT_PIN_POL_HIGH,
+	},
+};
+
 static struct tegra_dc_out e1853_ser_out = {
 	.align		= TEGRA_DC_ALIGN_MSB,
 	.order		= TEGRA_DC_ORDER_RED_BLUE,
@@ -232,6 +142,8 @@ static struct tegra_dc_out e1853_ser_out = {
 	.n_modes	= ARRAY_SIZE(e1853_panel_modes),
 	.enable		= e1853_lvds_enable,
 	.disable	= e1853_lvds_disable,
+	.out_pins	= e1853_dc_out_pins,
+	.n_out_pins	= ARRAY_SIZE(e1853_dc_out_pins),
 };
 
 static struct tegra_dc_platform_data e1853_disp1_pdata = {
@@ -361,5 +273,9 @@ int __init e1853_panel_init(void)
 		err = platform_device_register(&nvavp_device);
 	}
 #endif
+
+	if (!err)
+		i2c_register_board_info(1, lvds_ser_info, 1);
+
 	return err;
 }

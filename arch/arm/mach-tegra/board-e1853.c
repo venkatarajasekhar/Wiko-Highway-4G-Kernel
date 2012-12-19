@@ -349,9 +349,6 @@ static struct platform_device tegra_camera = {
 };
 
 static struct platform_device *e1853_devices[] __initdata = {
-#if defined(CONFIG_TEGRA_IOVMM_SMMU)
-	&tegra_smmu_device,
-#endif
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
 #endif
@@ -444,9 +441,6 @@ static __initdata struct tegra_clk_init_table spi_clk_init_table[] = {
 
 static int __init e1853_touch_init(void)
 {
-	tegra_gpio_enable(TOUCH_GPIO_IRQ_ATMEL_T9);
-	tegra_gpio_enable(TOUCH_GPIO_RST_ATMEL_T9);
-
 	gpio_request(TOUCH_GPIO_IRQ_ATMEL_T9, "atmel-irq");
 	gpio_direction_input(TOUCH_GPIO_IRQ_ATMEL_T9);
 
@@ -757,7 +751,7 @@ late_initcall(e1853_bt_init);
 MACHINE_START(E1853, "e1853")
 	.atag_offset    = 0x100,
 	.soc		= &tegra_soc_desc,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.init_early     = tegra30_init_early,
 	.init_machine   = tegra_e1853_init,
 	.map_io         = tegra_map_common_io,

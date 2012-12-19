@@ -683,7 +683,7 @@ int p1852_get_skuid()
 MACHINE_START(P1852, "p1852")
 	.atag_offset    = 0x100,
 	.soc		= &tegra_soc_desc,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.init_early     = tegra30_init_early,
 	.init_machine   = tegra_p1852_init,
 	.map_io         = tegra_map_common_io,

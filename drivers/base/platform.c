@@ -307,19 +307,8 @@ int platform_device_add(struct platform_device *pdev)
 		 dev_name(&pdev->dev), dev_name(pdev->dev.parent));
 
 	ret = device_add(&pdev->dev);
-	if (ret)
-		goto failed;
-
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	if (platform_bus_type.map && !pdev->dev.archdata.mapping) {
-		ret = arm_iommu_attach_device(&pdev->dev,
-					      platform_bus_type.map);
-		if (ret)
-			goto failed;
-	}
-#endif
-
-	return 0;
+	if (ret == 0)
+		return ret;
 
  failed:
 	while (--i >= 0) {

@@ -154,6 +154,7 @@ obj-$(CONFIG_TEGRA_USB_MODEM_POWER)     += tegra_usb_modem_power.o
 obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS)    += tegra_cl_dvfs.o
 
 obj-y                                   += board-common.o
+obj-$(CONFIG_TEGRA_WAKEUP_MONITOR)      += tegra_wakeup_monitor.o
 obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 
 # MC error reporting.
@@ -286,7 +287,10 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-roth-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-kbc.o
-obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sensors.o
+obj-${CONFIG_MACH_DALMORE}          	+= board-dalmore-sensors.o
+obj-${CONFIG_MACH_DALMORE}              += panel-a-1080p-11-6.o
+obj-${CONFIG_MACH_DALMORE}              += panel-p-wuxga-10-1.o
+obj-${CONFIG_MACH_DALMORE}              += panel-s-wqxga-10-1.o
 
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto.o
 obj-${CONFIG_MACH_TEGRA_PLUTO}          += board-pluto-memory.o
@@ -322,3 +326,4 @@ obj-${CONFIG_MACH_ROTH}                 += board-roth-sdhci.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-panel.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-kbc.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-sensors.o
+obj-${CONFIG_MACH_ROTH}			+= board-roth-fan.o

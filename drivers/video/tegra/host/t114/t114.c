@@ -61,8 +61,8 @@ static struct resource tegra_host1x02_resources[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	{
-		.start = INT_SYNCPT_THRESH_BASE,
-		.end = INT_SYNCPT_THRESH_BASE + INT_SYNCPT_THRESH_NR - 1,
+		.start = INT_HOST1X_MPCORE_SYNCPT,
+		.end = INT_HOST1X_MPCORE_SYNCPT,
 		.flags = IORESOURCE_IRQ,
 	},
 	{
@@ -99,7 +99,7 @@ static struct host1x_device_info host1x02_info = {
 };
 
 static struct nvhost_device_data tegra_host1x02_info = {
-	.clocks		= { {"host1x", 102000000} },
+	.clocks		= { {"host1x", 136000000} },
 	NVHOST_MODULE_NO_POWERGATE_IDS,
 };
 

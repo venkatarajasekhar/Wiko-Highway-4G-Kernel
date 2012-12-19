@@ -26,6 +26,7 @@
 #include <linux/clk.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -38,6 +39,7 @@
 #include "nvhost_acm.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
+#include "nvhost_memmgr.h"
 #include "chip_support.h"
 
 #define DRIVER_NAME		"host1x"
@@ -178,7 +180,6 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 
 	ndev = nvhost_device_list_match_by_id(args->id);
-	BUG_ON(!ndev);
 
 	while (num_offsets--) {
 		int err;
@@ -362,13 +363,11 @@ fail:
 
 struct nvhost_channel *nvhost_alloc_channel(struct platform_device *dev)
 {
-	BUG_ON(!host_device_op().alloc_nvhost_channel);
 	return host_device_op().alloc_nvhost_channel(dev);
 }
 
 void nvhost_free_channel(struct nvhost_channel *ch)
 {
-	BUG_ON(!host_device_op().free_nvhost_channel);
 	host_device_op().free_nvhost_channel(ch);
 }
 
@@ -401,21 +400,31 @@ static int __devinit nvhost_alloc_resources(struct nvhost_master *host)
 static int __devinit nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
-	struct resource *regs, *intr0, *intr1;
+	struct resource *regs;
+	int syncpt_irq, generic_irq;
 	int i, err;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
 	regs = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	intr0 = platform_get_resource(dev, IORESOURCE_IRQ, 0);
-	intr1 = platform_get_resource(dev, IORESOURCE_IRQ, 1);
-
-	if (!regs || !intr0 || !intr1) {
-		dev_err(&dev->dev, "missing required platform resources\n");
+	if (!regs) {
+		dev_err(&dev->dev, "missing host1x regs\n");
 		return -ENXIO;
 	}
 
-	host = kzalloc(sizeof(*host), GFP_KERNEL);
+	syncpt_irq = platform_get_irq(dev, 0);
+	if (IS_ERR_VALUE(syncpt_irq)) {
+		dev_err(&dev->dev, "missing syncpt irq\n");
+		return -ENXIO;
+	}
+
+	generic_irq = platform_get_irq(dev, 1);
+	if (IS_ERR_VALUE(generic_irq)) {
+		dev_err(&dev->dev, "missing generic irq\n");
+		return -ENXIO;
+	}
+
+	host = devm_kzalloc(&dev->dev, sizeof(*host), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
 
@@ -441,17 +450,8 @@ static int __devinit nvhost_probe(struct platform_device *dev)
 	/* set private host1x device data */
 	nvhost_set_private_data(dev, host);
 
-	host->reg_mem = request_mem_region(regs->start,
-		resource_size(regs), dev->name);
-	if (!host->reg_mem) {
-		dev_err(&dev->dev, "failed to get host register memory\n");
-		err = -ENXIO;
-		goto fail;
-	}
-
-	host->aperture = ioremap(regs->start, resource_size(regs));
+	host->aperture = devm_request_and_ioremap(&dev->dev, regs);
 	if (!host->aperture) {
-		dev_err(&dev->dev, "failed to remap host registers\n");
 		err = -ENXIO;
 		goto fail;
 	}
@@ -462,7 +462,7 @@ static int __devinit nvhost_probe(struct platform_device *dev)
 		goto fail;
 	}
 
-	host->memmgr = mem_op().alloc_mgr();
+	host->memmgr = nvhost_memmgr_alloc_mgr();
 	if (!host->memmgr) {
 		dev_err(&dev->dev, "unable to create nvmap client\n");
 		err = -EIO;
@@ -473,7 +473,7 @@ static int __devinit nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	err = nvhost_intr_init(&host->intr, intr1->start, intr0->start);
+	err = nvhost_intr_init(&host->intr, generic_irq, syncpt_irq);
 	if (err)
 		goto fail;
 
@@ -491,6 +491,10 @@ static int __devinit nvhost_probe(struct platform_device *dev)
 	for (i = 0; i < pdata->num_clks; i++)
 		clk_disable_unprepare(pdata->clk[i]);
 
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
 	nvhost_device_list_init();
 	err = nvhost_device_list_add(dev);
 	if (err)
@@ -507,7 +511,7 @@ static int __devinit nvhost_probe(struct platform_device *dev)
 fail:
 	nvhost_free_resources(host);
 	if (host->memmgr)
-		mem_op().put_mgr(host->memmgr);
+		nvhost_memmgr_put_mgr(host->memmgr);
 	kfree(host);
 	return err;
 }
@@ -521,31 +525,45 @@ static int __exit nvhost_remove(struct platform_device *dev)
 	return 0;
 }
 
-static int nvhost_suspend(struct platform_device *dev, pm_message_t state)
+#ifdef CONFIG_PM
+static int nvhost_suspend(struct device *dev)
 {
-	struct nvhost_master *host = nvhost_get_private_data(dev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_master *host = nvhost_get_private_data(pdev);
 	int ret = 0;
 
 	ret = nvhost_module_suspend(host->dev);
-	dev_info(&dev->dev, "suspend status: %d\n", ret);
+	dev_info(dev, "suspend status: %d\n", ret);
 
 	return ret;
 }
 
-static int nvhost_resume(struct platform_device *dev)
+static int nvhost_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops host1x_pm_ops = {
+	.suspend = nvhost_suspend,
+	.resume = nvhost_resume,
+};
+
+#define HOST1X_PM_OPS	(&host1x_pm_ops)
+
+#else
+
+#define HOST1X_PM_OPS	NULL
+
+#endif /* CONFIG_PM */
 
 static struct platform_driver platform_driver = {
 	.probe = nvhost_probe,
 	.remove = __exit_p(nvhost_remove),
-	.suspend = nvhost_suspend,
-	.resume = nvhost_resume,
 	.driver = {
 		.owner = THIS_MODULE,
-		.name = DRIVER_NAME
+		.name = DRIVER_NAME,
+		.pm = HOST1X_PM_OPS,
 	},
 };
 

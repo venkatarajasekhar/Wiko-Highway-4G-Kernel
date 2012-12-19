@@ -30,6 +30,7 @@
 #include <linux/seq_file.h>
 #include <linux/spinlock.h>
 #include <trace/events/power.h>
+#include <asm/atomic.h>
 
 #include <mach/clk.h>
 #include <mach/iomap.h>
@@ -1127,6 +1128,11 @@ static bool skip_pg_check(int id, bool is_unpowergate)
 }
 #endif
 
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+static atomic_t ref_count_a = ATOMIC_INIT(1); /* for TEGRA_POWERGATE_DISA */
+static atomic_t ref_count_b = ATOMIC_INIT(1); /* for TEGRA_POWERGATE_DISB */
+#endif
+
 /*
  * Must be called with clk disabled, and returns with clk disabled
  * Drivers should enable clks for partition. Unpowergates only the
@@ -1137,6 +1143,14 @@ int tegra_unpowergate_partition(int id)
 	int ret;
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	bool is_pg_skip;
+
+	WARN_ONCE(atomic_read(&ref_count_a) < 0, "ref count A underflow");
+	WARN_ONCE(atomic_read(&ref_count_b) < 0, "ref count B underflow");
+	if (id == TEGRA_POWERGATE_DISA && atomic_inc_return(&ref_count_a) != 1)
+		return 0;
+	else if (id == TEGRA_POWERGATE_DISB &&
+		atomic_inc_return(&ref_count_b) != 1)
+		return 0;
 
 	is_pg_skip = skip_pg_check(id, true);
 	if (is_pg_skip)
@@ -1194,6 +1208,7 @@ err_power:
 	return ret;
 #endif
 }
+EXPORT_SYMBOL(tegra_unpowergate_partition);
 
 int tegra_cpu_powergate_id(int cpuid)
 {
@@ -1515,6 +1530,14 @@ int tegra_powergate_partition(int id)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	bool is_pg_skip;
 
+	WARN_ONCE(atomic_read(&ref_count_a) < 0, "ref count A underflow");
+	WARN_ONCE(atomic_read(&ref_count_b) < 0, "ref count B underflow");
+	if (id == TEGRA_POWERGATE_DISA && atomic_dec_return(&ref_count_a) != 0)
+		return 0;
+	else if (id == TEGRA_POWERGATE_DISB &&
+		atomic_dec_return(&ref_count_b) != 0)
+		return 0;
+
 	is_pg_skip = skip_pg_check(id, false);
 	if (is_pg_skip)
 		return 0;
@@ -1553,6 +1576,7 @@ err_clk_off:
 	return ret;
 #endif
 }
+EXPORT_SYMBOL(tegra_powergate_partition);
 
 int tegra_powergate_partition_with_clk_off(int id)
 {

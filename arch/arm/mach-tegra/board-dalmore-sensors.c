@@ -49,10 +49,12 @@
 
 #include "gpio-names.h"
 #include "board.h"
+#include "board-common.h"
 #include "board-dalmore.h"
 #include "cpu-tegra.h"
 #include "devices.h"
 #include "tegra-board-id.h"
+#include "dvfs.h"
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
@@ -87,24 +89,35 @@ static struct balanced_throttle tj_throttle = {
 	},
 };
 
+static int __init dalmore_throttle_init(void)
+{
+	if (machine_is_dalmore())
+		balanced_throttle_register(&tj_throttle, "dalmore-nct");
+	return 0;
+}
+module_init(dalmore_throttle_init);
+
 static struct nct1008_platform_data dalmore_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x08,
-	.offset = 80, /* 4 * 20C. Bug 844025 - 1C for device accuracies */
-	.shutdown_ext_limit = 90, /* C */
+	.offset = 0,
+	.shutdown_ext_limit = 85, /* C */
 	.shutdown_local_limit = 120, /* C */
 
-	/* Thermal Throttling */
-	.passive = {
-		.create_cdev = (struct thermal_cooling_device *(*)(void *))
-				balanced_throttle_register,
-		.cdev_data = &tj_throttle,
-		.trip_temp = 80000,
-		.tc1 = 0,
-		.tc2 = 1,
-		.passive_delay = 2000,
-	}
+	.passive_delay = 2000,
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "dalmore-nct",
+			.trip_temp = 75000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
 };
 
 static struct i2c_board_info dalmore_i2c4_nct1008_board_info[] = {
@@ -539,50 +552,59 @@ static int dalmore_nct1008_init(void)
 	int nct1008_port = -1;
 	int ret = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	if ((board_info.board_id == BOARD_E1611) ||
-	    (board_info.board_id == BOARD_E1612) ||
+	if ((board_info.board_id == BOARD_E1612) ||
 	    (board_info.board_id == BOARD_E1641) ||
 	    (board_info.board_id == BOARD_E1613) ||
 	    (board_info.board_id == BOARD_P2454))
 	{
 		/* per email from Matt 9/10/2012 */
 		nct1008_port = TEGRA_GPIO_PX6;
+	} else if (board_info.board_id == BOARD_E1611) {
+		if (board_info.fab == 0x04)
+			nct1008_port = TEGRA_GPIO_PO4;
+		else
+			nct1008_port = TEGRA_GPIO_PX6;
 	} else {
 		nct1008_port = TEGRA_GPIO_PX6;
 		pr_err("Warning: nct alert_port assumed TEGRA_GPIO_PX6"
 			" for unknown dalmore board id E%d\n",
 			board_info.board_id);
 	}
-#else
-	/* dalmore + AP30 interposer has SPI2_CS0 gpio */
-	nct1008_port = TEGRA_GPIO_PX3;
-#endif
 
 	if (nct1008_port >= 0) {
+		struct nct1008_platform_data *data = &dalmore_nct1008_pdata;
 #ifdef CONFIG_TEGRA_EDP_LIMITS
 		const struct tegra_edp_limits *cpu_edp_limits;
-		struct nct1008_cdev *active_cdev;
 		int cpu_edp_limits_size;
 		int i;
+		int trip;
+		struct nct_trip_temp *trip_state;
 
 		/* edp capping */
 		tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
 
-		if ((cpu_edp_limits_size > MAX_THROT_TABLE_SIZE) ||
-			(cpu_edp_limits_size > MAX_ACTIVE_TEMP_STATE))
+		if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
 			BUG();
 
-		active_cdev = &dalmore_nct1008_pdata.active;
-		active_cdev->create_cdev = edp_cooling_device_create;
-		active_cdev->hysteresis = 1000;
-
 		for (i = 0; i < cpu_edp_limits_size-1; i++) {
-			active_cdev->states[i].trip_temp =
-				cpu_edp_limits[i].temperature * 1000;
-			active_cdev->states[i].state = i + 1;
+			trip = data->num_trips;
+			trip_state = &data->trips[trip];
+
+			trip_state->cdev_type = "edp";
+			trip_state->trip_temp =
+					cpu_edp_limits[i].temperature * 1000;
+			trip_state->trip_type = THERMAL_TRIP_ACTIVE;
+			trip_state->state = i + 1;
+			trip_state->hysteresis = 1000;
+
+			data->num_trips++;
+
+			if (data->num_trips > NCT_MAX_TRIPS)
+				BUG();
 		}
 #endif
+		nct1008_add_cdev_trips(data, tegra_core_edp_get_cdev());
+		nct1008_add_cdev_trips(data, tegra_dvfs_get_cpu_dfll_cdev());
 
 		dalmore_i2c4_nct1008_board_info[0].irq = gpio_to_irq(nct1008_port);
 		pr_info("%s: dalmore nct1008 irq %d", __func__, dalmore_i2c4_nct1008_board_info[0].irq);
@@ -680,7 +702,7 @@ static int __init dalmore_skin_init(void)
 {
 	struct thermal_cooling_device *skin_cdev;
 
-	skin_cdev = balanced_throttle_register(&skin_throttle);
+	skin_cdev = balanced_throttle_register(&skin_throttle, "dalmore-skin");
 
 	skin_data.cdev = skin_cdev;
 	tegra_skin_therm_est_device.dev.platform_data = &skin_data;

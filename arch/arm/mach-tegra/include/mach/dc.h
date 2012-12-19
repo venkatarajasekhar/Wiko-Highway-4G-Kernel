@@ -82,6 +82,7 @@ enum {
 	TEGRA_DSI_PACKET_CMD,
 	TEGRA_DSI_DELAY_MS,
 	TEGRA_DSI_GPIO_SET,
+	TEGRA_DSI_SEND_FRAME,
 };
 
 struct tegra_dsi_cmd {
@@ -91,6 +92,7 @@ struct tegra_dsi_cmd {
 		u16 data_len;
 		u16 delay_ms;
 		unsigned gpio;
+		u16 frame_cnt;
 		struct {
 			u8 data0;
 			u8 data1;
@@ -135,6 +137,11 @@ struct tegra_dsi_cmd {
 				.sp_len_dly.data_len = ARRAY_SIZE(ptr), \
 				.pdata = ptr, \
 				}
+
+#define DSI_SEND_FRAME(cnt)	{ \
+			.cmd_type = TEGRA_DSI_SEND_FRAME, \
+			.sp_len_dly.frame_cnt = cnt, \
+			}
 
 struct dsi_phy_timing_ns {
 	u16		t_hsdexit_ns;
@@ -217,7 +224,6 @@ enum {
 #define DSI_HOST_SUSPEND_LV0		1
 #define DSI_HOST_SUSPEND_LV1		2
 #define DSI_HOST_SUSPEND_LV2		3
-#define DSI_SUSPEND_FULL		4
 
 struct tegra_dsi_out {
 	u8		n_data_lanes;			/* required */

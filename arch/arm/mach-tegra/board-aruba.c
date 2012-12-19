@@ -447,9 +447,6 @@ static struct platform_device *aruba_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
-	&tegra_smmu_device,
-#endif
 	&aruba_keys_device,
 	&tegra_wdt0_device,
 	&tegra_wdt1_device,
@@ -508,6 +505,7 @@ static void __init tegra_aruba_init(void)
 	tegra_clk_init_from_table(aruba_clk_init_table);
 	tegra_enable_pinmux();
 	aruba_pinmux_init();
+	tegra_smmu_init();
 	tegra_soc_device_init("aruba");
 
 	platform_add_devices(aruba_devices, ARRAY_SIZE(aruba_devices));
@@ -539,7 +537,7 @@ MACHINE_START(ARUBA, "aruba")
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_aruba_reserve,
 	.init_early	= tegra_init_early,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
 	.init_machine   = tegra_aruba_init,

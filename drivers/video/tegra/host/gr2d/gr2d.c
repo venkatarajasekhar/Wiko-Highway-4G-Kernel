@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -55,6 +56,7 @@ MODULE_DEVICE_TABLE(nvhost, gr2d_id);
 static int __devinit gr2d_probe(struct platform_device *dev)
 {
 	int index = 0;
+	int err = 0;
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)dev->dev.platform_data;
 
@@ -62,14 +64,22 @@ static int __devinit gr2d_probe(struct platform_device *dev)
 	dev_set_name(&dev->dev, "%s", "gr2d");
 
 	index = (int)(platform_get_device_id(dev)->driver_data);
-	BUG_ON(index > gr2d_02);
+	WARN_ON(index > gr2d_02);
 
 	pdata->pdev = dev;
 	pdata->finalize_poweron = gr2d[index].finalize_poweron;
 
 	platform_set_drvdata(dev, pdata);
 
-	return nvhost_client_device_init(dev);
+	err = nvhost_client_device_init(dev);
+	if (err)
+		return err;
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
+	return 0;
 }
 
 static int __exit gr2d_remove(struct platform_device *dev)
@@ -79,28 +89,37 @@ static int __exit gr2d_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int gr2d_suspend(struct platform_device *dev, pm_message_t state)
+static int gr2d_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int gr2d_resume(struct platform_device *dev)
+static int gr2d_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
-#endif
+
+static const struct dev_pm_ops gr2d_pm_ops = {
+	.suspend = gr2d_suspend,
+	.resume = gr2d_resume,
+};
+
+#define GR2D_PM_OPS	(&gr2d_pm_ops)
+
+#else
+
+#define GR2D_PM_OPS	NULL
+
+#endif /* CONFIG_PM */
 
 static struct platform_driver gr2d_driver = {
 	.probe = gr2d_probe,
 	.remove = __exit_p(gr2d_remove),
-#ifdef CONFIG_PM
-	.suspend = gr2d_suspend,
-	.resume = gr2d_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gr2d",
+		.pm = GR2D_PM_OPS,
 	},
 	.id_table = gr2d_id,
 };

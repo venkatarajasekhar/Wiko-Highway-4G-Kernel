@@ -61,12 +61,7 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	/* bug 976976 requires reg 0x403 to be restored before reg 0xe45 */
 	/* bug 972588 requires reg 0x403 to be restored with reg 0x411's
 	   value */
-	/* remove #if 1 for part 3 checkin */
-	#if 1
-	HWCTX_REGINFO(0x403,    1, DIRECT),
-	#else
 	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0x403),
-	#endif
 	HWCTX_REGINFO(0x404,   15, DIRECT),
 	/* bug 955371 requires reg 0x7e0 to be restored with 0x410,s value.
 	   bug 982750 requires reg 0x7e0 to be restored before 0x804.
@@ -106,12 +101,7 @@ static const struct hwctx_reginfo ctxsave_regs_3d_global[] = {
 	/* bug 976976 requires reg 0xe45 to be restored after reg 0x403 */
 	/* bug 972588 requires reg 0x403 to be restored with reg 0x411's
 	   value */
-	/* remove #if 1 for part 3 checkin */
-	#if 1
-	HWCTX_REGINFO(0xe45,    1, DIRECT),
-	#else
 	HWCTX_REGINFO_RST(0x411, 1, DIRECT, 0xe45),
-	#endif
 	HWCTX_REGINFO(0xe50,   49, DIRECT),
 	/* bug 930456 requires reg 0xe2b to be restored with 0x126's value */
 	HWCTX_REGINFO_RST(0x126, 1, DIRECT, 0xe2b),
@@ -180,17 +170,16 @@ static void save_push_v1(struct nvhost_hwctx *nctx, struct nvhost_cdma *cdma)
 	   buffer boundary, and 3d driver inserts a FDC flush & invalidate &
 	   clear the invalidate bit in the beginning of the each push buffer.
 	   So we do not need to explicitly clear the invalidate bit here. */
+
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_imm(AR3D_FDC_CONTROL_0,
 			AR3D_FDC_CONTROL_0_RESET_VAL
 				| AR3D_FDC_CONTROL_0_INVALIDATE),
 		nvhost_opcode_imm(AR3D_GLOBAL_MEMORY_OUTPUT_READS, 1));
 	/* bug 972588 requires SW to clear the reg 0x403 and 0xe45 */
-	/* enable the following line for part 3 checkin
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_imm(0xe45, 0),
 		nvhost_opcode_imm(0x403, 0));
-	*/
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_nonincr(AR3D_DW_MEMORY_OUTPUT_ADDRESS, 1),
 		ctx->restore_phys);
@@ -451,23 +440,23 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 
 	setup_save(p, NULL);
 
-	p->save_buf = mem_op().alloc(memmgr, p->save_size * 4, 32,
+	p->save_buf = nvhost_memmgr_alloc(memmgr, p->save_size * 4, 32,
 				mem_mgr_flag_write_combine);
 	if (IS_ERR_OR_NULL(p->save_buf))
 		goto fail_alloc;
 
-	save_ptr = mem_op().mmap(p->save_buf);
+	save_ptr = nvhost_memmgr_mmap(p->save_buf);
 	if (IS_ERR_OR_NULL(save_ptr))
 		goto fail_mmap;
 
-	p->save_sgt = mem_op().pin(memmgr, p->save_buf);
+	p->save_sgt = nvhost_memmgr_pin(memmgr, p->save_buf);
 	if (IS_ERR_OR_NULL(p->save_sgt))
 		goto fail_pin;
 	p->save_phys = sg_dma_address(p->save_sgt->sgl);
 
 	setup_save(p, save_ptr);
 
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 
 	p->save_slots = 5;
 	p->h.alloc = ctx3d_alloc_v1;
@@ -479,9 +468,9 @@ struct nvhost_hwctx_handler *nvhost_gr3d_t114_ctxhandler_init(
 	return &p->h;
 
 fail_pin:
-	mem_op().munmap(p->save_buf, save_ptr);
+	nvhost_memmgr_munmap(p->save_buf, save_ptr);
 fail_mmap:
-	mem_op().put(memmgr, p->save_buf);
+	nvhost_memmgr_put(memmgr, p->save_buf);
 fail_alloc:
 	kfree(p);
 	return NULL;

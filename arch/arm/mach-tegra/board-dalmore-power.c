@@ -120,7 +120,7 @@ static struct regulator_consumer_supply tps65090_fet7_supply[] = {
 };
 
 #define TPS65090_PDATA_INIT(_id, _name, _supply_reg,			\
-		_always_on, _boot_on, _apply_uV, _en_ext_ctrl, _gpio)	\
+	_always_on, _boot_on, _apply_uV, _en_ext_ctrl, _gpio, _wait_to)	\
 static struct regulator_init_data ri_data_##_name =			\
 {									\
 	.supply_regulator = _supply_reg,				\
@@ -146,19 +146,20 @@ static struct tps65090_regulator_platform_data				\
 	.enable_ext_control = _en_ext_ctrl,				\
 	.gpio = _gpio,							\
 	.reg_init_data = &ri_data_##_name ,				\
+	.wait_timeout_us = _wait_to,					\
 }
 
-TPS65090_PDATA_INIT(DCDC1, dcdc1, NULL, 1, 1, 0, false, -1);
-TPS65090_PDATA_INIT(DCDC2, dcdc2, NULL, 1, 1, 0, false, -1);
-TPS65090_PDATA_INIT(DCDC3, dcdc3, NULL, 1, 1, 0, false, -1);
-TPS65090_PDATA_INIT(LDO1, ldo1, NULL, 1, 1, 0, false, -1);
-TPS65090_PDATA_INIT(LDO2, ldo2, NULL, 1, 1, 0, false, -1);
-TPS65090_PDATA_INIT(FET1, fet1, NULL, 0, 0, 0, false, -1);
-TPS65090_PDATA_INIT(FET3, fet3, tps65090_rails(DCDC2), 0, 0, 0, false, -1);
-TPS65090_PDATA_INIT(FET4, fet4, tps65090_rails(DCDC2), 0, 0, 0, false, -1);
-TPS65090_PDATA_INIT(FET5, fet5, tps65090_rails(DCDC2), 0, 0, 0, false, -1);
-TPS65090_PDATA_INIT(FET6, fet6, tps65090_rails(DCDC2), 0, 0, 0, false, -1);
-TPS65090_PDATA_INIT(FET7, fet7, tps65090_rails(DCDC2), 0, 0, 0, false, -1);
+TPS65090_PDATA_INIT(DCDC1, dcdc1, NULL, 1, 1, 0, false, -1, -1);
+TPS65090_PDATA_INIT(DCDC2, dcdc2, NULL, 1, 1, 0, false, -1, -1);
+TPS65090_PDATA_INIT(DCDC3, dcdc3, NULL, 1, 1, 0, false, -1, -1);
+TPS65090_PDATA_INIT(LDO1, ldo1, NULL, 1, 1, 0, false, -1, -1);
+TPS65090_PDATA_INIT(LDO2, ldo2, NULL, 1, 1, 0, false, -1, -1);
+TPS65090_PDATA_INIT(FET1, fet1, NULL, 0, 0, 0, false, -1, 800);
+TPS65090_PDATA_INIT(FET3, fet3, tps65090_rails(DCDC2), 0, 0, 0, false, -1, 0);
+TPS65090_PDATA_INIT(FET4, fet4, tps65090_rails(DCDC2), 0, 0, 0, false, -1, 0);
+TPS65090_PDATA_INIT(FET5, fet5, tps65090_rails(DCDC2), 0, 0, 0, false, -1, 0);
+TPS65090_PDATA_INIT(FET6, fet6, tps65090_rails(DCDC2), 0, 0, 0, false, -1, 0);
+TPS65090_PDATA_INIT(FET7, fet7, tps65090_rails(DCDC2), 0, 0, 0, false, -1, 0);
 
 #define ADD_TPS65090_REG(_name) (&tps65090_regulator_pdata_##_name)
 static struct tps65090_regulator_platform_data *tps65090_reg_pdata[] = {
@@ -689,7 +690,7 @@ PALMAS_REG_INIT(smps45, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(smps457, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(smps6, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps7, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps8, 0, 0, 0, 0, 0);
+PALMAS_REG_INIT(smps8, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(smps9, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps10, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(ldo1, 0, 0, 0, 0, 0);
@@ -881,15 +882,9 @@ FIXED_REG(4,	vpp_fuse,	vpp_fuse,
 	max77663_rails(sd2),	0,	0,
 	TEGRA_GPIO_PX4,	false,	true,	0,	3300);
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 FIXED_REG(5,	usb1_vbus,	usb1_vbus,
 	tps65090_rails(DCDC1),	0,	0,
 	TEGRA_GPIO_PN4,	true,	true,	0,	5000);
-#else
-FIXED_REG(5,	usb1_vbus,	usb1_vbus,
-	tps65090_rails(DCDC1),	0,	0,
-	TEGRA_GPIO_PR3,	true,	true,	0,	5000);
-#endif
 
 FIXED_REG(6,	usb3_vbus,	usb3_vbus,
 	tps65090_rails(DCDC1),	0,	0,
@@ -944,16 +939,7 @@ int __init dalmore_palmas_regulator_init(void)
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
 	int i;
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	int ret;
 
-	ret = gpio_request(TEGRA_GPIO_PCC3, "pmic_nreswarm");
-	if (ret < 0)
-		pr_err("%s: gpio_request failed for gpio %d\n",
-				__func__, TEGRA_GPIO_PCC3);
-	else
-		gpio_direction_output(TEGRA_GPIO_PCC3, 1);
-#endif
 	/* TPS65913: Normal state of INT request line is LOW.
 	 * configure the power management controller to trigger PMU
 	 * interrupts when HIGH.
@@ -996,7 +982,7 @@ static struct platform_device dalmore_pda_power_device = {
 };
 
 static struct tegra_suspend_platform_data dalmore_suspend_data = {
-	.cpu_timer	= 300,
+	.cpu_timer	= 100,
 	.cpu_off_timer	= 300,
 	.suspend_mode	= TEGRA_SUSPEND_LP0,
 	.core_timer	= 0x157e,

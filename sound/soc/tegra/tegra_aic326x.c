@@ -243,19 +243,33 @@ static int tegra_aic326x_set_dam_cif(int dam_ifc, int srate,
 				srate);
 	tegra30_dam_set_samplerate(dam_ifc, TEGRA30_DAM_CHIN1,
 				srate);
+#ifndef CONFIG_ARCH_TEGRA_3x_SOC
+	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN1,
+		channels, bit_size, channels,
+				32);
+	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHOUT,
+		channels, bit_size, channels,
+				32);
+#else
 	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN1,
 		channels, bit_size, channels,
 				bit_size);
 	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHOUT,
 		channels, bit_size, channels,
 				bit_size);
+#endif
 
 	if (src_on) {
 		tegra30_dam_set_gain(dam_ifc, TEGRA30_DAM_CHIN0_SRC, 0x1000);
 		tegra30_dam_set_samplerate(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
 			src_srate);
+#ifndef CONFIG_ARCH_TEGRA_3x_SOC
+		tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
+			src_channels, src_bit_size, 1, 32);
+#else
 		tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
 			src_channels, src_bit_size, 1, 16);
+#endif
 	}
 
 	return 0;
@@ -1253,11 +1267,11 @@ static __devinit int tegra_aic326x_driver_probe(struct platform_device *pdev)
 			pdata->i2s_param[i].rate;
 		machine->codec_info[i].channels =
 			pdata->i2s_param[i].channels;
-		if ((pdata->i2s_param[i].i2s_mode == TEGRA_DAIFMT_DSP_A) ||
-			(pdata->i2s_param[i].i2s_mode == TEGRA_DAIFMT_DSP_B))
-			machine->codec_info[i].is_format_dsp = 1;
-		else
-			machine->codec_info[i].is_format_dsp = 0;
+		machine->codec_info[i].i2s_mode =
+			pdata->i2s_param[i].i2s_mode;
+		machine->codec_info[i].bit_clk =
+			pdata->i2s_param[i].bit_clk;
+
 	}
 
 	tegra_aic326x_dai[DAI_LINK_HIFI].cpu_dai_name =

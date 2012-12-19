@@ -559,7 +559,7 @@ MACHINE_START(WHISTLER, "whistler")
 	.soc		= &tegra_soc_desc,
 	.map_io         = tegra_map_common_io,
 	.init_early	= tegra20_init_early,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.reserve        = tegra_whistler_reserve,
 	.timer          = &tegra_timer,

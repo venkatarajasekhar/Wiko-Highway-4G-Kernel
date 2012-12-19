@@ -236,18 +236,16 @@ static struct thermal_cooling_device_ops throttle_cooling_ops = {
 	.set_cur_state = throttle_set_cur_state,
 };
 
-static struct thermal_cooling_device *throttle_create(void *data)
+static int __init ventana_throttle_init(void)
 {
-	return thermal_cooling_device_register("throttle",
+	if (machine_is_ventana())
+		thermal_cooling_device_register("ventana-nct",
 						NULL,
 						&throttle_cooling_ops);
+	return 0;
 }
-#else
-static struct thermal_cooling_device *throttle_create(void *data)
-{
-	return NULL;
-}
-#endif
+module_init(ventana_throttle_init);
+#endif /* CONFIG_THERMAL */
 
 static struct nct1008_platform_data ventana_nct1008_pdata = {
 	.supported_hwrev = true,
@@ -257,14 +255,18 @@ static struct nct1008_platform_data ventana_nct1008_pdata = {
 	.shutdown_local_limit = 125,
 	.shutdown_ext_limit = 115,
 
-	/* Thermal Throttling */
-	.passive = {
-		.create_cdev = throttle_create,
-		.cdev_data = NULL,
-		.trip_temp = 90000,
-		.tc1 = 0,
-		.tc2 = 1,
-		.passive_delay = 2000,
+	.passive_delay = 2000,
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "ventana-nct",
+			.trip_temp = 90000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
 	},
 };
 

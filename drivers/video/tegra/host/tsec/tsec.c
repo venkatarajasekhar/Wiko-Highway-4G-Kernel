@@ -21,6 +21,7 @@
 #include <linux/slab.h>         /* for kzalloc */
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <linux/pm_runtime.h>
 #include <mach/clk.h>
 #include <asm/byteorder.h>      /* for parsing ucode image wrt endianness */
 #include <linux/delay.h>	/* for udelay */
@@ -207,6 +208,34 @@ static int tsec_wait_idle(struct platform_device *dev, u32 *timeout)
 	return -1;
 }
 
+static int tsec_load_kfuse(struct platform_device *pdev)
+{
+	u32 val;
+	u32 timeout;
+
+	val = nvhost_device_readl(pdev, tsec_tegra_ctl_r());
+	val &= ~tsec_tegra_ctl_tkfi_kfuse_m();
+	nvhost_device_writel(pdev, tsec_tegra_ctl_r(), val);
+
+	val = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+	val |= tsec_scp_ctl_pkey_request_reload_s();
+	nvhost_device_writel(pdev, tsec_scp_ctl_pkey_r(), val);
+
+	timeout = TSEC_IDLE_TIMEOUT_DEFAULT;
+
+	do {
+		u32 check = min_t(u32, TSEC_IDLE_CHECK_PERIOD, timeout);
+		u32 w = nvhost_device_readl(pdev, tsec_scp_ctl_pkey_r());
+
+		if (w & tsec_scp_ctl_pkey_loaded_m())
+			return 0;
+		udelay(TSEC_IDLE_CHECK_PERIOD);
+		timeout -= check;
+	} while (timeout);
+
+	return -1;
+}
+
 int tsec_boot(struct platform_device *dev)
 {
 	u32 timeout;
@@ -255,7 +284,7 @@ int tsec_boot(struct platform_device *dev)
 			(tsec_itfen_mthden_enable_f() |
 				tsec_itfen_ctxen_enable_f()));
 
-	return 0;
+	return tsec_load_kfuse(dev);
 }
 
 static int tsec_setup_ucode_image(struct platform_device *dev,
@@ -356,7 +385,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	/* allocate pages for ucode */
-	m->mem_r = mem_op().alloc(nvhost_get_host(dev)->memmgr,
+	m->mem_r = nvhost_memmgr_alloc(nvhost_get_host(dev)->memmgr,
 			     roundup(ucode_fw->size+256, PAGE_SIZE),
 			     PAGE_SIZE, mem_mgr_flag_uncacheable);
 	if (IS_ERR_OR_NULL(m->mem_r)) {
@@ -365,7 +394,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->pa = mem_op().pin(nvhost_get_host(dev)->memmgr, m->mem_r);
+	m->pa = nvhost_memmgr_pin(nvhost_get_host(dev)->memmgr, m->mem_r);
 	if (IS_ERR_OR_NULL(m->pa)) {
 		dev_err(&dev->dev, "nvmap pin failed for ucode");
 		err = PTR_ERR(m->pa);
@@ -373,7 +402,7 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		goto clean_up;
 	}
 
-	m->mapped = mem_op().mmap(m->mem_r);
+	m->mapped = nvhost_memmgr_mmap(m->mem_r);
 	if (IS_ERR_OR_NULL(m->mapped)) {
 		dev_err(&dev->dev, "nvmap mmap failed");
 		err = -ENOMEM;
@@ -394,11 +423,12 @@ int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 clean_up:
 	if (m->mapped)
-		mem_op().munmap(m->mem_r, m->mapped);
+		nvhost_memmgr_munmap(m->mem_r, m->mapped);
 	if (m->pa)
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
+				m->mem_r, m->pa);
 	if (m->mem_r)
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 	release_firmware(ucode_fw);
 	return err;
 }
@@ -441,7 +471,7 @@ void nvhost_tsec_init(struct platform_device *dev)
 
  clean_up:
 	dev_err(&dev->dev, "failed");
-	mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
+	nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
 }
 
 void nvhost_tsec_deinit(struct platform_device *dev)
@@ -452,9 +482,10 @@ void nvhost_tsec_deinit(struct platform_device *dev)
 
 	/* unpin, free ucode memory */
 	if (m->mem_r) {
-		mem_op().munmap(m->mem_r, m->mapped);
-		mem_op().unpin(nvhost_get_host(dev)->memmgr, m->mem_r, m->pa);
-		mem_op().put(nvhost_get_host(dev)->memmgr, m->mem_r);
+		nvhost_memmgr_munmap(m->mem_r, m->mapped);
+		nvhost_memmgr_unpin(nvhost_get_host(dev)->memmgr,
+				m->mem_r, m->pa);
+		nvhost_memmgr_put(nvhost_get_host(dev)->memmgr, m->mem_r);
 		m->mem_r = 0;
 	}
 }
@@ -494,6 +525,11 @@ static int __devinit tsec_probe(struct platform_device *dev)
 	udelay(10);
 	tegra_periph_reset_deassert(pdata->clk[0]);
 	clk_disable(pdata->clk[0]);
+
+	pm_runtime_use_autosuspend(&dev->dev);
+	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
+	pm_runtime_enable(&dev->dev);
+
 	nvhost_module_idle(to_platform_device(dev->dev.parent));
 	return err;
 }
@@ -509,28 +545,37 @@ static int __exit tsec_remove(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static int tsec_suspend(struct platform_device *dev, pm_message_t state)
+static int tsec_suspend(struct device *dev)
 {
-	return nvhost_client_device_suspend(dev);
+	return nvhost_client_device_suspend(to_platform_device(dev));
 }
 
-static int tsec_resume(struct platform_device *dev)
+static int tsec_resume(struct device *dev)
 {
-	dev_info(&dev->dev, "resuming\n");
+	dev_info(dev, "resuming\n");
 	return 0;
 }
+
+static const struct dev_pm_ops tsec_pm_ops = {
+	.suspend = tsec_suspend,
+	.resume = tsec_resume,
+};
+
+#define TSEC_PM_OPS	(&tsec_pm_ops)
+
+#else
+
+#define TSEC_PM_OPS	NULL
+
 #endif
 
 static struct platform_driver tsec_driver = {
 	.probe = tsec_probe,
 	.remove = __exit_p(tsec_remove),
-#ifdef CONFIG_PM
-	.suspend = tsec_suspend,
-	.resume = tsec_resume,
-#endif
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tsec",
+		.pm = TSEC_PM_OPS,
 	}
 };
 

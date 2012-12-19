@@ -1760,8 +1760,10 @@ static void udc_test_mode(struct tegra_udc *udc, u32 test_mode)
 	return;
 stall:
 	ep0stall(udc);
-	kfree(req->req.buf);
-	tegra_free_request(NULL, &req->req);
+	if (req) {
+		kfree(req->req.buf);
+		tegra_free_request(NULL, &req->req);
+	}
 }
 
 static void setup_received_irq(struct tegra_udc *udc,
@@ -2424,13 +2426,8 @@ static int tegra_udc_start(struct usb_gadget_driver *driver,
 	}
 
 	/* Enable DR IRQ reg and Set usbcmd reg  Run bit */
-	if (vbus_enabled(udc)) {
-		dr_controller_run(udc);
-		udc->usb_state = USB_STATE_ATTACHED;
-		udc->ep0_state = WAIT_FOR_SETUP;
-		udc->ep0_dir = 0;
-		udc->vbus_active = 1;
-	}
+	if (vbus_enabled(udc))
+		tegra_vbus_session(&udc->gadget, 1);
 
 	printk(KERN_INFO "%s: bind to driver %s\n",
 			udc->gadget.name, driver->driver.name);
@@ -2458,13 +2455,7 @@ static int tegra_udc_stop(struct usb_gadget_driver *driver)
 	if (!driver || driver != udc->driver || !driver->unbind)
 		return -EINVAL;
 
-	/* stop DR, disable intr */
-	dr_controller_stop(udc);
-
-	/* in fact, no needed */
-	udc->usb_state = USB_STATE_ATTACHED;
-	udc->ep0_state = WAIT_FOR_SETUP;
-	udc->ep0_dir = 0;
+	tegra_vbus_session(&udc->gadget, 0);
 
 	/* stand operation */
 	spin_lock_irqsave(&udc->lock, flags);

@@ -142,6 +142,9 @@ struct suspend_context tegra_sctx;
 #define PMC_DPAD_ORIDE		0x1C
 #define PMC_WAKE_DELAY		0xe0
 #define PMC_DPD_SAMPLE		0x20
+#define PMC_IO_DPD_REQ          0x1B8
+#define PMC_IO_DPD2_REQ         0x1C0
+
 
 #define PMC_WAKE_STATUS		0x14
 #define PMC_SW_WAKE_STATUS	0x18
@@ -599,7 +602,7 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 {
 	u32 reg;
 	unsigned int remain;
-#ifndef CONFIG_ARCH_TEGRA_11x_SOC
+#ifdef CONFIG_CACHE_L2X0
 	pgd_t *pgd;
 #endif
 
@@ -673,7 +676,7 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	cpu_cluster_pm_enter();
 	suspend_cpu_complex(flags);
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_prolog);
-#ifndef CONFIG_ARCH_TEGRA_11x_SOC
+#ifdef CONFIG_CACHE_L2X0
 	flush_cache_all();
 	/*
 	 * No need to flush complete L2. Cleaning kernel and IO mappings
@@ -690,8 +693,10 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	tegra_init_cache(false);
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	trace_smc_wake(tegra_resume_smc_entry_time, NVSEC_SMC_START);
 	trace_smc_wake(tegra_resume_smc_exit_time, NVSEC_SMC_DONE);
+#endif
 #endif
 
 	tegra_cluster_switch_time(flags, tegra_cluster_switch_time_id_switch);
@@ -818,6 +823,11 @@ static void tegra_pm_set(enum tegra_suspend_mode mode)
 		/* Enable DPD sample to trigger sampling pads data and direction
 		 * in which pad will be driven during lp0 mode*/
 		writel(0x1, pmc + PMC_DPD_SAMPLE);
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC) && !defined(CONFIG_ARCH_TEGRA_2x_SOC)
+		writel(0x800fdfff, pmc + PMC_IO_DPD_REQ);
+		writel(0x80001fff, pmc + PMC_IO_DPD2_REQ);
+#endif
+
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		/* this is needed only for T11x, not for other chips */
 		reg &= ~TEGRA_POWER_CPUPWRGOOD_EN;
@@ -1004,8 +1014,10 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 	tegra_init_cache(true);
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	trace_smc_wake(tegra_resume_smc_entry_time, NVSEC_SMC_START);
 	trace_smc_wake(tegra_resume_smc_exit_time, NVSEC_SMC_DONE);
+#endif
 
 	if (mode == TEGRA_SUSPEND_LP0) {
 		trace_secureos_init(tegra_resume_entry_time,
@@ -1015,15 +1027,11 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 
 	if (mode == TEGRA_SUSPEND_LP0) {
 
-		/* CPUPWRGOOD_EN is not enabled in HW so disabling this, *
-		* Otherwise it is creating issue in cluster switch after LP0 *
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 		reg = readl(pmc+PMC_CTRL);
 		reg |= TEGRA_POWER_CPUPWRGOOD_EN;
 		pmc_32kwritel(reg, PMC_CTRL);
 #endif
-		*/
-
 		tegra_tsc_resume();
 		tegra_cpu_reset_handler_restore();
 		tegra_lp0_resume_mc();

@@ -399,9 +399,6 @@ static struct platform_device *curacao_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
-	&tegra_smmu_device,
-#endif
 	&curacao_keys_device,
 #if defined(CONFIG_SND_HDA_TEGRA)
 	&tegra_hda_device,
@@ -585,6 +582,7 @@ static void __init tegra_curacao_init(void)
 	tegra_clk_init_from_table(curacao_clk_init_table);
 	tegra_enable_pinmux();
 	curacao_pinmux_init();
+	tegra_smmu_init();
 	tegra_soc_device_init("curacao");
 
 	if (tegra_revision == TEGRA_REVISION_QT)
@@ -637,7 +635,7 @@ MACHINE_START(CURACAO, CURACAO_BOARD_NAME)
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_curacao_reserve,
 	.init_early	= tegra11x_init_early,
-	.init_irq       = tegra_init_irq,
+	.init_irq       = tegra_dt_init_irq,
 	.handle_irq	= gic_handle_irq,
 	.timer          = &tegra_timer,
 	.init_machine   = tegra_curacao_dt_init,

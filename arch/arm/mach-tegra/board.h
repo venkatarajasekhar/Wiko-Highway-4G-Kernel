@@ -92,7 +92,6 @@ void __init tegra30_init_early(void);
 void __init tegra11x_init_early(void);
 void __init tegra14x_init_early(void);
 void __init tegra_map_common_io(void);
-void __init tegra_init_irq(void);
 void __init tegra_dt_init_irq(void);
 void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	unsigned long fb2_size);
@@ -103,8 +102,14 @@ int  __init tegra_init_board_info(void);
 void __init tegra_reserve_shmem(unsigned long priv_size,
 				unsigned long ipc_size);
 #endif
-void tegra_move_framebuffer(unsigned long to, unsigned long from,
-	unsigned long size);
+void __tegra_move_framebuffer(struct platform_device *pdev,
+			      unsigned long to, unsigned long from,
+			      unsigned long size);
+static inline void tegra_move_framebuffer(unsigned long to, unsigned long from,
+					  unsigned long size)
+{
+	__tegra_move_framebuffer(NULL, to, from, size);
+}
 bool is_tegra_debug_uartport_hs(void);
 int get_tegra_uart_debug_port_id(void);
 int arb_lost_recovery(int scl_gpio, int sda_gpio);

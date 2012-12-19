@@ -32,6 +32,7 @@
 #include <linux/fs.h>
 #include <linux/shrinker.h>
 #include <linux/moduleparam.h>
+#include <linux/module.h>
 #include <linux/nvmap.h>
 
 #include <asm/cacheflush.h>
@@ -266,28 +267,31 @@ static void shrink_page_pools(int *total_pages, int *available_pages)
 {
 	struct shrink_control sc;
 
-	sc.gfp_mask = GFP_KERNEL;
-	sc.nr_to_scan = 0;
-	*total_pages = nvmap_page_pool_shrink(NULL, &sc);
-	sc.nr_to_scan = *total_pages * 2;
+	if (*total_pages == 0) {
+		sc.gfp_mask = GFP_KERNEL;
+		sc.nr_to_scan = 0;
+		*total_pages = nvmap_page_pool_shrink(NULL, &sc);
+	}
+	sc.nr_to_scan = *total_pages;
 	*available_pages = nvmap_page_pool_shrink(NULL, &sc);
 }
 
 #if NVMAP_TEST_PAGE_POOL_SHRINKER
-static bool shrink_pp;
+static int shrink_pp;
 static int shrink_set(const char *arg, const struct kernel_param *kp)
 {
 	int cpu = smp_processor_id();
 	unsigned long long t1, t2;
 	int total_pages, available_pages;
 
-	param_set_bool(arg, kp);
+	param_set_int(arg, kp);
 
 	if (shrink_pp) {
+		total_pages = shrink_pp;
 		t1 = cpu_clock(cpu);
 		shrink_page_pools(&total_pages, &available_pages);
 		t2 = cpu_clock(cpu);
-		pr_info("shrink page pools: time=%lldns, "
+		pr_debug("shrink page pools: time=%lldns, "
 			"total_pages_released=%d, free_pages_available=%d",
 			t2-t1, total_pages, available_pages);
 	}
@@ -296,7 +300,7 @@ static int shrink_set(const char *arg, const struct kernel_param *kp)
 
 static int shrink_get(char *buff, const struct kernel_param *kp)
 {
-	return param_get_bool(buff, kp);
+	return param_get_int(buff, kp);
 }
 
 static struct kernel_param_ops shrink_ops = {
@@ -314,6 +318,7 @@ static int enable_pp_set(const char *arg, const struct kernel_param *kp)
 	param_set_bool(arg, kp);
 
 	if (!enable_pp) {
+		total_pages = 0;
 		shrink_page_pools(&total_pages, &available_pages);
 		pr_info("disabled page pools and released pages, "
 			"total_pages_released=%d, free_pages_available=%d",
@@ -580,7 +585,8 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct nvmap_share *share = nvmap_get_share_from_dev(h->dev);
 #endif
 	gfp_t gfp = GFP_NVMAP;
-	unsigned long kaddr, paddr;
+	unsigned long kaddr;
+	phys_addr_t paddr;
 	pte_t **pte = NULL;
 
 	if (h->userflags & NVMAP_HANDLE_ZEROED_PAGES) {
@@ -945,6 +951,8 @@ out:
 	BUG_ON(!atomic_read(&h->ref));
 	nvmap_handle_put(h);
 }
+EXPORT_SYMBOL(nvmap_free_handle_id);
+
 
 static void add_handle_ref(struct nvmap_client *client,
 			   struct nvmap_handle_ref *ref)
@@ -1105,3 +1113,116 @@ struct nvmap_handle_ref *nvmap_duplicate_handle_id(struct nvmap_client *client,
 	trace_nvmap_duplicate_handle_id(client, id, ref);
 	return ref;
 }
+
+unsigned long nvmap_duplicate_handle_id_ex(struct nvmap_client *client,
+						unsigned long id)
+{
+	struct nvmap_handle_ref *ref = nvmap_duplicate_handle_id(client, id);
+
+	if (IS_ERR(ref))
+		return 0;
+
+	return nvmap_ref_to_id(ref);
+}
+EXPORT_SYMBOL(nvmap_duplicate_handle_id_ex);
+
+int nvmap_get_page_list_info(struct nvmap_client *client,
+				unsigned long id, u32 *size, u32 *flags,
+				u32 *nr_page, bool *contig)
+{
+	struct nvmap_handle *h;
+
+	BUG_ON(!size || !flags || !nr_page || !contig);
+	BUG_ON(!client || client->dev != nvmap_dev);
+
+	*size = 0;
+	*flags = 0;
+	*nr_page = 0;
+
+	h = nvmap_validate_get(client, id);
+
+	if (!h) {
+		nvmap_err(client, "%s query invalid handle %p\n",
+			  current->group_leader->comm, (void *)id);
+		return -EINVAL;
+	}
+
+	if (!h->alloc || !h->heap_pgalloc) {
+		nvmap_err(client, "%s query unallocated handle %p\n",
+			  current->group_leader->comm, (void *)id);
+		nvmap_handle_put(h);
+		return -EINVAL;
+	}
+
+	*flags = h->flags;
+	*size = h->orig_size;
+	*nr_page = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+	*contig = h->pgalloc.contig;
+
+	nvmap_handle_put(h);
+	return 0;
+}
+EXPORT_SYMBOL(nvmap_get_page_list_info);
+
+int nvmap_acquire_page_list(struct nvmap_client *client,
+			unsigned long id, struct page **pages, u32 nr_page)
+{
+	struct nvmap_handle *h;
+	struct nvmap_handle_ref *ref;
+	int idx;
+
+	BUG_ON(!client || client->dev != nvmap_dev);
+
+	h = nvmap_validate_get(client, id);
+
+	if (!h) {
+		nvmap_err(client, "%s query invalid handle %p\n",
+			  current->group_leader->comm, (void *)id);
+		return -EINVAL;
+	}
+
+	if (!h->alloc || !h->heap_pgalloc) {
+		nvmap_err(client, "%s query unallocated handle %p\n",
+			  current->group_leader->comm, (void *)id);
+		nvmap_handle_put(h);
+		return -EINVAL;
+	}
+
+	BUG_ON(nr_page != PAGE_ALIGN(h->size) >> PAGE_SHIFT);
+
+	for (idx = 0; idx < nr_page; idx++)
+		pages[idx] = h->pgalloc.pages[idx];
+
+	nvmap_ref_lock(client);
+	ref = _nvmap_validate_id_locked(client, id);
+	if (ref)
+		nvmap_pin(client, ref);
+	nvmap_ref_unlock(client);
+
+	return 0;
+}
+EXPORT_SYMBOL(nvmap_acquire_page_list);
+
+int nvmap_release_page_list(struct nvmap_client *client, unsigned long id)
+{
+	struct nvmap_handle_ref *ref;
+	struct nvmap_handle *h = NULL;
+
+	BUG_ON(!client || client->dev != nvmap_dev);
+
+	nvmap_ref_lock(client);
+
+	ref = _nvmap_validate_id_locked(client, id);
+	if (ref)
+		nvmap_unpin(client, ref);
+
+	nvmap_ref_unlock(client);
+
+	if (ref)
+		h = ref->handle;
+	if (h)
+		nvmap_handle_put(h);
+
+	return 0;
+}
+EXPORT_SYMBOL(nvmap_release_page_list);

@@ -135,7 +135,7 @@ DT_MACHINE_START(CERES, "Ceres")
 #else
 	.init_early		= tegra14x_init_early,
 #endif
-	.init_irq		= tegra_init_irq,
+	.init_irq		= tegra_dt_init_irq,
 	.handle_irq		= gic_handle_irq,
 	.timer			= &tegra_timer,
 	.init_machine	= tegra_ceres_dt_init,

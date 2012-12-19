@@ -28,7 +28,11 @@
 #include <linux/irq.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <linux/syscore_ops.h>
+#include <linux/pm.h>
+#include <linux/pm_runtime.h>
+
 #include <mach/dma.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
@@ -147,6 +151,10 @@ static const unsigned int bus_width_table[5] = {
 
 static void __iomem *general_dma_addr = IO_ADDRESS(TEGRA_APB_DMA_BASE);
 typedef void (*dma_isr_handler)(struct tegra_dma_channel *ch);
+
+static struct platform_device tegra_dma_device = {
+	.name = "tegra_dma",
+};
 
 #define TEGRA_DMA_NAME_SIZE 16
 struct tegra_dma_channel {
@@ -436,6 +444,7 @@ int tegra_dma_dequeue_req(struct tegra_dma_channel *ch,
 	list_for_each_entry(req, &ch->list, node) {
 		if (req == _req) {
 			list_del(&req->node);
+			pm_runtime_put(&tegra_dma_device.dev);
 			found = 1;
 			break;
 		}
@@ -539,6 +548,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 		hreq = list_entry(new_list.next, typeof(*hreq), node);
 		hreq->status = -TEGRA_DMA_REQ_ERROR_ABORTED;
 		list_del(&hreq->node);
+		pm_runtime_put(&tegra_dma_device.dev);
 	}
 
 	return 0;
@@ -648,6 +658,7 @@ int tegra_dma_enqueue_req(struct tegra_dma_channel *ch,
 	if (list_empty(&ch->list))
 		start_dma = 1;
 
+	pm_runtime_get_sync(&tegra_dma_device.dev);
 	list_add_tail(&req->node, &ch->list);
 
 	if (start_dma) {
@@ -1049,6 +1060,7 @@ static void handle_oneshot_dma(struct tegra_dma_channel *ch)
 	ch->cb_req = req;
 
 	start_head_req(ch);
+	pm_runtime_put(&tegra_dma_device.dev);
 	return;
 }
 
@@ -1081,6 +1093,7 @@ static void handle_continuous_dbl_dma(struct tegra_dma_channel *ch)
 
 			tegra_dma_abort_req(ch, req,
 				"Dma becomes out of sync for ping-pong buffer");
+			pm_runtime_put(&tegra_dma_device.dev);
 			return;
 		}
 
@@ -1110,6 +1123,7 @@ static void handle_continuous_dbl_dma(struct tegra_dma_channel *ch)
 		ch->cb_req = req;
 
 		handle_continuous_head_request(ch, req);
+		pm_runtime_put(&tegra_dma_device.dev);
 		return;
 	}
 	tegra_dma_abort_req(ch, req, "Dma status is not on sync\n");
@@ -1141,6 +1155,7 @@ static void handle_continuous_sngl_dma(struct tegra_dma_channel *ch)
 	ch->cb_req = req;
 
 	handle_continuous_head_request(ch, req);
+	pm_runtime_put(&tegra_dma_device.dev);
 	return;
 }
 
@@ -1200,6 +1215,51 @@ static irqreturn_t dma_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 #endif
+
+#ifdef CONFIG_PM_RUNTIME
+static int tegra_dma_rt_suspend(struct device *dev)
+{
+	tegra_clk_disable_unprepare(dma_clk);
+	return 0;
+}
+
+static int tegra_dma_rt_resume(struct device *dev)
+{
+	tegra_clk_prepare_enable(dma_clk);
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_dma_rt_ops = {
+	SET_RUNTIME_PM_OPS(
+			tegra_dma_rt_suspend,
+			tegra_dma_rt_resume,
+			NULL
+			)
+};
+
+#define TEGRA_DMA_PM_OPS	(&tegra_dma_rt_ops)
+
+#else
+#define TEGRA_DMA_PM_OPS	NULL
+#endif /* CONFIG_PM_RUNTIME */
+
+static int __init tegra_dma_probe(struct platform_device *pdev)
+{
+	struct device *dev = &tegra_dma_device.dev;
+
+	pm_runtime_enable(dev);
+
+	return 0;
+}
+
+
+static struct platform_driver tegra_dma_driver = {
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "tegra_dma",
+		.pm = TEGRA_DMA_PM_OPS,
+	},
+};
 
 int __init tegra_dma_init(void)
 {
@@ -1274,6 +1334,18 @@ int __init tegra_dma_init(void)
 
 	tegra_dma_initialized = true;
 
+	ret = platform_device_register(&tegra_dma_device);
+	if (ret) {
+		pr_err("tegra_dma : platform device register failed\n");
+		goto fail;
+	}
+
+	ret = platform_driver_probe(&tegra_dma_driver, tegra_dma_probe);
+	if (ret) {
+		pr_err("tegra_dma : platform driver register failed\n");
+		goto fail;
+	}
+
 	return 0;
 fail:
 	writel(0, general_dma_addr + APB_DMA_GEN);
@@ -1296,6 +1368,7 @@ static int tegra_dma_suspend(void)
 	u32 *ctx = apb_dma;
 	int i;
 
+	pm_runtime_get_sync(&tegra_dma_device.dev);
 	*ctx++ = readl(general_dma_addr + APB_DMA_GEN);
 	*ctx++ = readl(general_dma_addr + APB_DMA_CNTRL);
 	*ctx++ = readl(general_dma_addr + APB_DMA_IRQ_MASK);
@@ -1310,9 +1383,7 @@ static int tegra_dma_suspend(void)
 		*ctx++ = readl(addr + APB_DMA_CHAN_APB_PTR);
 		*ctx++ = readl(addr + APB_DMA_CHAN_APB_SEQ);
 	}
-
-	/* Disabling clock of dma. */
-	tegra_clk_disable_unprepare(dma_clk);
+	pm_runtime_put_sync(&tegra_dma_device.dev);
 	return 0;
 }
 
@@ -1321,8 +1392,7 @@ static void tegra_dma_resume(void)
 	u32 *ctx = apb_dma;
 	int i;
 
-	/* Enabling clock of dma. */
-	tegra_clk_prepare_enable(dma_clk);
+	pm_runtime_get_sync(&tegra_dma_device.dev);
 
 	writel(*ctx++, general_dma_addr + APB_DMA_GEN);
 	writel(*ctx++, general_dma_addr + APB_DMA_CNTRL);
@@ -1338,6 +1408,8 @@ static void tegra_dma_resume(void)
 		writel(*ctx++, addr + APB_DMA_CHAN_APB_PTR);
 		writel(*ctx++, addr + APB_DMA_CHAN_APB_SEQ);
 	}
+
+	pm_runtime_put_sync(&tegra_dma_device.dev);
 }
 
 static struct syscore_ops tegra_dma_syscore_ops = {

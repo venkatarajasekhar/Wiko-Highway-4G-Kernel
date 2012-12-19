@@ -32,9 +32,11 @@
 #include <linux/io.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/of_iommu.h>
 
 #include <asm/page.h>
 #include <asm/cacheflush.h>
+#include <asm/dma-iommu.h>
 
 #include <mach/iomap.h>
 #include <mach/hardware.h>
@@ -406,6 +408,11 @@ static int __smmu_client_set_hwgrp(struct smmu_client *c,
 		map = smmu_client_hwgrp(c);
 
 	for_each_set_bit(i, &map, HWGRP_COUNT) {
+
+		/* FIXME: PCIe client hasn't been registered as IOMMU */
+		if (i == HWGRP_AFI)
+			continue;
+
 		offs = HWGRP_ASID_REG(i);
 		val = smmu_read(smmu, offs);
 		if (on) {
@@ -714,10 +721,8 @@ static int __smmu_iommu_unmap(struct smmu_as *as, dma_addr_t iova)
 	*pte = _PTE_VACANT(iova);
 	FLUSH_CPU_DCACHE(pte, page, sizeof(*pte));
 	flush_ptc_and_tlb(as->smmu, as, iova, pte, page, 0);
-	if (!--(*count)) {
+	if (!--(*count))
 		free_ptbl(as, iova);
-		smmu_flush_regs(as->smmu, 0);
-	}
 
 	return 0;
 }
@@ -752,9 +757,6 @@ static int smmu_iommu_map(struct iommu_domain *domain, unsigned long iova,
 	unsigned long flags;
 
 	dev_dbg(as->smmu->dev, "[%d] %08lx:%08x\n", as->asid, iova, pa);
-
-	if (!pfn_valid(pfn))
-		return -ENOMEM;
 
 	spin_lock_irqsave(&as->lock, flags);
 	__smmu_iommu_map_pfn(as, iova, pfn);
@@ -1297,6 +1299,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 
 	smmu_debugfs_create(smmu);
 	smmu_handle = smmu;
+	bus_set_iommu(&platform_bus_type, &smmu_iommu_ops);
 	return 0;
 
 fail:
@@ -1359,14 +1362,70 @@ static struct platform_driver tegra_smmu_driver = {
 	},
 };
 
+static int tegra_smmu_device_notifier(struct notifier_block *nb,
+				      unsigned long event, void *_dev)
+{
+	struct dma_iommu_mapping *map = tegra_smmu_get_map();
+	struct device *dev = _dev;
+	dma_addr_t base;
+	size_t size;
+	int err;
+
+	switch (event) {
+	case BUS_NOTIFY_ADD_DEVICE:
+		err = of_get_dma_window(dev->of_node, NULL, 0, NULL, &base,
+					&size);
+		if (!err)
+			map = arm_iommu_create_mapping(&platform_bus_type,
+						       base, size, 0);
+		if (IS_ERR_OR_NULL(map))
+			break;
+		if (arm_iommu_attach_device(dev, map)) {
+			arm_iommu_release_mapping(map);
+			dev_err(dev, "Failed to attach %s\n", dev_name(dev));
+			break;
+		}
+		dev_dbg(dev, "Attached %s to map %p\n", dev_name(dev), map);
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block tegra_smmu_device_nb = {
+	.notifier_call = tegra_smmu_device_notifier,
+};
+
 static int __devinit tegra_smmu_init(void)
 {
-	bus_set_iommu(&platform_bus_type, &smmu_iommu_ops);
-	return platform_driver_register(&tegra_smmu_driver);
+	int err;
+
+	err = platform_driver_register(&tegra_smmu_driver);
+	if (err)
+		return err;
+	if (IS_ENABLED(CONFIG_ARM_DMA_USE_IOMMU))
+		bus_register_notifier(&platform_bus_type,
+				      &tegra_smmu_device_nb);
+	return 0;
+}
+
+static int tegra_smmu_remove_map(struct device *dev, void *data)
+{
+	struct dma_iommu_mapping *map = to_dma_iommu_mapping(dev);
+	if (map)
+		arm_iommu_release_mapping(map);
+	return 0;
 }
 
 static void __exit tegra_smmu_exit(void)
 {
+	if (IS_ENABLED(CONFIG_ARM_DMA_USE_IOMMU)) {
+		bus_for_each_dev(&platform_bus_type, NULL, NULL,
+				 tegra_smmu_remove_map);
+		bus_unregister_notifier(&platform_bus_type,
+					&tegra_smmu_device_nb);
+	}
 	platform_driver_unregister(&tegra_smmu_driver);
 }
 
