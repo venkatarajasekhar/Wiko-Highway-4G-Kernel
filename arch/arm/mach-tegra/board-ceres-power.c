@@ -614,6 +614,18 @@ int __init ceres_suspend_init(void)
 	return 0;
 }
 
+/* enable this after verifying ceres uses max77660 regulator
+static struct tegra_tsensor_pmu_data tpdata_max77663 = {
+	.reset_tegra = 1,
+	.pmu_16bit_ops = 0,
+	.controller_type = 0,
+	.pmu_i2c_addr = 0x3c,
+	.i2c_controller_id = 4,
+	.poweroff_reg_addr = 0x41,
+	.poweroff_reg_data = 0x80,
+};
+*/
+
 static struct soctherm_platform_data ceres_soctherm_data = {
 	.therm = {
 		[THERM_CPU] = {
@@ -660,6 +672,8 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 			},
 		},
 	},
+	/* enable this after verifying ceres uses max77660 regulator
+	.tshut_pmu_trip_data = &tpdata_max77663, */
 };
 
 int __init ceres_soctherm_init(void)
