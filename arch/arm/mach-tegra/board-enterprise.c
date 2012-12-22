@@ -619,11 +619,11 @@ static struct tegra_asoc_platform_data enterprise_audio_pdata = {
 	.i2s_param[BASEBAND]	= {
 		.audio_port_id	= 2,
 		.is_i2s_master	= 1,
-		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
-		.rate		= 8000,
-		.channels	= 1,
-		.bit_clk    = 2048000,
+		.rate		= 16000,
+		.channels	= 2,
+		.bit_clk        = 768000,
 	},
 	.i2s_param[BT_SCO]	= {
 		.audio_port_id	= 3,
@@ -707,14 +707,14 @@ static struct platform_device *enterprise_devices[] __initdata = {
 #endif
 };
 
-#define MXT_CFG_NAME            "Android_Enterprise_2012-01-31.cfg"
+#define MXT_CFG_NAME            "Android_Enterprise_2012-12-18.cfg"
 static u8 read_chg(void)
 {
 	return gpio_get_value(TEGRA_GPIO_PH6);
 }
 
 static struct mxt_platform_data atmel_mxt_info = {
-	.irqflags       = IRQF_TRIGGER_FALLING,
+	.irqflags       = IRQF_ONESHOT | IRQF_TRIGGER_LOW,
 	.read_chg       = &read_chg,
 	.mxt_cfg_name	= MXT_CFG_NAME,
 };
@@ -882,23 +882,23 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
 };
 
-struct platform_device *tegra_usb_hsic_host_register(void)
+static struct platform_device *
+tegra_usb_hsic_host_register(struct platform_device *ehci_dev)
 {
 	struct platform_device *pdev;
 	int val;
 
-	pdev = platform_device_alloc(tegra_ehci2_device.name,
-		tegra_ehci2_device.id);
+	pdev = platform_device_alloc(ehci_dev->name, ehci_dev->id);
 	if (!pdev)
 		return NULL;
 
-	val = platform_device_add_resources(pdev, tegra_ehci2_device.resource,
-		tegra_ehci2_device.num_resources);
+	val = platform_device_add_resources(pdev, ehci_dev->resource,
+						ehci_dev->num_resources);
 	if (val)
 		goto error;
 
-	pdev->dev.dma_mask =  tegra_ehci2_device.dev.dma_mask;
-	pdev->dev.coherent_dma_mask = tegra_ehci2_device.dev.coherent_dma_mask;
+	pdev->dev.dma_mask =  ehci_dev->dev.dma_mask;
+	pdev->dev.coherent_dma_mask = ehci_dev->dev.coherent_dma_mask;
 
 	val = platform_device_add_data(pdev, &tegra_ehci2_hsic_xmm_pdata,
 			sizeof(struct tegra_usb_platform_data));
@@ -1067,6 +1067,8 @@ static void enterprise_baseband_init(void)
 						&tegra_usb_hsic_host_register;
 		tegra_baseband_power_data.hsic_unregister =
 						&tegra_usb_hsic_host_unregister;
+		tegra_baseband_power_data.ehci_device =
+					&tegra_ehci2_device;
 		if ((board_info.board_id == BOARD_E1239) &&
 			(board_info.fab <= BOARD_FAB_A02)) {
 			tegra_baseband_power_data.modem.

@@ -483,6 +483,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+		.vbus_oc_map = 0x4,
 	},
 };
 
@@ -508,6 +509,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+		.vbus_oc_map = 0x5,
 	},
 };
 
@@ -546,6 +548,7 @@ static void roth_audio_init(void)
 static void __init tegra_roth_init(void)
 {
 	tegra_clk_init_from_table(roth_clk_init_table);
+	tegra_clk_vefify_parents();
 	tegra_smmu_init();
 	tegra_soc_device_init("roth");
 	tegra_enable_pinmux();

@@ -761,7 +761,7 @@ int tegra_clk_shared_bus_update(struct clk *c)
 }
 
 /* dvfs initialization may lower default maximum rate */
-void __init tegra_init_max_rate(struct clk *c, unsigned long max_rate)
+void tegra_init_max_rate(struct clk *c, unsigned long max_rate)
 {
 	struct clk *shared_bus_user;
 
@@ -785,6 +785,22 @@ void __init tegra_init_max_rate(struct clk *c, unsigned long max_rate)
 void __init tegra_common_init_clock(void)
 {
 	tegra_cpu_timer_init();
+}
+
+void __init tegra_clk_vefify_parents(void)
+{
+	struct clk *c;
+	struct clk *p;
+
+	mutex_lock(&clock_list_lock);
+
+	list_for_each_entry(c, &clocks, node) {
+		p = clk_get_parent(c);
+		if (!tegra_clk_is_parent_allowed(c, p))
+			WARN(1, "tegra: parent %s is not allowed for %s\n",
+			     p->name, c->name);
+	}
+	mutex_unlock(&clock_list_lock);
 }
 
 static bool tegra_keep_boot_clocks = false;
@@ -962,11 +978,13 @@ unsigned long tegra_clk_measure_input_freq(void)
 		osc_freq = 38400000;
 	} else if (clock_autodetect >= 2928 - 3 && clock_autodetect <= 2928 + 3) {
 		osc_freq = 48000000;
-	} else if (tegra_revision == TEGRA_REVISION_QT) {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	} else if (tegra_platform_is_qt()) {
 		if (clock_autodetect >= 2 && clock_autodetect <= 9)
 			osc_freq = 115200;
 		else if (clock_autodetect >= 13 && clock_autodetect <= 15)
 			osc_freq = 230400;
+#endif
 #endif
 	} else {
 		pr_err("%s: Unexpected clock autodetect value %d", __func__, clock_autodetect);

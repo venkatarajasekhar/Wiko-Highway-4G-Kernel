@@ -36,6 +36,7 @@
 
 #include "clock.h"
 #include "dvfs.h"
+#include "board.h"
 #include "tegra11_emc.h"
 
 #ifdef CONFIG_TEGRA_EMC_SCALING_ENABLE
@@ -1000,12 +1001,13 @@ static void adjust_emc_dvfs_table(const struct tegra11_emc_table *table,
 #ifdef CONFIG_TEGRA_PLLM_SCALED
 /* When pll_m is scaled, pll_c must provide backup rate;
    if not - remove rates that require pll_m scaling */
-static void purge_emc_table(void)
+static int purge_emc_table(unsigned long max_rate)
 {
 	int i;
+	int ret = 0;
 
 	if (emc->shared_bus_backup.input)
-		return;
+		return ret;
 
 	pr_warn("tegra: selected pll_m scaling option but no backup source:\n");
 	pr_warn("       removed not supported entries from the table:\n");
@@ -1020,13 +1022,16 @@ static void purge_emc_table(void)
 				sel->input = NULL;
 				sel->input_rate = 0;
 				sel->value = 0;
+				if (max_rate == tegra_emc_table[i].rate)
+					ret = -EINVAL;
 			}
 		}
 	}
+	return ret;
 }
 #else
 /* When pll_m is fixed @ max EMC rate, it always provides backup for pll_c */
-#define purge_emc_table()
+#define purge_emc_table(max_rate) (0)
 #endif
 
 static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
@@ -1034,6 +1039,7 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 	int i, mv;
 	u32 reg;
 	bool max_entry = false;
+	bool emc_max_dvfs_sel = get_emc_max_dvfs();
 	unsigned long boot_rate, max_rate;
 	struct clk *pll_c = tegra_get_clock_by_name("pll_c");
 
@@ -1041,9 +1047,6 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 	spin_lock_init(&emc_stats.spinlock);
 	emc_stats.last_update = get_jiffies_64();
 	emc_stats.last_sel = TEGRA_EMC_TABLE_MAX_SIZE;
-
-	boot_rate = clk_get_rate(emc) / 1000;
-	max_rate = clk_get_max_rate(emc) / 1000;
 
 	if ((dram_type != DRAM_TYPE_DDR3) && (dram_type != DRAM_TYPE_LPDDR2)) {
 		pr_err("tegra: not supported DRAM type %u\n", dram_type);
@@ -1060,6 +1063,9 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 		pr_err("tegra: EMC DFS table is empty\n");
 		return -ENODATA;
 	}
+
+	boot_rate = clk_get_rate(emc) / 1000;
+	max_rate = clk_get_rate(emc->parent) / 1000;
 
 	tegra_emc_table_size = min(table_size, TEGRA_EMC_TABLE_MAX_SIZE);
 	switch (table[0].rev) {
@@ -1092,7 +1098,14 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 		if (table_rate == boot_rate)
 			emc_stats.last_sel = i;
 
-		if (table_rate == max_rate) {
+		if (emc_max_dvfs_sel) {
+			/* EMC max rate = max table entry above boot pll_m */
+			if (table_rate >= max_rate) {
+				max_rate = table_rate;
+				max_entry = true;
+			}
+		} else if (table_rate == max_rate) {
+			/* EMC max rate = boot pll_m rate */
 			max_entry = true;
 			break;
 		}
@@ -1107,6 +1120,16 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 
 	tegra_emc_table = table;
 
+	/*
+	 * Purge rates that cannot be reached because table does not specify
+	 * proper backup source. If maximum rate was purged, fall back on boot
+	 * pll_m rate as maximum limit. In any case propagate new maximum limit
+	 * down stream to shared users, and check it against nominal voltage.
+	 */
+	if (purge_emc_table(max_rate))
+		max_rate = clk_get_rate(emc->parent) / 1000;
+	tegra_init_max_rate(emc, max_rate * 1000);
+
 	if (emc->dvfs) {
 		adjust_emc_dvfs_table(tegra_emc_table, tegra_emc_table_size);
 		mv = tegra_dvfs_predict_millivolts(emc, max_rate * 1000);
@@ -1118,8 +1141,6 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 			return -ENODATA;
 		}
 	}
-
-	purge_emc_table();
 
 	pr_info("tegra: validated EMC DFS table\n");
 

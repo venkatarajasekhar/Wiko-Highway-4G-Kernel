@@ -321,6 +321,12 @@ config MACH_E1853
        help
          Support for NVIDIA E1853 development platform
 
+config MACH_M2601
+       bool "M2601 board"
+       depends on ARCH_TEGRA_3x_SOC
+       help
+         Support for NVIDIA M2601 development platform
+
 config MACH_TEGRA_ENTERPRISE
        bool "Enterprise board"
        depends on ARCH_TEGRA_3x_SOC

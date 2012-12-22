@@ -491,6 +491,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+		.vbus_oc_map = 0x4,
 	},
 };
 
@@ -516,6 +517,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+		.vbus_oc_map = 0x5,
 	},
 };
 
@@ -608,9 +610,14 @@ static struct platform_device icera_nemo_device = {
 
 static void dalmore_modem_init(void)
 {
+	int modem_id = tegra_get_modem_id();
 	int usb_port_owner_info = tegra_get_usb_port_owner_info();
-	if (!(usb_port_owner_info & HSIC1_PORT_OWNER_XUSB))
-		platform_device_register(&icera_nemo_device);
+	switch (modem_id) {
+	case TEGRA_BB_NEMO: /* on board i500 HSIC */
+		if (!(usb_port_owner_info & HSIC1_PORT_OWNER_XUSB))
+			platform_device_register(&icera_nemo_device);
+		break;
+	}
 }
 
 #else
@@ -770,6 +777,7 @@ static void __init tegra_dalmore_init(void)
 	tegra_get_display_board_info(&board_info);
 	dalmore_battery_edp_init();
 	tegra_clk_init_from_table(dalmore_clk_init_table);
+	tegra_clk_vefify_parents();
 	tegra_smmu_init();
 	tegra_soc_device_init("dalmore");
 	tegra_enable_pinmux();

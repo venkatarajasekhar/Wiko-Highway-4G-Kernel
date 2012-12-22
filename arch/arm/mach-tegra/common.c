@@ -156,6 +156,24 @@ static unsigned long tegra_bb_ipc_size;
 
 #define NEVER_RESET 0
 
+inline void ahb_gizmo_writel(unsigned long val, void __iomem *reg)
+{
+	unsigned long check;
+	int retry = 10;
+
+	/* Read and check if write is successful,
+	 * if val doesn't match with read, retry write.
+	 */
+	do {
+		writel(val, reg);
+		check = readl(reg);
+		if (likely(check == val))
+			break;
+		else
+			pr_err("AHB register access fail for reg\n");
+	} while (--retry);
+}
+
 void tegra_assert_system_reset(char mode, const char *cmd)
 {
 #if defined(CONFIG_TEGRA_FPGA_PLATFORM) || NEVER_RESET
@@ -195,6 +213,7 @@ static enum audio_codec_type audio_codec_name;
 static enum image_type board_image_type = system_image;
 static int max_cpu_current;
 static int max_core_current;
+static int emc_max_dvfs;
 static int usb_port_owner_info;
 
 /* WARNING: There is implicit client of pllp_out3 like i2c, uart, dsi
@@ -360,11 +379,14 @@ static __initdata struct tegra_clk_init_table tegra11x_clk_init_table[] = {
 #ifdef CONFIG_TEGRA_DUAL_CBUS
 	{ "c2bus",	"pll_c2",	250000000,	false },
 	{ "c3bus",	"pll_c3",	250000000,	false },
-	{ "pll_c",	NULL,		250000000,	false },
+	{ "pll_c",	NULL,		624000000,	false },
 #else
 	{ "cbus",	"pll_c",	250000000,	false },
 #endif
 	{ "pll_c_out1",	"pll_c",	150000000,	false },
+#ifdef CONFIG_TEGRA_PLLM_SCALED
+	{ "vi",		"pll_p",	0,		false},
+#endif
 	{ NULL,		NULL,		0,		0},
 };
 #endif
@@ -684,25 +706,29 @@ static void __init tegra_init_ahb_gizmo_settings(void)
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | AHBDMA_MST_ID |
 		ADDR_BNDRY(0xc) | INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG1);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG1));
 
 	val = gizmo_readl(AHB_MEM_PREFETCH_CFG2);
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | USB_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG2);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG2));
 
 	val = gizmo_readl(AHB_MEM_PREFETCH_CFG3);
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | USB3_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG3);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG3));
 
 	val = gizmo_readl(AHB_MEM_PREFETCH_CFG4);
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | USB2_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG4);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG4));
 
 	/*
 	 * SDMMC controller is removed from AHB interface in T124 and
@@ -714,7 +740,8 @@ static void __init tegra_init_ahb_gizmo_settings(void)
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | SDMMC4_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG5);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG5));
 #endif
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -722,7 +749,8 @@ static void __init tegra_init_ahb_gizmo_settings(void)
 	val &= ~MST_ID(~0);
 	val |= PREFETCH_ENB | SE_MST_ID | ADDR_BNDRY(0xc) |
 		INACTIVITY_TIMEOUT(0x1000);
-	gizmo_writel(val, AHB_MEM_PREFETCH_CFG6);
+	ahb_gizmo_writel(val,
+		IO_ADDRESS(TEGRA_AHB_GIZMO_BASE + AHB_MEM_PREFETCH_CFG6));
 #endif
 }
 
@@ -994,6 +1022,18 @@ static int __init tegra_max_core_current(char *options)
 	return 1;
 }
 __setup("core_edp_ma=", tegra_max_core_current);
+
+int get_emc_max_dvfs(void)
+{
+	return emc_max_dvfs;
+}
+static int __init tegra_emc_max_dvfs(char *options)
+{
+	char *p = options;
+	emc_max_dvfs = memparse(p, &p);
+	return 1;
+}
+__setup("emc_max_dvfs", tegra_emc_max_dvfs);
 
 static int __init tegra_debug_uartport(char *info)
 {
@@ -1568,7 +1608,6 @@ static const char *tegra_revision_name[TEGRA_REVISION_MAX] = {
 	[TEGRA_REVISION_A03p]    = "A03 prime",
 	[TEGRA_REVISION_A04]     = "A04",
 	[TEGRA_REVISION_A04p]    = "A04 prime",
-	[TEGRA_REVISION_QT]      = "QT",
 };
 
 static const char * __init tegra_get_revision(void)

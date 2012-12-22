@@ -69,12 +69,14 @@
 #include <mach/tegra_fiq_debugger.h>
 #include <mach/tegra-bb-power.h>
 #include <mach/tegra_usb_modem_power.h>
+#include <mach/tegra_wakeup_monitor.h>
 
 #include "board.h"
 #include "board-common.h"
 #include "board-touch-raydium.h"
 #include "clock.h"
 #include "board-pluto.h"
+#include "baseband-xmm-power.h"
 #include "tegra-board-id.h"
 #include "devices.h"
 #include "gpio-names.h"
@@ -372,6 +374,21 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
+#if defined(CONFIG_TEGRA_WAKEUP_MONITOR)
+static struct tegra_wakeup_monitor_platform_data
+			pluto_tegra_wakeup_monitor_pdata = {
+	.wifi_wakeup_source	= 6,
+};
+
+static struct platform_device pluto_tegra_wakeup_monitor_device = {
+	.name = "tegra_wakeup_monitor",
+	.id   = -1,
+	.dev  = {
+		.platform_data = &pluto_tegra_wakeup_monitor_pdata,
+	},
+};
+#endif
+
 static struct tegra_asoc_platform_data pluto_audio_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
@@ -458,6 +475,9 @@ static struct platform_device *pluto_devices[] __initdata = {
 	&spdif_dit_device,
 	&bluetooth_dit_device,
 	&baseband_dit_device,
+#if defined(CONFIG_TEGRA_WAKEUP_MONITOR)
+	&pluto_tegra_wakeup_monitor_device,
+#endif
 	&pluto_audio_device,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_AES)
@@ -469,6 +489,20 @@ static struct platform_device *pluto_devices[] __initdata = {
 };
 
 #ifdef CONFIG_USB_SUPPORT
+static struct tegra_usb_platform_data tegra_ehci3_hsic_xmm_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.unaligned_dma_buf_supported = false,
+	.phy_intf = TEGRA_USB_PHY_INTF_HSIC,
+	.op_mode	= TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+};
+
 static struct tegra_usb_platform_data tegra_ehci3_hsic_smsc_hub_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
@@ -531,6 +565,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_lsrslew = 2,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+		.vbus_oc_map = 0x7,
 	},
 };
 
@@ -588,7 +623,6 @@ static struct tegra_usb_platform_data tegra_ehci3_hsic_baseband2_pdata = {
 	.ops = &baseband2_plat_ops,
 };
 
-#ifdef CONFIG_TEGRA_BB_OEM1
 static struct tegra_usb_platform_data tegra_hsic_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
@@ -677,7 +711,6 @@ static struct platform_device tegra_bb_oem1 = {
 		.platform_data = &bb_pdata_oem1,
 	},
 };
-#endif
 
 static int baseband_init(void)
 {
@@ -803,6 +836,36 @@ static struct platform_device icera_baseband2_device = {
 	},
 };
 
+static struct baseband_power_platform_data tegra_baseband_xmm_power_data = {
+	.baseband_type = BASEBAND_XMM,
+	.modem = {
+		.xmm = {
+			.bb_rst = XMM_GPIO_BB_RST,
+			.bb_on = XMM_GPIO_BB_ON,
+			.ipc_bb_wake = XMM_GPIO_IPC_BB_WAKE,
+			.ipc_ap_wake = XMM_GPIO_IPC_AP_WAKE,
+			.ipc_hsic_active = XMM_GPIO_IPC_HSIC_ACTIVE,
+			.ipc_hsic_sus_req = XMM_GPIO_IPC_HSIC_SUS_REQ,
+		},
+	},
+};
+
+static struct platform_device tegra_baseband_xmm_power_device = {
+	.name = "baseband_xmm_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &tegra_baseband_xmm_power_data,
+	},
+};
+
+static struct platform_device tegra_baseband_xmm_power2_device = {
+	.name = "baseband_xmm_power2",
+	.id = -1,
+	.dev = {
+		.platform_data = &tegra_baseband_xmm_power_data,
+	},
+};
+
 static void pluto_usb_init(void)
 {
 	int usb_port_owner_info = tegra_get_usb_port_owner_info();
@@ -834,7 +897,6 @@ static void pluto_modem_init(void)
 		if (!(usb_port_owner_info & HSIC2_PORT_OWNER_XUSB))
 			platform_device_register(&icera_baseband2_device);
 		break;
-#ifdef CONFIG_TEGRA_BB_OEM1
 	case TEGRA_BB_OEM1:	/* OEM1 HSIC */
 		if ((board_info.board_id == BOARD_E1575) ||
 			((board_info.board_id == BOARD_E1580) &&
@@ -850,7 +912,46 @@ static void pluto_modem_init(void)
 			platform_device_register(&tegra_bb_oem1);
 		}
 		break;
-#endif
+	case TEGRA_BB_OEM2: /* XMM6260/XMM6360 HSIC */
+		/* fix wrong wiring in Pluto A02 */
+		if ((board_info.board_id == BOARD_E1580) &&
+			(board_info.fab == BOARD_FAB_A02)) {
+			pr_info(
+"%s: Pluto A02: replace MDM2_PWR_ON with MDM2_PWR_ON_FOR_PLUTO_A02\n",
+				__func__);
+			if (tegra_baseband_xmm_power_data.modem.xmm.bb_on
+				!= MDM2_PWR_ON)
+				pr_err(
+"%s: expected MDM2_PWR_ON default gpio for XMM bb_on\n",
+					__func__);
+			tegra_baseband_xmm_power_data.modem.xmm.bb_on
+				= MDM2_PWR_ON_FOR_PLUTO_A02;
+		}
+		/* baseband-power.ko will register ehci3 device */
+		tegra_ehci3_device.dev.platform_data =
+					&tegra_ehci3_hsic_xmm_pdata;
+		tegra_baseband_xmm_power_data.hsic_register =
+						&tegra_usb_hsic_host_register;
+		tegra_baseband_xmm_power_data.hsic_unregister =
+						&tegra_usb_hsic_host_unregister;
+		tegra_baseband_xmm_power_data.ehci_device =
+					&tegra_ehci3_device;
+		platform_device_register(&tegra_baseband_xmm_power_device);
+		platform_device_register(&tegra_baseband_xmm_power2_device);
+		/* override audio settings - use 8kHz */
+		pluto_audio_pdata.i2s_param[BASEBAND].audio_port_id
+			= 2;
+		pluto_audio_pdata.i2s_param[BASEBAND].is_i2s_master
+			= 1;
+		pluto_audio_pdata.i2s_param[BASEBAND].i2s_mode
+			= TEGRA_DAIFMT_I2S;
+		pluto_audio_pdata.i2s_param[BASEBAND].sample_size
+			= 16;
+		pluto_audio_pdata.i2s_param[BASEBAND].rate
+			= 8000;
+		pluto_audio_pdata.i2s_param[BASEBAND].channels
+			= 2;
+		break;
 	case TEGRA_BB_HSIC_HUB: /* i500 SWD HSIC */
 		if (!(usb_port_owner_info & HSIC2_PORT_OWNER_XUSB)) {
 			tegra_ehci3_device.dev.platform_data =
@@ -858,7 +959,6 @@ static void pluto_modem_init(void)
 			platform_device_register(&tegra_ehci3_device);
 		}
 		break;
-
 	default:
 		return;
 	}
@@ -1009,6 +1109,7 @@ static void __init tegra_pluto_init(void)
 {
 	pluto_battery_edp_init();
 	tegra_clk_init_from_table(pluto_clk_init_table);
+	tegra_clk_vefify_parents();
 	tegra_smmu_init();
 	tegra_soc_device_init("tegra_pluto");
 	tegra_enable_pinmux();

@@ -1566,12 +1566,9 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 				avi.vic = 16; /* 60 Hz */
 			else
 				avi.vic = 34; /* 30 Hz */
-		} else if (dc->mode.h_front_porch == 528) {
-			if (dc->mode.pclk > 74250000)
-				avi.vic = 31; /* 50 Hz */
-			else
-				avi.vic = 33; /* 25 Hz */
-		} else
+		} else if (dc->mode.h_front_porch == 528)
+			avi.vic = 31; /* 50 Hz */
+		else
 			avi.vic = 32; /* 24 Hz */
 	} else {
 		avi.m = HDMI_AVI_M_16_9;
