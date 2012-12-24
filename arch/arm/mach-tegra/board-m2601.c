@@ -268,7 +268,6 @@ static void m2601_usb_init(void)
 	platform_device_register(&tegra_ehci2_device);
 }
 
-#define NOR_VIRT_BASE ((void __iomem *)IO_NOR_VIRT)
 #define CHIP_SIZE_MSP14LV320 0x40000000ULL
 
 static struct tegra_nor_platform_data m2601_nor_data = {
@@ -279,7 +278,7 @@ static struct tegra_nor_platform_data m2601_nor_data = {
 	.chip_parms = {
 		.MuxMode = NorMuxMode_ADNonMux,
 		.ReadMode = NorReadMode_Page,
-		.PageLength = NorPageLength_8Word,
+		.PageLength = NorPageLength_16Word,
 		.ReadyActive = NorReadyActive_WithData,
 		.timing_default = {
 			.timing0 = 0xB040C310,
@@ -289,13 +288,120 @@ static struct tegra_nor_platform_data m2601_nor_data = {
 			.timing0 = 0xB040C310,
 			.timing1 = 0x000a0a04,
 		},
-	},
+	}
+};
+
+#define M2601_NUM_CS	8
+static struct cs_info m2601_cs_info[M2601_NUM_CS] = {
+			{
+				.cs = CSel0,
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel1,
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel2,
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel3,
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel4,
+				.gpio_cs = {
+						"PX7",
+						TEGRA_GPIO_PX7,
+						LOW
+					},
+				.num_cs_gpio = 1,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel4,
+				.gpio_cs = {
+						"PX7",
+						TEGRA_GPIO_PX7,
+						HIGH
+					},
+				.num_cs_gpio = 1,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel5,
+				.gpio_cs = {
+						"PX7",
+						TEGRA_GPIO_PX7,
+						LOW
+					},
+				.num_cs_gpio = 1,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			},
+			{
+				.cs = CSel5,
+				.gpio_cs = {
+						"PX7",
+						TEGRA_GPIO_PX7,
+						HIGH
+					},
+				.num_cs_gpio = 1,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = CHIP_SIZE_MSP14LV320,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			}
+};
+
+#define M2601_NUM_GPIO_ADDR	3
+static struct gpio_addr	m2601_gpio_addr[M2601_NUM_GPIO_ADDR] = {
+			{TEGRA_GPIO_PK6, 27},
+			{TEGRA_GPIO_PK5, 28},
+			{TEGRA_GPIO_PV3, 29},
 };
 
 static void m2601_nor_init(void)
 {
 	tegra_nor_device.resource[2].end = TEGRA_NOR_FLASH_BASE +
 						TEGRA_NOR_FLASH_SIZE - 1;
+	m2601_nor_data.info.cs = kzalloc(sizeof(struct cs_info) *
+						M2601_NUM_CS, GFP_KERNEL);
+	if (!m2601_nor_data.info.cs)
+		BUG();
+
+	m2601_nor_data.info.num_chips = M2601_NUM_CS;
+
+	memcpy(m2601_nor_data.info.cs, m2601_cs_info,
+				sizeof(struct cs_info) * M2601_NUM_CS);
+
+	m2601_nor_data.addr.addr = kzalloc(sizeof(struct gpio_addr) *
+					M2601_NUM_GPIO_ADDR, GFP_KERNEL);
+	if (!m2601_nor_data.addr.addr)
+		BUG();
+
+	m2601_nor_data.addr.num_gpios = M2601_NUM_GPIO_ADDR;
+
+	memcpy(m2601_nor_data.addr.addr, m2601_gpio_addr,
+			sizeof(struct gpio_addr) * M2601_NUM_GPIO_ADDR);
+
 	tegra_nor_device.dev.platform_data = &m2601_nor_data;
 	platform_device_register(&tegra_nor_device);
 }
