@@ -636,7 +636,7 @@ static void __init tegra_dolak_init(void)
 	tegra_enable_pinmux();
 	dolak_pinmux_init();
 
-	if (tegra_revision == TEGRA_REVISION_QT)
+	if (tegra_platform_is_qt())
 		debug_uart_platform_data[0].uartclk = tegra_clk_measure_input_freq();
 
 	platform_add_devices(dolak_devices, ARRAY_SIZE(dolak_devices));
