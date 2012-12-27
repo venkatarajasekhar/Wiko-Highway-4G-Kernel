@@ -541,13 +541,6 @@ static struct platform_device pluto_audio_aic326x_device = {
 	},
 };
 
-#ifndef CONFIG_USE_OF
-static struct platform_device tegra_camera = {
-	.name = "tegra_camera",
-	.id = -1,
-};
-#endif
-
 static struct tegra_spi_device_controller_data dev_bdata = {
 	.rx_clk_tap_delay = 0,
 	.tx_clk_tap_delay = 0,
@@ -564,7 +557,6 @@ static struct spi_board_info aic326x_spi_board_info[] = {
 	},
 };
 
-
 #ifdef CONFIG_MHI_NETDEV
 struct platform_device mhi_netdevice0 = {
 	.name = "mhi_net_device",
@@ -578,9 +570,6 @@ static struct platform_device *pluto_devices[] __initdata = {
 	&tegra_udc_device,
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
-#endif
-#ifndef CONFIG_USE_OF
-	&tegra_camera,
 #endif
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,

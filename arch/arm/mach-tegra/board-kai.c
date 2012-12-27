@@ -372,11 +372,6 @@ static void __init kai_uart_init(void)
 				ARRAY_SIZE(kai_uart_devices));
 }
 
-static struct platform_device tegra_camera = {
-	.name = "tegra_camera",
-	.id = -1,
-};
-
 static struct platform_device *kai_spi_devices[] __initdata = {
 	&tegra_spi_device1,
 };
@@ -519,7 +514,6 @@ static struct platform_device *kai_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
 #endif
-	&tegra_camera,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra_se_device,
 #endif
