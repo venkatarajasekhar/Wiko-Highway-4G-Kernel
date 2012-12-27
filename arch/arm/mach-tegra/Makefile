@@ -252,9 +252,9 @@ obj-${CONFIG_MACH_E1853}               += board-e1853-panel.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-pinmux.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-sdhci.o
 
-obj-${CONFIG_MACH_M2601}		+= board-m2601.o
-obj-${CONFIG_MACH_M2601}		+= board-m2601-pinmux.o
-obj-${CONFIG_MACH_M2601}		+= board-m2601-sdhci.o
+obj-${CONFIG_MACH_M2601}               += board-m2601.o
+obj-${CONFIG_MACH_M2601}               += board-m2601-pinmux.o
+obj-${CONFIG_MACH_M2601}               += board-m2601-sdhci.o
 
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise.o
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise-panel.o
@@ -285,7 +285,7 @@ obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sdhci.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-roth-panel.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-kbc.o
-obj-${CONFIG_MACH_DALMORE}          	+= board-dalmore-sensors.o
+obj-${CONFIG_MACH_DALMORE}              += board-dalmore-sensors.o
 obj-${CONFIG_MACH_DALMORE}              += panel-a-1080p-11-6.o
 obj-${CONFIG_MACH_DALMORE}              += panel-p-wuxga-10-1.o
 obj-${CONFIG_MACH_DALMORE}              += panel-s-wqxga-10-1.o
@@ -317,6 +317,7 @@ obj-${CONFIG_MACH_CERES}                += board-ceres-kbc.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sdhci.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-power.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-pinmux.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-sensors.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
@@ -336,4 +337,4 @@ obj-${CONFIG_MACH_ROTH}                 += board-roth-sdhci.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-panel.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-kbc.o
 obj-${CONFIG_MACH_ROTH}                 += board-roth-sensors.o
-obj-${CONFIG_MACH_ROTH}			+= board-roth-fan.o
+obj-${CONFIG_MACH_ROTH}                 += board-roth-fan.o
