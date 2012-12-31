@@ -1260,12 +1260,6 @@ static void cardhu_pci_init(void)
 		cardhu_pci_platform_data.port_status[2] = 1;
 		cardhu_pci_platform_data.use_dock_detect = 1;
 		cardhu_pci_platform_data.gpio = DOCK_DETECT_GPIO;
-	} else if (board_info.board_id == BOARD_PM315) {
-		cardhu_pci_platform_data.port_status[0] = 1;
-		cardhu_pci_platform_data.port_status[1] = 0;
-		cardhu_pci_platform_data.port_status[2] = 1;
-		cardhu_pci_platform_data.use_dock_detect = 0;
-		cardhu_pci_platform_data.gpio = 0;
 	}
 	if ((board_info.board_id == BOARD_E1186) ||
 			(board_info.board_id == BOARD_E1187) ||
