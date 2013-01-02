@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-dolak.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -656,6 +656,7 @@ static void __init tegra_dolak_init(void)
 #if defined(CONFIG_TEGRA_BASEBAND)
 	dolak_tegra_bb_init();
 #endif
+	tegra_register_fuse();
 }
 
 static void __init tegra_dolak_reserve(void)

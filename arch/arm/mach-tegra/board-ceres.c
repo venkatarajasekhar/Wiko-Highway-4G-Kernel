@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -344,6 +344,7 @@ static void __init tegra_ceres_init(void)
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 	ceres_sensors_init();
+	tegra_register_fuse();
 }
 
 static void __init tegra_ceres_dt_init(void)
