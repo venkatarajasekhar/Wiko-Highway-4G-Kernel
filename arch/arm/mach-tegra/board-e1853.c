@@ -610,6 +610,15 @@ static void e1853_nor_init(void)
 	platform_device_register(&tegra_nor_device);
 }
 
+#ifdef CONFIG_SATA_AHCI_TEGRA
+static void e1853_sata_init(void)
+{
+	platform_device_register(&tegra_sata_device);
+}
+#else
+static void e1853_sata_init(void) { }
+#endif
+
 static void __init tegra_e1853_init(void)
 {
 	tegra_init_board_info();
@@ -635,6 +644,7 @@ static void __init tegra_e1853_init(void)
 	e1853_panel_init();
 	e1853_nor_init();
 	e1853_pcie_init();
+	e1853_sata_init();
 }
 
 static void __init tegra_e1853_reserve(void)
