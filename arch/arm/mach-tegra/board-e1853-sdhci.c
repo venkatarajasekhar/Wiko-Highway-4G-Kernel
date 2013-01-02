@@ -30,6 +30,8 @@
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/sdhci.h>
+#include <mach/board_id.h>
+#include <linux/i2c.h>
 
 #include "gpio-names.h"
 #include "board.h"
@@ -76,10 +78,16 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
 
 int __init e1853_sdhci_init(void)
 {
+	int is_e1860 = 0;
 	tegra_sdhci_device1.dev.platform_data = &tegra_sdhci_platform_data1;
 	tegra_sdhci_device2.dev.platform_data = &tegra_sdhci_platform_data2;
 	tegra_sdhci_device3.dev.platform_data = &tegra_sdhci_platform_data3;
 	tegra_sdhci_device4.dev.platform_data = &tegra_sdhci_platform_data4;
+
+	is_e1860 = tegra_is_board(NULL, "61860", NULL, NULL, NULL);
+	if (is_e1860){
+		tegra_sdhci_platform_data3.mmc_data.ocr_mask = MMC_OCR_3V2_MASK;
+	}
 
 	platform_device_register(&tegra_sdhci_device1);
 	platform_device_register(&tegra_sdhci_device2);
