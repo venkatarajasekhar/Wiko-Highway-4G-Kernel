@@ -138,6 +138,12 @@ static struct resource dolak_disp1_resources[] = {
 		.end	= TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+	{
+		.name   = "mipi_cal",
+		.start  = TEGRA_MIPI_CAL_BASE,
+		.end    = TEGRA_MIPI_CAL_BASE + TEGRA_MIPI_CAL_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
 };
 
 static struct tegra_dc_mode dolak_panel_modes[] = {
