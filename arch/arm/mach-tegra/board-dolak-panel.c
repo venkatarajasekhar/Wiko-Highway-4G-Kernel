@@ -27,6 +27,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
+#include <linux/of.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -411,8 +412,9 @@ int __init dolak_panel_init(void)
 #if defined(CONFIG_TEGRA_DC)
 	struct resource *res;
 #endif
-	struct platform_device *phost1x;
+	struct platform_device *phost1x = NULL;
 #endif
+	bool is_dt = of_have_populated_dt();
 
 	dolak_carveouts[1].base = tegra_carveout_start;
 	dolak_carveouts[1].size = tegra_carveout_size;
@@ -423,9 +425,15 @@ int __init dolak_panel_init(void)
 				   ARRAY_SIZE(dolak_gfx_devices));
 
 #ifdef CONFIG_TEGRA_GRHOST
-	phost1x = tegra14_register_host1x_devices();
-	if (!phost1x)
+	if (!is_dt)
+		phost1x = tegra14_register_host1x_devices();
+	else
+		phost1x = to_platform_device(bus_find_device_by_name(
+			&platform_bus_type, NULL, "host1x"));
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)

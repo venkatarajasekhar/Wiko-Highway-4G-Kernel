@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-enterprise-panel.c
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
+#include <linux/of.h>
 
 #include <asm/mach-types.h>
 #include <asm/atomic.h>
@@ -937,7 +938,8 @@ int __init enterprise_panel_init(void)
 	int err;
 	struct resource __maybe_unused *res;
 	struct board_info board_info;
-	struct platform_device *phost1x;
+	struct platform_device *phost1x = NULL;
+	bool is_dt = of_have_populated_dt();
 
 	tegra_get_board_info(&board_info);
 
@@ -1048,9 +1050,15 @@ int __init enterprise_panel_init(void)
 			ARRAY_SIZE(external_pwm_gfx_devices));
 
 #ifdef CONFIG_TEGRA_GRHOST
-	phost1x = tegra3_register_host1x_devices();
-	if (!phost1x)
+	if (!is_dt)
+		phost1x = tegra3_register_host1x_devices();
+	else
+		phost1x = to_platform_device(bus_find_device_by_name(
+			&platform_bus_type, NULL, "host1x"));
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)

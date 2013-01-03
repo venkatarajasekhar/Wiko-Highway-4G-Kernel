@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-harmony-panel.c
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -22,6 +22,7 @@
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pwm_backlight.h>
+#include <linux/of.h>
 
 #include <mach/dc.h>
 #include <mach/irqs.h>
@@ -332,7 +333,8 @@ int __init harmony_panel_init(void)
 {
 	int err;
 	struct resource *res;
-	struct platform_device *phost1x;
+	struct platform_device *phost1x = NULL;
+	bool is_dt = of_have_populated_dt();
 
 	gpio_request(harmony_en_vdd_pnl, "en_vdd_pnl");
 	gpio_direction_output(harmony_en_vdd_pnl, 1);
@@ -357,9 +359,15 @@ int __init harmony_panel_init(void)
 		return err;
 
 #ifdef CONFIG_TEGRA_GRHOST
-	phost1x = tegra2_register_host1x_devices();
-	if (!phost1x)
+	if (!is_dt)
+		phost1x = tegra2_register_host1x_devices();
+	else
+		phost1x = to_platform_device(bus_find_device_by_name(
+			&platform_bus_type, NULL, "host1x"));
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 #endif
 
 	res = platform_get_resource_byname(&harmony_disp1_device,

@@ -646,10 +646,10 @@ static void __init tegra_ceres_init(void)
 
 static void __init tegra_ceres_dt_init(void)
 {
-	tegra_ceres_init();
-
 	of_platform_populate(NULL,
-		of_default_bus_match_table, NULL, NULL);
+		of_default_bus_match_table, NULL, &platform_bus);
+
+	tegra_ceres_init();
 }
 
 static void __init tegra_ceres_reserve(void)

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-kai.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -867,14 +867,28 @@ static void __init kai_ramconsole_reserve(unsigned long size)
 	tegra_ram_console_debug_reserve(SZ_1M);
 }
 
+#ifdef CONFIG_USE_OF
+static struct of_dev_auxdata kai_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("nvidia,tegra30-host1x", TEGRA_HOST1X_BASE, "host1x",
+		NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-gr3d", TEGRA_GR3D_BASE, "gr3d", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-gr2d", TEGRA_GR2D_BASE, "gr2d", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-mpe", TEGRA_MPE_BASE, "mpe", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-vi", TEGRA_VI_BASE, "vi", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-isp", TEGRA_ISP_BASE, "isp", NULL),
+	{}
+};
+#endif
+
 static void __init tegra_kai_dt_init(void)
 {
-	tegra_kai_init();
-
 #ifdef CONFIG_USE_OF
 	of_platform_populate(NULL,
-		of_default_bus_match_table, NULL, NULL);
+		of_default_bus_match_table, kai_auxdata_lookup,
+		&platform_bus);
 #endif
+
+	tegra_kai_init();
 }
 
 static void __init tegra_kai_reserve(void)

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-whistler-panel.c
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -310,7 +310,8 @@ int __init whistler_panel_init(void)
 {
 	int err;
 	struct resource __maybe_unused *res;
-	struct platform_device *phost1x;
+	struct platform_device *phost1x = NULL;
+	bool is_dt = of_have_populated_dt();
 
 	gpio_request(whistler_hdmi_hpd, "hdmi_hpd");
 	gpio_direction_input(whistler_hdmi_hpd);
@@ -324,9 +325,15 @@ int __init whistler_panel_init(void)
 		ARRAY_SIZE(whistler_gfx_devices));
 
 #ifdef CONFIG_TEGRA_GRHOST
-	phost1x = tegra2_register_host1x_devices();
-	if (!phost1x)
+	if (!is_dt)
+		phost1x = tegra2_register_host1x_devices();
+	else
+		phost1x = to_platform_device(bus_find_device_by_name(
+			&platform_bus_type, NULL, "host1x"));
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-cardhu-panel.c
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@
 #include <asm/atomic.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
+#include <linux/of.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -1401,7 +1402,8 @@ int __init cardhu_panel_init(void)
 {
 	int err;
 	struct resource __maybe_unused *res;
-	struct platform_device *phost1x;
+	struct platform_device *phost1x = NULL;
+	bool is_dt = of_have_populated_dt();
 
 	tegra_get_board_info(&board_info);
 	tegra_get_display_board_info(&display_board_info);
@@ -1519,9 +1521,15 @@ skip_lvds:
 				ARRAY_SIZE(cardhu_gfx_devices));
 
 #ifdef CONFIG_TEGRA_GRHOST
-	phost1x = tegra3_register_host1x_devices();
-	if (!phost1x)
+	if (!is_dt)
+		phost1x = tegra3_register_host1x_devices();
+	else
+		phost1x = to_platform_device(bus_find_device_by_name(
+			&platform_bus_type, NULL, "host1x"));
+	if (!phost1x) {
+		pr_err("host1x devices registration failed\n");
 		return -EINVAL;
+	}
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
