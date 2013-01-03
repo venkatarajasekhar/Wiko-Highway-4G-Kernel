@@ -125,9 +125,6 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
-	&tegra_smmu_device,
-#endif
 	&tegra_camera,
 	&tegra_ahub_device,
 	&tegra_pcm_device,
