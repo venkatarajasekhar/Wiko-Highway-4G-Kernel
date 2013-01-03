@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres-sensors.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -286,6 +286,12 @@ static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	},
 };
 
+static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
+	{
+		I2C_BOARD_INFO("max44005", 0x44),
+	},
+};
+
 static int ceres_camera_init(void)
 {
 	tegra_pinmux_config_table(&mclk_disable, 1);
@@ -299,6 +305,9 @@ static int ceres_camera_init(void)
 int __init ceres_sensors_init(void)
 {
 	ceres_camera_init();
+
+	i2c_register_board_info(0, ceres_i2c_board_info_max44005,
+			ARRAY_SIZE(ceres_i2c_board_info_max44005));
 
 	return 0;
 }

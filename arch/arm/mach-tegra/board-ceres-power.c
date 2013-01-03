@@ -206,6 +206,7 @@ static struct regulator_consumer_supply max77660_sw3_supply[] = {
 	REGULATOR_SUPPLY("vdd_aud_dgtl", NULL),
 	REGULATOR_SUPPLY("vdd_aud_anlg", NULL),
 	REGULATOR_SUPPLY("vdd_aud_mic", NULL),
+	REGULATOR_SUPPLY("vdd", "0-0044"),
 };
 
 static struct regulator_consumer_supply max77660_sw4_supply[] = {
