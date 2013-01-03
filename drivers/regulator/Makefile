@@ -84,6 +84,7 @@ obj-$(CONFIG_REGULATOR_WM8350) += wm8350-regulator.o
 obj-$(CONFIG_REGULATOR_WM8400) += wm8400-regulator.o
 obj-$(CONFIG_REGULATOR_WM8994) += wm8994-regulator.o
 obj-$(CONFIG_REGULATOR_MAX77660) += max77660-regulator.o
+obj-$(CONFIG_REGULATOR_LP8755) += lp8755.o
 
 
 ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG

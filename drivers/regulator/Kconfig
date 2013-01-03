@@ -559,5 +559,14 @@ config REGULATOR_MAX77660
 	  via I2C bus. The provided regulator is suitable for Tegra
 	  chip to control Step-Down DC-DC and LDOs.
 
+config REGULATOR_LP8755
+	tristate "TI LP8755 High Performance PMU driver"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  This driver supports LP8755 High Performance PMU driver. This
+	  chip contains six step-down DC/DC converters which can support
+	  9 mode multiphase configuration.
+
 endif
 
