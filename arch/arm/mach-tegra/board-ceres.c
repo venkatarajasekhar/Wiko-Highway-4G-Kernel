@@ -125,6 +125,9 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
 	&tegra_udc_device,
+#if defined(CONFIG_TEGRA_AVP)
+	&tegra_avp_device,
+#endif
 	&tegra_camera,
 	&tegra_ahub_device,
 	&tegra_pcm_device,
@@ -375,6 +378,12 @@ static void __init tegra_ceres_dt_init(void)
 
 static void __init tegra_ceres_reserve(void)
 {
+#if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
+	/* for PANEL_5_SHARP_1080p: 1920*1080*4*2 = 16588800 bytes */
+	tegra_reserve(0, SZ_16M, SZ_4M);
+#else
+	tegra_reserve(SZ_128M, SZ_16M, SZ_4M);
+#endif
 }
 
 static const char * const ceres_dt_board_compat[] = {
