@@ -79,7 +79,12 @@ static struct platform_device tegra_camera = {
 };
 
 static struct platform_device *ceres_spi_devices[] __initdata = {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	&tegra11_spi_device4,
+#else
+	&tegra11_spi_device2,
+	&tegra11_spi_device3,
+#endif
 };
 
 struct spi_clk_parent spi_parent_clk_ceres[] = {
@@ -120,7 +125,13 @@ static void __init ceres_spi_init(void)
 	}
 	ceres_spi_pdata.parent_clk_list = spi_parent_clk_ceres;
 	ceres_spi_pdata.parent_clk_count = ARRAY_SIZE(spi_parent_clk_ceres);
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	tegra11_spi_device4.dev.platform_data = &ceres_spi_pdata;
+#else
+	tegra11_spi_device2.dev.platform_data = &ceres_spi_pdata;
+	tegra11_spi_device3.dev.platform_data = &ceres_spi_pdata;
+#endif
 	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
 }
 
