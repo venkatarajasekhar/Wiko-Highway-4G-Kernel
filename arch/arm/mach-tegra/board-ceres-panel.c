@@ -290,7 +290,7 @@ static struct tegra_dc_sd_settings ceres_sd_settings = {
 	.bin_width = -1,
 	.aggressiveness = 5,
 	.use_vid_luma = false,
-	.phase_in_adjustments = 1,
+	.phase_in_adjustments = 0,
 	.k_limit_enable = true,
 	/* Aggressive k_limit */
 	.k_limit = 180,
@@ -349,7 +349,7 @@ static void ceres_panel_select(void)
 	}
 
 	if (panel->init_sd_settings)
-		panel->init_sd_settings(&ceres_sd_settings);
+		panel->init_sd_settings(&sd_settings);
 
 	if (panel->init_dc_out)
 		panel->init_dc_out(&ceres_disp1_out);
