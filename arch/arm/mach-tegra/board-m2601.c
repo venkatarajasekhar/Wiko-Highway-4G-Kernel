@@ -294,35 +294,35 @@ static struct tegra_nor_platform_data m2601_nor_data = {
 #define M2601_NUM_CS	8
 static struct cs_info m2601_cs_info[M2601_NUM_CS] = {
 			{
-				.cs = CSel0,
+				.cs = CS_0,
 				.num_cs_gpio = 0,
 				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
 				.size = CHIP_SIZE_MSP14LV320,
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel1,
+				.cs = CS_1,
 				.num_cs_gpio = 0,
 				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
 				.size = CHIP_SIZE_MSP14LV320,
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel2,
+				.cs = CS_2,
 				.num_cs_gpio = 0,
 				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
 				.size = CHIP_SIZE_MSP14LV320,
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel3,
+				.cs = CS_3,
 				.num_cs_gpio = 0,
 				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
 				.size = CHIP_SIZE_MSP14LV320,
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel4,
+				.cs = CS_4,
 				.gpio_cs = {
 						"PX7",
 						TEGRA_GPIO_PX7,
@@ -334,7 +334,7 @@ static struct cs_info m2601_cs_info[M2601_NUM_CS] = {
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel4,
+				.cs = CS_4,
 				.gpio_cs = {
 						"PX7",
 						TEGRA_GPIO_PX7,
@@ -346,7 +346,7 @@ static struct cs_info m2601_cs_info[M2601_NUM_CS] = {
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel5,
+				.cs = CS_5,
 				.gpio_cs = {
 						"PX7",
 						TEGRA_GPIO_PX7,
@@ -358,7 +358,7 @@ static struct cs_info m2601_cs_info[M2601_NUM_CS] = {
 				.phys = TEGRA_NOR_FLASH_BASE,
 			},
 			{
-				.cs = CSel5,
+				.cs = CS_5,
 				.gpio_cs = {
 						"PX7",
 						TEGRA_GPIO_PX7,
