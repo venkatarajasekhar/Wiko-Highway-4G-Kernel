@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/e1853/board-e1853.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 
 int e1853_sdhci_init(void);
 int e1853_pinmux_init(void);
+int e1853_touch_init(void);
 int e1853_panel_init(void);
 int e1853_gpio_init(void);
 int e1853_pins_state_init(void);
@@ -69,12 +70,6 @@ int e1853_pca953x_init(void);
 #define MISCIO_USER_LED2_GPIO		(PCA953X_MISCIO_GPIO_BASE + 14)
 #define MISCIO_USER_LED1_GPIO		(PCA953X_MISCIO_GPIO_BASE + 15)
 #define PCA953X_MISCIO_GPIO_END		(PCA953X_MISCIO_GPIO_BASE + 16)
-
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
-#define TOUCH_GPIO_IRQ_ATMEL_T9 TEGRA_GPIO_PEE1
-#define TOUCH_GPIO_RST_ATMEL_T9 TEGRA_GPIO_PR2
-#define TOUCH_BUS_ATMEL_T9  0
-#endif
 
 /* PCA953X I2C IO expander bus addresses */
 #define PCA953X_MISCIO_ADDR		0x75

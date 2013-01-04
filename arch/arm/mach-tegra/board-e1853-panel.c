@@ -28,11 +28,13 @@
 #include <mach/iomap.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
+#include <mach/board_id.h>
 
 #include "board.h"
 #include "devices.h"
 #include "tegra3_host1x_devices.h"
 #include "gpio-names.h"
+#include "board-e1853.h"
 
 #define E1853_HDMI_HPD TEGRA_GPIO_PB2
 
@@ -61,9 +63,7 @@ static struct i2c_board_info __initdata lvds_ser_info[] = {
 	}
 };
 
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
-
-static struct tegra_dc_mode e1853_panel_modes[] = {
+static struct tegra_dc_mode e1853_CLAA101WB03_panel_modes[] = {
 	{
 		/* 1366x768@60Hz */
 		.pclk = 74180000,
@@ -80,14 +80,12 @@ static struct tegra_dc_mode e1853_panel_modes[] = {
 	},
 };
 
-static struct tegra_fb_data e1853_fb_data = {
+static struct tegra_fb_data e1853_CLAA101WB03_fb_data = {
 	.win        = 0,
 	.xres       = 1366,
 	.yres       = 768,
 	.bits_per_pixel = 32,
 };
-
-#else
 
 static struct tegra_dc_mode e1853_panel_modes[] = {
 	{
@@ -112,8 +110,6 @@ static struct tegra_fb_data e1853_fb_data = {
 	.yres		= 480,
 	.bits_per_pixel	= 32,
 };
-
-#endif
 
 static struct tegra_dc_out_pin e1853_dc_out_pins[] = {
 	{
@@ -219,14 +215,32 @@ static struct platform_device *e1853_gfx_devices[] __initdata = {
 	&tegra_nvmap_device,
 };
 
+static void e1853_config_CLAA101WB03_lcd(void)
+{
+	e1853_disp1_pdata.default_out->modes =
+		e1853_CLAA101WB03_panel_modes;
+	e1853_disp1_pdata.default_out->n_modes =
+		ARRAY_SIZE(e1853_CLAA101WB03_panel_modes);
+	e1853_disp1_pdata.fb = &e1853_CLAA101WB03_fb_data;
+}
+
 int __init e1853_panel_init(void)
 {
+	bool has_ebb = false;
 	int err;
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 	struct resource *res;
 	struct platform_device *phost1x = NULL;
 #endif
 	bool is_dt = of_have_populated_dt();
+
+	if (tegra_is_board(NULL, "61861", NULL, NULL, NULL)) {
+		has_ebb = true;
+		if (tegra_is_board(NULL, "61227", NULL, NULL, NULL)) {
+			e1853_config_CLAA101WB03_lcd();
+			e1853_touch_init();
+		}
+	}
 
 	e1853_carveouts[1].base = tegra_carveout_start;
 	e1853_carveouts[1].size = tegra_carveout_size;
@@ -282,8 +296,10 @@ int __init e1853_panel_init(void)
 	}
 #endif
 
-	if (!err)
-		i2c_register_board_info(1, lvds_ser_info, 1);
+	if (has_ebb) {
+		if (!err)
+			i2c_register_board_info(1, lvds_ser_info, 1);
+	}
 
 	return err;
 }
