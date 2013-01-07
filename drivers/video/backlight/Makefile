@@ -1,5 +1,7 @@
 # Backlight & LCD drivers
 
+GCOV_PROFILE := y
+
 obj-$(CONFIG_LCD_CLASS_DEVICE)     += lcd.o
 obj-$(CONFIG_LCD_CORGI)		   += corgi_lcd.o
 obj-$(CONFIG_LCD_HP700)		   += jornada720_lcd.o
