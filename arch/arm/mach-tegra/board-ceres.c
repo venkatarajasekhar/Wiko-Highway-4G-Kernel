@@ -369,6 +369,7 @@ static void __init tegra_ceres_init(void)
 	ceres_panel_init();
 	ceres_sensors_init();
 	tegra_register_fuse();
+	ceres_soctherm_init();
 }
 
 static void __init tegra_ceres_dt_init(void)

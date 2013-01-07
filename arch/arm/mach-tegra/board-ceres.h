@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -52,4 +52,5 @@ int ceres_regulator_init(void);
 int ceres_suspend_init(void);
 int ceres_pinmux_init(void);
 int ceres_panel_init(void);
+int ceres_soctherm_init(void);
 #endif

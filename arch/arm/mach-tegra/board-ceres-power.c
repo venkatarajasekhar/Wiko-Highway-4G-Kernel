@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres-power.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@
 
 #include "pm.h"
 #include "board.h"
+#include "tegra11_soctherm.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -585,4 +586,81 @@ int __init ceres_suspend_init(void)
 {
 	tegra_init_suspend(&ceres_suspend_data);
 	return 0;
+}
+
+static struct soctherm_platform_data ceres_soctherm_data = {
+	.soctherm_clk_rate = 136000000,
+	.tsensor_clk_rate = 500000,
+	.sensor_data = {
+		[TSENSE_CPU0] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU1] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU2] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_CPU3] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		/* MEM0/MEM1 won't be used */
+		[TSENSE_MEM0] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_MEM1] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_GPU] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+		[TSENSE_PLLX] = {
+			.enable = true,
+			.tall = 16300,
+			.tiddq = 1,
+			.ten_count = 1,
+			.tsample = 163,
+			.pdiv = 10,
+		},
+	},
+};
+
+int __init ceres_soctherm_init(void)
+{
+	return tegra11_soctherm_init(&ceres_soctherm_data);
 }
