@@ -43,8 +43,8 @@
 
 /* max77660 consumer rails */
 static struct regulator_consumer_supply max77660_buck1_supply[] = {
-	REGULATOR_SUPPLY("vdd_soc", NULL),
-	REGULATOR_SUPPLY("vdd_soc_dbg", NULL),
+	REGULATOR_SUPPLY("vdd_core", NULL),
+	REGULATOR_SUPPLY("vdd_core_dbg", NULL),
 };
 
 static struct regulator_consumer_supply max77660_buck2_supply[] = {
@@ -81,7 +81,6 @@ static struct regulator_consumer_supply max77660_buck5_supply[] = {
 	REGULATOR_SUPPLY("vdd_1v8_cpu_reg", NULL),
 	REGULATOR_SUPPLY("vdd_sys_mb", NULL),
 	REGULATOR_SUPPLY("vdd_1v8_eeprom", NULL),
-	REGULATOR_SUPPLY("vdd2_lpddr3", NULL),
 	REGULATOR_SUPPLY("vdd_1v8_hdmi", "tegradc.1"),
 	REGULATOR_SUPPLY("vdd_1v8_com", NULL),
 	REGULATOR_SUPPLY("vddio_sim_bb", NULL),
@@ -258,7 +257,7 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 		.flags = _flags,					\
 	}
 
-MAX77660_PDATA_INIT(BUCK1, buck1,  1100, 1100, NULL,
+MAX77660_PDATA_INIT(BUCK1, buck1,  900, 1400, NULL,
 		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK2, buck2,  900, 1300, NULL,
@@ -298,13 +297,13 @@ MAX77660_PDATA_INIT(LDO6, ldo6, 1200, 1200, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO7, ldo7, 1050, 1050, max77660_rails(buck3),
-		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
+		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO8, ldo8, 900, 900, max77660_rails(buck3),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO9, ldo9, 2800, 2800, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO10, ldo10, 1800, 1800, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
@@ -319,7 +318,7 @@ MAX77660_PDATA_INIT(LDO13, ldo13, 2850, 2850, NULL,
 		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO14, ldo14, 2800, 2800, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO15, ldo15, 1200, 1200, NULL,
 		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
@@ -334,19 +333,19 @@ MAX77660_PDATA_INIT(LDO18, ldo18, 2700, 2700, NULL,
 		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW3, sw3, 1800, 1800, max77660_rails(buck5),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW4, sw4, 1100, 1100, max77660_rails(buck1),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW5, sw5, 1200, 1200, max77660_rails(buck3),
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 #define MAX77660_REG(_id, _data) (&max77660_regulator_pdata_##_data)
 
