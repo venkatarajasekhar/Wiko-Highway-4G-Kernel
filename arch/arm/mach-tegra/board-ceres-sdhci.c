@@ -388,6 +388,9 @@ static int __init ceres_wifi_init(void)
 #ifdef CONFIG_TEGRA_PREPOWER_WIFI
 static int __init ceres_wifi_prepower(void)
 {
+	if (!machine_is_ceres())
+		return 0;
+
 	ceres_wifi_power(1);
 
 	return 0;
