@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-dolak-panel.c
  *
- * Copyright (c) 2011-2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,6 +97,7 @@ static struct platform_device dolak_backlight_device = {
 	},
 };
 
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 static int dolak_panel_enable(void)
 {
 #if DSI_PANEL_218
@@ -319,7 +320,7 @@ static struct tegra_dc_sd_settings dolak_sd_settings = {
 			},
 		},
 	.sd_brightness = &sd_brightness,
-	.bl_device = &dolak_backlight_device,
+	.bl_device = (struct backlight_device *)&dolak_backlight_device,
 };
 
 static struct tegra_dc_out dolak_disp1_out = {
@@ -358,6 +359,7 @@ static struct platform_device dolak_disp1_device = {
 		.platform_data = &dolak_disp1_pdata,
 	},
 };
+#endif
 
 static struct nvmap_platform_carveout dolak_carveouts[] = {
 	[0] = {

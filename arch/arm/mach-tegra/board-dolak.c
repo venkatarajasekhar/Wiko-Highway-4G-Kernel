@@ -88,11 +88,6 @@ static struct platform_device debug_uart = {
 	},
 };
 
-/* !!!FIXME!!! */
-static struct tegra_ulpi_config ulpi_phy_config = {
-	.clk = "clk_dev2",
-};
-
 #ifdef CONFIG_BCM4329_RFKILL
 
 static struct resource dolak_bcm4329_rfkill_resources[] = {
@@ -157,12 +152,6 @@ static __initdata struct tegra_clk_init_table dolak_clk_init_table[] = {
 	{ "vde",	"pll_c",	48400000,	true},
 #endif
 	{ NULL,		NULL,		0,		0},
-};
-
-static struct i2c_board_info __initdata dolak_i2c_bus1_board_info[] = {
-	{
-		I2C_BOARD_INFO("wm8903", 0x1a),
-	},
 };
 
 static struct tegra_i2c_platform_data dolak_i2c1_platform_data = {
@@ -471,6 +460,7 @@ static struct tegra_usb_platform_data tegra_udc_pdata = {
 	},
 };
 
+#if defined(USB_HOST_ONLY)
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
@@ -494,59 +484,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_use_fuses = 1,
 	},
 };
-
-static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.hot_plug = true,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 15,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
-static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
-	.port_otg = false,
-	.has_hostpc = true,
-	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
-	.op_mode	= TEGRA_USB_OPMODE_HOST,
-	.u_data.host = {
-		.vbus_gpio = -1,
-		.hot_plug = true,
-		.remote_wakeup_supported = true,
-		.power_off_on_suspend = true,
-	},
-	.u_cfg.utmi = {
-		.hssync_start_delay = 0,
-		.elastic_limit = 16,
-		.idle_wait_delay = 17,
-		.term_range_adj = 6,
-		.xcvr_setup = 8,
-		.xcvr_lsfslew = 2,
-		.xcvr_lsrslew = 2,
-		.xcvr_setup_offset = 0,
-		.xcvr_use_fuses = 1,
-	},
-};
-
-static struct tegra_usb_otg_data tegra_otg_pdata = {
-	.ehci_device = &tegra_ehci1_device,
-	.ehci_pdata = &tegra_ehci1_utmi_pdata,
-};
+#endif
 
 static void dolak_usb_init(void)
 {
