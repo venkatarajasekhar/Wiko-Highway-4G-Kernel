@@ -11,8 +11,6 @@ obj-y                                   += board-info.o
 obj-y                                   += io.o
 obj-y                                   += irq.o
 obj-y                                   += clock.o
-obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_clocks.o
-obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11_clocks.o
 obj-y                                   += timer.o
 obj-y                                   += timerinfo.o
 
@@ -112,6 +110,7 @@ obj-$(CONFIG_CPU_IDLE)                  += sleep.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_clocks.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra30_clocks.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_clocks.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra14_clocks.o
 obj-$(CONFIG_SMP)                       += platsmp.o
 obj-y                                   += headsmp.o
 obj-y                                   += reset.o
