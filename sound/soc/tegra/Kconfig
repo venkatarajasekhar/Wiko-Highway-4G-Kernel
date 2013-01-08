@@ -125,6 +125,7 @@ config SND_SOC_TEGRA_E1853
 	select SND_SOC_SPDIF
 	select SND_SOC_TEGRA30_DAM if ARCH_TEGRA_3x_SOC
 	select SND_SOC_WM8731
+	select SND_SOC_AD193X
 	help
 	  Say Y or M here if you want to add support for SoC audio on the
 	  TEGRA E1853 SKUs. These are plug-n-play boards and and the codecs

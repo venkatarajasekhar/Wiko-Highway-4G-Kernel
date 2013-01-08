@@ -317,9 +317,9 @@ static struct tegra_asoc_vcm_platform_data jetson_audio_pdata = {
 		.master = 0,
 	},
 	.codec_info[1] = {
-		.codec_dai_name = "dit-hifi",
+		.codec_dai_name = "ad193x-hifi",
 		.cpu_dai_name = "tegra30-i2s.3",
-		.codec_name = "spdif-dit.1",
+		.codec_name = "ad193x.0-0007",
 		.name = "tegra-i2s-2",
 		.pcm_driver = "tegra-tdm-pcm-audio",
 		.i2s_format = format_tdm,
@@ -353,6 +353,10 @@ static struct i2c_board_info __initdata wm8731_board_info = {
 	I2C_BOARD_INFO("wm8731", 0x1a),
 };
 
+static struct i2c_board_info __initdata ad1937_board_info = {
+	I2C_BOARD_INFO("ad1937", 0x07),
+};
+
 static void e1853_i2s_audio_init(void)
 {
 	platform_device_register(&tegra_pcm_device);
@@ -365,6 +369,7 @@ static void e1853_i2s_audio_init(void)
 
 	if (tegra_is_board(NULL, "61860", NULL, NULL, NULL)) {
 		i2c_register_board_info(0, &wm8731_board_info, 1);
+		i2c_register_board_info(0, &ad1937_board_info, 1);
 		tegra_snd_e1853.dev.platform_data = &jetson_audio_pdata;
 		platform_device_register(&tegra_snd_e1853);
 	} else {
