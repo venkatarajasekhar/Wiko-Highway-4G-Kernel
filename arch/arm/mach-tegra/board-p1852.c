@@ -64,6 +64,7 @@
 #include "gpio-names.h"
 #include "fuse.h"
 #include "common.h"
+#include "pm.h"
 
 static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	/* name		parent		rate		enabled */
@@ -169,7 +170,6 @@ static struct platform_device *p1852_uart_devices[] __initdata = {
 	&tegra_uartd_device,
 	&tegra_uarte_device,
 };
-static struct clk *debug_uart_clk;
 
 static void __init uart_debug_init(void)
 {
@@ -178,6 +178,8 @@ static void __init uart_debug_init(void)
 	pr_info("Selecting UARTB as the debug console\n");
 	p1852_uart_devices[1] = &debug_uartb_device;
 	debug_uart_clk = clk_get_sys("serial8250.0", "uartb");
+	debug_uart_port_base = ((struct plat_serial8250_port *)(
+				debug_uartb_device.dev.platform_data))->mapbase;
 }
 
 static void __init p1852_uart_init(void)
@@ -200,6 +202,29 @@ static void __init p1852_uart_init(void)
 	platform_add_devices(p1852_uart_devices,
 				ARRAY_SIZE(p1852_uart_devices));
 }
+
+#if defined(CONFIG_RTC_DRV_TEGRA)
+static struct resource tegra_rtc_resources[] = {
+	[0] = {
+		.start = TEGRA_RTC_BASE,
+		.end = TEGRA_RTC_BASE + TEGRA_RTC_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = INT_RTC,
+		.end = INT_RTC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device tegra_rtc_device = {
+	.name = "tegra_rtc",
+	.id   = -1,
+	.resource = tegra_rtc_resources,
+	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
+};
+#endif
+
 #if defined(CONFIG_TEGRA_P1852_TDM)
 static struct tegra_asoc_vcm_platform_data p1852_audio_tdm_pdata = {
 	.codec_info[0] = {
@@ -366,6 +391,9 @@ static struct platform_device *p1852_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_AVP)
 	&tegra_avp_device,
 #endif
+#if defined(CONFIG_RTC_DRV_TEGRA)
+	&tegra_rtc_device,
+#endif
 	&tegra_camera,
 
 	&tegra_wdt0_device,
@@ -509,7 +537,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = false,
+		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -535,7 +563,7 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = false,
+		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},
@@ -560,7 +588,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
 		.vbus_gpio = -1,
-		.hot_plug = false,
+		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 	},

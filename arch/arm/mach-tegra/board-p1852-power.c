@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-p1852-power.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,17 @@
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/regulator/tps6591x-regulator.h>
+
+#include <linux/platform_device.h>
+#include <linux/resource.h>
+#include <linux/regulator/machine.h>
+#include <linux/mfd/tps6591x.h>
+#include <linux/gpio.h>
+#include <linux/io.h>
+#include <linux/regulator/tps6591x-regulator.h>
+
+#include <mach/iomap.h>
+#include <mach/irqs.h>
 
 #include "board-p1852.h"
 #include "pm.h"
@@ -86,11 +97,16 @@ static struct tps6591x_subdev_info tps_devs_p1852[] = {
 	TPS_REG(LDO_1, ldo1, 0),
 };
 
+static struct tps6591x_sleep_keepon_data tps_slp_keepon = {
+	.clkout32k_keepon = 1,
+};
+
 static struct tps6591x_platform_data tps_platform = {
 	.irq_base	= TPS6591X_IRQ_BASE,
 	.gpio_base	= TPS6591X_GPIO_BASE,
-	.slp_keepon	= NULL,
-	.dev_slp_en	= false,
+	.dev_slp_en	= true,
+	.slp_keepon	= &tps_slp_keepon,
+	.use_power_off	= true,
 };
 
 static struct i2c_board_info __initdata p1852_regulators[] = {
@@ -122,12 +138,30 @@ int __init p1852_regulator_init(void)
 	return 0;
 }
 
+static void p1852_board_suspend(int lp_state, enum suspend_stage stg)
+{
+	if ((lp_state == 1) && (stg == TEGRA_SUSPEND_BEFORE_CPU))
+		tegra_console_uart_suspend();
+}
+
+static void p1852_board_resume(int lp_state, enum resume_stage stg)
+{
+	if ((lp_state == 1) && (stg == TEGRA_RESUME_AFTER_CPU))
+		tegra_console_uart_resume();
+}
+
 static struct tegra_suspend_platform_data p1852_suspend_data = {
 	/*  FIXME: This value needs to come from SysEng  */
 	.cpu_timer	= 2000,
 	.cpu_off_timer	= 200,
-	.suspend_mode	= TEGRA_SUSPEND_NONE,
-	.cpu_lp2_min_residency	= 2000,
+	.suspend_mode	= TEGRA_SUSPEND_LP1,
+	.core_timer	= 0x7e7e,
+	.core_off_timer = 0,
+	.corereq_high	= true,
+	.sysclkreq_high	= false,
+	.cpu_lp2_min_residency = 2000,
+	.board_suspend = p1852_board_suspend,
+	.board_resume = p1852_board_resume,
 };
 
 int __init p1852_suspend_init(void)
