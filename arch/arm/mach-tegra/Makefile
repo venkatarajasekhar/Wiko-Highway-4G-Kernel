@@ -284,6 +284,8 @@ obj-${CONFIG_MACH_KAI}                  += board-kai-sdhci.o
 obj-${CONFIG_MACH_KAI}                  += board-kai-sensors.o
 obj-y                                   += eeprom-wifi-mac.o
 
+obj-y                                   += board-panel.o
+
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-memory.o
 obj-${CONFIG_MACH_DALMORE}              += board-dalmore-pinmux.o

@@ -43,6 +43,14 @@
 #include "tegra14_host1x_devices.h"
 #endif
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
+#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+#else
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PG4
+#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PG3
+#endif
+
 struct platform_device * __init ceres_host1x_init(void)
 {
 	struct platform_device *pdev = NULL;
@@ -89,8 +97,8 @@ static struct resource ceres_disp1_resources[] = {
 	},
 	{
 		.name	= "dsi_regs",
-		.start	= 0, /* Filled in the panel file by init_resources() */
-		.end	= 0, /* Filled in the panel file by init_resources() */
+		.start	= 0, /* Filled in by tegra_dsi_resources_init() */
+		.end	= 0, /* Filled in by tegra_dsi_resources_init() */
 		.flags	= IORESOURCE_MEM,
 	},
 	{
@@ -337,6 +345,7 @@ static void ceres_panel_select(void)
 {
 	struct tegra_panel *panel;
 	struct board_info board;
+	u8 dsi_instance = 0;
 
 	tegra_get_display_board_info(&board);
 
@@ -345,14 +354,21 @@ static void ceres_panel_select(void)
 	/* fall through */
 	default:
 		panel = &dsi_s_1080p_5;
+		/* ceres uses instance 0 for Sharp 1080p panel */
+		dsi_instance = DSI_INSTANCE_0;
 		break;
 	}
 
 	if (panel->init_sd_settings)
 		panel->init_sd_settings(&sd_settings);
 
-	if (panel->init_dc_out)
+	if (panel->init_dc_out) {
 		panel->init_dc_out(&ceres_disp1_out);
+		ceres_disp1_out.dsi->dsi_instance = dsi_instance;
+		ceres_disp1_out.dsi->dsi_panel_rst_gpio = DSI_PANEL_RST_GPIO;
+		ceres_disp1_out.dsi->dsi_panel_bl_en_gpio =
+			DSI_PANEL_BL_EN_GPIO;
+	}
 
 	if (panel->init_fb_data)
 		panel->init_fb_data(&ceres_disp1_fb_data);
@@ -363,9 +379,8 @@ static void ceres_panel_select(void)
 	if (panel->set_disp_device)
 		panel->set_disp_device(&ceres_disp1_device);
 
-	if (panel->init_resources)
-		panel->init_resources(ceres_disp1_resources,
-			ARRAY_SIZE(ceres_disp1_resources));
+	tegra_dsi_resources_init(dsi_instance, ceres_disp1_resources,
+		ARRAY_SIZE(ceres_disp1_resources));
 
 	if (panel->register_bl_dev)
 		panel->register_bl_dev();
