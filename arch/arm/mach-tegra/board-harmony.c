@@ -258,6 +258,8 @@ static struct tegra_i2c_platform_data harmony_i2c1_platform_data = {
 	.adapter_nr     = 0,
 	.bus_count      = 1,
 	.bus_clk_rate   = { 400000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static const struct tegra_pingroup_config i2c2_ddc = {
@@ -276,12 +278,16 @@ static struct tegra_i2c_platform_data harmony_i2c2_platform_data = {
 	.bus_clk_rate   = { 100000, 100000 },
 	.bus_mux        = { &i2c2_ddc, &i2c2_gen2 },
 	.bus_mux_len    = { 1, 1 },
+	.scl_gpio	= {-1, -1},
+	.sda_gpio	= {-1, -1},
 };
 
 static struct tegra_i2c_platform_data harmony_i2c3_platform_data = {
 	.adapter_nr     = 3,
 	.bus_count      = 1,
 	.bus_clk_rate   = { 400000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct tegra_i2c_platform_data harmony_dvc_platform_data = {
@@ -289,6 +295,8 @@ static struct tegra_i2c_platform_data harmony_dvc_platform_data = {
 	.bus_count      = 1,
 	.bus_clk_rate   = { 400000, 0 },
 	.is_dvc         = true,
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct wm8903_platform_data harmony_wm8903_pdata = {

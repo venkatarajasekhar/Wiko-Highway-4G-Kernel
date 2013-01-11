@@ -246,7 +246,6 @@ static struct tegra_i2c_platform_data whistler_i2c1_platform_data = {
 	.bus_clk_rate	= { 400000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PC4, 0},
 	.sda_gpio		= {TEGRA_GPIO_PC5, 0},
-	.arb_recovery = arb_lost_recovery,
 	.slave_addr = 0xFC,
 };
 
@@ -266,9 +265,8 @@ static struct tegra_i2c_platform_data whistler_i2c2_platform_data = {
 	.bus_clk_rate	= { 10000, 100000 },
 	.bus_mux	= { &i2c2_ddc, &i2c2_gen2 },
 	.bus_mux_len	= { 1, 1 },
-	.scl_gpio		= {0, TEGRA_GPIO_PT5},
-	.sda_gpio		= {0, TEGRA_GPIO_PT6},
-	.arb_recovery = arb_lost_recovery,
+	.scl_gpio		= {-1, TEGRA_GPIO_PT5},
+	.sda_gpio		= {-1, TEGRA_GPIO_PT6},
 	.slave_addr = 0xFC,
 };
 
@@ -278,7 +276,6 @@ static struct tegra_i2c_platform_data whistler_i2c3_platform_data = {
 	.bus_clk_rate	= { 400000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PBB2, 0},
 	.sda_gpio		= {TEGRA_GPIO_PBB3, 0},
-	.arb_recovery = arb_lost_recovery,
 	.slave_addr = 0xFC,
 };
 
@@ -289,7 +286,6 @@ static struct tegra_i2c_platform_data whistler_dvc_platform_data = {
 	.is_dvc		= true,
 	.scl_gpio		= {TEGRA_GPIO_PZ6, 0},
 	.sda_gpio		= {TEGRA_GPIO_PZ7, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 static struct aic326x_pdata whistler_aic3262_pdata = {

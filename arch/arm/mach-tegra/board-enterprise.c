@@ -320,7 +320,6 @@ static struct tegra_i2c_platform_data enterprise_i2c1_platform_data = {
 	.bus_clk_rate	= { 100000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PC4, 0},
 	.sda_gpio		= {TEGRA_GPIO_PC5, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 static struct tegra_i2c_platform_data enterprise_i2c2_platform_data = {
@@ -330,7 +329,6 @@ static struct tegra_i2c_platform_data enterprise_i2c2_platform_data = {
 	.is_clkon_always = true,
 	.scl_gpio		= {TEGRA_GPIO_PT5, 0},
 	.sda_gpio		= {TEGRA_GPIO_PT6, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 static struct tegra_i2c_platform_data enterprise_i2c3_platform_data = {
@@ -339,7 +337,6 @@ static struct tegra_i2c_platform_data enterprise_i2c3_platform_data = {
 	.bus_clk_rate	= { 271000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PBB1, 0},
 	.sda_gpio		= {TEGRA_GPIO_PBB2, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 static struct tegra_i2c_platform_data enterprise_i2c4_platform_data = {
@@ -348,7 +345,6 @@ static struct tegra_i2c_platform_data enterprise_i2c4_platform_data = {
 	.bus_clk_rate	= { 10000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PV4, 0},
 	.sda_gpio		= {TEGRA_GPIO_PV5, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 static struct tegra_i2c_platform_data enterprise_i2c5_platform_data = {
@@ -357,7 +353,6 @@ static struct tegra_i2c_platform_data enterprise_i2c5_platform_data = {
 	.bus_clk_rate	= { 390000, 0 },
 	.scl_gpio		= {TEGRA_GPIO_PZ6, 0},
 	.sda_gpio		= {TEGRA_GPIO_PZ7, 0},
-	.arb_recovery = arb_lost_recovery,
 };
 
 /* Equalizer filter coefs generated from the MAXIM MAX98088

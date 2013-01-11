@@ -169,6 +169,8 @@ static struct tegra_i2c_platform_data dolak_i2c1_platform_data = {
 	.adapter_nr	= 0,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 #if 0	/* !!!FIXME!!! */
@@ -187,24 +189,32 @@ static struct tegra_i2c_platform_data dolak_i2c2_platform_data = {
 	.adapter_nr	= 1,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct tegra_i2c_platform_data dolak_i2c3_platform_data = {
 	.adapter_nr	= 3,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct tegra_i2c_platform_data dolak_i2c4_platform_data = {
 	.adapter_nr	= 4,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct tegra_i2c_platform_data dolak_i2c5_platform_data = {
 	.adapter_nr	= 5,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio	= {-1, 0},
+	.sda_gpio	= {-1, 0},
 };
 
 static struct wm8903_platform_data dolak_wm8903_pdata = {

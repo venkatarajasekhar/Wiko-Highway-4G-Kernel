@@ -270,6 +270,8 @@ static struct tegra_i2c_platform_data aruba_i2c2_platform_data = {
 	.adapter_nr	= 1,
 	.bus_count	= 2,
 	.bus_clk_rate	= { 100000, 100000 },
+	.scl_gpio		= {-1, -1},
+	.sda_gpio		= {-1, -1},
 #if 0	/* !!!FIXME!!!! TESE ARE VENTANA SETTINGS */
 	.bus_mux	= { &i2c2_ddc, &i2c2_gen2 },
 	.bus_mux_len	= { 1, 1 },
@@ -280,18 +282,24 @@ static struct tegra_i2c_platform_data aruba_i2c3_platform_data = {
 	.adapter_nr	= 3,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio		= {-1, -1},
+	.sda_gpio		= {-1, -1},
 };
 
 static struct tegra_i2c_platform_data aruba_i2c4_platform_data = {
 	.adapter_nr	= 4,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio		= {-1, -1},
+	.sda_gpio		= {-1, -1},
 };
 
 static struct tegra_i2c_platform_data aruba_i2c5_platform_data = {
 	.adapter_nr	= 5,
 	.bus_count	= 1,
 	.bus_clk_rate	= { 100000, 0 },
+	.scl_gpio		= {-1, -1},
+	.sda_gpio		= {-1, -1},
 };
 
 static void aruba_i2c_init(void)
