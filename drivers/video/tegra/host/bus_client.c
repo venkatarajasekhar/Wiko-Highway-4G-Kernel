@@ -135,13 +135,14 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	filp->private_data = NULL;
 
 	nvhost_module_remove_client(priv->ch->dev, priv);
-	nvhost_putchannel(priv->ch, priv->hwctx);
 
 	if (priv->hwctx)
 		priv->hwctx->h->put(priv->hwctx);
 
 	if (priv->job)
 		nvhost_job_put(priv->job);
+
+	nvhost_putchannel(priv->ch, priv->hwctx);
 
 	nvhost_memmgr_put_mgr(priv->memmgr);
 	kfree(priv);
