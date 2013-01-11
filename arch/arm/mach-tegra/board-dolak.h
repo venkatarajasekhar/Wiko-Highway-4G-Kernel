@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-dolak.h
  *
- * Copyright (C) 2011-2012 NVIDIA Corporation.
+ * Copyright (C) 2011-2013 NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,6 +26,7 @@ int dolak_sdhci_init(void);
 int dolak_pinmux_init(void);
 int dolak_panel_init(void);
 int dolak_sensors_init(void);
+int dolak_emc_init(void);
 
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 #define DOLAK_BOARD_NAME "dolak_sim"

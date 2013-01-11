@@ -624,6 +624,7 @@ static void __init tegra_dolak_init(void)
 	dolak_i2c_init();
 	dolak_regulator_init();
 	dolak_suspend_init();
+	dolak_emc_init();
 	dolak_touch_init();
 	dolak_usb_init();
 	dolak_panel_init();
