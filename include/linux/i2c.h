@@ -617,4 +617,18 @@ union i2c_smbus_data {
 #define I2C_SMBUS_BLOCK_PROC_CALL   7		/* SMBus 2.0 */
 #define I2C_SMBUS_I2C_BLOCK_DATA    8
 
+/* Bus clear logic using the GPIO */
+#ifdef CONFIG_I2C_ALGO_BUSCLEAR
+int i2c_algo_busclear_gpio(struct device *dev, int scl_gpio,
+	int scl_gpio_flags, int sda_gpio, int sda_gpio_flags,
+	int max_retry_clock, int clock_speed_hz);
+#else
+static inline int i2c_algo_busclear_gpio(struct device *dev, int scl_gpio,
+	int scl_gpio_flags, int sda_gpio, int sda_gpio_flags,
+	int max_retry_clock, int clock_speed_hz)
+{
+	return -EINVAL;
+}
+#endif /* CONFIG_I2C_ALGO_BUSCLEAR */
+
 #endif /* _LINUX_I2C_H */
