@@ -86,7 +86,10 @@ obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra14_dvfs.o
 ifeq ($(CONFIG_TEGRA_SILICON_PLATFORM),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_dvfs.o
-obj-$(CONFIG_TEGRA_LATENCY_ALLOWANCE)   += latency_allowance.o
+obj-y                                   += latency_allowance.o
+obj-y                                   += tegra3_la.o
+obj-y                                   += tegra11x_la.o
+obj-y                                   += tegra14x_la.o
 obj-$(CONFIG_TEGRA_EDP_LIMITS)          += edp.o
 obj-$(CONFIG_TEGRA_CORE_EDP_LIMITS)     += edp_core.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_edp.o
