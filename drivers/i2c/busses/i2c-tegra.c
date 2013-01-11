@@ -28,6 +28,7 @@
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/interrupt.h>
+#include <linux/gpio.h>
 #include <linux/delay.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -126,6 +127,7 @@
 #define SL_ADDR1(addr) (addr & 0xff)
 #define SL_ADDR2(addr) ((addr >> 8) & 0xff)
 
+#define MAX_BUSCLEAR_CLOCK			(9 * 8 + 1)
 /*
  * msg_end_type: The bus control which need to be send at end of transfer.
  * @MSG_END_STOP: Send stop pulse at end of transfer.
@@ -222,7 +224,6 @@ struct tegra_i2c_dev {
 	bool is_clkon_always;
 	bool is_high_speed_enable;
 	u16 hs_master_code;
-	int (*arb_recovery)(int scl_gpio, int sda_gpio);
 	struct tegra_i2c_chipdata *chipdata;
 	struct tegra_i2c_bus busses[1];
 };
@@ -923,9 +924,12 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 
 			if (!(i2c_readl(i2c_dev, I2C_BUS_CLEAR_STATUS) & I2C_BC_STATUS))
 				dev_warn(i2c_dev->dev, "Un-recovered Arbitration lost\n");
-		} else if (i2c_dev->arb_recovery)
-			i2c_dev->arb_recovery(i2c_bus->scl_gpio,
-							i2c_bus->sda_gpio);
+		} else {
+			i2c_algo_busclear_gpio(i2c_dev->dev,
+				i2c_bus->scl_gpio, GPIOF_OPEN_DRAIN,
+				i2c_bus->sda_gpio,GPIOF_OPEN_DRAIN,
+				MAX_BUSCLEAR_CLOCK, 100000);
+		}
 	}
 
 	if (i2c_dev->msg_err == I2C_ERR_NO_ACK) {
@@ -1211,9 +1215,6 @@ static int __devinit tegra_i2c_probe(struct platform_device *pdev)
 	if (!i2c_dev->chipdata->has_xfer_complete_interrupt)
 		spin_lock_init(&i2c_dev->fifo_lock);
 
-	if (!i2c_dev->chipdata->has_hw_arb_support)
-		i2c_dev->arb_recovery = plat->arb_recovery;
-
 	platform_set_drvdata(pdev, i2c_dev);
 
 	if (i2c_dev->is_clkon_always)
@@ -1242,10 +1243,8 @@ static int __devinit tegra_i2c_probe(struct platform_device *pdev)
 		i2c_bus->mux_len = plat->bus_mux_len[i];
 		i2c_bus->bus_clk_rate = plat->bus_clk_rate[i] ?: 100000;
 
-		if (i2c_dev->arb_recovery) {
-			i2c_bus->scl_gpio = plat->scl_gpio[i];
-			i2c_bus->sda_gpio = plat->sda_gpio[i];
-		}
+		i2c_bus->scl_gpio = plat->scl_gpio[i];
+		i2c_bus->sda_gpio = plat->sda_gpio[i];
 		i2c_bus->adapter.dev.of_node = pdev->dev.of_node;
 		i2c_bus->adapter.algo = &tegra_i2c_algo;
 		i2c_set_adapdata(&i2c_bus->adapter, i2c_bus);
