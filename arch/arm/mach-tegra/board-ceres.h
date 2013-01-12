@@ -45,6 +45,15 @@
 #define CAM_AF_PWDN			TEGRA_GPIO_PBB7
 #define CAM_TORCH_EN			TEGRA_GPIO_PCC1
 
+/* Touchscreen definitions */
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define TOUCH_GPIO_IRQ_RAYDIUM_SPI	TEGRA_GPIO_PK2
+#define TOUCH_GPIO_RST_RAYDIUM_SPI	TEGRA_GPIO_PK4
+#else
+#define TOUCH_GPIO_IRQ_RAYDIUM_SPI	TEGRA_GPIO_PN1
+#define TOUCH_GPIO_RST_RAYDIUM_SPI	TEGRA_GPIO_PN2
+#endif
+
 int ceres_sensors_init(void);
 int ceres_keys_init(void);
 int ceres_sdhci_init(void);

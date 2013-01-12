@@ -22,6 +22,7 @@
 #include <linux/ctype.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/platform_data/tegra_usb.h>
 #include <linux/memblock.h>
@@ -31,6 +32,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c-tegra.h>
 #include <linux/spi/spi.h>
+#include <linux/spi/rm31080a_ts.h>
 #include <linux/spi-tegra.h>
 #include <asm/hardware/gic.h>
 
@@ -45,6 +47,7 @@
 #include "board.h"
 #include "board-ceres.h"
 #include "board-common.h"
+#include "board-touch-raydium.h"
 #include "clock.h"
 #include "devices.h"
 #include "common.h"
@@ -358,6 +361,52 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device1);
 }
 
+static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
+	/* name		parent		rate		enabled */
+	{ "extern2",	"pll_p",	41000000,	false},
+	{ "clk_out_2",	"extern2",	40800000,	false},
+	{ NULL,		NULL,		0,		0},
+};
+
+struct rm_spi_ts_platform_data rm31080ts_ceres_data = {
+	.gpio_reset = 0,
+	.config = 0,
+	.platform_id = RM_PLATFORM_P005,
+	.name_of_clock = "clk_out_2",
+};
+
+static struct tegra_spi_device_controller_data dev_cdata = {
+	.rx_clk_tap_delay = 0,
+	.tx_clk_tap_delay = 0,
+};
+
+struct spi_board_info rm31080a_ceres_spi_board[1] = {
+	{
+		.modalias = "rm_ts_spidev",
+		.bus_num = 3,
+		.chip_select = 2,
+		.max_speed_hz = 12 * 1000 * 1000,
+		.mode = SPI_MODE_0,
+		.controller_data = &dev_cdata,
+		.platform_data = &rm31080ts_ceres_data,
+	},
+};
+
+static int __init ceres_touch_init(void)
+{
+	tegra_clk_init_from_table(touch_clk_init_table);
+	clk_enable(tegra_get_clock_by_name("clk_out_2"));
+	mdelay(20);
+	rm31080a_ceres_spi_board[0].irq =
+		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+				TOUCH_GPIO_RST_RAYDIUM_SPI,
+				&rm31080ts_ceres_data,
+				&rm31080a_ceres_spi_board[0],
+				ARRAY_SIZE(rm31080a_ceres_spi_board));
+	return 0;
+}
+
 static void __init tegra_ceres_init(void)
 {
 	tegra_clk_init_from_table(ceres_clk_init_table);
@@ -372,6 +421,7 @@ static void __init tegra_ceres_init(void)
 	ceres_keys_init();
 	ceres_regulator_init();
 	ceres_suspend_init();
+	ceres_touch_init();
 	ceres_sdhci_init();
 	isomgr_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
