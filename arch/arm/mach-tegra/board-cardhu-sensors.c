@@ -59,12 +59,12 @@
 #include "cpu-tegra.h"
 #include "devices.h"
 
-static struct regulator *cardhu_1v8_cam1 = NULL;
-static struct regulator *cardhu_1v8_cam2 = NULL;
-static struct regulator *cardhu_1v8_cam3 = NULL;
-static struct regulator *cardhu_vdd_2v8_cam1 = NULL;
-static struct regulator *cardhu_vdd_2v8_cam2 = NULL;
-static struct regulator *cardhu_vdd_cam3 = NULL;
+static struct regulator *cardhu_1v8_cam1;
+static struct regulator *cardhu_1v8_cam2;
+static struct regulator *cardhu_1v8_cam3;
+static struct regulator *cardhu_vdd_2v8_cam1;
+static struct regulator *cardhu_vdd_2v8_cam2;
+static struct regulator *cardhu_vdd_cam3;
 
 static struct board_info board_info;
 
@@ -108,9 +108,15 @@ static int cardhu_camera_init(void)
 			pr_err("%s: gpio_request failed for gpio %s\n",
 				__func__, "OV5650_RESETN_GPIO");
 
+		ret = gpio_request(FRONT_CAM_DETECT_GPIO, "front_cam_detect");
+		if (ret < 0)
+			pr_err("%s: gpio_request failed for gpio %s\n",
+				__func__, "FRONT_CAM_DETECT_GPIO");
+
 		gpio_direction_output(CAM3_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 1);
+		gpio_direction_input(FRONT_CAM_DETECT_GPIO);
 		mdelay(10);
 
 		gpio_direction_output(OV5650_RESETN_GPIO, 1);
@@ -378,8 +384,7 @@ static void cardhu_ov5650_synchronize_sensors(void)
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 0);
 		gpio_direction_output(CAM2_POWER_DWN_GPIO, 0);
 		mdelay(50);
-	}
-	else
+	} else
 		pr_err("%s: UnSupported BoardId\n", __func__);
 }
 
@@ -551,6 +556,34 @@ static int cardhu_ov5640_power_off(struct device *dev)
 	return 0;
 }
 
+/* Detect ov5640 adapter by toggling the CAM3_POWER_DWN_GPIO and read it back
+ * from FRONT_CAM_DETECT_GPIO.
+ * On the ov5640 adapter, R507 should be installed a 0ohm resistor to make
+ * CAM3_POWER_DWN_GPIO and FRONT_CAM_DETECT_GPIO connected.
+ */
+static int ov5640_installed(void)
+{
+	int val = gpio_get_value(CAM3_POWER_DWN_GPIO);
+	int ret = gpio_get_value(FRONT_CAM_DETECT_GPIO);
+
+	pr_info("%s round 1: %d vs %d\n", __func__, val, ret);
+	if (ret != val)
+		return 0;
+
+	/* toggle CAM3_POWER_DWN_GPIO and read back from detect pin */
+	val ^= 1;
+	gpio_set_value(CAM3_POWER_DWN_GPIO, val & 1);
+	ret = gpio_get_value(FRONT_CAM_DETECT_GPIO);
+	/* resume CAM3_POWER_DWN_GPIO state */
+	gpio_set_value(CAM3_POWER_DWN_GPIO, (~val) & 1);
+
+	pr_info("%s round 2: %d vs %d\n", __func__, val, ret);
+	if (ret != val)
+		return 0;
+
+	return 1;
+}
+
 struct ov5640_platform_data cardhu_ov5640_data = {
 	.power_on = cardhu_ov5640_power_on,
 	.power_off = cardhu_ov5640_power_off,
@@ -673,11 +706,14 @@ static struct i2c_board_info pm269_i2c7_board_info[] = {
 	},
 };
 
-static struct i2c_board_info cardhu_i2c8_board_info[] = {
+static struct i2c_board_info cardhu_i2c8_board_info_ov2710[] = {
 	{
 		I2C_BOARD_INFO("ov2710", 0x36),
 		.platform_data = &cardhu_ov2710_data,
 	},
+};
+
+static struct i2c_board_info cardhu_i2c8_board_info_ov5640[] = {
 	{
 		I2C_BOARD_INFO("ov5640", 0x3C),
 		.platform_data = &cardhu_ov5640_data,
@@ -954,7 +990,8 @@ static int __init cam_tca6416_init(void)
 static struct mpu_platform_data mpu_gyro_data = {
 	.int_config	= 0x10,
 	.level_shifter	= 0,
-	.orientation	= MPU_GYRO_ORIENTATION,	/* Located in board_[platformname].h	*/
+	/* Located in board_[platformname].h	*/
+	.orientation	= MPU_GYRO_ORIENTATION,
 	.sec_slave_type	= SECONDARY_SLAVE_TYPE_ACCEL,
 	.sec_slave_id	= ACCEL_ID_KXTF9,
 	.secondary_i2c_addr	= MPU_ACCEL_ADDR,
@@ -1088,8 +1125,18 @@ int __init cardhu_sensors_init(void)
 					pm269_i2c7_board_info,
 					ARRAY_SIZE(pm269_i2c7_board_info));
 	}
-	i2c_register_board_info(PCA954x_I2C_BUS2, cardhu_i2c8_board_info,
-		ARRAY_SIZE(cardhu_i2c8_board_info));
+
+	if (ov5640_installed()) {
+		pr_info("%s ov5640 installed.\n", __func__);
+		i2c_register_board_info(PCA954x_I2C_BUS2,
+			cardhu_i2c8_board_info_ov5640,
+			ARRAY_SIZE(cardhu_i2c8_board_info_ov5640));
+	} else {
+		pr_info("%s ov2710 installed.\n", __func__);
+		i2c_register_board_info(PCA954x_I2C_BUS2,
+			cardhu_i2c8_board_info_ov2710,
+			ARRAY_SIZE(cardhu_i2c8_board_info_ov2710));
+	}
 
 #endif
 	pmu_tca6416_init();
