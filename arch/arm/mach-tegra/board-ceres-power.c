@@ -116,6 +116,7 @@ static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 	 REGULATOR_SUPPLY("avdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("avdd_dis_ts", NULL),
+	 REGULATOR_SUPPLY("avdd_backlight_3v0", "1-004d"),
 };
 
 static struct regulator_consumer_supply max77660_ldo5_supply[] = {
@@ -194,6 +195,7 @@ static struct regulator_consumer_supply max77660_ldo18_supply[] = {
 static struct regulator_consumer_supply max77660_sw1_supply[] = {
 	 REGULATOR_SUPPLY("vdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("vdd_dis_ts", NULL),
+	 REGULATOR_SUPPLY("vdd_lcd_1v8_s", NULL),
 };
 
 static struct regulator_consumer_supply max77660_sw2_supply[] = {
@@ -500,6 +502,11 @@ int __init ceres_regulator_init(void)
 	return 0;
 }
 
+/* Always ON /Battery regulator */
+static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
+	REGULATOR_SUPPLY("vdd_sys_bl", NULL),
+};
+
 /* LCD_AVDD_EN From PMU GP6 */
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
@@ -543,6 +550,10 @@ static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
 		},							\
 	}
 
+FIXED_REG(0,	battery,	battery,
+	NULL,	0,	0,
+	-1,	false, true,	0,	3300);
+
 FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 	NULL,	0,	0,
 	MAX77660_GPIO_BASE + MAX77660_GPIO6,	true,	true,	1,	2800);
@@ -554,6 +565,7 @@ FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 #define ADD_FIXED_REG(_name)    (&fixed_reg_##_name##_dev)
 
 #define CERES_COMMON_FIXED_REG		\
+	ADD_FIXED_REG(battery),		\
 	ADD_FIXED_REG(avdd_lcd),		\
 
 /* Gpio switch regulator platform data for Ceres E1680 */
@@ -563,7 +575,7 @@ static struct platform_device *fixed_reg_devs_e1680[] = {
 
 static int __init ceres_fixed_regulator_init(void)
 {
-	if (!machine_is_ceres())
+	if (!of_machine_is_compatible("nvidia,ceres"))
 		return 0;
 
 	return platform_add_devices(fixed_reg_devs_e1680,
