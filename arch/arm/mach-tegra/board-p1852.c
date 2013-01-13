@@ -112,36 +112,28 @@ static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 };
 
 static struct tegra_i2c_platform_data p1852_i2c1_platform_data = {
-	.adapter_nr	= 0,
-	.bus_count	= 1,
-	.bus_clk_rate	= { 100000, 0 },
-	.scl_gpio	= {-1, 0},
-	.sda_gpio	= {-1, 0},
+	.bus_clk_rate	= 100000,
+	.scl_gpio	= -1,
+	.sda_gpio	= -1,
 };
 
 static struct tegra_i2c_platform_data p1852_i2c2_platform_data = {
-	.adapter_nr	= 1,
-	.bus_count	= 1,
-	.bus_clk_rate	= { 100000, 0 },
+	.bus_clk_rate	= 100000,
+	.scl_gpio	= -1,
+	.sda_gpio	= -1,
 	.is_clkon_always = true,
-	.scl_gpio	= {-1, 0},
-	.sda_gpio	= {-1, 0},
 };
 
 static struct tegra_i2c_platform_data p1852_i2c4_platform_data = {
-	.adapter_nr	= 3,
-	.bus_count	= 1,
-	.bus_clk_rate	= { 100000, 0 },
-	.scl_gpio	= {-1, 0},
-	.sda_gpio	= {-1, 0},
+	.bus_clk_rate	= 100000,
+	.scl_gpio	= -1,
+	.sda_gpio	= -1,
 };
 
 static struct tegra_i2c_platform_data p1852_i2c5_platform_data = {
-	.adapter_nr	= 4,
-	.bus_count	= 1,
-	.bus_clk_rate	= { 100000, 0 },
-	.scl_gpio	= {-1, 0},
-	.sda_gpio	= {-1, 0},
+	.bus_clk_rate	= 100000,
+	.scl_gpio	= -1,
+	.sda_gpio	= -1,
 };
 
 static struct tegra_pci_platform_data p1852_pci_platform_data = {

@@ -20,23 +20,16 @@
 #ifndef _LINUX_I2C_TEGRA_H
 #define _LINUX_I2C_TEGRA_H
 
-#include <mach/pinmux.h>
-
-#define TEGRA_I2C_MAX_BUS 3
 
 struct tegra_i2c_platform_data {
-	int adapter_nr;
-	int bus_count;
-	const struct tegra_pingroup_config *bus_mux[TEGRA_I2C_MAX_BUS];
-	int bus_mux_len[TEGRA_I2C_MAX_BUS];
-	unsigned long bus_clk_rate[TEGRA_I2C_MAX_BUS];
+	unsigned long bus_clk_rate;
 	bool is_dvc;
 	bool is_clkon_always;
 	int retries;
 	int timeout;	/* in jiffies */
 	u16 slave_addr;
-	int scl_gpio[TEGRA_I2C_MAX_BUS];
-	int sda_gpio[TEGRA_I2C_MAX_BUS];
+	int scl_gpio;
+	int sda_gpio;
 	bool is_high_speed_enable;
 	u16 hs_master_code;
 };
