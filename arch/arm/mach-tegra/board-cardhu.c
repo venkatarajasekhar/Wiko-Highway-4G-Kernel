@@ -217,6 +217,8 @@ static struct i2c_board_info __initdata cardhu_i2c_bus3_board_info[] = {
 		.platform_data = &nfc_pdata,
 	},
 };
+
+#ifndef CONFIG_USE_OF
 static struct tegra_i2c_platform_data cardhu_i2c1_platform_data = {
 	.bus_clk_rate	= 100000,
 	.scl_gpio	= TEGRA_GPIO_PC4,
@@ -247,7 +249,7 @@ static struct tegra_i2c_platform_data cardhu_i2c5_platform_data = {
 	.scl_gpio	= TEGRA_GPIO_PZ6,
 	.sda_gpio	= TEGRA_GPIO_PZ7,
 };
-
+#endif
 
 #if 0
 struct tegra_wired_jack_conf audio_wr_jack_conf = {
@@ -388,6 +390,7 @@ static void cardhu_i2c_init(void)
 
 		tegra_get_board_info(&board_info);
 
+#ifndef CONFIG_USE_OF
 	tegra_i2c_device1.dev.platform_data = &cardhu_i2c1_platform_data;
 	tegra_i2c_device2.dev.platform_data = &cardhu_i2c2_platform_data;
 	tegra_i2c_device3.dev.platform_data = &cardhu_i2c3_platform_data;
@@ -399,6 +402,7 @@ static void cardhu_i2c_init(void)
 	platform_device_register(&tegra_i2c_device3);
 	platform_device_register(&tegra_i2c_device2);
 	platform_device_register(&tegra_i2c_device1);
+#endif
 
 	cardhu_codec_wm8903_info.irq = cardhu_codec_max98095_info.irq =
 		cardhu_codec_aic326x_info.irq = gpio_to_irq(TEGRA_GPIO_CDC_IRQ);
@@ -1381,13 +1385,24 @@ static void __init tegra_cardhu_init(void)
 	tegra_register_fuse();
 }
 
+#ifdef CONFIG_USE_OF
+struct of_dev_auxdata tegra30_cardhu_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("nvidia,tegra30-i2c", 0x7000c000, "tegra-i2c.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-i2c", 0x7000c400, "tegra-i2c.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-i2c", 0x7000c500, "tegra-i2c.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-i2c", 0x7000c700, "tegra-i2c.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra30-i2c", 0x7000d000, "tegra-i2c.4", NULL),
+	{}
+};
+#endif
+
 static void __init tegra_cardhu_dt_init(void)
 {
 	tegra_cardhu_init();
 
 #ifdef CONFIG_USE_OF
-	of_platform_populate(NULL,
-		of_default_bus_match_table, NULL, NULL);
+	of_platform_populate(NULL, of_default_bus_match_table,
+		tegra30_cardhu_auxdata_lookup, NULL);
 #endif
 }
 
