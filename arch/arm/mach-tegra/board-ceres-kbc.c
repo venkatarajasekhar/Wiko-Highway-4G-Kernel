@@ -97,29 +97,23 @@ static struct tegra_kbc_platform_data ceres_kbc_platform_data = {
 	}
 
 static struct gpio_keys_button ceres_int_keys[] = {
-	[0] = GPIO_KEY(KEY_VOLUMEDOWN, PV5, 0),
-	[1] = GPIO_KEY(KEY_VOLUMEUP, PV6, 0),
-	[2] = GPIO_KEY(KEY_CAMERA_FOCUS, PV3, 0),
-	[3] = {
-		.code = SW_ROTATE_LOCK,
-		.gpio = TEGRA_GPIO_PV1,
-		.irq = -1,
-		.type = EV_SW,
-		.desc = "LCD ROTATION",
-		.active_low = 1,
-		.wakeup = 1,
-		.debounce_interval = 100,
-	},
-	[4] = {
-		.code = SW_CAMERA_LENS_COVER,
-		.gpio = TEGRA_GPIO_PV2,
-		.irq = -1,
-		.type = EV_SW,
-		.desc = "CAMERA SHUTTER",
-		.active_low = 1,
-		.wakeup = 1,
-		.debounce_interval = 100,
-	},
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	[0] = GPIO_KEY(KEY_HOME, PR0, 0),
+	[1] = GPIO_KEY(KEY_MENU, PR1, 0),
+	[2] = GPIO_KEY(KEY_BACK, PR2, 0),
+	[3] = GPIO_KEY(KEY_POWER, PQ0, 1),
+	[4] = GPIO_KEY(KEY_VOLUMEUP, PQ1, 0),
+	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PQ2, 0),
+
+#else
+	[0] = GPIO_KEY(KEY_HOME, PV1, 0),
+	[1] = GPIO_KEY(KEY_MENU, PV2, 0),
+	[2] = GPIO_KEY(KEY_BACK, PV3, 0),
+	[3] = GPIO_KEY(KEY_POWER, PV4, 1),
+	[4] = GPIO_KEY(KEY_VOLUMEUP, PV5, 0),
+	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PV6, 0),
+
+#endif
 };
 
 static struct gpio_keys_platform_data ceres_int_keys_pdata = {
