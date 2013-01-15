@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-e1853.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -139,7 +139,7 @@ static struct tegra_i2c_platform_data e1853_i2c2_platform_data = {
 };
 
 static struct tegra_i2c_platform_data e1853_i2c4_platform_data = {
-	.bus_clk_rate	= 100000,
+	.bus_clk_rate	= 20000,
 	.scl_gpio	= -1,
 	.sda_gpio	= -1,
 };
