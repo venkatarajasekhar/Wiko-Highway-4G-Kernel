@@ -56,13 +56,21 @@ static struct tegra_pingroup_config mclk_disable =
 static struct tegra_pingroup_config mclk_enable =
 	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+/* Front sensor clock pinmux settings */
+static struct tegra_pingroup_config pbb0_disable =
+	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+
+static struct tegra_pingroup_config pbb0_enable =
+	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+#else
 /* Front sensor clock pinmux settings */
 static struct tegra_pingroup_config pbb0_disable =
 	VI_PINMUX(GPIO_PBB0, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 
 static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(GPIO_PBB0, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
-
+#endif
 
 static int ceres_focuser_power_on(struct ad5816_power_rail *pw)
 {
@@ -115,6 +123,10 @@ static int ceres_imx091_power_on(struct nvc_regulator *vreg)
 	if (err)
 		goto imx091_avdd_fail;
 
+	err = regulator_enable(vreg[IMX091_VREG_DVDD].vreg);
+	if (unlikely(err))
+		goto imx091_dvdd_fail;
+
 	err = regulator_enable(vreg[IMX091_VREG_IOVDD].vreg);
 	if (err)
 		goto imx091_iovdd_fail;
@@ -128,6 +140,9 @@ static int ceres_imx091_power_on(struct nvc_regulator *vreg)
 	return 1;
 
 imx091_iovdd_fail:
+	regulator_disable(vreg[IMX091_VREG_DVDD].vreg);
+
+imx091_dvdd_fail:
 	regulator_disable(vreg[IMX091_VREG_AVDD].vreg);
 
 imx091_avdd_fail:
@@ -148,6 +163,7 @@ static int ceres_imx091_power_off(struct nvc_regulator *vreg)
 
 	regulator_disable(vreg[IMX091_VREG_IOVDD].vreg);
 	regulator_disable(vreg[IMX091_VREG_AVDD].vreg);
+	regulator_disable(vreg[IMX091_VREG_DVDD].vreg);
 	return 0;
 }
 
