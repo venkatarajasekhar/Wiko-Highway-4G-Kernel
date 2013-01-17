@@ -116,7 +116,7 @@ static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 	 REGULATOR_SUPPLY("avdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("avdd_dis_ts", NULL),
-	 REGULATOR_SUPPLY("avdd_backlight_3v0", "1-004d"),
+	 REGULATOR_SUPPLY("vin", "1-004d"),
 };
 
 static struct regulator_consumer_supply max77660_ldo5_supply[] = {
