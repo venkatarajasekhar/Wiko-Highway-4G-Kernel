@@ -122,7 +122,7 @@ static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 	 REGULATOR_SUPPLY("avdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("avdd_dis_ts", NULL),
-	 REGULATOR_SUPPLY("vin", "1-004d"),
+	 REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
 static struct regulator_consumer_supply max77660_ldo5_supply[] = {
@@ -213,6 +213,7 @@ static struct regulator_consumer_supply max77660_sw2_supply[] = {
 	REGULATOR_SUPPLY("vif", "2-0010"),
 	REGULATOR_SUPPLY("vif", "2-0036"),
 	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
+	REGULATOR_SUPPLY("vdd", "2-004a"),
 };
 
 static struct regulator_consumer_supply max77660_sw3_supply[] = {
@@ -521,6 +522,7 @@ int __init ceres_regulator_init(void)
 /* Always ON /Battery regulator */
 static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_bl", NULL),
+	REGULATOR_SUPPLY("vdd_sys_cam", NULL),
 };
 
 /* LCD_AVDD_EN From PMU GP6 */

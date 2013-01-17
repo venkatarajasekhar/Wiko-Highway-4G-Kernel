@@ -24,6 +24,7 @@
 #include <media/imx091.h>
 #include <media/imx132.h>
 #include <media/ad5816.h>
+#include <media/max77387.h>
 
 #include <mach/pinmux-t11.h>
 #include <mach/pinmux.h>
@@ -408,6 +409,47 @@ static struct ad5816_platform_data ceres_ad5816_pdata = {
 	.power_off	= ceres_focuser_power_off,
 };
 
+static unsigned max77387_estates[] = {1000, 800, 600, 400, 200, 100, 0};
+
+static struct max77387_platform_data ceres_max77387_pdata = {
+	.config		= {
+		.led_mask		= 3,
+		.flash_trigger_mode	= 1,
+		/* use ONE-SHOOT flash mode - flash triggered at the
+		 * raising edge of strobe or strobe signal.
+		*/
+		.flash_mode		= 1,
+		.def_ftimer		= 0x24,
+		.max_total_current_mA	= 1000,
+		.max_peak_current_mA	= 600,
+		.led_config[0]	= {
+			.flash_torch_ratio	= 18100,
+			.granularity		= 1000,
+			.flash_levels		= 0,
+			.lumi_levels	= NULL,
+			},
+		.led_config[1]	= {
+			.flash_torch_ratio	= 18100,
+			.granularity		= 1000,
+			.flash_levels		= 0,
+			.lumi_levels		= NULL,
+			},
+		},
+	.pinstate	= {
+		.mask	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		.values	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		},
+	.cfg		= NVC_CFG_NODEV,
+	.dev_name	= "torch",
+	.gpio_strobe	= CAM_FLASH_STROBE,
+	.edpc_config	= {
+		.states		= max77387_estates,
+		.num_states	= ARRAY_SIZE(max77387_estates),
+		.e0_index	= 3,
+		.priority	= EDP_MAX_PRIO - 2,
+		},
+};
+
 static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	{
 		I2C_BOARD_INFO("imx091", 0x10),
@@ -420,6 +462,10 @@ static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	{
 		I2C_BOARD_INFO("ad5816", 0x0E),
 		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("max77387", 0x4A),
+		.platform_data = &ceres_max77387_pdata,
 	},
 };
 
