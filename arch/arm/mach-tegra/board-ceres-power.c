@@ -353,7 +353,7 @@ MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW3, sw3, 1800, 1800, max77660_rails(buck5),
-		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
+		0, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW4, sw4, 1100, 1100, max77660_rails(buck1),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);

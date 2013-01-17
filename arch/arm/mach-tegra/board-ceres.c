@@ -35,6 +35,7 @@
 #include <linux/nfc/bcm2079x.h>
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi-tegra.h>
+#include <sound/max98090.h>
 #include <asm/hardware/gic.h>
 
 #include <mach/iomap.h>
@@ -44,6 +45,8 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/tegra_fiq_debugger.h>
+
+#include <mach/tegra_asoc_pdata.h>
 
 #include "board.h"
 #include "board-ceres.h"
@@ -190,10 +193,56 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
+static struct max98090_eq_cfg max98090_eq_cfg[] = {
+};
+
+static struct max98090_pdata ceres_max98090_pdata = {
+	/* Headphone Detection */
+	.irq = TEGRA_GPIO_HP_DET,
+
+	/* Equalizer Configuration */
+	.eq_cfg = max98090_eq_cfg,
+	.eq_cfgcnt = ARRAY_SIZE(max98090_eq_cfg),
+
+	/* Microphone Configuration */
+	.digmic_left_mode = 1,
+	.digmic_right_mode = 1,
+};
+
+static struct i2c_board_info __initdata max98090_board_info = {
+	I2C_BOARD_INFO("max98090", 0x10),
+	.platform_data = &ceres_max98090_pdata,
+	.irq		= TEGRA_GPIO_CDC_IRQ,
+};
+
+static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
+	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
+	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
+	.gpio_hp_mute		= -1,
+	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
+	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
+	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
+	.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.channels       = 2,
+	},
+};
+
+static struct platform_device ceres_audio_max98090_device = {
+	.name	= "tegra-snd-max98090",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &ceres_audio_max98090_pdata,
+	},
+};
 static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
 	.id = -1,
 };
+
 
 static struct platform_device *ceres_spi_devices[] __initdata = {
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -252,15 +301,7 @@ static void __init ceres_spi_init(void)
 	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
 }
 
-
-static struct platform_device *ceres_devices[] __initdata = {
-	&tegra_pmu_device,
-	&tegra_rtc_device,
-	&tegra_udc_device,
-#if defined(CONFIG_TEGRA_AVP)
-	&tegra_avp_device,
-#endif
-	&tegra_camera,
+static struct platform_device *ceres_audio_devices[] __initdata = {
 	&tegra_ahub_device,
 	&tegra_pcm_device,
 	&tegra_dam_device0,
@@ -271,15 +312,37 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&tegra_i2s_device2,
 	&tegra_i2s_device3,
 	&tegra_i2s_device4,
-	&tegra_spdif_device,
 	&spdif_dit_device,
+	&tegra_spdif_device,
 	&bluetooth_dit_device,
 	&baseband_dit_device,
+#if defined(CONFIG_SND_HDA_PLATFORM_NVIDIA_TEGRA)
+	&tegra_hda_device,
+#endif
+	&ceres_audio_max98090_device,
+};
+
+static struct platform_device *ceres_devices[] __initdata = {
+	&tegra_pmu_device,
+	&tegra_rtc_device,
+	&tegra_udc_device,
+#if defined(CONFIG_TEGRA_AVP)
+	&tegra_avp_device,
+#endif
+	&tegra_camera,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,
 #endif
-	&tegra_hda_device,
+
 };
+
+static void ceres_audio_init(void)
+{
+	i2c_register_board_info(0, &max98090_board_info, 1);
+
+	platform_add_devices(ceres_audio_devices,
+			ARRAY_SIZE(ceres_audio_devices));
+}
 
 #ifdef CONFIG_USB_SUPPORT
 static struct tegra_usb_platform_data tegra_udc_pdata = {
@@ -374,7 +437,23 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "cilab",	"pll_p",	150000000,	false},
 	{ "cilcd",	"pll_p",	150000000,	false},
 	{ "cile",	"pll_p",	150000000,	false},
+	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
+	{ "hda",	"pll_p",	108000000,	false},
+	{ "hda2codec_2x", "pll_p",	48000000,	false},
+	{ "i2s0",	"pll_a_out0",	0,		false},
+	{ "i2s1",	"pll_a_out0",	0,		false},
+	{ "i2s2",	"pll_a_out0",	0,		false},
+	{ "i2s3",	"pll_a_out0",	0,		false},
+	{ "i2s4",	"pll_a_out0",	0,		false},
+	{ "d_audio",	"clk_m",	12000000,	false},
+	{ "dam0",	"clk_m",	12000000,	false},
+	{ "dam1",	"clk_m",	12000000,	false},
+	{ "dam2",	"clk_m",	12000000,	false},
+	{ "audio0",	"i2s0_sync",	0,		false},
+	{ "audio1",	"i2s1_sync",	0,		false},
+	{ "audio2",	"i2s2_sync",	0,		false},
+	{ "audio3",	"i2s3_sync",	0,		false},
 	{ NULL,		NULL,		0,		0},
 };
 
@@ -441,8 +520,9 @@ static void __init ceres_uart_init(void)
 
 static struct tegra_i2c_platform_data ceres_i2c1_platform_data = {
 	.bus_clk_rate	= 100000,
-	.scl_gpio	= -1,
-	.sda_gpio	= -1,
+	.scl_gpio	= TEGRA_GPIO_I2C1_SCL,
+	.sda_gpio	= TEGRA_GPIO_I2C1_SDA,
+	.is_clkon_always = true,
 };
 
 static struct tegra_i2c_platform_data ceres_i2c2_platform_data = {
@@ -561,6 +641,7 @@ static void __init tegra_ceres_init(void)
 #elif defined CONFIG_BLUEDROID_PM
 	ceres_setup_bluedroid_pm();
 #endif
+	ceres_audio_init();
 }
 
 static void __init tegra_ceres_dt_init(void)
