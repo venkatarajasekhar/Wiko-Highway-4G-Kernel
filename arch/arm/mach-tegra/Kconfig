@@ -134,7 +134,7 @@ config ARCH_TEGRA_11x_SOC
 	select TEGRA_ISOMGR_DEBUG
 	select TEGRA_ERRATA_1157520
 	select TEGRA_ERRATA_977223
-	#select TEGRA_CORE_EDP_LIMITS
+	select TEGRA_CORE_EDP_LIMITS
 	select TEGRA_THERMAL_THROTTLE_EXACT_FREQ
 	help
 	  Support for NVIDIA Tegra 11x family of SoCs, based upon the
