@@ -485,7 +485,7 @@ static struct max77660_platform_data max77660_pdata = {
 	.num_regulator_pdata = ARRAY_SIZE(max77660_reg_pdata),
 
 	.flags	= 0x00,
-	.use_power_off	= false,
+	.use_power_off	= true,
 };
 
 static struct i2c_board_info __initdata max77660_regulators[] = {
