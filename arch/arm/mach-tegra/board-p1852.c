@@ -680,7 +680,7 @@ static void __init tegra_p1852_init(void)
 	p1852_pcie_init();
 	p1852_suspend_init();
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
-
+	p1852_keys_init();
 }
 
 static void __init tegra_p1852_reserve(void)

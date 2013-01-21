@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-p1852.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -107,6 +107,7 @@ int p1852_pins_state_init(void);
 int p1852_suspend_init(void);
 int p1852_regulator_init(void);
 int p1852_get_skuid(void);
+int p1852_keys_init(void);
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
 #define TOUCH_GPIO_IRQ_ATMEL_T9 TEGRA_GPIO_PEE1

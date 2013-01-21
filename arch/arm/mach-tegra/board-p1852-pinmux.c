@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-p1852-pinmux.c
  *
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,6 +16,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/interrupt.h>
 #include <mach/pinmux.h>
 #include <mach/pinmux-tegra30.h>
 #include <mach/gpio-tegra.h>
@@ -424,6 +425,7 @@ static __initdata struct tegra_pingroup_config p1852_pinmux_common[] = {
 	DEFAULT_PINMUX(LCD_PWR2,	SPI5,	NORMAL,	NORMAL,	INPUT),
 	DEFAULT_PINMUX(LCD_SDIN,	RSVD,	NORMAL,	NORMAL,	INPUT),
 	DEFAULT_PINMUX(LCD_SDOUT,	SPI5,	NORMAL,	NORMAL,	INPUT),
+	DEFAULT_PINMUX(PEX_WAKE_N,	RSVD2,	NORMAL,	TRISTATE,	INPUT),
 	DEFAULT_PINMUX(GPIO_PV2,	RSVD1,	NORMAL,	NORMAL,	INPUT),
 	DEFAULT_PINMUX(GPIO_PV3,	RSVD1,	NORMAL,	NORMAL,	INPUT),
 	DEFAULT_PINMUX(SDMMC3_DAT7,	SDMMC3,	NORMAL,	NORMAL,	INPUT),
@@ -475,7 +477,6 @@ static struct gpio p1852_sku8_gpios[] = {
 	{TEGRA_GPIO_PC6,	GPIOF_IN,		"c6"},
 	{TEGRA_GPIO_PZ2,	GPIOF_OUT_INIT_HIGH,	"z2"},
 	{TEGRA_GPIO_PN5,	GPIOF_OUT_INIT_HIGH,	"n5"},
-	{TEGRA_GPIO_PDD3,	GPIOF_OUT_INIT_HIGH,	"dd3"},
 	{TEGRA_GPIO_PV3,	GPIOF_IN,		"v3"},
 	{TEGRA_GPIO_PD4,	GPIOF_IN,		"d4"},
 	{TEGRA_GPIO_PCC4,	GPIOF_OUT_INIT_LOW,	"cc4"},
