@@ -4,7 +4,7 @@
  * Copyright (C) 2009 Palm, Inc.
  * Author: Yvonne Yip <y@palm.com>
  *
- * Copyright (c) 2012-13, NVIDIA CORPORATION.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,6 +45,7 @@ struct tegra_sdhci_platform_data {
 	int is_8bit;
 	int pm_flags;
 	int pm_caps;
+	int nominal_vcore_uV;
 	unsigned int max_clk_limit;
 	unsigned int ddr_clk_limit;
 	unsigned int tap_delay;
