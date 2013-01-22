@@ -25,6 +25,9 @@
 #include <linux/mfd/palmas.h>
 #include "gpio-names.h"
 
+/* MAX77660_GPIO Base Address */
+#define MAX77660_GPIO_BASE      TEGRA_NR_GPIOS
+
 /* I2C related GPIOs */
 #define TEGRA_GPIO_I2C1_SCL		TEGRA_GPIO_PC4
 #define TEGRA_GPIO_I2C1_SDA		TEGRA_GPIO_PC5

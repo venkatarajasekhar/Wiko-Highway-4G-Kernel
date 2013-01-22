@@ -35,12 +35,12 @@
 
 #include "pm.h"
 #include "board.h"
+#include "board-ceres.h"
 #include "tegra11_soctherm.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
 #define MAX77660_IRQ_BASE	TEGRA_NR_IRQS
-#define MAX77660_GPIO_BASE	TEGRA_NR_GPIOS
 
 /* max77660 consumer rails */
 static struct regulator_consumer_supply max77660_buck1_supply[] = {
