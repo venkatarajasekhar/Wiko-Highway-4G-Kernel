@@ -143,8 +143,8 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.cd_gpio = -1,
 	.wp_gpio = -1,
 	.power_gpio = -1,
-	.tap_delay = 0x2,
-	.trim_delay = 0x2,
+	.tap_delay = 0x3,
+	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
 	/* FIXME remove uhs_mask for T148 silicon */
 	.uhs_mask = MMC_UHS_MASK_SDR104 |
@@ -156,7 +156,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.tap_delay = 0x3,
-	.trim_delay = 0x3,
+	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
 };
 
@@ -165,8 +165,8 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.is_8bit = 1,
-	.tap_delay = 0x5,
-	.trim_delay = 0x3,
+	.tap_delay = 0x3,
+	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
 	.mmc_data = {
 		.built_in = 1,
