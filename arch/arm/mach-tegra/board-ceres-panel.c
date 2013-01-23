@@ -46,9 +46,11 @@
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+#define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PH1
 #else
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PG4
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PG3
+#define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PG2
 #endif
 
 struct platform_device * __init ceres_host1x_init(void)
@@ -350,6 +352,10 @@ static void ceres_panel_select(void)
 	tegra_get_display_board_info(&board);
 
 	switch (board.board_id) {
+	case BOARD_E1605:
+		panel = &dsi_j_720p_4_7;
+		dsi_instance = DSI_INSTANCE_0;
+		break;
 	case BOARD_E1582:
 	/* fall through */
 	default:
@@ -364,10 +370,16 @@ static void ceres_panel_select(void)
 
 	if (panel->init_dc_out) {
 		panel->init_dc_out(&ceres_disp1_out);
+		/* FIXME: one shot mode should be used for smart panel */
+		ceres_disp1_out.flags = TEGRA_DC_OUT_CONTINUOUS_MODE;
 		ceres_disp1_out.dsi->dsi_instance = dsi_instance;
 		ceres_disp1_out.dsi->dsi_panel_rst_gpio = DSI_PANEL_RST_GPIO;
 		ceres_disp1_out.dsi->dsi_panel_bl_en_gpio =
 			DSI_PANEL_BL_EN_GPIO;
+		ceres_disp1_out.dsi->dsi_panel_bl_pwm_gpio =
+			DSI_PANEL_BL_PWM_GPIO;
+		/* update the init cmd if dependent on reset GPIO */
+		tegra_dsi_update_init_cmd_gpio_rst(&ceres_disp1_out);
 	}
 
 	if (panel->init_fb_data)
