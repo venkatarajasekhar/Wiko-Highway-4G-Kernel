@@ -406,6 +406,97 @@ static void m2601_nor_init(void)
 	platform_device_register(&tegra_nor_device);
 }
 
+static struct tegra_nor_chip_parms m2601_gmi_sram_data = {
+			.MuxMode = NorMuxMode_ADNonMux,
+			.ReadMode = NorReadMode_Async,
+			.PageLength = NorPageLength_8Word,
+			.ReadyActive = NorReadyActive_WithData,
+			.BusWidth = 4,
+			.timing_default = {
+				.timing0 = 0xB050c110,
+				.timing1 = 0x00050901,
+			},
+			.timing_read = {
+				.timing0 = 0xB050C110,
+				.timing1 = 0x00050901,
+			},
+			.csinfo = {
+				.cs = CS_7,
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = 32768,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			}
+};
+struct platform_device tegra_gmi_sram_device = {
+	.name = "tegra-gmi-char",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+};
+static void m2601_gmi_sram_init(void)
+{
+	tegra_gmi_sram_device.dev.platform_data = &m2601_gmi_sram_data;
+	platform_device_register(&tegra_gmi_sram_device);
+
+}
+
+static struct tegra_nor_chip_parms m2601_gmi_pca_data = {
+			.MuxMode = NorMuxMode_ADNonMux,
+			.ReadMode = NorReadMode_Async,
+			.PageLength = NorPageLength_8Word,
+			.ReadyActive = NorReadyActive_WithData,
+			.BusWidth = 4,
+			.timing_default = {
+				.timing0 = 0xB050c110,
+				.timing1 = 0x00050901,
+			},
+			.timing_read = {
+				.timing0 = 0xB050C110,
+				.timing1 = 0x00050901,
+			},
+			.csinfo = {
+				.cs = CS_6,
+				 .gpio_cs = {
+							"K05",
+							TEGRA_GPIO_PK5,
+							LOW
+					},
+				.num_cs_gpio = 0,
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.size = 32768,
+				.phys = TEGRA_NOR_FLASH_BASE,
+			}
+
+};
+
+static struct resource tegra_gmi_pca_resources[] = {
+	[0] = {
+			.name	= "TEGRA_GPIO_PW2_INT",
+			.start  = TEGRA_GPIO_PW2,
+			.end    = TEGRA_GPIO_PW2,
+			.flags  = IORESOURCE_IO,
+	},
+};
+
+struct platform_device tegra_gmi_pca_device = {
+	.name = "i2c-pca-gmi",
+	.id = -1,
+	.dev = {
+		.coherent_dma_mask = 0xffffffff,
+	},
+	.num_resources  = ARRAY_SIZE(tegra_gmi_pca_resources),
+	.resource       = tegra_gmi_pca_resources,
+
+};
+
+static void m2601_gmi_pca_init(void)
+{
+	tegra_gmi_pca_device.dev.platform_data = &m2601_gmi_pca_data;
+	platform_device_register(&tegra_gmi_pca_device);
+
+}
 static void __init tegra_m2601_init(void)
 {
 	tegra_init_board_info();
@@ -424,6 +515,9 @@ static void __init tegra_m2601_init(void)
 	platform_add_devices(m2601_devices, ARRAY_SIZE(m2601_devices));
 	m2601_nor_init();
 	m2601_pcie_init();
+	m2601_gmi_sram_init();
+	m2601_gmi_pca_init();
+
 }
 
 MACHINE_START(M2601, "m2601")
