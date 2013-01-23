@@ -27,6 +27,8 @@
 
 #include <mach/pinmux-t11.h>
 #include <mach/pinmux.h>
+#include <linux/nct1008.h>
+#include <mach/edp.h>
 
 #include "cpu-tegra.h"
 #include "devices.h"
@@ -72,6 +74,125 @@ static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(GPIO_PBB0, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 #endif
 
+static struct throttle_table tj_throttle_table[] = {
+	{      0, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 760000, 1000 },
+	{ 760000, 1050 },
+	{1000000, 1050 },
+	{1000000, 1100 },
+};
+
+static struct balanced_throttle tj_throttle = {
+	.throt_tab_size = ARRAY_SIZE(tj_throttle_table),
+	.throt_tab = tj_throttle_table,
+};
+
+static int __init ceres_throttle_init(void)
+{
+	balanced_throttle_register(&tj_throttle, "ceres-nct");
+	return 0;
+}
+module_init(ceres_throttle_init);
+
+static struct nct1008_platform_data ceres_nct1008_pdata = {
+	.supported_hwrev = true,
+	.ext_range = true,
+	.conv_rate = 0x09, /* 0x09 corresponds to 32Hz conversion rate */
+	.offset = 8, /* 4 * 2C. 1C for device accuracies */
+
+	.shutdown_ext_limit = 90, /* C */
+	.shutdown_local_limit = 100, /* C */
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "ceres-nct",
+			.trip_temp = 80000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.state = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
+};
+
+
+
+static struct i2c_board_info ceres_i2c0_nct1008_board_info[] = {
+	{
+		I2C_BOARD_INFO("nct72", 0x4C),
+		.platform_data = &ceres_nct1008_pdata,
+		.irq = -1,
+	}
+};
+
+#ifdef CONFIG_TEGRA_EDP_LIMITS
+static void ceres_init_edp_cdev(void)
+{
+	const struct tegra_edp_limits *cpu_edp_limits;
+	int cpu_edp_limits_size;
+	int i;
+	int trip;
+	struct nct1008_platform_data *data = &ceres_nct1008_pdata;
+	struct nct_trip_temp *trip_state;
+
+	/* edp capping */
+	tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
+
+	if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
+		BUG();
+
+	for (i = 0; i < cpu_edp_limits_size-1; i++) {
+		trip = data->num_trips;
+		trip_state = &data->trips[trip];
+
+		trip_state->cdev_type = "edp";
+		trip_state->trip_temp = cpu_edp_limits[i].temperature * 1000;
+		trip_state->trip_type = THERMAL_TRIP_ACTIVE;
+		trip_state->state = i + 1;
+		trip_state->hysteresis = 1000;
+
+		data->num_trips++;
+
+		if (data->num_trips >= NCT_MAX_TRIPS)
+			BUG();
+	}
+}
+#else
+static void ceres_init_edp_cdev(void)
+{
+}
+#endif
+#define CERES_TEMP_ALERT_GPIO	TEGRA_GPIO_PO1
+static int ceres_nct1008_init(void)
+{
+	int ret = 0;
+
+	/* FIXME: enable irq when throttling is supported */
+	ceres_i2c0_nct1008_board_info[0].irq =
+		gpio_to_irq(CERES_TEMP_ALERT_GPIO);
+
+	ret = gpio_request(CERES_TEMP_ALERT_GPIO, "temp_alert");
+	if (ret < 0) {
+		pr_err("%s: gpio_request failed\n", __func__);
+		return ret;
+	}
+
+	ret = gpio_direction_input(CERES_TEMP_ALERT_GPIO);
+	if (ret < 0) {
+		pr_err("%s: set gpio to input failed\n", __func__);
+		gpio_free(CERES_TEMP_ALERT_GPIO);
+	}
+
+	ceres_init_edp_cdev();
+
+	return ret;
+}
 static int ceres_focuser_power_on(struct ad5816_power_rail *pw)
 {
 	int err;
@@ -320,7 +441,15 @@ static int ceres_camera_init(void)
 
 int __init ceres_sensors_init(void)
 {
+	int err;
 	ceres_camera_init();
+
+	err = ceres_nct1008_init();
+	if (err)
+		pr_err("%s: nct1008 init failed\n", __func__);
+	else
+		i2c_register_board_info(0, ceres_i2c0_nct1008_board_info,
+				ARRAY_SIZE(ceres_i2c0_nct1008_board_info));
 
 	i2c_register_board_info(0, ceres_i2c_board_info_max44005,
 			ARRAY_SIZE(ceres_i2c_board_info_max44005));

@@ -156,6 +156,7 @@ static struct regulator_consumer_supply max77660_ldo9_supply[] = {
 	REGULATOR_SUPPLY("vdd_irled", NULL),
 	REGULATOR_SUPPLY("vdd_sensor_2v8", NULL),
 	REGULATOR_SUPPLY("vdd_pm_2v8", NULL),
+	REGULATOR_SUPPLY("vdd", "0-004c"),
 	REGULATOR_SUPPLY("vdd", "0-0069"),
 };
 
