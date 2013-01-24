@@ -72,9 +72,6 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 	struct tegra_dc_out_ops *ops = dc->out_ops;
 	struct fb_videomode mode;
 
-	if (!var->bits_per_pixel)
-		var->bits_per_pixel = info->var.bits_per_pixel;
-
 	if ((var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
 	    info->screen_size)
 		return -EINVAL;
