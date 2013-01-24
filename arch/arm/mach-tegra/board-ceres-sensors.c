@@ -358,7 +358,7 @@ static struct nvc_imager_cap imx091_cap = {
 	.initial_clock_rate_khz	= 6000,
 	.clock_profiles[0] = {
 		.external_clock_khz	= 24000,
-		.clock_multiplier	= 10416667, /* value / 1,000,000 */
+		.clock_multiplier	= 850000, /* value / 1,000,000 */
 	},
 	.clock_profiles[1] = {
 		.external_clock_khz	= 0,
@@ -375,8 +375,8 @@ static struct nvc_imager_cap imx091_cap = {
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
 	.preferred_mode_index	= 0,
-	.focuser_guid		= 0,
-	.torch_guid		= 0,
+	.focuser_guid		= NVC_FOCUS_GUID(0),
+	.torch_guid		= NVC_TORCH_GUID(0),
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
