@@ -19,6 +19,9 @@
 #ifndef _MACH_TEGRA_BOARD_E1853_H
 #define _MACH_TEGRA_BOARD_E1853_H
 
+#include <linux/mfd/tps6591x.h>
+#include <mach/gpio-tegra.h>
+
 int e1853_sdhci_init(void);
 int e1853_pinmux_init(void);
 int e1853_panel_init(void);
@@ -26,7 +29,7 @@ int e1853_gpio_init(void);
 int e1853_pins_state_init(void);
 int e1853_suspend_init(void);
 int e1853_regulator_init(void);
-
+int e1853_pca953x_init(void);
 
 /* External peripheral act as gpio */
 /* TPS6591x GPIOs */
@@ -45,10 +48,35 @@ int e1853_regulator_init(void);
 #define TPS6591X_IRQ_BASE	TEGRA_NR_IRQS
 #define TPS6591X_IRQ_END	(TPS6591X_IRQ_BASE + 18)
 
+/* PCA953X - MISC SYSTEM IO */
+#define PCA953X_MISCIO_GPIO_BASE	TPS6591X_GPIO_END
+#define MISCIO_BT_RST_GPIO			(PCA953X_MISCIO_GPIO_BASE + 0)
+#define MISCIO_GPS_RST_GPIO			(PCA953X_MISCIO_GPIO_BASE + 1)
+#define MISCIO_GPS_EN_GPIO			(PCA953X_MISCIO_GPIO_BASE + 2)
+#define MISCIO_WF_EN_GPIO			(PCA953X_MISCIO_GPIO_BASE + 3)
+#define MISCIO_WF_RST_GPIO			(PCA953X_MISCIO_GPIO_BASE + 4)
+#define MISCIO_BT_EN_GPIO			(PCA953X_MISCIO_GPIO_BASE + 5)
+/* GPIO6 is not used */
+#define MISCIO_NOT_USED0			(PCA953X_MISCIO_GPIO_BASE + 6)
+#define MISCIO_BT_WAKEUP_GPIO		(PCA953X_MISCIO_GPIO_BASE + 7)
+#define MISCIO_FAN_SEL_GPIO			(PCA953X_MISCIO_GPIO_BASE + 8)
+#define MISCIO_EN_MISC_BUF_GPIO		(PCA953X_MISCIO_GPIO_BASE + 9)
+#define MISCIO_EN_MSATA_GPIO		(PCA953X_MISCIO_GPIO_BASE + 10)
+#define MISCIO_EN_SDCARD_GPIO		(PCA953X_MISCIO_GPIO_BASE + 11)
+/* GPIO12 is not used */
+#define MISCIO_NOT_USED1			(PCA953X_MISCIO_GPIO_BASE + 12)
+#define MISCIO_ABB_RST_GPIO			(PCA953X_MISCIO_GPIO_BASE + 13)
+#define MISCIO_USER_LED2_GPIO		(PCA953X_MISCIO_GPIO_BASE + 14)
+#define MISCIO_USER_LED1_GPIO		(PCA953X_MISCIO_GPIO_BASE + 15)
+#define PCA953X_MISCIO_GPIO_END		(PCA953X_MISCIO_GPIO_BASE + 16)
+
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
 #define TOUCH_GPIO_IRQ_ATMEL_T9 TEGRA_GPIO_PEE1
 #define TOUCH_GPIO_RST_ATMEL_T9 TEGRA_GPIO_PR2
 #define TOUCH_BUS_ATMEL_T9  0
 #endif
+
+/* PCA953X I2C IO expander bus addresses */
+#define PCA953X_MISCIO_ADDR		0x75
 
 #endif

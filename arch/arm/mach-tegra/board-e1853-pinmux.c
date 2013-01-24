@@ -19,6 +19,8 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/i2c.h>
+#include <linux/i2c/pca953x.h>
 #include <mach/pinmux.h>
 #include <mach/pinmux-tegra30.h>
 #include <linux/gpio.h>
@@ -508,5 +510,35 @@ int __init e1853_gpio_init(void)
 	for (i = 0; i < pin_count; i++) {
 		gpio_export(gpios_info[i].gpio, true);
 	}
+	return 0;
+}
+
+/*
+ * TODO: Check for the correct pca953x before invoking client
+ *  init functions
+ */
+static int pca953x_client_setup(struct i2c_client *client,
+				unsigned gpio, unsigned ngpio,
+				void *context)
+{
+	return 0;
+}
+
+static struct pca953x_platform_data e1853_miscio_pca9539_data = {
+	.gpio_base  = PCA953X_MISCIO_GPIO_BASE,
+	.setup = pca953x_client_setup,
+};
+
+static struct i2c_board_info e1853_i2c2_board_info_pca9539[] = {
+	{
+		I2C_BOARD_INFO("pca9539", PCA953X_MISCIO_ADDR),
+		.platform_data = &e1853_miscio_pca9539_data,
+	},
+};
+
+int __init e1853_pca953x_init(void)
+{
+	i2c_register_board_info(1, e1853_i2c2_board_info_pca9539,
+		ARRAY_SIZE(e1853_i2c2_board_info_pca9539));
 	return 0;
 }

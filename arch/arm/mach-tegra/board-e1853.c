@@ -682,6 +682,7 @@ static void __init tegra_e1853_init(void)
 	e1853_panel_init();
 	e1853_nor_init();
 	e1853_pcie_init();
+	e1853_pca953x_init();
 	e1853_sata_init();
 }
 
