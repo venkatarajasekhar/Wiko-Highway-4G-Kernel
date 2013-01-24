@@ -236,6 +236,7 @@ static struct regulator_consumer_supply max77660_sw5_supply[] = {
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegra_camera"),
 	REGULATOR_SUPPLY("vdd_1v2_lcd", NULL),
 	REGULATOR_SUPPLY("vdd_1v2_cdc", NULL),
+	REGULATOR_SUPPLY("vdd_prox", "0-0044"),
 };
 
 static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
