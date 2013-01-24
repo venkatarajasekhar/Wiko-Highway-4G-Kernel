@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-e1853-pinmux.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -144,6 +144,9 @@ static __initdata struct tegra_drive_pingroup_config e1853_drive_pinmux[] = {
 
 	/* SDMMC 3 */
 	SET_DRIVE(SDIO3,	DISABLE, DISABLE, DIV_1, 46, 42, FAST, FAST),
+
+	/* SDMMC 1 */
+	SET_DRIVE(SDIO1, DISABLE, DISABLE, DIV_1, 36, 36, SLOWEST, SLOWEST),
 };
 
 #define DEFAULT_PINMUX(_pingroup, _mux, _pupd, _tri, _io)	\
