@@ -26,6 +26,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/mfd/max77660/max77660-regulator.h>
+#include <linux/platform_data/lp8755.h>
 
 #include <asm/mach-types.h>
 
@@ -450,6 +451,68 @@ static struct i2c_board_info __initdata max77660_regulators[] = {
 	},
 };
 
+/* LP8755 DC-DC converter */
+static struct regulator_consumer_supply lp8755_buck0_supply[] = {
+	REGULATOR_SUPPLY("vdd_cpu", NULL),
+};
+
+#define lp8755_rail(_id) "lp8755_"#_id
+
+#define LP8755_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
+	_boot_on, _apply_uv)						\
+	static struct regulator_init_data reg_idata_##_name = {		\
+		.constraints = {					\
+			.name = lp8755_rail(_name),			\
+			.min_uV = (_minmv)*1000,			\
+			.max_uV = (_maxmv)*1000,			\
+			.valid_modes_mask = (REGULATOR_MODE_NORMAL |	\
+					REGULATOR_MODE_STANDBY),	\
+			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
+					REGULATOR_CHANGE_STATUS |	\
+					REGULATOR_CHANGE_VOLTAGE),	\
+			.always_on = _always_on,			\
+			.boot_on = _boot_on,				\
+			.apply_uV = _apply_uv,				\
+		},							\
+		.num_consumer_supplies =				\
+			ARRAY_SIZE(lp8755_##_name##_supply),		\
+		.consumer_supplies = lp8755_##_name##_supply,		\
+		.supply_regulator = _supply_reg,			\
+	}
+
+LP8755_PDATA_INIT(buck0, 500, 1670, NULL, 0, 0, 0);
+
+#define LP8755_REG_PDATA(_sname) &reg_idata_##_sname
+
+static struct regulator_init_data *lp8755_reg_data[LP8755_BUCK_MAX] = {
+	LP8755_REG_PDATA(buck0),
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
+
+static struct lp8755_platform_data lp8755_pdata;
+
+static struct i2c_board_info lp8755_regulators[] = {
+	{
+		I2C_BOARD_INFO(LP8755_NAME, 0x60),
+		.irq		= INT_EXTERNAL_PMU,
+		.platform_data	= &lp8755_pdata,
+	},
+};
+
+static void lp8755_regulator_init(void)
+{
+	lp8755_pdata.mphase = MPHASE_CONF6;
+	lp8755_pdata.buck_data[LP8755_BUCK0] = lp8755_reg_data[LP8755_BUCK0];
+	lp8755_pdata.ramp_us[LP8755_BUCK0] = 230;
+
+	i2c_register_board_info(4, lp8755_regulators,
+			ARRAY_SIZE(lp8755_regulators));
+}
+
 int __init ceres_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -470,6 +533,9 @@ int __init ceres_regulator_init(void)
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
 				MAX77660_PIN_PULL_NORMAL;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
+
+		max77660_reg_pdata[MAX77660_REGULATOR_ID_BUCK2] = NULL;
+		lp8755_regulator_init();
 	}
 
 	i2c_register_board_info(4, max77660_regulators,
