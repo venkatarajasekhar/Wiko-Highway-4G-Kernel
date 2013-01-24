@@ -87,7 +87,7 @@ static __initdata struct tegra_drive_pingroup_config e1853_drive_pinmux[] = {
 	SET_DRIVE(AT5,	DISABLE, ENABLE, DIV_1, 12, 30, FASTEST, FASTEST),
 
 	/* DDC I2C */
-	SET_DRIVE(DDC,	DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
+	SET_DRIVE(DDC,	DISABLE, ENABLE, DIV_1, 4, 31, FASTEST, FASTEST),
 
 	/* PWR_I2C */
 	SET_DRIVE(AO1,	DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
@@ -108,7 +108,7 @@ static __initdata struct tegra_drive_pingroup_config e1853_drive_pinmux[] = {
 	/* DAP4 */
 	/* This drive strength value is valid in i2s slave mode.
 	   For master mode, we needs to update drive strength with proper value. */
-	SET_DRIVE(DAP4,	ENABLE, ENABLE, DIV_1, 0,  0, SLOWEST, SLOWEST),
+	SET_DRIVE(DAP4,	ENABLE, ENABLE, DIV_1, 10,  8, SLOWEST, SLOWEST),
 
 	/* DBG */
 	SET_DRIVE(DBG,	ENABLE, ENABLE, DIV_1, 20,  0, SLOWEST, SLOWEST),
@@ -134,7 +134,7 @@ static __initdata struct tegra_drive_pingroup_config e1853_drive_pinmux[] = {
 	SET_DRIVE(DAP1,	ENABLE, ENABLE, DIV_1, 20,  20, SLOWEST, SLOWEST),
 	SET_DRIVE(DAP3,	ENABLE, ENABLE, DIV_1, 20,  20, SLOWEST, SLOWEST),
 #else
-	SET_DRIVE(DAP1,	ENABLE, ENABLE, DIV_1, 31,  31, SLOWEST, SLOWEST),
+	SET_DRIVE(DAP1,	ENABLE, ENABLE, DIV_1, 10,  8, SLOWEST, SLOWEST),
 	SET_DRIVE(DAP3,	ENABLE, ENABLE, DIV_1, 3,  3, SLOWEST, SLOWEST),
 #endif
 
