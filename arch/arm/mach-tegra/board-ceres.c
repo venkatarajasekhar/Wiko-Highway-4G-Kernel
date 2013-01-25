@@ -635,6 +635,7 @@ static void __init tegra_ceres_init(void)
 	ceres_sensors_init();
 	tegra_register_fuse();
 	ceres_soctherm_init();
+	ceres_emc_init();
 #ifdef CONFIG_BT_BLUESLEEP
 	ceres_setup_bluesleep();
 	ceres_setup_bt_rfkill();
