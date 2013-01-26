@@ -406,17 +406,17 @@ static struct max77660_regulator_platform_data *max77660_reg_pdata[] = {
 static struct max77660_gpio_config max77660_gpio_cfgs[] = {
 	{
 		.gpio = MAX77660_GPIO0,
-		.dir = GPIO_DIR_OUT,
+		.dir = GPIO_DIR_IN,
 		.dout = GPIO_DOUT_LOW,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.alternate = GPIO_ALT_DISABLE,
+		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
+		.alternate = GPIO_ALT_ENABLE,
 	},
 	{
 		.gpio = MAX77660_GPIO1,
-		.dir = GPIO_DIR_IN,
+		.dir = GPIO_DIR_OUT,
 		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.pull_up = GPIO_PU_ENABLE,
+		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
+		.pull_up = GPIO_PU_DISABLE,
 		.alternate = GPIO_ALT_DISABLE,
 	},
 	{
@@ -431,8 +431,8 @@ static struct max77660_gpio_config max77660_gpio_cfgs[] = {
 		.gpio = MAX77660_GPIO3,
 		.dir = GPIO_DIR_OUT,
 		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.pull_up = GPIO_PU_ENABLE,
+		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
+		.pull_up = GPIO_PU_DISABLE,
 		.alternate = GPIO_ALT_DISABLE,
 	},
 	{
@@ -440,27 +440,28 @@ static struct max77660_gpio_config max77660_gpio_cfgs[] = {
 		.dir = GPIO_DIR_OUT,
 		.dout = GPIO_DOUT_HIGH,
 		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.alternate = GPIO_ALT_ENABLE,
+		.alternate = GPIO_ALT_DISABLE,
 	},
 	{
 		.gpio = MAX77660_GPIO5,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_LOW,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
+		.dir = GPIO_DIR_IN,
+		.dout = GPIO_DOUT_HIGH,
+		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
 		.alternate = GPIO_ALT_DISABLE,
 	},
 	{
 		.gpio = MAX77660_GPIO6,
 		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_LOW,
+		.dout = GPIO_DOUT_HIGH,
 		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
+		.pull_up = GPIO_PU_DISABLE,
 		.alternate = GPIO_ALT_DISABLE,
 	},
 	{
 		.gpio = MAX77660_GPIO7,
 		.dir = GPIO_DIR_OUT,
 		.dout = GPIO_DOUT_LOW,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
+		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
 		.alternate = GPIO_ALT_ENABLE,
 	},
 	{
@@ -516,8 +517,18 @@ int __init ceres_regulator_init(void)
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 	tegra_get_board_info(&board_info);
 	max77660_pdata.en_buck2_ext_ctrl = true;
-	if (board_info.fab > BOARD_FAB_A00)
+	if (board_info.fab > BOARD_FAB_A00) {
 		max77660_pdata.en_buck2_ext_ctrl = false;
+		max77660_gpio_cfgs[MAX77660_GPIO1].dir = GPIO_DIR_IN;
+		max77660_gpio_cfgs[MAX77660_GPIO1].out_drv =
+					GPIO_OUT_DRV_OPEN_DRAIN;
+		max77660_gpio_cfgs[MAX77660_GPIO1].pull_up = GPIO_PU_ENABLE;
+
+		max77660_gpio_cfgs[MAX77660_GPIO2].dir = GPIO_DIR_OUT;
+		max77660_gpio_cfgs[MAX77660_GPIO2].out_drv =
+					GPIO_OUT_DRV_PUSH_PULL;
+		max77660_gpio_cfgs[MAX77660_GPIO2].pull_up = GPIO_PU_DISABLE;
+	}
 
 	i2c_register_board_info(4, max77660_regulators,
 			ARRAY_SIZE(max77660_regulators));
