@@ -40,6 +40,7 @@
 #include "board-common.h"
 #include "board-ceres.h"
 #include "tegra11_soctherm.h"
+#include "tegra-board-id.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -507,11 +508,16 @@ int __init ceres_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
+	struct board_info board_info;
 
 	/* configure the power management controller to trigger PMU
 	 * interrupts when low */
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+	tegra_get_board_info(&board_info);
+	max77660_pdata.en_buck2_ext_ctrl = true;
+	if (board_info.fab > BOARD_FAB_A00)
+		max77660_pdata.en_buck2_ext_ctrl = false;
 
 	i2c_register_board_info(4, max77660_regulators,
 			ARRAY_SIZE(max77660_regulators));
