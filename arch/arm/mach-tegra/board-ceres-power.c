@@ -493,6 +493,8 @@ static struct max77660_platform_data max77660_pdata = {
 	.num_regulator_pdata = ARRAY_SIZE(max77660_reg_pdata),
 
 	.flags	= 0x00,
+	.en_clk32out1 = true,
+	.en_clk32out2 = true,
 	.use_power_off	= true,
 };
 
