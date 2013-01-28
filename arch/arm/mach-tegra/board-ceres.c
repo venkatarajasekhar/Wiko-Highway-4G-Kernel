@@ -549,8 +549,16 @@ static struct tegra_i2c_platform_data ceres_i2c5_platform_data = {
 	.sda_gpio	= -1,
 };
 
+static __maybe_unused struct tegra_i2c_platform_data ceres_i2c6_platform_data = {
+	.bus_clk_rate	= 400000,
+	.scl_gpio	= -1,
+	.sda_gpio	= -1,
+};
+
 static void ceres_i2c_init(void)
 {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+
 	tegra11_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
 	tegra11_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
 	tegra11_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
@@ -562,6 +570,25 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device3);
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
+
+#else
+
+	tegra14_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
+	tegra14_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
+	tegra14_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
+	tegra14_i2c_device4.dev.platform_data = &ceres_i2c4_platform_data;
+	tegra14_i2c_device5.dev.platform_data = &ceres_i2c5_platform_data;
+	tegra14_i2c_device6.dev.platform_data = &ceres_i2c6_platform_data;
+
+	platform_device_register(&tegra14_i2c_device6);
+	platform_device_register(&tegra14_i2c_device5);
+	platform_device_register(&tegra14_i2c_device4);
+	platform_device_register(&tegra14_i2c_device3);
+	platform_device_register(&tegra14_i2c_device2);
+	platform_device_register(&tegra14_i2c_device1);
+
+#endif
+
 	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(TEGRA_GPIO_PW2);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
