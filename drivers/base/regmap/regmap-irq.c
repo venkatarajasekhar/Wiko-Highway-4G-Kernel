@@ -37,8 +37,11 @@ struct regmap_irq_chip_data {
 	unsigned int *mask_buf;
 	unsigned int *mask_buf_def;
 	unsigned int *wake_buf;
+	unsigned int *type_buf;
+	unsigned int *type_buf_def;
 
 	unsigned int irq_reg_stride;
+	unsigned int type_reg_stride;
 };
 
 static inline const
@@ -81,6 +84,22 @@ static void regmap_irq_sync_unlock(struct irq_data *data)
 				reg);
 	}
 
+	for (i = 0; i < d->chip->num_type_reg; i++) {
+		if (!d->type_buf_def[i])
+			continue;
+		reg = d->chip->type_base +
+			(i * map->reg_stride * d->type_reg_stride);
+		if (d->chip->type_invert)
+			ret = regmap_update_bits(d->map, reg,
+				d->type_buf_def[i], ~d->type_buf[i]);
+		else
+			ret = regmap_update_bits(d->map, reg,
+				d->type_buf_def[i], d->type_buf[i]);
+		if (ret != 0)
+			dev_err(d->map->dev, "Failed to sync type in %x\n",
+				reg);
+	}
+
 	/* If we've changed our wakeup count propagate it to the parent */
 	if (d->wake_count < 0)
 		for (i = d->wake_count; i < 0; i++)
@@ -112,6 +131,38 @@ static void regmap_irq_disable(struct irq_data *data)
 	d->mask_buf[irq_data->reg_offset / map->reg_stride] |= irq_data->mask;
 }
 
+static int regmap_irq_set_type(struct irq_data *data, unsigned int type)
+{
+	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
+	struct regmap *map = d->map;
+	const struct regmap_irq *irq_data = irq_to_regmap_irq(d, data->hwirq);
+	int reg = irq_data->type_reg_offset / map->reg_stride;
+
+	if (!(irq_data->type_rising_mask | irq_data->type_falling_mask))
+		return 0;
+
+	d->type_buf[reg] &= ~(irq_data->type_falling_mask |
+					irq_data->type_rising_mask);
+	switch (type) {
+	case IRQ_TYPE_EDGE_FALLING:
+		d->type_buf[reg] |= irq_data->type_falling_mask;
+		break;
+
+	case IRQ_TYPE_EDGE_RISING:
+		d->type_buf[reg] |= irq_data->type_rising_mask;
+		break;
+
+	case IRQ_TYPE_EDGE_BOTH:
+		d->type_buf[reg] |= (irq_data->type_falling_mask |
+					irq_data->type_rising_mask);
+		break;
+
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static int regmap_irq_set_wake(struct irq_data *data, unsigned int on)
 {
 	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
@@ -138,6 +189,7 @@ static const struct irq_chip regmap_irq_chip = {
 	.irq_bus_sync_unlock	= regmap_irq_sync_unlock,
 	.irq_disable		= regmap_irq_disable,
 	.irq_enable		= regmap_irq_enable,
+	.irq_set_type		= regmap_irq_set_type,
 	.irq_set_wake		= regmap_irq_set_wake,
 };
 
@@ -288,6 +340,18 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 			goto err_alloc;
 	}
 
+	if (chip->num_type_reg) {
+		d->type_buf_def = kzalloc(sizeof(unsigned int) *
+					chip->num_type_reg, GFP_KERNEL);
+		if (!d->type_buf_def)
+			goto err_alloc;
+
+		d->type_buf = kzalloc(sizeof(unsigned int) * chip->num_type_reg,
+				      GFP_KERNEL);
+		if (!d->type_buf)
+			goto err_alloc;
+	}
+
 	d->irq_chip = regmap_irq_chip;
 	d->irq_chip.name = chip->name;
 	d->irq = irq;
@@ -299,6 +363,8 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 		d->irq_reg_stride = chip->irq_reg_stride;
 	else
 		d->irq_reg_stride = 1;
+
+	d->type_reg_stride = chip->type_reg_stride ? : 1;
 
 	mutex_init(&d->lock);
 
@@ -340,6 +406,33 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 		}
 	}
 
+	if (chip->num_type_reg) {
+		for (i = 0; i < chip->num_irqs; i++) {
+			reg = chip->irqs[i].type_reg_offset / map->reg_stride;
+			d->type_buf_def[reg] |= chip->irqs[i].type_rising_mask |
+					chip->irqs[i].type_falling_mask;
+		}
+		for (i = 0; i < chip->num_type_reg; ++i) {
+			if (!d->type_buf_def[i])
+				continue;
+
+			reg = chip->type_base +
+				(i * map->reg_stride * d->type_reg_stride);
+			if (chip->type_invert)
+				ret = regmap_update_bits(map, reg,
+					d->type_buf_def[i], 0xFF);
+			else
+				ret = regmap_update_bits(map, reg,
+					d->type_buf_def[i], 0x0);
+			if (ret != 0) {
+				dev_err(map->dev,
+					"Failed to set type in 0x%x: %x\n",
+					reg, ret);
+				goto err_alloc;
+			}
+		}
+	}
+
 	if (irq_base)
 		d->domain = irq_domain_add_legacy(map->dev->of_node,
 						  chip->num_irqs, irq_base, 0,
@@ -366,6 +459,8 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 err_domain:
 	/* Should really dispose of the domain but... */
 err_alloc:
+	kfree(d->type_buf);
+	kfree(d->type_buf_def);
 	kfree(d->wake_buf);
 	kfree(d->mask_buf_def);
 	kfree(d->mask_buf);
@@ -388,6 +483,8 @@ void regmap_del_irq_chip(int irq, struct regmap_irq_chip_data *d)
 
 	free_irq(irq, d);
 	/* We should unmap the domain but... */
+	kfree(d->type_buf);
+	kfree(d->type_buf_def);
 	kfree(d->wake_buf);
 	kfree(d->mask_buf_def);
 	kfree(d->mask_buf);
