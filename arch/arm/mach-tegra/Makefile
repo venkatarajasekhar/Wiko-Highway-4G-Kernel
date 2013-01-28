@@ -66,6 +66,7 @@ obj-y                                   += mc.o
 obj-$(CONFIG_TEGRA_STAT_MON)            += tegra2_statmon.o
 ifeq ($(CONFIG_USB_SUPPORT),y)
 obj-$(CONFIG_USB_SUPPORT)               += usb_phy.o
+obj-$(CONFIG_USB_SUPPORT)               += tegra_usb_pmc.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_usb_phy.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_usb_phy.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11x_usb_phy.o
