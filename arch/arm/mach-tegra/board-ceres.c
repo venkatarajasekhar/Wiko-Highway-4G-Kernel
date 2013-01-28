@@ -240,6 +240,15 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 		.sample_size	= 16,
 		.channels       = 2,
 	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.rate		= 16000,
+		.channels	= 1,
+		.bit_clk        = 768000,
+	},
 };
 
 static struct platform_device ceres_audio_max98090_device = {
