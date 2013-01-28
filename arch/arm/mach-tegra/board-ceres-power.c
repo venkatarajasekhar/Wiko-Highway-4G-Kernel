@@ -403,94 +403,36 @@ static struct max77660_regulator_platform_data *max77660_reg_pdata[] = {
 	MAX77660_REG(SW5, sw5),
 };
 
-static struct max77660_gpio_config max77660_gpio_cfgs[] = {
-	{
-		.gpio = MAX77660_GPIO0,
-		.dir = GPIO_DIR_IN,
-		.dout = GPIO_DOUT_LOW,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.alternate = GPIO_ALT_ENABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO1,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.pull_up = GPIO_PU_DISABLE,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO2,
-		.dir = GPIO_DIR_IN,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.pull_up = GPIO_PU_ENABLE,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO3,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.pull_up = GPIO_PU_DISABLE,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO4,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO5,
-		.dir = GPIO_DIR_IN,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO6,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.pull_up = GPIO_PU_DISABLE,
-		.alternate = GPIO_ALT_DISABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO7,
-		.dir = GPIO_DIR_OUT,
-		.dout = GPIO_DOUT_LOW,
-		.out_drv = GPIO_OUT_DRV_PUSH_PULL,
-		.alternate = GPIO_ALT_ENABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO8,
-		.dir = GPIO_DIR_IN,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.pull_up = GPIO_PU_ENABLE,
-		.alternate = GPIO_ALT_ENABLE,
-	},
-	{
-		.gpio = MAX77660_GPIO9,
-		.dir = GPIO_DIR_IN,
-		.dout = GPIO_DOUT_HIGH,
-		.out_drv = GPIO_OUT_DRV_OPEN_DRAIN,
-		.pull_up = GPIO_PU_ENABLE,
-		.alternate = GPIO_ALT_DISABLE,
-	},
+#define MAX77660_INIT_PINS(_id, _gpio, _od, _up_dn)		\
+{								\
+	.pin_id			= MAX77660_PINS_##_id,		\
+	.gpio_pin_mode		= _gpio,			\
+	.open_drain		= _od,				\
+	.pullup_dn_normal	= MAX77660_PIN_##_up_dn,	\
+}
+
+static struct max77660_pinctrl_platform_data max77660_pinctrl_pdata[] = {
+	MAX77660_INIT_PINS(GPIO0, 0, 1, DEFAULT),
+	MAX77660_INIT_PINS(GPIO1, 1, 0, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO2, 1, 1, PULL_UP),
+	MAX77660_INIT_PINS(GPIO3, 1, 0, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO4, 1, 0, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO5, 1, 1, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO6, 1, 0, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO7, 0, 0, PULL_NORMAL),
+	MAX77660_INIT_PINS(GPIO8, 0, 1, PULL_UP),
+	MAX77660_INIT_PINS(GPIO9, 1, 1, PULL_UP),
 };
 
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
 
-	.num_gpio_cfgs	= ARRAY_SIZE(max77660_gpio_cfgs),
-	.gpio_cfgs	= max77660_gpio_cfgs,
-
 	.regulator_pdata = max77660_reg_pdata,
 	.num_regulator_pdata = ARRAY_SIZE(max77660_reg_pdata),
+
+	.pinctrl_pdata	= max77660_pinctrl_pdata,
+	.num_pinctrl	= ARRAY_SIZE(max77660_pinctrl_pdata),
 
 	.flags	= 0x00,
 	.en_clk32out1 = true,
@@ -522,15 +464,12 @@ int __init ceres_regulator_init(void)
 	max77660_pdata.en_buck2_ext_ctrl = true;
 	if (board_info.fab > BOARD_FAB_A00) {
 		max77660_pdata.en_buck2_ext_ctrl = false;
-		max77660_gpio_cfgs[MAX77660_GPIO1].dir = GPIO_DIR_IN;
-		max77660_gpio_cfgs[MAX77660_GPIO1].out_drv =
-					GPIO_OUT_DRV_OPEN_DRAIN;
-		max77660_gpio_cfgs[MAX77660_GPIO1].pull_up = GPIO_PU_ENABLE;
-
-		max77660_gpio_cfgs[MAX77660_GPIO2].dir = GPIO_DIR_OUT;
-		max77660_gpio_cfgs[MAX77660_GPIO2].out_drv =
-					GPIO_OUT_DRV_PUSH_PULL;
-		max77660_gpio_cfgs[MAX77660_GPIO2].pull_up = GPIO_PU_DISABLE;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
+				MAX77660_PIN_PULL_UP;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
+				MAX77660_PIN_PULL_NORMAL;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 	}
 
 	i2c_register_board_info(4, max77660_regulators,
