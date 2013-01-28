@@ -350,8 +350,13 @@ static struct platform_device *ceres_devices[] __initdata = {
 
 };
 
+static struct i2c_board_info __initdata max97236_board_info = {
+	I2C_BOARD_INFO("max97236", 0x40),
+};
+
 static void ceres_audio_init(void)
 {
+	i2c_register_board_info(0, &max97236_board_info, 1);
 	i2c_register_board_info(0, &max98090_board_info, 1);
 
 	platform_add_devices(ceres_audio_devices,
