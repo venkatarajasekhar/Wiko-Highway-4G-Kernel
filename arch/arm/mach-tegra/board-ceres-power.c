@@ -496,6 +496,7 @@ static struct max77660_platform_data max77660_pdata = {
 	.en_clk32out1 = true,
 	.en_clk32out2 = true,
 	.use_power_off	= true,
+	.system_watchdog_timeout = 32,
 };
 
 static struct i2c_board_info __initdata max77660_regulators[] = {
