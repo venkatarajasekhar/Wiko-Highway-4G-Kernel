@@ -1431,6 +1431,10 @@ static int mmc_suspend(struct mmc_host *host)
 	if (host->card->ext_csd.refresh)
 		del_timer_sync(&host->card->timer);
 	mmc_claim_host(host);
+	err = mmc_cache_ctrl(host, 0);
+	if (err)
+		goto out;
+
 	if (mmc_card_can_sleep(host) &&
 		!(host->caps2 & MMC_CAP2_NO_SLEEP_CMD)) {
 		err = mmc_card_sleep(host);
@@ -1439,8 +1443,9 @@ static int mmc_suspend(struct mmc_host *host)
 	} else if (!mmc_host_is_spi(host))
 		mmc_deselect_cards(host);
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
-	mmc_release_host(host);
 
+out:
+	mmc_release_host(host);
 	return err;
 }
 
