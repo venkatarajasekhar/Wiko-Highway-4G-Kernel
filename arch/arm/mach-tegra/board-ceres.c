@@ -41,6 +41,7 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/isomgr.h>
+#include <mach/tegra_bbc_proxy.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -315,6 +316,33 @@ static void __init ceres_spi_init(void)
 	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
 }
 
+#define BBC_BOOT_EDP_MAX 0
+static unsigned int bbc_boot_edp_states[] = {500};
+static struct edp_client bbc_boot_edp_client = {
+	.name = "bbc_boot",
+	.states = bbc_boot_edp_states,
+	.num_states = ARRAY_SIZE(bbc_boot_edp_states),
+	.e0_index = BBC_BOOT_EDP_MAX,
+	.priority = EDP_MAX_PRIO,
+};
+
+static struct tegra_bbc_proxy_platform_data bbc_proxy_pdata = {
+	.modem_boot_edp_client = &bbc_boot_edp_client,
+	.edp_manager_name = NULL, /* FIXME when edp manager present */
+	.i_breach_ppm = 500000,
+	.i_thresh_3g_adjperiod = 10000,
+	.i_thresh_lte_adjperiod = 10000,
+};
+
+static struct platform_device tegra_bbc_proxy_device = {
+	.name = "tegra_bbc_proxy",
+	.id = -1,
+	.dev = {
+		.platform_data = &bbc_proxy_pdata,
+	},
+};
+
+
 static struct platform_device *ceres_audio_devices[] __initdata = {
 	&tegra_ahub_device,
 	&tegra_pcm_device,
@@ -347,7 +375,7 @@ static struct platform_device *ceres_devices[] __initdata = {
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,
 #endif
-
+	&tegra_bbc_proxy_device,
 };
 
 static struct i2c_board_info __initdata max97236_board_info = {
