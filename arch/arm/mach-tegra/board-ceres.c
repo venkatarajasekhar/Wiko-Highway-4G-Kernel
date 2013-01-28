@@ -56,11 +56,26 @@
 #include "devices.h"
 #include "common.h"
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define CERES_BT_EN		TEGRA_GPIO_PQ6
+#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PU6
+#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PEE1
+#define CERES_NFC_IRQ		TEGRA_GPIO_PW2
+#define CERES_NFC_EN		TEGRA_GPIO_PU4
+#define CERES_NFC_WAKE		TEGRA_GPIO_PX7
+#else
+#define CERES_BT_EN		TEGRA_GPIO_PM3
+#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM1
+#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PM2
+#define CERES_NFC_IRQ		TEGRA_GPIO_PM4
+#define CERES_NFC_EN		TEGRA_GPIO_PI0
+#define CERES_NFC_WAKE		TEGRA_GPIO_PM0
+#endif
+
 #ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
 	.name           = "bt_rfkill",
-	.shutdown_gpio  = TEGRA_GPIO_PQ7,
-	.reset_gpio	= TEGRA_GPIO_PQ6,
+	.reset_gpio	= CERES_BT_EN,
 	.type           = RFKILL_TYPE_BLUETOOTH,
 };
 
@@ -80,14 +95,14 @@ static noinline void __init ceres_setup_bt_rfkill(void)
 static struct resource ceres_bluesleep_resources[] = {
 	[0] = {
 		.name = "gpio_host_wake",
-			.start  = TEGRA_GPIO_PU6,
-			.end    = TEGRA_GPIO_PU6,
+			.start  = CERES_BT_HOST_WAKE,
+			.end    = CERES_BT_HOST_WAKE,
 			.flags  = IORESOURCE_IO,
 	},
 	[1] = {
 		.name = "gpio_ext_wake",
-			.start  = TEGRA_GPIO_PEE1,
-			.end    = TEGRA_GPIO_PEE1,
+			.start  = CERES_BT_EXT_WAKE,
+			.end    = CERES_BT_EXT_WAKE,
 			.flags  = IORESOURCE_IO,
 	},
 	[2] = {
@@ -160,9 +175,9 @@ static noinline void __init ceres_setup_bluedroid_pm(void)
 #endif
 
 static struct bcm2079x_platform_data nfc_pdata = {
-	.irq_gpio = TEGRA_GPIO_PW2,
-	.en_gpio = TEGRA_GPIO_PU4,
-	.wake_gpio = TEGRA_GPIO_PX7,
+	.irq_gpio = CERES_NFC_IRQ,
+	.en_gpio = CERES_NFC_EN,
+	.wake_gpio = CERES_NFC_WAKE,
 	};
 
 static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
@@ -171,7 +186,6 @@ static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
 		.platform_data = &nfc_pdata,
 	},
 };
-
 
 static struct resource tegra_rtc_resources[] = {
 	[0] = {

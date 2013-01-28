@@ -37,9 +37,14 @@
 #include "board.h"
 #include "board-ceres.h"
 
-
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define CERES_WLAN_PWR	TEGRA_GPIO_PCC5
 #define CERES_WLAN_WOW	TEGRA_GPIO_PU5
+#else
+#define CERES_WLAN_PWR  TEGRA_GPIO_PL7
+#define CERES_WLAN_WOW  TEGRA_GPIO_PO2
+#endif
+
 #define CERES_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
