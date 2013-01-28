@@ -642,12 +642,12 @@ static int __init ceres_touch_init(void)
 static void __init tegra_ceres_init(void)
 {
 	tegra_clk_init_from_table(ceres_clk_init_table);
+	tegra_smmu_init();
 	tegra_enable_pinmux();
 	ceres_pinmux_init();
 	ceres_i2c_init();
 	ceres_spi_init();
 	ceres_uart_init();
-	tegra_smmu_init();
 	ceres_usb_init();
 	tegra_soc_device_init("ceres");
 	ceres_keys_init();
