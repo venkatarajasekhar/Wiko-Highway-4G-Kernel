@@ -122,7 +122,7 @@ static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 };
 
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
-	 REGULATOR_SUPPLY("avdd_dis_lcd", NULL),
+	 REGULATOR_SUPPLY("avdd_lcd", NULL),
 	 REGULATOR_SUPPLY("avdd_dis_ts", NULL),
 	 REGULATOR_SUPPLY("vin", "2-004a"),
 };
@@ -207,6 +207,7 @@ static struct regulator_consumer_supply max77660_ldo18_supply[] = {
 static struct regulator_consumer_supply max77660_sw1_supply[] = {
 	 REGULATOR_SUPPLY("vdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("vdd_dis_ts", NULL),
+	 REGULATOR_SUPPLY("vddio_ts", NULL),
 	 REGULATOR_SUPPLY("vdd_lcd_1v8_s", NULL),
 };
 
@@ -286,34 +287,34 @@ MAX77660_PDATA_INIT(BUCK2, buck2,  900, 1300, NULL,
 		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
-		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK4, buck4,  1000, 1000, NULL,
-		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK6, buck6,  1700, 1700, NULL,
-		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2650, NULL,
-		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO1, ldo1, 1100, 1100, max77660_rails(buck3),
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO2, ldo2, 2800, 2800, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO3, ldo3, 2800, 2800, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO5, ldo5, 1800, 1800, NULL,
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO6, ldo6, 1200, 1200, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
@@ -331,19 +332,19 @@ MAX77660_PDATA_INIT(LDO10, ldo10, 1800, 1800, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO11, ldo11, 3300, 3300, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO12, ldo12, 1800, 3300, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO13, ldo13, 2850, 2850, NULL,
-		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO14, ldo14, 2800, 2800, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO15, ldo15, 1200, 1200, NULL,
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO16, ldo16, 3000, 3000, NULL,
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
@@ -352,7 +353,7 @@ MAX77660_PDATA_INIT(LDO17, ldo17, 1800, 1800, max77660_rails(buck7),
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO18, ldo18, 2700, 2700, NULL,
-		0, 1, 1, FPS_SRC_NONE, -1, -1, 0);
+		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
@@ -552,7 +553,7 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 
 /* LCD_AVDD_EN From PMU GP6 */
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
-	REGULATOR_SUPPLY("avdd_lcd", NULL),
+	REGULATOR_SUPPLY("unused", NULL),
 };
 
 /* Macro for defining fixed regulator sub device data */
