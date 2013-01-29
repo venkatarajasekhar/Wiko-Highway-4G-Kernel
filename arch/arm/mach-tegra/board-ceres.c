@@ -348,6 +348,7 @@ static void ceres_audio_init(void)
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.builtin_host_disabled = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_DEVICE,
 	.u_data.dev = {
@@ -373,6 +374,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
 	.unaligned_dma_buf_supported = false,
+	.builtin_host_disabled = true,
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -397,6 +399,10 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_device = &tegra_ehci1_device,
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	.support_pmu_vbus = true,
+	.extcon_dev_name = "max77660-charger-extcon",
+#endif
 };
 
 static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
