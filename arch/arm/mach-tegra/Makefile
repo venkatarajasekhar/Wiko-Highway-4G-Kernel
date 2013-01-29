@@ -351,6 +351,7 @@ obj-${CONFIG_MACH_CERES}                += board-ceres-memory.o
 obj-${CONFIG_MACH_CERES}                += panel-l-720p-5.o
 obj-${CONFIG_MACH_CERES}                += panel-j-720p-4-7.o
 obj-${CONFIG_MACH_CERES}                += panel-s-1080p-5.o
+obj-${CONFIG_MACH_CERES}                += panel-j-720p-4-7.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o

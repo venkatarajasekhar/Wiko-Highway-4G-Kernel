@@ -441,8 +441,6 @@ static void ceres_panel_select(void)
 
 	if (panel->init_dc_out) {
 		panel->init_dc_out(&ceres_disp1_out);
-		/* FIXME: one shot mode should be used for smart panel */
-		ceres_disp1_out.flags = TEGRA_DC_OUT_CONTINUOUS_MODE;
 		ceres_disp1_out.dsi->dsi_instance = dsi_instance;
 		ceres_disp1_out.dsi->dsi_panel_rst_gpio = DSI_PANEL_RST_GPIO;
 		ceres_disp1_out.dsi->dsi_panel_bl_en_gpio =
