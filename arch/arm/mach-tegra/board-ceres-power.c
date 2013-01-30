@@ -41,6 +41,8 @@
 #include "board-ceres.h"
 #include "tegra11_soctherm.h"
 #include "tegra-board-id.h"
+#include "tegra_cl_dvfs.h"
+#include "devices.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -554,6 +556,57 @@ static void lp8755_regulator_init(void)
 			ARRAY_SIZE(lp8755_regulators));
 }
 
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+/* LP8755LME: fixed 10mV steps from 500mV to 1670mV, with offset 0x80 */
+#define PMU_CPU_VDD_MAP_SIZE ((1670000 - 500000) / 10000 + 1)
+static struct voltage_reg_map pmu_cpu_vdd_map[PMU_CPU_VDD_MAP_SIZE];
+static inline void fill_reg_map(void)
+{
+	int i;
+	for (i = 0; i < PMU_CPU_VDD_MAP_SIZE; i++) {
+		pmu_cpu_vdd_map[i].reg_value = i + 0x80;
+		pmu_cpu_vdd_map[i].reg_uV = 500000 + 10000 * i;
+	}
+}
+
+/* board parameters for cpu dfll */
+static struct tegra_cl_dvfs_cfg_param ceres_cl_dvfs_param = {
+	.sample_rate = 12500,
+	.force_mode = TEGRA_CL_DVFS_FORCE_FIXED,
+	.cf = 10,
+	.ci = 0,
+	.cg = 2,
+
+	.droop_cut_value = 0xF,
+	.droop_restore_ramp = 0x0,
+	.scale_out_ramp = 0x0,
+};
+
+static struct tegra_cl_dvfs_platform_data ceres_cl_dvfs_data = {
+	.dfll_clk_name = "dfll_cpu",
+	.pmu_if = TEGRA_CL_DVFS_PMU_I2C,
+	.u.pmu_i2c = {
+		.fs_rate = 400000,
+		.slave_addr = 0xc0,
+		.reg = 0x00,
+	},
+	.vdd_map = pmu_cpu_vdd_map,
+	.vdd_map_size = PMU_CPU_VDD_MAP_SIZE,
+
+	.cfg_param = &ceres_cl_dvfs_param,
+};
+
+static int __init ceres_cl_dvfs_init(void)
+{
+	fill_reg_map();
+	tegra_cl_dvfs_device.dev.platform_data = &ceres_cl_dvfs_data;
+	platform_device_register(&tegra_cl_dvfs_device);
+
+	return 0;
+}
+#endif
+
+
 int __init ceres_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -589,6 +642,10 @@ int __init ceres_regulator_init(void)
 
 	i2c_register_board_info(4, max77660_regulators,
 			ARRAY_SIZE(max77660_regulators));
+
+#ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+	ceres_cl_dvfs_init();
+#endif
 
 	return 0;
 }
