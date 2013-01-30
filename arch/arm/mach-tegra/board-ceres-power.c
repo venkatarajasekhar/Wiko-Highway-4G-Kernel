@@ -289,7 +289,7 @@ MAX77660_PDATA_INIT(BUCK2, buck2,  900, 1300, NULL,
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK4, buck4,  1000, 1000, NULL,
+MAX77660_PDATA_INIT(BUCK4, buck4,  1100, 1100, NULL,
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
@@ -441,6 +441,13 @@ static struct max77660_platform_data max77660_pdata = {
 	.en_clk32out2 = true,
 	.use_power_off	= true,
 	.system_watchdog_timeout = 32,
+	.dvfs_pd = {
+		.en_pwm = false,
+		.step_voltage_uV = 25000,
+		.default_voltage_uV = 900000,
+		.base_voltage_uV = 600000,
+		.max_voltage_uV = 1100000,
+	},
 };
 
 static struct i2c_board_info __initdata max77660_regulators[] = {
