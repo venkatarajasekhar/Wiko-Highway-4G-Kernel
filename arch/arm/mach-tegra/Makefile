@@ -343,6 +343,7 @@ obj-${CONFIG_MACH_CERES}                += board-ceres.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-kbc.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sdhci.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-power.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-powermon.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-pinmux.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sensors.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-panel.o

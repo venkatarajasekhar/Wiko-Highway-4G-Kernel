@@ -100,6 +100,13 @@
 #define MPU_COMPASS_BUS_NUM	0
 #define MPU_COMPASS_ORIENTATION	{ 0, 1, 0, -1, 0, 0, 0, 0, 1 }
 
+/* PCA954x I2C bus expander bus addresses */
+#define PCA954x_I2C_BUS_BASE    6
+#define PCA954x_I2C_BUS0        (PCA954x_I2C_BUS_BASE + 0)
+#define PCA954x_I2C_BUS1        (PCA954x_I2C_BUS_BASE + 1)
+#define PCA954x_I2C_BUS2        (PCA954x_I2C_BUS_BASE + 2)
+#define PCA954x_I2C_BUS3        (PCA954x_I2C_BUS_BASE + 3)
+
 int ceres_sensors_init(void);
 int ceres_keys_init(void);
 int ceres_sdhci_init(void);
@@ -109,4 +116,5 @@ int ceres_pinmux_init(void);
 int ceres_panel_init(void);
 int ceres_soctherm_init(void);
 int ceres_emc_init(void);
+int ceres_pmon_init(void);
 #endif

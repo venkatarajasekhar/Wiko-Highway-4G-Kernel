@@ -695,6 +695,7 @@ static void __init tegra_ceres_init(void)
 	ceres_setup_bluedroid_pm();
 #endif
 	ceres_audio_init();
+	ceres_pmon_init();
 }
 
 static void __init tegra_ceres_dt_init(void)
