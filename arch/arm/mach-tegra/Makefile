@@ -178,6 +178,8 @@ obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += mcerr-t11.o
 obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += mcerr-t14.o
 endif
 
+obj-$(CONFIG_TRUSTED_FOUNDATIONS)       += tegra_tzram.o
+
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony-kbc.o
 obj-$(CONFIG_MACH_HARMONY)              += board-harmony-panel.o
