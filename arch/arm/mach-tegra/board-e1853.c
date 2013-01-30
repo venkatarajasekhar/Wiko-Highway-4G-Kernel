@@ -134,12 +134,12 @@ static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	{ "vde",		"pll_c",	484000000,	false},
 	{ "host1x",		"pll_c",	242000000,	true},
 	{ "mpe",		"pll_c",	484000000,	false},
-	{ "se",			"pll_m",	625000000,	true},
 	{ "i2c1",		"pll_p",	3200000,	true},
 	{ "i2c2",		"pll_p",	3200000,	true},
 	{ "i2c3",		"pll_p",	3200000,	true},
 	{ "i2c4",		"pll_p",	3200000,	true},
 	{ "i2c5",		"pll_p",	3200000,	true},
+	{ "se",			"pll_p",	204000000,	true},
 	{"wake.sclk",		NULL,		334000000,	true },
 	{ NULL,			NULL,		0,		0},
 };
@@ -440,7 +440,11 @@ static struct platform_device *e1853_devices[] __initdata = {
 #if defined(CONFIG_BCM4329_RFKILL)
 	&e1853_bcm4329_rfkill_device,
 #endif
-	&tegra_wdt0_device
+	&tegra_wdt0_device,
+
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
+	&tegra_se_device,
+#endif
 };
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT
