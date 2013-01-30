@@ -703,6 +703,27 @@ static struct tegra_tsensor_pmu_data tpdata_max77663 = {
 };
 */
 
+int __init ceres_edp_init(void)
+{
+	unsigned int regulator_mA;
+
+	regulator_mA = get_maximum_cpu_current_supported();
+	if (!regulator_mA)
+		regulator_mA = 9000;
+
+	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
+	tegra_init_cpu_edp_limits(regulator_mA);
+
+	regulator_mA = get_maximum_core_current_supported();
+	if (!regulator_mA)
+		regulator_mA = 4000;
+
+	pr_info("%s: core regulator %d mA\n", __func__, regulator_mA);
+	tegra_init_core_edp_limits(regulator_mA);
+
+	return 0;
+}
+
 static struct soctherm_platform_data ceres_soctherm_data = {
 	.therm = {
 		[THERM_CPU] = {

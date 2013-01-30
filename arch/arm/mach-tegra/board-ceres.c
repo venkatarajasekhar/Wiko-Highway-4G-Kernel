@@ -717,6 +717,7 @@ static void __init tegra_ceres_init(void)
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 	ceres_panel_init();
+	ceres_edp_init();
 	ceres_sensors_init();
 	tegra_register_fuse();
 	ceres_soctherm_init();
