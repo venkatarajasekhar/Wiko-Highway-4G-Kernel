@@ -966,19 +966,6 @@ int __init enterprise_panel_init(void)
 	enterprise_carveouts[1].size = tegra_carveout_size;
 #endif
 
-	err = gpio_request(enterprise_hdmi_hpd, "hdmi_hpd");
-	if (err < 0) {
-		pr_err("%s: gpio_request failed %d\n", __func__, err);
-		return err;
-	}
-	err = gpio_direction_input(enterprise_hdmi_hpd);
-	if (err < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n",
-			__func__, err);
-		gpio_free(enterprise_hdmi_hpd);
-		return err;
-	}
-
 	if (board_info.board_id != BOARD_E1239) {
 		err = gpio_request(enterprise_lcd_2d_3d, "lcd_2d_3d");
 		if (err < 0) {

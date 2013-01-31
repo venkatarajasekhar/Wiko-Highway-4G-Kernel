@@ -313,9 +313,6 @@ int __init whistler_panel_init(void)
 	struct platform_device *phost1x = NULL;
 	bool is_dt = of_have_populated_dt();
 
-	gpio_request(whistler_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(whistler_hdmi_hpd);
-
 #if defined(CONFIG_TEGRA_NVMAP)
 	whistler_carveouts[1].base = tegra_carveout_start;
 	whistler_carveouts[1].size = tegra_carveout_size;

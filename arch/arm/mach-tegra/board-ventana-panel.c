@@ -367,9 +367,6 @@ int __init ventana_panel_init(void)
 	gpio_request(ventana_hdmi_enb, "hdmi_5v_en");
 	gpio_direction_output(ventana_hdmi_enb, 1);
 
-	gpio_request(ventana_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(ventana_hdmi_hpd);
-
 #if defined(CONFIG_TEGRA_NVMAP)
 	ventana_carveouts[1].base = tegra_carveout_start;
 	ventana_carveouts[1].size = tegra_carveout_size;

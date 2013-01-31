@@ -726,20 +726,6 @@ int __init kai_panel_init(void)
 		return err;
 	}
 
-	err = gpio_request(kai_hdmi_hpd, "hdmi_hpd");
-	if (err < 0) {
-		pr_err("%s: gpio_request failed %d\n",
-			__func__, err);
-		return err;
-	}
-	err = gpio_direction_input(kai_hdmi_hpd);
-	if (err < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n",
-			__func__, err);
-		gpio_free(kai_hdmi_hpd);
-		return err;
-	}
-
 	err = platform_add_devices(kai_gfx_devices,
 				ARRAY_SIZE(kai_gfx_devices));
 

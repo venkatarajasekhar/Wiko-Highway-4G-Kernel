@@ -490,11 +490,6 @@ int __init ceres_panel_init(void)
 	}
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_T11x_SOC
-	gpio_request(ceres_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(ceres_hdmi_hpd);
-#endif
-
 	phost1x = ceres_host1x_init();
 	if (!phost1x) {
 		pr_err("host1x devices registration failed\n");
