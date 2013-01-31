@@ -449,6 +449,12 @@ static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.vbus_reg_init_data = &vbus_reg_init_data,
 };
 
+struct max77660_adc_platform_data max77660_adc_pdata = {
+	.adc_current_uA = 10,
+	.adc_avg_sample = 2,
+	.adc_ref_enabled = 1,
+};
+
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
@@ -460,6 +466,8 @@ static struct max77660_platform_data max77660_pdata = {
 	.num_pinctrl	= ARRAY_SIZE(max77660_pinctrl_pdata),
 
 	.charger_pdata = &max77660_charger_pdata,
+
+	.adc_pdata = &max77660_adc_pdata,
 
 	.flags	= 0x00,
 	.en_clk32out1 = true,
