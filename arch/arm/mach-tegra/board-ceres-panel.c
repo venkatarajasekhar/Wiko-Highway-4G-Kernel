@@ -26,6 +26,7 @@
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pwm_backlight.h>
+#include <linux/mfd/max77660/max77660-core.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -36,6 +37,7 @@
 #include "board-ceres.h"
 #include "board-panel.h"
 #include "common.h"
+#include "tegra-board-id.h"
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include "tegra11_host1x_devices.h"
@@ -76,7 +78,7 @@ struct platform_device * __init ceres_host1x_init(void)
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define ceres_hdmi_hpd		TEGRA_GPIO_PN7
 #else
-/* FIXME: T148 ceres has this GPIO from PMIC */
+#define ceres_hdmi_hpd		(MAX77660_GPIO_BASE + MAX77660_GPIO2)
 #endif
 
 /* hdmi related regulators */
@@ -467,6 +469,22 @@ static void ceres_panel_select(void)
 		panel->register_bl_dev();
 
 }
+
+void ceres_set_hotplug_gpio(void)
+{
+	struct tegra_dc_platform_data *pdata;
+	struct board_info board_info;
+	int hdmi_hpd_gpio = ceres_hdmi_hpd;
+
+	pdata = ceres_disp2_device.dev.platform_data;
+	tegra_get_board_info(&board_info);
+
+	if (board_info.fab > BOARD_FAB_A00)
+		hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);
+
+	pdata->default_out->hotplug_gpio = hdmi_hpd_gpio;
+}
+
 int __init ceres_panel_init(void)
 {
 	int err = 0;
@@ -517,6 +535,10 @@ int __init ceres_panel_init(void)
 		pr_err("disp1 device registration failed\n");
 		return err;
 	}
+
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
+	ceres_set_hotplug_gpio();
+#endif
 
 	ceres_disp2_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&ceres_disp2_device);
