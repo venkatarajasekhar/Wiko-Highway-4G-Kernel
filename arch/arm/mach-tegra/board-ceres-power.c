@@ -596,6 +596,10 @@ static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
 	REGULATOR_SUPPLY("unused", NULL),
 };
 
+static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
+	REGULATOR_SUPPLY("vdd_hdmi_5v0", "tegradc.1"),
+};
+
 /* Macro for defining fixed regulator sub device data */
 #define FIXED_SUPPLY(_name) "fixed_reg_"#_name
 #define FIXED_REG(_id, _var, _name, _in_supply, _always_on, _boot_on,	\
@@ -641,7 +645,9 @@ FIXED_REG(0,	battery,	battery,
 FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 	NULL,	0,	0,
 	MAX77660_GPIO_BASE + MAX77660_GPIO6,	true,	true,	1,	2800);
-
+FIXED_REG(2,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
+	NULL,	0,	0,
+	MAX77660_GPIO_BASE + MAX77660_GPIO3,	false,	true,	0,	5000);
 /*
  * Creating the fixed regulator device tables
  */
@@ -651,6 +657,7 @@ FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 #define CERES_COMMON_FIXED_REG		\
 	ADD_FIXED_REG(battery),		\
 	ADD_FIXED_REG(avdd_lcd),		\
+	ADD_FIXED_REG(vdd_hdmi_5v0)		\
 
 /* Gpio switch regulator platform data for Ceres E1680 */
 static struct platform_device *fixed_reg_devs_e1680[] = {
