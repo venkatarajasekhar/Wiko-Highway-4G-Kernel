@@ -426,6 +426,29 @@ static struct max77660_pinctrl_platform_data max77660_pinctrl_pdata[] = {
 	MAX77660_INIT_PINS(GPIO9, 1, 1, PULL_UP),
 };
 
+static struct regulator_consumer_supply max77660_vbus_sypply[] = {
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
+};
+
+static struct regulator_init_data vbus_reg_init_data = {
+	.constraints = {
+		.name = "max77660-vbus",
+		.min_uV = 0,
+		.max_uV = 5000000,
+		.valid_modes_mask = (REGULATOR_MODE_NORMAL |
+					REGULATOR_MODE_STANDBY),
+		.valid_ops_mask = (REGULATOR_CHANGE_MODE |
+					REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE),
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = max77660_vbus_sypply,
+};
+
+static struct max77660_charger_platform_data max77660_charger_pdata = {
+	.vbus_reg_init_data = &vbus_reg_init_data,
+};
+
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
@@ -435,6 +458,8 @@ static struct max77660_platform_data max77660_pdata = {
 
 	.pinctrl_pdata	= max77660_pinctrl_pdata,
 	.num_pinctrl	= ARRAY_SIZE(max77660_pinctrl_pdata),
+
+	.charger_pdata = &max77660_charger_pdata,
 
 	.flags	= 0x00,
 	.en_clk32out1 = true,
