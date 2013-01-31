@@ -720,7 +720,9 @@ static void __init tegra_ceres_init(void)
 	ceres_edp_init();
 	ceres_sensors_init();
 	tegra_register_fuse();
+/* Disabled for T148 bringup 
 	ceres_soctherm_init();
+*/
 	ceres_emc_init();
 #ifdef CONFIG_BT_BLUESLEEP
 	ceres_setup_bluesleep();

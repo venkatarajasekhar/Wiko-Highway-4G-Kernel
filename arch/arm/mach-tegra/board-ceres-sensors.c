@@ -76,6 +76,7 @@ static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(GPIO_PBB0, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 #endif
 
+/* Disabled for T148 bringup
 static struct throttle_table tj_throttle_table[] = {
 	{      0, 1000 },
 	{ 640000, 1000 },
@@ -100,6 +101,7 @@ static int __init ceres_throttle_init(void)
 	return 0;
 }
 module_init(ceres_throttle_init);
+*/
 
 static struct nct1008_platform_data ceres_nct1008_pdata = {
 	.supported_hwrev = true,
