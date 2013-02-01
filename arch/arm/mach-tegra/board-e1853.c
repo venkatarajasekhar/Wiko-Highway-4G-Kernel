@@ -49,7 +49,6 @@
 #include <mach/pci.h>
 #include <mach/audio.h>
 #include <mach/tegra_asoc_vcm_pdata.h>
-#include <mach/ioexpander.h>
 #include <asm/mach/flash.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -66,11 +65,6 @@
 #include "common.h"
 #include "pm.h"
 #include <mach/board_id.h>
-
-#define IO_EXPANDER_ADDR	(0x75)
-#define BT_RESET_BIT_POS	(IO_EXP_PIN_0)
-#define BT_ENABLE_BIT_POS	(IO_EXP_PIN_5)
-#define BT_WAKEUP_BIT_POS	(IO_EXP_PIN_7)
 
 static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	/* name		parent		rate		enabled */
@@ -694,108 +688,6 @@ static void __init tegra_e1853_reserve(void)
 	tegra_reserve(SZ_128M, SZ_8M, SZ_8M);
 #endif
 }
-
-static int __init e1853_bt_init(void)
-{
-	struct i2c_adapter *adapter;
-	struct i2c_board_info info = { {0} };
-	struct i2c_client *client = NULL;
-	struct i2c_msg msg;
-	u8 cmd_buf[2];
-	int ret = 0;
-
-	/* Program the IO Expander */
-	adapter = i2c_get_adapter(1);
-	if (!adapter) {
-		printk(KERN_WARNING "%s: adapter is null\n", __func__);
-		ret = -ENXIO;
-		goto i2c_done;
-	}
-
-	info.addr = IO_EXPANDER_ADDR;
-	client = i2c_new_device(adapter, &info);
-	i2c_put_adapter(adapter);
-	if (!client) {
-		printk(KERN_WARNING "%s: client is null\n", __func__);
-		ret = -ENXIO;
-		goto i2c_done;
-	}
-
-	/* Set output state for BT_RST, BT_EN and BT_WAKEUP */
-	/* Read register contents of OUTPUT_PORT_REG */
-	cmd_buf[0] = IO_EXP_OUTPUT_PORT_REG_0;
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = 0;
-	msg.len = 1;
-	msg.buf = &cmd_buf[0];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = I2C_M_RD;
-	msg.len = 1;
-	msg.buf = &cmd_buf[1];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	/* Set required output values and write  */
-	cmd_buf[0] = IO_EXP_OUTPUT_PORT_REG_0;
-	cmd_buf[1] |= ((1 << BT_ENABLE_BIT_POS) |
-			(1 << BT_WAKEUP_BIT_POS) |
-			(1 << BT_RESET_BIT_POS));
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = 0;
-	msg.len = 2;
-	msg.buf = &cmd_buf[0];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	/* Set BT_RST, BT_EN and BT_WAKEUP as output pins */
-	/* Read register contents of CONFIG_REG */
-	cmd_buf[0] = IO_EXP_CONFIG_REG_0;
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = 0;
-	msg.len = 1;
-	msg.buf = &cmd_buf[0];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = I2C_M_RD;
-	msg.len = 1;
-	msg.buf = &cmd_buf[1];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	/* Set required direction bits */
-	cmd_buf[0] = IO_EXP_CONFIG_REG_0;
-	cmd_buf[1] &=  (~((1 << BT_ENABLE_BIT_POS) |
-			(1 << BT_WAKEUP_BIT_POS) |
-			(1 << BT_RESET_BIT_POS)));
-	msg.addr = IO_EXPANDER_ADDR;
-	msg.flags = 0;
-	msg.len = 2;
-	msg.buf = &cmd_buf[0];
-	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0)
-		goto i2c_done;
-
-	ret = 0;
-
-i2c_done:
-	if (ret < 0)
-		printk(KERN_ERR "%s: I2C transaction failed\n", __func__);
-	if (client)
-		i2c_unregister_device(client);
-	return ret;
-}
-
-late_initcall(e1853_bt_init);
 
 MACHINE_START(E1853, "e1853")
 	.atag_offset    = 0x100,
