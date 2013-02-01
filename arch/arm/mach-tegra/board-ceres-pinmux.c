@@ -151,7 +151,7 @@
 		.ioreset    = TEGRA_PIN_IO_RESET_DEFAULT,	\
 	}
 
-#define GPIO_PINMUX(_pingroup, _pupd, _tri, _io, _od)	\
+#define GPIO_PINMUX(_pingroup, _pupd, _tri, _io)	\
 {							\
 	.pingroup   = TEGRA_PINGROUP_##_pingroup,	\
 	.func       = TEGRA_MUX_SAFE,			\
@@ -159,7 +159,7 @@
 	.tristate   = TEGRA_TRI_##_tri,			\
 	.io         = TEGRA_PIN_##_io,			\
 	.lock       = TEGRA_PIN_LOCK_DEFAULT,		\
-	.od         = TEGRA_PIN_OD_##_od,		\
+	.od         = TEGRA_PIN_OD_DEFAULT,		\
 	.ioreset    = TEGRA_PIN_IO_RESET_DEFAULT,	\
 }
 
@@ -302,51 +302,6 @@ static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 								FASTEST, 1),
 };
 
-/* Initially setting all used GPIO's to non-TRISTATE */
-static __initdata struct tegra_pingroup_config ceres_pinmux_set_nontristate[] = {
-	DEFAULT_PINMUX(AP_GPS_RST,     RSVD0,    PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPS_AP_INT,     RSVD0,    PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(DCA_LSPII,      DISPLAYA, PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(DCA_LSC,        DISPLAYA, PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(DCA_LVS,        DISPLAYA, PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(SPI2_CS2_N,     EXTPERIPH1, PULL_DOWN,  NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PS0,       VGP1,     PULL_UP,      NORMAL,    OUTPUT),
-
-	DEFAULT_PINMUX(GPIO_PS1,       VGP2,     NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PS2,       VGP3,     NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PS3,       VGP4,     NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PS4,       VGP5,     NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PS5,       VGP6,     NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(KB_COL0,        KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_COL1,        KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_COL2,        KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW0,        KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW1,        KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW2,        KBC,      PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(AP_WIFI_EN,     RSVD0,    PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(AP_WIFI_RST,    RSVD0,    PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(AP_WAKE_BT,     RSVD0,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(BT_WAKE_AP,     RSVD0,    PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(BT_RESET_L,     RSVD0,    PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(NFC_INT_L,      RSVD0,    PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(NFC_EN,         RSVD0,    PULL_UP,      NORMAL,    OUTPUT),
-
-	DEFAULT_PINMUX(NFC_DATA_EN,    RSVD0,    NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PO0,       UARTD,    NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PO1,       UARTD,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PO2,       UARTD,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PO3,       UARTD,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PO4,       RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PO5,       RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PO6,       RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(AP_READY,       RSVD0,    NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(MODEM_WAKE_AP,  RSVD0,    NORMAL,       NORMAL,    OUTPUT),
-
-	DEFAULT_PINMUX(MOTION_INT_L,   RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(TOUCH_INT_L,    RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(TOUCH_RESET_L,  RSVD0,    NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(ALS_PROX_INT_L, RSVD0,    NORMAL,       NORMAL,    INPUT),
-};
 
 #include "board-ceres-pinmux-t14x.h"
 
@@ -385,8 +340,6 @@ int __init ceres_pinmux_init(void)
 	tegra_pinmux_config_table(unused_pins_lowpower,
 		ARRAY_SIZE(unused_pins_lowpower));
 #else
-	tegra_pinmux_config_table(ceres_pinmux_set_nontristate,
-					ARRAY_SIZE(ceres_pinmux_set_nontristate));
 	ceres_gpio_init_configure();
 
 	tegra_pinmux_config_table(ceres_pinmux_common, ARRAY_SIZE(ceres_pinmux_common));
