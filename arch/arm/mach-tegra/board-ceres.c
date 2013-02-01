@@ -614,7 +614,7 @@ static void ceres_i2c_init(void)
 
 #endif
 
-	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(TEGRA_GPIO_PW2);
+	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(CERES_NFC_IRQ);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
 
