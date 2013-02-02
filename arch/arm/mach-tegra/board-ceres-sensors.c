@@ -26,8 +26,11 @@
 #include <media/imx132.h>
 #include <media/ad5816.h>
 #include <media/max77387.h>
-
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include <mach/pinmux-t11.h>
+#else
+#include <mach/pinmux-t14.h>
+#endif
 #include <mach/pinmux.h>
 #include <linux/nct1008.h>
 #include <mach/edp.h>
@@ -53,6 +56,7 @@ static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 		.ioreset	= TEGRA_PIN_IO_RESET_##_ioreset	\
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 /* Rear sensor clock pinmux settings */
 static struct tegra_pingroup_config mclk_disable =
 	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
@@ -60,7 +64,6 @@ static struct tegra_pingroup_config mclk_disable =
 static struct tegra_pingroup_config mclk_enable =
 	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 /* Front sensor clock pinmux settings */
 static struct tegra_pingroup_config pbb0_disable =
 	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
@@ -68,12 +71,21 @@ static struct tegra_pingroup_config pbb0_disable =
 static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 #else
+/* Rear sensor clock pinmux settings */
+static struct tegra_pingroup_config mclk_disable =
+	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
+
+static struct tegra_pingroup_config mclk_enable =
+	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
+			NORMAL, OUTPUT, DEFAULT, DISABLE);
+
 /* Front sensor clock pinmux settings */
 static struct tegra_pingroup_config pbb0_disable =
-	VI_PINMUX(GPIO_PBB0, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
 
 static struct tegra_pingroup_config pbb0_enable =
-	VI_PINMUX(GPIO_PBB0, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
+			NORMAL, OUTPUT, DEFAULT, DISABLE);
 #endif
 
 /* Disabled for T148 bringup
@@ -378,8 +390,8 @@ static struct nvc_imager_cap imx091_cap = {
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
 	.preferred_mode_index	= 0,
-	.focuser_guid		= NVC_FOCUS_GUID(0),
-	.torch_guid		= NVC_TORCH_GUID(0),
+	.focuser_guid		= 0, /*NVC_FOCUS_GUID(0),*/
+	.torch_guid		= 0, /*NVC_TORCH_GUID(0),*/
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
@@ -438,10 +450,14 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 			.lumi_levels		= NULL,
 			},
 		},
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	.pinstate	= {
 		.mask	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
 		.values	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
 		},
+#else
+	/* Needs to be validated and changed for t14x */
+#endif
 	.cfg		= NVC_CFG_NODEV,
 	.dev_name	= "torch",
 	.gpio_strobe	= CAM_FLASH_STROBE,
