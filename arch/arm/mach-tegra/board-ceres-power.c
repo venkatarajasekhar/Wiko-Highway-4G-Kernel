@@ -25,7 +25,6 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max77660/max77660-core.h>
-#include <linux/mfd/max77660/max77660-regulator.h>
 #include <linux/platform_data/lp8755.h>
 
 #include <asm/mach-types.h>
@@ -271,7 +270,6 @@ static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
 static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 {									\
 		.reg_init_data = &max77660_regulator_idata_##_id,	\
-		.id = MAX77660_REGULATOR_ID_##_rid,			\
 		.fps_src = _fps_src,					\
 		.fps_pu_period = _fps_pu_period,			\
 		.fps_pd_period = _fps_pd_period,			\
@@ -279,6 +277,7 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 		.fps_cfgs = max77660_fps_cfgs,				\
 		.flags = _flags,					\
 	}
+
 
 MAX77660_PDATA_INIT(BUCK1, buck1,  900, 1400, NULL,
 		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
@@ -370,7 +369,8 @@ MAX77660_PDATA_INIT(SW4, sw4, 1100, 1100, max77660_rails(buck1),
 MAX77660_PDATA_INIT(SW5, sw5, 1200, 1200, max77660_rails(buck3),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
 
-#define MAX77660_REG(_id, _data) (&max77660_regulator_pdata_##_data)
+#define MAX77660_REG(_id, _data) 	\
+	[MAX77660_REGULATOR_ID_##_id] = (&max77660_regulator_pdata_##_data)
 
 static struct max77660_regulator_platform_data *max77660_reg_pdata[] = {
 	MAX77660_REG(BUCK1, buck1),
@@ -458,9 +458,6 @@ struct max77660_adc_platform_data max77660_adc_pdata = {
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
-
-	.regulator_pdata = max77660_reg_pdata,
-	.num_regulator_pdata = ARRAY_SIZE(max77660_reg_pdata),
 
 	.pinctrl_pdata	= max77660_pinctrl_pdata,
 	.num_pinctrl	= ARRAY_SIZE(max77660_pinctrl_pdata),
@@ -559,6 +556,7 @@ int __init ceres_regulator_init(void)
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
 	struct board_info board_info;
+	int id;
 
 	/* configure the power management controller to trigger PMU
 	 * interrupts when low */
@@ -566,6 +564,9 @@ int __init ceres_regulator_init(void)
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 	tegra_get_board_info(&board_info);
 	max77660_pdata.en_buck2_ext_ctrl = true;
+	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
+		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
+
 	if (board_info.fab > BOARD_FAB_A00) {
 		max77660_pdata.en_buck2_ext_ctrl = false;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
