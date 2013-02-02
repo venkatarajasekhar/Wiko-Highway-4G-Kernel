@@ -1090,7 +1090,6 @@ static int max77660_regulator_probe(struct platform_device *pdev)
 	struct regulator_desc *rdesc;
 	struct max77660_regulator *reg;
 	struct max77660_regulator *max_regs;
-	struct max77660_regulator_platform_data *reg_pdata;
 	int ret = 0;
 	int id;
 	int reg_id;
@@ -1109,9 +1108,10 @@ static int max77660_regulator_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, max_regs);
 
 	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id) {
+		struct max77660_regulator_platform_data *reg_pdata;
+		struct regulator_init_data *reg_init_data = NULL;
+
 		reg_pdata = pdata->regulator_pdata[id];
-		if (!reg_pdata)
-			continue;
 
 		reg_id = id;
 		reg  = &max_regs[id];
@@ -1119,24 +1119,31 @@ static int max77660_regulator_probe(struct platform_device *pdev)
 		reg->rinfo = &max77660_regs_info[reg_id];
 		reg->dev = &pdev->dev;
 		reg->pdata = reg_pdata;
+		if (reg_pdata)
+			reg_init_data = reg_pdata->reg_init_data;
+
 		reg->regulator_mode = REGULATOR_MODE_NORMAL;
 		reg->power_mode = POWER_MODE_NORMAL;
 
 		dev_dbg(&pdev->dev, "probe: name=%s\n", rdesc->name);
 
-		ret = max77660_regulator_preinit(reg);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to preinit regulator %s\n",
-				rdesc->name);
-			goto clean_exit;
+		if (reg_pdata) {
+			ret = max77660_regulator_preinit(reg);
+			if (ret < 0) {
+				dev_err(&pdev->dev,
+					"Preinit regualtor %s failed: %d\n",
+					rdesc->name, ret);
+				goto clean_exit;
+			}
 		}
 
 		reg->rdev = regulator_register(rdesc, &pdev->dev,
-					reg->pdata->reg_init_data, reg, NULL);
+					reg_init_data, reg, NULL);
 		if (IS_ERR(reg->rdev)) {
-			dev_err(&pdev->dev, "Failed to register regulator %s\n",
-			rdesc->name);
 			ret = PTR_ERR(reg->rdev);
+			dev_err(&pdev->dev,
+				"regulator %s register failed: %d\n",
+				rdesc->name, ret);
 			goto clean_exit;
 		}
 	}
@@ -1150,7 +1157,8 @@ static int max77660_regulator_probe(struct platform_device *pdev)
 clean_exit:
 	while (--id >= 0) {
 		reg  = &max_regs[id];
-		regulator_unregister(reg->rdev);
+		if (reg->dev)
+			regulator_unregister(reg->rdev);
 	}
 	return ret;
 }
