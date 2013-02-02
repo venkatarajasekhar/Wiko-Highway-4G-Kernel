@@ -514,6 +514,42 @@ int __init e1853_gpio_init(void)
 }
 
 /*
+ * GPIO init table for PCA9539 MISC IO GPIOs
+ * that have to be brought up to a known good state
+ * except for WiFi as it is handled via the
+ * WiFi stack.
+ */
+static struct gpio e1853_system_gpios[] = {
+	{MISCIO_BT_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"bt_rst"},
+	{MISCIO_GPS_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"gps_rst"},
+	{MISCIO_GPS_EN_GPIO,	GPIOF_OUT_INIT_HIGH,	"gps_en"},
+	{MISCIO_BT_EN_GPIO,		GPIOF_OUT_INIT_HIGH,	"bt_en"},
+	{MISCIO_BT_WAKEUP_GPIO,	GPIOF_OUT_INIT_HIGH,	"bt_wk"},
+	{MISCIO_ABB_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"ebb_rst"},
+	{MISCIO_USER_LED2_GPIO,	GPIOF_OUT_INIT_LOW,		"usr_led2"},
+	{MISCIO_USER_LED1_GPIO, GPIOF_OUT_INIT_LOW,		"usr_led1"},
+};
+
+static int __init e1853_system_gpio_init(void)
+{
+	int ret, pin_count = 0;
+	struct gpio *gpios_info = NULL;
+	gpios_info = e1853_system_gpios;
+	pin_count = ARRAY_SIZE(e1853_system_gpios);
+
+	/* Set required system GPIOs to initial bootup values */
+	ret = gpio_request_array(gpios_info, pin_count);
+	/* Free them so that they can be used by other modules
+		(ex. RFKILL) */
+	gpio_free_array(gpios_info, pin_count);
+
+	if (ret)
+		printk(KERN_ERR "%s gpio_request_array failed(%d)\r\n",
+				 __func__, ret);
+	return ret;
+}
+
+/*
  * TODO: Check for the correct pca953x before invoking client
  *  init functions
  */
@@ -521,7 +557,16 @@ static int pca953x_client_setup(struct i2c_client *client,
 				unsigned gpio, unsigned ngpio,
 				void *context)
 {
+	int ret = 0;
+
+	ret = e1853_system_gpio_init();
+	if (ret < 0)
+		goto fail;
+
 	return 0;
+fail:
+	printk(KERN_ERR "%s failed(%d)\r\n", __func__, ret);
+	return ret;
 }
 
 static struct pca953x_platform_data e1853_miscio_pca9539_data = {
