@@ -86,6 +86,7 @@ obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += powergate-t30.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += powergate-t11x.o
 obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += powergate-t14x.o
 
+obj-$(CONFIG_PM_GENERIC_DOMAINS)        += pm_domains.o
 obj-y                                   += dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_dvfs.o
 obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra14_dvfs.o
