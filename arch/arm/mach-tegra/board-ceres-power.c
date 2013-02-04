@@ -47,6 +47,10 @@
 #define MAX77660_IRQ_BASE	TEGRA_NR_IRQS
 
 /* max77660 consumer rails */
+static struct regulator_consumer_supply max77660_unused_supply[] = {
+	REGULATOR_SUPPLY("unused_reg", NULL),
+};
+
 static struct regulator_consumer_supply max77660_buck1_supply[] = {
 	REGULATOR_SUPPLY("vdd_core", NULL),
 	REGULATOR_SUPPLY("vdd_core_dbg", NULL),
@@ -283,7 +287,7 @@ MAX77660_PDATA_INIT(BUCK1, buck1,  900, 1400, NULL,
 		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK2, buck2,  900, 1300, NULL,
-		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
+		1, 1, 0, FPS_SRC_3, 0, 0, 0);
 
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
@@ -536,7 +540,7 @@ static struct lp8755_platform_data lp8755_pdata;
 static struct i2c_board_info lp8755_regulators[] = {
 	{
 		I2C_BOARD_INFO(LP8755_NAME, 0x60),
-		.irq		= INT_EXTERNAL_PMU,
+		.irq		= 0,
 		.platform_data	= &lp8755_pdata,
 	},
 };
@@ -568,7 +572,6 @@ int __init ceres_regulator_init(void)
 		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
 
 	if (board_info.fab > BOARD_FAB_A00) {
-		max77660_pdata.en_buck2_ext_ctrl = false;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
 				MAX77660_PIN_PULL_UP;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
@@ -576,7 +579,12 @@ int __init ceres_regulator_init(void)
 				MAX77660_PIN_PULL_NORMAL;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
-		max77660_reg_pdata[MAX77660_REGULATOR_ID_BUCK2] = NULL;
+		max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
+		max77660_regulator_idata_buck1.num_consumer_supplies =
+			ARRAY_SIZE(max77660_unused_supply);
+		max77660_regulator_idata_buck2.consumer_supplies = max77660_buck1_supply;
+		max77660_regulator_idata_buck2.num_consumer_supplies =
+						ARRAY_SIZE(max77660_buck1_supply);
 		lp8755_regulator_init();
 	}
 
