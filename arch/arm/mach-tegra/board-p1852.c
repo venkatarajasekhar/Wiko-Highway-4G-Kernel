@@ -87,7 +87,7 @@ static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	{ "sbc4",		"pll_m",	100000000,	true},
 	{ "sbc5",		"pll_m",	100000000,	true},
 	{ "sbc6",		"pll_m",	100000000,	true},
-	{ "cpu_g",		"cclk_g",	900000000,	true},
+	{ "cpu_g",		"cclk_g",	900000000,	false},
 	{ "i2s0",		"pll_a_out0",	24576000,	false},
 	{ "i2s1",		"pll_a_out0",	24576000,	false},
 	{ "i2s2",		"pll_a_out0",	24576000,	false},
