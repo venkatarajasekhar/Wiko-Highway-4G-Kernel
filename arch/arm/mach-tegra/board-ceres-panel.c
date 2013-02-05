@@ -432,9 +432,13 @@ static void ceres_panel_select(void)
 	case BOARD_E1582:
 	/* fall through */
 	default:
-		panel = &dsi_s_1080p_5;
-		/* ceres uses instance 0 for Sharp 1080p panel */
-		dsi_instance = DSI_INSTANCE_0;
+		if (tegra_get_board_panel_id()) {
+			panel = &dsi_s_1080p_5;
+			dsi_instance = DSI_INSTANCE_0;
+		} else {
+			panel = &dsi_l_720p_5;
+			dsi_instance = DSI_INSTANCE_0;
+		}
 		break;
 	}
 
