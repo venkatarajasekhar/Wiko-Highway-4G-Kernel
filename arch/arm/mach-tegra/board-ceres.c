@@ -41,6 +41,7 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/isomgr.h>
+#include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
 
 #include <asm/mach-types.h>
@@ -258,6 +259,17 @@ static struct platform_device tegra_camera = {
 	.id = -1,
 };
 
+#if defined(CONFIG_TEGRA_BASEBAND)
+static struct tegra_bb_platform_data ceres_tegra_bb_data;
+
+static struct platform_device ceres_tegra_bb_device = {
+	.name = "tegra_bb",
+	.id = 0,
+	.dev = {
+		.platform_data = &ceres_tegra_bb_data,
+	},
+};
+#endif
 
 static struct platform_device *ceres_spi_devices[] __initdata = {
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -697,6 +709,15 @@ static int __init ceres_touch_init(void)
 	return 0;
 }
 
+#if defined(CONFIG_TEGRA_BASEBAND)
+static void ceres_tegra_bb_init(void)
+{
+	pr_info("%s: registering tegra bb\n", __func__);
+	ceres_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
+	platform_device_register(&ceres_tegra_bb_device);
+}
+#endif
+
 static void __init tegra_ceres_init(void)
 {
 	tegra_clk_init_from_table(ceres_clk_init_table);
@@ -723,6 +744,9 @@ static void __init tegra_ceres_init(void)
 	ceres_panel_init();
 	ceres_edp_init();
 	ceres_sensors_init();
+#if defined(CONFIG_TEGRA_BASEBAND)
+	ceres_tegra_bb_init();
+#endif
 	tegra_register_fuse();
 /* Disabled for T148 bringup 
 	ceres_soctherm_init();
