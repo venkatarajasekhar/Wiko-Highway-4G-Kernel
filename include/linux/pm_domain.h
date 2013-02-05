@@ -156,9 +156,9 @@ extern int pm_genpd_add_callbacks(struct device *dev,
 				  struct gpd_dev_ops *ops,
 				  struct gpd_timing_data *td);
 extern int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td);
-extern int genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state,
-				struct cpuidle_device *cpuidle_dev);
-extern int genpd_detach_cpuidle(struct generic_pm_domain *genpd);
+extern int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int state,
+					struct cpuidle_device *cpuidle_dev);
+extern int pm_genpd_detach_cpuidle(struct generic_pm_domain *genpd);
 extern void pm_genpd_init(struct generic_pm_domain *genpd,
 			  struct dev_power_governor *gov, bool is_off);
 
@@ -227,11 +227,11 @@ static inline int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td)
 {
 	return -ENOSYS;
 }
-static inline int genpd_attach_cpuidle(struct generic_pm_domain *genpd, int st)
+static inline int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int st)
 {
 	return -ENOSYS;
 }
-static inline int genpd_detach_cpuidle(struct generic_pm_domain *genpd)
+static inline int pm_genpd_detach_cpuidle(struct generic_pm_domain *genpd)
 {
 	return -ENOSYS;
 }
