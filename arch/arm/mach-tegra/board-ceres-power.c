@@ -95,7 +95,6 @@ static struct regulator_consumer_supply max77660_buck5_supply[] = {
 	REGULATOR_SUPPLY("vddio_sim_bb", NULL),
 	REGULATOR_SUPPLY("vdd_nfc", NULL),
 	REGULATOR_SUPPLY("vdd_dtv", NULL),
-	REGULATOR_SUPPLY("vdd_ts", NULL),
 	REGULATOR_SUPPLY("vdd_modem2", NULL),
 	REGULATOR_SUPPLY("vdd_dbg", NULL),
 };
@@ -126,7 +125,7 @@ static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 	 REGULATOR_SUPPLY("avdd_lcd", NULL),
-	 REGULATOR_SUPPLY("avdd_dis_ts", NULL),
+	 REGULATOR_SUPPLY("avdd", "spi2.0"),
 	 REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
@@ -210,7 +209,7 @@ static struct regulator_consumer_supply max77660_ldo18_supply[] = {
 static struct regulator_consumer_supply max77660_sw1_supply[] = {
 	 REGULATOR_SUPPLY("vdd_dis_lcd", NULL),
 	 REGULATOR_SUPPLY("vdd_dis_ts", NULL),
-	 REGULATOR_SUPPLY("vddio_ts", NULL),
+	 REGULATOR_SUPPLY("dvdd", "spi2.0"),
 	 REGULATOR_SUPPLY("vdd_lcd_1v8_s", NULL),
 };
 
@@ -314,7 +313,7 @@ MAX77660_PDATA_INIT(LDO3, ldo3, 2800, 2800, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL,
-		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
+		1, 1, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO5, ldo5, 1800, 1800, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
@@ -359,7 +358,7 @@ MAX77660_PDATA_INIT(LDO18, ldo18, 3100, 3100, NULL,
 		0, 0, 1, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
-		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
+		1, 1, 0, FPS_SRC_NONE, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_NONE, -1, -1, 0);
