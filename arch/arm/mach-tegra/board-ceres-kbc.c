@@ -106,12 +106,12 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PQ2, 0),
 
 #else
-	[0] = GPIO_KEY(KEY_HOME, PV1, 0),
-	[1] = GPIO_KEY(KEY_MENU, PV2, 0),
-	[2] = GPIO_KEY(KEY_BACK, PV3, 0),
-	[3] = GPIO_KEY(KEY_POWER, PV4, 1),
-	[4] = GPIO_KEY(KEY_VOLUMEUP, PV5, 0),
-	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PV6, 0),
+	[0] = GPIO_KEY(KEY_HOME, PJ1, 0),
+	[1] = GPIO_KEY(KEY_MENU, PJ2, 0),
+	[2] = GPIO_KEY(KEY_BACK, PJ3, 0),
+	[3] = GPIO_KEY(KEY_POWER, PJ4, 1),
+	[4] = GPIO_KEY(KEY_VOLUMEUP, PJ5, 0),
+	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PJ6, 0),
 
 #endif
 };
