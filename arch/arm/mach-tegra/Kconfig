@@ -1,4 +1,4 @@
-# Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,7 @@ config ARCH_TEGRA_2x_SOC
 	select ARM_ERRATA_720789
 	select ARM_ERRATA_751472
 	select ARM_ERRATA_754327
-	select ARM_ERRATA_764369
+	select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_742230 if SMP
 	select ARM_ERRATA_761320 if SMP
 	select PL310_ERRATA_769419 if CACHE_L2X0
@@ -84,7 +84,7 @@ config ARCH_TEGRA_3x_SOC
 	select ARM_ERRATA_743622
 	select ARM_ERRATA_751472
 	select ARM_ERRATA_754322
-	select ARM_ERRATA_764369
+	select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_761320 if SMP
 	select PL310_ERRATA_769419 if CACHE_L2X0
 	select CPU_FREQ_TABLE if CPU_FREQ
