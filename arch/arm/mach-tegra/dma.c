@@ -194,6 +194,18 @@ void tegra_dma_flush(struct tegra_dma_channel *ch)
 }
 EXPORT_SYMBOL(tegra_dma_flush);
 
+static void tegra_dma_clk_enable(struct device *dev)
+{
+	clk_prepare_enable(dma_clk);
+	pm_runtime_get(dev);
+}
+
+static void tegra_dma_clk_disable(struct device *dev)
+{
+	clk_disable_unprepare(dma_clk);
+	pm_runtime_put(dev);
+}
+
 static void tegra_dma_stop(struct tegra_dma_channel *ch)
 {
 	u32 csr;
@@ -443,7 +455,7 @@ int tegra_dma_dequeue_req(struct tegra_dma_channel *ch,
 	list_for_each_entry(req, &ch->list, node) {
 		if (req == _req) {
 			list_del(&req->node);
-			pm_runtime_put(&tegra_dma_device.dev);
+			tegra_dma_clk_disable(&tegra_dma_device.dev);
 			found = 1;
 			break;
 		}
@@ -547,7 +559,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 		hreq = list_entry(new_list.next, typeof(*hreq), node);
 		hreq->status = -TEGRA_DMA_REQ_ERROR_ABORTED;
 		list_del(&hreq->node);
-		pm_runtime_put(&tegra_dma_device.dev);
+		tegra_dma_clk_disable(&tegra_dma_device.dev);
 	}
 
 	return 0;
@@ -657,7 +669,7 @@ int tegra_dma_enqueue_req(struct tegra_dma_channel *ch,
 	if (list_empty(&ch->list))
 		start_dma = 1;
 
-	pm_runtime_get_sync(&tegra_dma_device.dev);
+	tegra_dma_clk_enable(&tegra_dma_device.dev);
 	list_add_tail(&req->node, &ch->list);
 
 	if (start_dma) {
@@ -1059,7 +1071,7 @@ static void handle_oneshot_dma(struct tegra_dma_channel *ch)
 	ch->cb_req = req;
 
 	start_head_req(ch);
-	pm_runtime_put(&tegra_dma_device.dev);
+	tegra_dma_clk_disable(&tegra_dma_device.dev);
 	return;
 }
 
@@ -1092,7 +1104,7 @@ static void handle_continuous_dbl_dma(struct tegra_dma_channel *ch)
 
 			tegra_dma_abort_req(ch, req,
 				"Dma becomes out of sync for ping-pong buffer");
-			pm_runtime_put(&tegra_dma_device.dev);
+			tegra_dma_clk_disable(&tegra_dma_device.dev);
 			return;
 		}
 
@@ -1122,7 +1134,7 @@ static void handle_continuous_dbl_dma(struct tegra_dma_channel *ch)
 		ch->cb_req = req;
 
 		handle_continuous_head_request(ch, req);
-		pm_runtime_put(&tegra_dma_device.dev);
+		tegra_dma_clk_disable(&tegra_dma_device.dev);
 		return;
 	}
 	tegra_dma_abort_req(ch, req, "Dma status is not on sync\n");
@@ -1154,7 +1166,7 @@ static void handle_continuous_sngl_dma(struct tegra_dma_channel *ch)
 	ch->cb_req = req;
 
 	handle_continuous_head_request(ch, req);
-	pm_runtime_put(&tegra_dma_device.dev);
+	tegra_dma_clk_disable(&tegra_dma_device.dev);
 	return;
 }
 
@@ -1244,6 +1256,7 @@ static int __init tegra_dma_probe(struct platform_device *pdev)
 {
 	struct device *dev = &tegra_dma_device.dev;
 
+	tegra_clk_disable_unprepare(dma_clk);
 	pm_runtime_enable(dev);
 
 	return 0;
@@ -1364,7 +1377,8 @@ static int tegra_dma_suspend(void)
 	u32 *ctx = apb_dma;
 	int i;
 
-	pm_runtime_get_sync(&tegra_dma_device.dev);
+	tegra_clk_prepare_enable(dma_clk);
+
 	*ctx++ = readl(general_dma_addr + APB_DMA_GEN);
 	*ctx++ = readl(general_dma_addr + APB_DMA_CNTRL);
 	*ctx++ = readl(general_dma_addr + APB_DMA_IRQ_MASK);
@@ -1379,7 +1393,6 @@ static int tegra_dma_suspend(void)
 		*ctx++ = readl(addr + APB_DMA_CHAN_APB_PTR);
 		*ctx++ = readl(addr + APB_DMA_CHAN_APB_SEQ);
 	}
-	pm_runtime_put_sync(&tegra_dma_device.dev);
 	return 0;
 }
 
@@ -1387,8 +1400,6 @@ static void tegra_dma_resume(void)
 {
 	u32 *ctx = apb_dma;
 	int i;
-
-	pm_runtime_get_sync(&tegra_dma_device.dev);
 
 	writel(*ctx++, general_dma_addr + APB_DMA_GEN);
 	writel(*ctx++, general_dma_addr + APB_DMA_CNTRL);
@@ -1404,8 +1415,7 @@ static void tegra_dma_resume(void)
 		writel(*ctx++, addr + APB_DMA_CHAN_APB_PTR);
 		writel(*ctx++, addr + APB_DMA_CHAN_APB_SEQ);
 	}
-
-	pm_runtime_put_sync(&tegra_dma_device.dev);
+	tegra_clk_disable_unprepare(dma_clk);
 }
 
 static struct syscore_ops tegra_dma_syscore_ops = {
