@@ -187,6 +187,7 @@
 
 static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 	/* DEFAULT_DRIVE(<pin_group>), */
+	SET_DRIVE(DAP1, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
 	SET_DRIVE(DAP2, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
 
 	/* SDMMC1 */

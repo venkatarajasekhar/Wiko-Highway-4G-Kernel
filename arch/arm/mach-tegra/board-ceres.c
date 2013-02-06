@@ -234,7 +234,7 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
 	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
 	.i2s_param[HIFI_CODEC]	= {
-		.audio_port_id	= 1,
+		.audio_port_id	= 0,
 		.is_i2s_master	= 1,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
@@ -391,8 +391,8 @@ static struct i2c_board_info __initdata max97236_board_info = {
 
 static void ceres_audio_init(void)
 {
-	i2c_register_board_info(0, &max97236_board_info, 1);
-	i2c_register_board_info(0, &max98090_board_info, 1);
+	i2c_register_board_info(5, &max97236_board_info, 1);
+	i2c_register_board_info(5, &max98090_board_info, 1);
 
 	platform_add_devices(ceres_audio_devices,
 			ARRAY_SIZE(ceres_audio_devices));
@@ -504,6 +504,7 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "cile",	"pll_p",	150000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
+	{ "i2c6",	"pll_p",	3200000,	false},
 	{ "hda",	"pll_p",	108000000,	false},
 	{ "hda2codec_2x", "pll_p",	48000000,	false},
 	{ "i2s0",	"pll_a_out0",	0,		false},
@@ -616,8 +617,8 @@ static struct tegra_i2c_platform_data ceres_i2c5_platform_data = {
 
 static __maybe_unused struct tegra_i2c_platform_data ceres_i2c6_platform_data = {
 	.bus_clk_rate	= 400000,
-	.scl_gpio	= -1,
-	.sda_gpio	= -1,
+	.scl_gpio	= TEGRA_GPIO_I2C5_SCL,
+	.sda_gpio	= TEGRA_GPIO_I2C5_SDA,
 };
 
 static void ceres_i2c_init(void)
