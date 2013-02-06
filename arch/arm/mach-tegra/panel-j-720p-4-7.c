@@ -109,7 +109,11 @@ static int __maybe_unused dsi_j_720p_4_7_check_fb(struct device *dev,
 */
 
 static struct platform_pwm_backlight_data dsi_j_720p_4_7_bl_data = {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	.pwm_id         = 1,
+#else
+	.pwm_id         = 0,
+#endif
 	.max_brightness = 255,
 	.dft_brightness = 77,
 	.pwm_period_ns  = 40000,
@@ -130,7 +134,11 @@ static struct tegra_dsi_out dsi_j_720p_4_7_pdata;
 static int dsi_j_720p_4_7_register_bl_dev(void)
 {
 	int err = 0;
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	err = platform_device_register(&tegra_pwfm1_device);
+#else
+	err = platform_device_register(&tegra_pwfm0_device);
+#endif
 	if (err) {
 		pr_err("disp1 pwm device registration failed");
 		return err;
