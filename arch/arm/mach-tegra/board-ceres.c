@@ -67,8 +67,8 @@
 #define CERES_NFC_WAKE		TEGRA_GPIO_PX7
 #else
 #define CERES_BT_EN		TEGRA_GPIO_PM3
-#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM1
-#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PM2
+#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM2
+#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PM1
 #define CERES_NFC_IRQ		TEGRA_GPIO_PM4
 #define CERES_NFC_EN		TEGRA_GPIO_PI0
 #define CERES_NFC_WAKE		TEGRA_GPIO_PM0
@@ -124,7 +124,7 @@ static noinline void __init ceres_setup_bluesleep(void)
 {
 	ceres_bluesleep_resources[2].start =
 		ceres_bluesleep_resources[2].end =
-			gpio_to_irq(TEGRA_GPIO_PU6);
+			gpio_to_irq(CERES_BT_HOST_WAKE);
 	platform_device_register(&ceres_bluesleep_device);
 	return;
 }
@@ -132,30 +132,25 @@ static noinline void __init ceres_setup_bluesleep(void)
 static struct resource ceres_bluedroid_pm_resources[] = {
 	[0] = {
 		.name   = "shutdown_gpio",
-		.start  = TEGRA_GPIO_PQ7,
-		.end    = TEGRA_GPIO_PQ7,
+		.start  = CERES_BT_EN,
+		.end    = CERES_BT_EN,
 		.flags  = IORESOURCE_IO,
 	},
+
 	[1] = {
 		.name = "host_wake",
 		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	},
 	[2] = {
 		.name = "gpio_ext_wake",
-		.start  = TEGRA_GPIO_PEE1,
-		.end    = TEGRA_GPIO_PEE1,
+		.start  = CERES_BT_EXT_WAKE,
+		.end    = CERES_BT_EXT_WAKE,
 		.flags  = IORESOURCE_IO,
 	},
 	[3] = {
 		.name = "gpio_host_wake",
-		.start  = TEGRA_GPIO_PU6,
-		.end    = TEGRA_GPIO_PU6,
-		.flags  = IORESOURCE_IO,
-	},
-	[4] = {
-		.name = "reset_gpio",
-		.start  = TEGRA_GPIO_PQ6,
-		.end    = TEGRA_GPIO_PQ6,
+		.start  = CERES_BT_HOST_WAKE,
+		.end    = CERES_BT_HOST_WAKE,
 		.flags  = IORESOURCE_IO,
 	},
 };
@@ -171,7 +166,7 @@ static noinline void __init ceres_setup_bluedroid_pm(void)
 {
 	ceres_bluedroid_pm_resources[1].start =
 		ceres_bluedroid_pm_resources[1].end =
-					gpio_to_irq(TEGRA_GPIO_PU6);
+					gpio_to_irq(CERES_BT_HOST_WAKE);
 	platform_device_register(&ceres_bluedroid_pm_device);
 }
 #endif
