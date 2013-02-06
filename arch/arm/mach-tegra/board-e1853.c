@@ -82,7 +82,7 @@ static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	{ "uartb",		"pll_p",	480000000,	true},
 	{ "uartc",		"pll_p",	480000000,	true},
 	{ "uartd",		"pll_p",	480000000,	true},
-	{ "sdmmc2",		"pll_p",	52000000,	true},
+	{ "sdmmc2",		"pll_p",	52000000,	false},
 	{ "sbc2",		"pll_m",	100000000,	true},
 	{ "sbc3",		"pll_m",	100000000,	true},
 	{ "sbc4",		"pll_m",	100000000,	true},
@@ -114,7 +114,6 @@ static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	{ "i2c3",		"pll_p",	3200000,	true},
 	{ "i2c4",		"pll_p",	3200000,	true},
 	{ "i2c5",		"pll_p",	3200000,	true},
-	{ "sdmmc2",		"pll_p",	104000000,	false},
 	{"wake.sclk",		NULL,		334000000,	true },
 	{ NULL,			NULL,		0,		0},
 };
