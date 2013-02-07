@@ -66,6 +66,30 @@
 #include "pm.h"
 #include <mach/board_id.h>
 
+#if defined(CONFIG_BCM4329_RFKILL)
+static struct resource e1853_bcm4329_rfkill_resources[] = {
+	{
+		.name   = "bcm4329_nreset_gpio",
+		.start  = MISCIO_BT_RST_GPIO,
+		.end    = MISCIO_BT_RST_GPIO,
+		.flags  = IORESOURCE_IO,
+	},
+	{
+		.name   = "bcm4329_nshutdown_gpio",
+		.start  = MISCIO_BT_EN_GPIO,
+		.end    = MISCIO_BT_EN_GPIO,
+		.flags  = IORESOURCE_IO,
+	},
+};
+
+static struct platform_device e1853_bcm4329_rfkill_device = {
+	.name = "bcm4329_rfkill",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(e1853_bcm4329_rfkill_resources),
+	.resource       = e1853_bcm4329_rfkill_resources,
+};
+#endif
+
 static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",		NULL,		0,		true},
@@ -387,6 +411,9 @@ static struct platform_device *e1853_devices[] __initdata = {
 	&tegra_rtc_device,
 #endif
 	&tegra_camera,
+#if defined(CONFIG_BCM4329_RFKILL)
+	&e1853_bcm4329_rfkill_device,
+#endif
 	&tegra_wdt0_device
 };
 
