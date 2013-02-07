@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/resource.h>
 #include <linux/io.h>
+#include <linux/gpio.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
@@ -410,25 +411,26 @@ static struct max77660_regulator_platform_data *max77660_reg_pdata[] = {
 	MAX77660_REG(SW5, sw5),
 };
 
-#define MAX77660_INIT_PINS(_id, _gpio, _od, _up_dn)		\
+#define MAX77660_INIT_PINS(_id, _gpio, _od, _up_dn, _flags)	\
 {								\
 	.pin_id			= MAX77660_PINS_##_id,		\
 	.gpio_pin_mode		= _gpio,			\
 	.open_drain		= _od,				\
 	.pullup_dn_normal	= MAX77660_PIN_##_up_dn,	\
+	.gpio_init_flag		= _flags,			\
 }
 
 static struct max77660_pinctrl_platform_data max77660_pinctrl_pdata[] = {
-	MAX77660_INIT_PINS(GPIO0, 0, 1, DEFAULT),
-	MAX77660_INIT_PINS(GPIO1, 1, 0, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO2, 1, 1, PULL_UP),
-	MAX77660_INIT_PINS(GPIO3, 1, 0, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO4, 1, 0, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO5, 1, 1, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO6, 1, 0, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO7, 0, 0, PULL_NORMAL),
-	MAX77660_INIT_PINS(GPIO8, 0, 1, PULL_UP),
-	MAX77660_INIT_PINS(GPIO9, 1, 1, PULL_UP),
+	MAX77660_INIT_PINS(GPIO0, 0, 1, DEFAULT, 0),
+	MAX77660_INIT_PINS(GPIO1, 1, 0, PULL_NORMAL, GPIOF_IN),
+	MAX77660_INIT_PINS(GPIO2, 1, 1, PULL_UP, GPIOF_OUT_INIT_HIGH),
+	MAX77660_INIT_PINS(GPIO3, 1, 0, PULL_NORMAL, GPIOF_IN),
+	MAX77660_INIT_PINS(GPIO4, 1, 0, PULL_NORMAL, GPIOF_IN),
+	MAX77660_INIT_PINS(GPIO5, 1, 1, PULL_NORMAL, GPIOF_IN),
+	MAX77660_INIT_PINS(GPIO6, 1, 0, PULL_NORMAL, GPIOF_IN),
+	MAX77660_INIT_PINS(GPIO7, 0, 0, PULL_NORMAL, 0),
+	MAX77660_INIT_PINS(GPIO8, 0, 1, PULL_UP, 0),
+	MAX77660_INIT_PINS(GPIO9, 1, 1, PULL_UP, GPIOF_IN),
 };
 
 static struct regulator_consumer_supply max77660_vbus_sypply[] = {
