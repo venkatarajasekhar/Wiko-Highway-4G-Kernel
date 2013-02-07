@@ -121,6 +121,12 @@
 #define PCA954x_I2C_BUS2        (PCA954x_I2C_BUS_BASE + 2)
 #define PCA954x_I2C_BUS3        (PCA954x_I2C_BUS_BASE + 3)
 
+/* Baseband IDs */
+enum tegra_bb_type {
+	TEGRA_BB_HSIC_HUB = 6,
+};
+
+
 int ceres_sensors_init(void);
 int ceres_keys_init(void);
 int ceres_sdhci_init(void);

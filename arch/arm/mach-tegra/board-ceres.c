@@ -485,14 +485,22 @@ static void ceres_usb_init(void)
 
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
+}
 
-	tegra_ehci2_device.dev.platform_data =
-		&tegra_ehci2_hsic_smsc_hub_pdata;
-	platform_device_register(&tegra_ehci2_device);
+static void ceres_modem_init(void)
+{
+	int modem_id = tegra_get_modem_id();
+
+	if (TEGRA_BB_HSIC_HUB == modem_id) {
+		tegra_ehci2_device.dev.platform_data =
+			&tegra_ehci2_hsic_smsc_hub_pdata;
+		platform_device_register(&tegra_ehci2_device);
+	}
 }
 
 #else
 static void ceres_usb_init(void) { }
+static void ceres_modem_init(void) { }
 #endif
 
 static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
@@ -789,6 +797,7 @@ static void __init tegra_ceres_init(void)
 	ceres_panel_init();
 	ceres_edp_init();
 	ceres_sensors_init();
+	ceres_modem_init();
 #if defined(CONFIG_TEGRA_BASEBAND)
 	ceres_tegra_bb_init();
 #endif
