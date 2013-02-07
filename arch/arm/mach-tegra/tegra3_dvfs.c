@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra3_dvfs.c
  *
- * Copyright (C) 2010-2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -369,8 +369,15 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("sbc5",  -1, 1, KHZ,    36000,  52000,  60000,  60000,  60000, 100000,  100000,   100000,  100000),
 	CORE_DVFS("sbc6",  -1, 1, KHZ,    36000,  52000,  60000,  60000,  60000, 100000,  100000,   100000,  100000),
 
-	CORE_DVFS("sata",  -1, 1, KHZ,        1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
-	CORE_DVFS("sata_oob", -1, 1, KHZ,     1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata",  0, 1, KHZ,        1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata",  1, 1, KHZ,        1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata",  2, 1, KHZ,        1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata",  3, 1, KHZ,        1, 272000, 272000, 272000, 272000, 272000,  272000,   272000,  272000),
+
+	CORE_DVFS("sata_oob", 0, 1, KHZ,     1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata_oob", 1, 1, KHZ,     1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata_oob", 2, 1, KHZ,     1, 216000, 216000, 216000, 216000, 216000,  216000,   216000,  216000),
+	CORE_DVFS("sata_oob", 3, 1, KHZ,     1, 272000, 272000, 272000, 272000, 272000,  272000,   272000,  272000),
 
 	CORE_DVFS("tvo",   -1, 1, KHZ,        1,      1, 297000, 297000, 297000, 297000,  297000,   297000,  297000),
 	CORE_DVFS("cve",   -1, 1, KHZ,        1,      1, 297000, 297000, 297000, 297000,  297000,   297000,  297000),
