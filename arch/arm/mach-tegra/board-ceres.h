@@ -27,6 +27,7 @@
 
 /* MAX77660_GPIO Base Address */
 #define MAX77660_GPIO_BASE      TEGRA_NR_GPIOS
+#define MAX77660_IRQ_BASE	TEGRA_NR_IRQS
 
 /* I2C related GPIOs */
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC

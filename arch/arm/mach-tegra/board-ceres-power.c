@@ -47,7 +47,6 @@
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
-#define MAX77660_IRQ_BASE	TEGRA_NR_IRQS
 
 /* max77660 consumer rails */
 static struct regulator_consumer_supply max77660_unused_supply[] = {
