@@ -413,7 +413,11 @@ ENDPROC(cpu_v7_do_resume)
  */
 __v7_ca5mp_setup:
 __v7_ca9mp_setup:
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	mov	r10, #(5 << 0)			@ TLB ops broadcasting
+#else
 	mov	r10, #(1 << 0)			@ TLB ops broadcasting
+#endif
 	b	1f
 __v7_ca15mp_setup:
 #ifdef CONFIG_ARCH_TEGRA
