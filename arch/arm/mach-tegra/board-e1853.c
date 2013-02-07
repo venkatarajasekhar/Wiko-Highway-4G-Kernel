@@ -677,12 +677,12 @@ static struct tegra_nor_platform_data e1853_nor_data = {
 		.ReadyActive = NorReadyActive_BeforeData,
 		/* FIXME: Need to use characterized value */
 		.timing_default = {
-			.timing0 = 0xA0A05585,
-			.timing1 = 0x200A0406,
+			.timing0 = 0x30301263,
+			.timing1 = 0x00030302,
 		},
 		.timing_read = {
-			.timing0 = 0xA0A05585,
-			.timing1 = 0x00050406,
+			.timing0 = 0x30301263,
+			.timing1 = 0x00030302,
 		},
 	},
 };
