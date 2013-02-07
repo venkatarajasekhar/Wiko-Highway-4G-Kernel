@@ -687,8 +687,8 @@ static void __init tegra_e1853_init(void)
 	e1853_pinmux_init();
 	e1853_i2c_init();
 	e1853_gpio_init();
-/*	e1853_regulator_init();
-	e1853_suspend_init(); */
+	e1853_regulator_init();
+	e1853_suspend_init();
 	e1853_i2s_audio_init();
 	e1853_uart_init();
 	e1853_usb_init();

@@ -269,6 +269,7 @@ obj-${CONFIG_MACH_P1852}               += board-p1852-sdhci.o
 obj-${CONFIG_MACH_P1852}               += board-p1852-kbc.o
 
 obj-${CONFIG_MACH_E1853}               += board-e1853.o
+obj-${CONFIG_MACH_E1853}               += board-e1853-power.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-panel.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-pinmux.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-sdhci.o
