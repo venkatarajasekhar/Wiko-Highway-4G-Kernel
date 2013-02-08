@@ -286,7 +286,7 @@ struct spi_clk_parent spi_parent_clk_ceres[] = {
 };
 
 static struct tegra_spi_platform_data ceres_spi_pdata = {
-	.is_dma_based           = false,
+	.is_dma_based           = true,
 	.max_dma_buffer         = 16 * 1024,
 	.is_clkon_always        = false,
 	.max_rate               = 25000000,
