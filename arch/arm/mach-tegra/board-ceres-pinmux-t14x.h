@@ -56,7 +56,7 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	DEFAULT_PINMUX(SPI2_MISO,     SPI2,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(SPI2_MOSI,     SPI2,        NORMAL,    NORMAL,   OUTPUT),
 	DEFAULT_PINMUX(SPI2_CS0_N,    SPI2,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(SPI2_CS1_N,    SPI2,        NORMAL,    NORMAL,   OUTPUT),
+	DEFAULT_PINMUX(SPI2_CS1_N,    SPI2,        PULL_UP,    NORMAL,   OUTPUT),
 
 	/* I2C1 pinmux */
 	I2C_PINMUX(I2C1_SCL, I2C1, NORMAL, NORMAL, INPUT, DEFAULT, DISABLE),
