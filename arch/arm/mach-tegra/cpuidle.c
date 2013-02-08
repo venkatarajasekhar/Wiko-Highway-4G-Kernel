@@ -42,6 +42,7 @@
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
+#include <mach/pm_domains.h>
 
 #include <trace/events/nvpower.h>
 
@@ -231,6 +232,10 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 		kfree(dev);
 		return -EIO;
 	}
+
+	if (cpu == 0)
+		pm_genpd_attach_cpuidle(&tegra_mc_clk.gpd, 2, dev);
+
 	return 0;
 }
 
