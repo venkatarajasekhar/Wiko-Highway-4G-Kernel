@@ -390,8 +390,8 @@ static struct nvc_imager_cap imx091_cap = {
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
 	.preferred_mode_index	= 0,
-	.focuser_guid		= 0, /*NVC_FOCUS_GUID(0),*/
-	.torch_guid		= 0, /*NVC_TORCH_GUID(0),*/
+	.focuser_guid		= NVC_FOCUS_GUID(0),
+	.torch_guid		= NVC_TORCH_GUID(0),
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
