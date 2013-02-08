@@ -126,7 +126,6 @@ config ARCH_TEGRA_11x_SOC
 	select ARCH_TEGRA_HAS_CL_DVFS
 	select TEGRA_DUAL_CBUS
 	select ARCH_TEGRA_4GB_MEMORY
-	select EDP_FRAMEWORK
 	select TEGRA_LATENCY_ALLOWANCE
 	select TEGRA_MC_PTSA
 	select SOC_BUS
@@ -385,6 +384,7 @@ config MACH_TEGRA_PLUTO
        depends on ARCH_TEGRA_11x_SOC
        select MACH_HAS_SND_SOC_TEGRA_CS42L73 if SND_SOC
        select MACH_HAS_SND_SOC_TEGRA_TLV320AIC326X if SND_SOC
+       select EDP_FRAMEWORK
        help
          Support for NVIDIA PLUTO development platform
 
