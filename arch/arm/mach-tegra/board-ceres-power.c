@@ -620,7 +620,13 @@ int __init ceres_regulator_init(void)
 	 * interrupts when low */
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+
 	tegra_get_board_info(&board_info);
+	pr_info("board_info: id:sku:fab:major:minor = 0x%04x:0x%04x:0x%02x:0x%02x:0x%02x\n",
+		board_info.board_id, board_info.sku,
+		board_info.fab, board_info.major_revision,
+		board_info.minor_revision);
+
 	max77660_pdata.en_buck2_ext_ctrl = true;
 	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
 		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
