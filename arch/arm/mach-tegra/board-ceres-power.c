@@ -647,6 +647,8 @@ int __init ceres_regulator_init(void)
 
 		max77660_regulator_pdata_buck1.fps_src = FPS_SRC_NONE;
 		max77660_regulator_pdata_buck2.fps_src = FPS_SRC_3;
+		max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
+		max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
 		max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
 		max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
 
