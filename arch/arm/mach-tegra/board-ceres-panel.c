@@ -49,10 +49,13 @@
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
 #define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PH1
+#define TE_GPIO			0
 #else
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PG4
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PG3
 #define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PG2
+#define TE_GPIO			TEGRA_GPIO_PG1
+
 #endif
 
 struct platform_device * __init ceres_host1x_init(void)
@@ -453,6 +456,7 @@ static void ceres_panel_select(void)
 			DSI_PANEL_BL_EN_GPIO;
 		ceres_disp1_out.dsi->dsi_panel_bl_pwm_gpio =
 			DSI_PANEL_BL_PWM_GPIO;
+		ceres_disp1_out.dsi->te_gpio = TE_GPIO;
 		/* update the init cmd if dependent on reset GPIO */
 		tegra_dsi_update_init_cmd_gpio_rst(&ceres_disp1_out);
 	}
