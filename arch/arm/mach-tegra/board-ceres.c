@@ -392,6 +392,9 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&tegra11_se_device,
 #endif
 	&tegra_bbc_proxy_device,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	&tegra_mipi_bif_device,
+#endif
 };
 
 static struct i2c_board_info __initdata max97236_board_info = {
