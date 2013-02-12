@@ -679,7 +679,8 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 int __init ceres_soctherm_init(void)
 {
 	tegra_platform_edp_init(ceres_soctherm_data.therm[THERM_CPU].trips,
-			&ceres_soctherm_data.therm[THERM_CPU].num_trips);
+			&ceres_soctherm_data.therm[THERM_CPU].num_trips,
+			8000); /* edp temperature margin */
 	tegra_add_tj_trips(ceres_soctherm_data.therm[THERM_CPU].trips,
 			&ceres_soctherm_data.therm[THERM_CPU].num_trips);
 
