@@ -523,8 +523,6 @@ int __init e1853_gpio_init(void)
  * WiFi stack.
  */
 static struct gpio e1853_system_gpios[] = {
-	{MISCIO_GPS_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"gps_rst"},
-	{MISCIO_GPS_EN_GPIO,	GPIOF_OUT_INIT_HIGH,	"gps_en"},
 	{MISCIO_BT_WAKEUP_GPIO,	GPIOF_OUT_INIT_HIGH,	"bt_wk"},
 	{MISCIO_ABB_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"ebb_rst"},
 	{MISCIO_USER_LED2_GPIO,	GPIOF_OUT_INIT_LOW,		"usr_led2"},
@@ -540,13 +538,15 @@ static int __init e1853_system_gpio_init(void)
 
 	/* Set required system GPIOs to initial bootup values */
 	ret = gpio_request_array(gpios_info, pin_count);
-	/* Free them so that they can be used by other modules
-		(ex. RFKILL) */
-	gpio_free_array(gpios_info, pin_count);
 
 	if (ret)
 		printk(KERN_ERR "%s gpio_request_array failed(%d)\r\n",
 				 __func__, ret);
+
+	/* Export the LED GPIOs to userland for any check */
+	gpio_export(MISCIO_USER_LED2_GPIO, false);
+	gpio_export(MISCIO_USER_LED1_GPIO, false);
+
 	return ret;
 }
 
