@@ -132,8 +132,8 @@ static struct tegra_i2c_platform_data m2601_i2c5_platform_data = {
 };
 static struct tegra_pci_platform_data m2601_pci_platform_data = {
 	.port_status[0] = 1,
-	.port_status[1] = 0,
-	.port_status[2] = 0,
+	.port_status[1] = 1,
+	.port_status[2] = 1,
 	.use_dock_detect = 0,
 	.gpio = 0,
 };
