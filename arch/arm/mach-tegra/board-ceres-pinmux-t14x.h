@@ -155,7 +155,6 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	DEFAULT_PINMUX(SPI3_MISO,     SPI3,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(SPI3_MOSI,     SPI3,        NORMAL,    NORMAL,   OUTPUT),
 	DEFAULT_PINMUX(SPI3_CS0_N,    SPI3,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(SPI3_CS1_N,    SPI3,        NORMAL,    NORMAL,   OUTPUT),
 
 	/* I2C2 pinmux */
 	I2C_PINMUX(GEN2_I2C_SCL, I2C2, NORMAL, NORMAL, INPUT, DEFAULT, DISABLE),
@@ -249,5 +248,6 @@ static struct gpio_init_pin_info init_gpio_mode_ceres_common[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN0, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN1, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN2, false, 0),
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
 };
 
