@@ -20,6 +20,7 @@
 #include <mach/pinmux.h>
 #include <mach/gpio-tegra.h>
 #include "board.h"
+#include "tegra-board-id.h"
 #include "board-ceres.h"
 #include "devices.h"
 #include "gpio-names.h"
@@ -309,6 +310,7 @@ static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 
 
 #include "board-ceres-pinmux-t14x.h"
+#include "board-atlantis-pinmux-t14x.h"
 
 static void __init ceres_gpio_init_configure(void)
 {
@@ -318,6 +320,22 @@ static void __init ceres_gpio_init_configure(void)
 
 	len = ARRAY_SIZE(init_gpio_mode_ceres_common);
 	pins_info = init_gpio_mode_ceres_common;
+
+	for (i = 0; i < len; ++i) {
+		tegra_gpio_init_configure(pins_info->gpio_nr,
+			pins_info->is_input, pins_info->value);
+		pins_info++;
+	}
+}
+
+static void __init atlantis_gpio_init_configure(void)
+{
+	int len;
+	int i;
+	struct gpio_init_pin_info *pins_info;
+
+	len = ARRAY_SIZE(init_gpio_mode_atlantis_common);
+	pins_info = init_gpio_mode_atlantis_common;
 
 	for (i = 0; i < len; ++i) {
 		tegra_gpio_init_configure(pins_info->gpio_nr,
@@ -345,13 +363,42 @@ int __init ceres_pinmux_init(void)
 	tegra_pinmux_config_table(unused_pins_lowpower,
 		ARRAY_SIZE(unused_pins_lowpower));
 #else
-	ceres_gpio_init_configure();
 
-	tegra_pinmux_config_table(ceres_pinmux_common, ARRAY_SIZE(ceres_pinmux_common));
+	switch (board_info.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
+		ceres_gpio_init_configure();
+		tegra_pinmux_config_table(ceres_pinmux_common,
+			ARRAY_SIZE(ceres_pinmux_common));
+		break;
+	case BOARD_E1670:
+	case BOARD_E1671:
+		atlantis_gpio_init_configure();
+		tegra_pinmux_config_table(atlantis_pinmux_common,
+			ARRAY_SIZE(atlantis_pinmux_common));
+		break;
+	}
+
 	tegra_drive_pinmux_config_table(ceres_drive_pinmux,
 					ARRAY_SIZE(ceres_drive_pinmux));
-	tegra_pinmux_config_table(unused_pins_lowpower,
-		ARRAY_SIZE(unused_pins_lowpower));
+
+	switch (board_info.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
+		tegra_pinmux_config_table(ceres_unused_pins_lowpower,
+			ARRAY_SIZE(ceres_unused_pins_lowpower));
+		break;
+	case BOARD_E1670:
+	case BOARD_E1671:
+		tegra_pinmux_config_table(atlantis_unused_pins_lowpower,
+			ARRAY_SIZE(atlantis_unused_pins_lowpower));
+		break;
+	default:
+		pr_err("%s: board_id=%#x unknown. Tegra14x board detect failed.\n",
+			__func__, board_info.board_id);
+		return -EINVAL;
+	}
+
 #endif
 
 	return 0;
