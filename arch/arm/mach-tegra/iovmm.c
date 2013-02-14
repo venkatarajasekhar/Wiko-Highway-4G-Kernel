@@ -3,7 +3,7 @@
  *
  * Tegra I/O VM manager
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -227,6 +227,7 @@ static void iovmm_free_block(struct tegra_iovmm_domain *domain,
 		iovmm_block_put(succ);
 	}
 
+	iovmm_length(block) = block->length;
 	p = &domain->free_blocks.rb_node;
 	while (*p) {
 		struct tegra_iovmm_block *b;
@@ -269,6 +270,7 @@ static struct tegra_iovmm_block *iovmm_split_free_block(
 
 	rem->start  = block->start + size;
 	rem->length = block->length - size;
+	iovmm_length(rem) = rem->length;
 	atomic_set(&rem->ref, 1);
 	block->length = size;
 
@@ -468,6 +470,7 @@ int tegra_iovmm_domain_init(struct tegra_iovmm_domain *domain,
 
 	b->start  = round_up(start, page_size);
 	b->length = round_down(end, page_size) - b->start;
+	iovmm_length(b) = b->length;
 
 	set_bit(BK_FREE, &b->flags);
 	rb_link_node(&b->free_node, NULL, &domain->free_blocks.rb_node);
