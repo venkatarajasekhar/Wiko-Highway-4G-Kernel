@@ -25,6 +25,9 @@
 #include "board.h"
 #include "board-ceres.h"
 
+/* Board ID for Ceres-FFD */
+#define BOARD_E1690			0x069A
+
 #define PRECISION_MULTIPLIER_CERES	1000
 
 enum {
@@ -45,6 +48,13 @@ enum {
 enum {
 	VDD_SYS_BL,
 	AVDD_DIS_LDO4,
+};
+
+/* following rails are present on Ceres-FFD */
+enum {
+	VDD_CELL,
+	VDD_CPU_BUCK2,
+	VDD_SOC_BUCK1,
 };
 
 static struct ina219_platform_data power_mon_info_0[] = {
@@ -142,6 +152,32 @@ static struct ina230_platform_data power_mon_info_2[] = {
 	},
 };
 
+static struct ina230_platform_data power_mon_info_ffd[] = {
+	[VDD_CELL] = {
+		.calibration_data  = 0x20C4,
+		.power_lsb = 3.051979018 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_CELL",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_CPU_BUCK2] = {
+		.calibration_data  = 0x1D48,
+		.power_lsb = 1.707577375 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_CPU_BUCK2",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SOC_BUCK1] = {
+		.calibration_data  = 0x3E79,
+		.power_lsb = 0.800350153 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SOC_BUCK1",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+};
+
 enum {
 	INA_I2C_2_0_ADDR_40,
 	INA_I2C_2_0_ADDR_41,
@@ -162,6 +198,13 @@ enum {
 enum {
 	INA_I2C_2_2_ADDR_41,
 	INA_I2C_2_2_ADDR_44,
+};
+
+/* i2c addresses of rails present on Ceres-FFD */
+enum {
+	INA_I2C_2_ADDR_40,
+	INA_I2C_2_ADDR_41,
+	INA_I2C_2_ADDR_42,
 };
 
 static struct i2c_board_info ceres_i2c2_0_ina219_board_info[] = {
@@ -248,6 +291,26 @@ static struct i2c_board_info ceres_i2c2_2_ina230_board_info[] = {
 	},
 };
 
+static struct i2c_board_info ceres_i2c2_ina230_board_info_ffd[] = {
+	[INA_I2C_2_ADDR_40] = {
+		I2C_BOARD_INFO("ina230", 0x40),
+		.platform_data = &power_mon_info_ffd[VDD_CELL],
+		.irq = -1,
+	},
+
+	[INA_I2C_2_ADDR_41] = {
+		I2C_BOARD_INFO("ina230", 0x41),
+		.platform_data = &power_mon_info_ffd[VDD_CPU_BUCK2],
+		.irq = -1,
+	},
+
+	[INA_I2C_2_ADDR_42] = {
+		I2C_BOARD_INFO("ina230", 0x42),
+		.platform_data = &power_mon_info_ffd[VDD_SOC_BUCK1],
+		.irq = -1,
+	},
+};
+
 static struct pca954x_platform_mode ceres_pca954x_modes[] = {
 	{ .adap_id = PCA954x_I2C_BUS0, .deselect_on_exit = true, },
 	{ .adap_id = PCA954x_I2C_BUS1, .deselect_on_exit = true, },
@@ -269,20 +332,33 @@ static const struct i2c_board_info ceres_i2c2_board_info[] = {
 
 int __init ceres_pmon_init(void)
 {
-	i2c_register_board_info(1, ceres_i2c2_board_info,
-		ARRAY_SIZE(ceres_i2c2_board_info));
+	struct board_info bi;
 
-	i2c_register_board_info(PCA954x_I2C_BUS0,
-			ceres_i2c2_0_ina219_board_info,
-			ARRAY_SIZE(ceres_i2c2_0_ina219_board_info));
+	tegra_get_board_info(&bi);
 
-	i2c_register_board_info(PCA954x_I2C_BUS1,
-			ceres_i2c2_1_ina230_board_info,
-			ARRAY_SIZE(ceres_i2c2_1_ina230_board_info));
+	/* There are only 3 devices on Ceres-FFD
+	 * so register only those if board is E1690
+	 */
+	if (bi.board_id == BOARD_E1690) {
+		i2c_register_board_info(1, ceres_i2c2_ina230_board_info_ffd,
+			ARRAY_SIZE(ceres_i2c2_ina230_board_info_ffd));
+	} else {
+		i2c_register_board_info(1, ceres_i2c2_board_info,
+			ARRAY_SIZE(ceres_i2c2_board_info));
 
-	i2c_register_board_info(PCA954x_I2C_BUS2,
-			ceres_i2c2_2_ina230_board_info,
-			ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
+		i2c_register_board_info(PCA954x_I2C_BUS0,
+				ceres_i2c2_0_ina219_board_info,
+				ARRAY_SIZE(ceres_i2c2_0_ina219_board_info));
+
+		i2c_register_board_info(PCA954x_I2C_BUS1,
+				ceres_i2c2_1_ina230_board_info,
+				ARRAY_SIZE(ceres_i2c2_1_ina230_board_info));
+
+		i2c_register_board_info(PCA954x_I2C_BUS2,
+				ceres_i2c2_2_ina230_board_info,
+				ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
+	}
+
 	return 0;
 }
 
