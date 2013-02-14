@@ -35,6 +35,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 		130,        /* number of burst_regs */
 		11,         /* number of up_down_regs */
 		{
+
 			0x00000000, /* EMC_RC */
 			0x00000003, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
@@ -74,7 +75,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
 			0x00000004, /* EMC_TRPAB */
-			0x00000001, /* EMC_TCLKSTABLE */
+			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000036, /* EMC_TREFBW */
 			0x00000000, /* EMC_ODT_WRITE */
@@ -181,7 +182,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 		},
 		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0x3320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x00020004, /* Mode Register 2 */
@@ -235,7 +236,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
 			0x00000004, /* EMC_TRPAB */
-			0x00000001, /* EMC_TCLKSTABLE */
+			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000000d5, /* EMC_TREFBW */
 			0x00000000, /* EMC_ODT_WRITE */
@@ -259,9 +260,9 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x000ec000, /* EMC_DLL_XFORM_ADDR0 */
+			0x000fc000, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x000ec000, /* EMC_DLL_XFORM_ADDR2 */
+			0x000fc000, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -270,10 +271,10 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLI_TRIM_TXDQS5 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS6 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS7 */
-			0x00090000, /* EMC_DLL_XFORM_DQ0 */
-			0x00090000, /* EMC_DLL_XFORM_DQ1 */
-			0x00090000, /* EMC_DLL_XFORM_DQ2 */
-			0x00090000, /* EMC_DLL_XFORM_DQ3 */
+			0x000fc000, /* EMC_DLL_XFORM_DQ0 */
+			0x000fc000, /* EMC_DLL_XFORM_DQ1 */
+			0x000fc000, /* EMC_DLL_XFORM_DQ2 */
+			0x000fc000, /* EMC_DLL_XFORM_DQ3 */
 			0x00010020, /* EMC_XM2CMDPADCTRL */
 			0x00000000, /* EMC_XM2CMDPADCTRL4 */
 			0x0030a01c, /* EMC_XM2DQSPADCTRL2 */
@@ -342,7 +343,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 		},
 		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0x3320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x00020004, /* Mode Register 2 */
@@ -396,7 +397,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
 			0x00000004, /* EMC_TRPAB */
-			0x00000001, /* EMC_TCLKSTABLE */
+			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000001a9, /* EMC_TREFBW */
 			0x00000000, /* EMC_ODT_WRITE */
@@ -503,7 +504,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 		},
 		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0x3320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x00020004, /* Mode Register 2 */
@@ -565,14 +566,14 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x10006086, /* EMC_FBIO_CFG5 */
 			0x00580088, /* EMC_CFG_DIG_DLL */
 			0x00008000, /* EMC_CFG_DIG_DLL_PERIOD */
-			0x00048000, /* EMC_DLL_XFORM_DQS0 */
-			0x00048000, /* EMC_DLL_XFORM_DQS1 */
-			0x00048000, /* EMC_DLL_XFORM_DQS2 */
-			0x00048000, /* EMC_DLL_XFORM_DQS3 */
-			0x00048000, /* EMC_DLL_XFORM_DQS4 */
-			0x00048000, /* EMC_DLL_XFORM_DQS5 */
-			0x00048000, /* EMC_DLL_XFORM_DQS6 */
-			0x00048000, /* EMC_DLL_XFORM_DQS7 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS0 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS1 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS2 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS3 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS4 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS5 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS6 */
+			0x000a0000, /* EMC_DLL_XFORM_DQS7 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE0 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE1 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE2 */
@@ -581,9 +582,9 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x000ec000, /* EMC_DLL_XFORM_ADDR0 */
+			0x0007c000, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x000ec000, /* EMC_DLL_XFORM_ADDR2 */
+			0x0007c000, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -625,7 +626,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_EINPUT_DURATION */
 			0x0000000c, /* EMC_QSAFE */
 			0x0000000e, /* EMC_RDV */
-			0x00000006, /* EMC_FBIO_CFG6 */
+			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
 			0x0000000c, /* EMC_QPOP */
 			0x02000006, /* MC_EMEM_ARB_CFG */
