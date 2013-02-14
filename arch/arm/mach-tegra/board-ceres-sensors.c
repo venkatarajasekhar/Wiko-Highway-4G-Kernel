@@ -37,6 +37,7 @@
 
 #include "cpu-tegra.h"
 #include "devices.h"
+#include "board-common.h"
 #include "board-ceres.h"
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
@@ -148,47 +149,13 @@ static struct i2c_board_info ceres_i2c0_nct1008_board_info[] = {
 	}
 };
 
-#ifdef CONFIG_TEGRA_EDP_LIMITS
-static void ceres_init_edp_cdev(void)
-{
-	const struct tegra_edp_limits *cpu_edp_limits;
-	int cpu_edp_limits_size;
-	int i;
-	int trip;
-	struct nct1008_platform_data *data = &ceres_nct1008_pdata;
-	struct nct_trip_temp *trip_state;
-
-	/* edp capping */
-	tegra_get_cpu_edp_limits(&cpu_edp_limits, &cpu_edp_limits_size);
-
-	if (cpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
-		BUG();
-
-	for (i = 0; i < cpu_edp_limits_size-1; i++) {
-		trip = data->num_trips;
-		trip_state = &data->trips[trip];
-
-		trip_state->cdev_type = "edp";
-		trip_state->trip_temp = cpu_edp_limits[i].temperature * 1000;
-		trip_state->trip_type = THERMAL_TRIP_ACTIVE;
-		trip_state->state = i + 1;
-		trip_state->hysteresis = 1000;
-
-		data->num_trips++;
-
-		if (data->num_trips >= NCT_MAX_TRIPS)
-			BUG();
-	}
-}
-#else
-static void ceres_init_edp_cdev(void)
-{
-}
-#endif
 #define CERES_TEMP_ALERT_GPIO	TEGRA_GPIO_PO1
 static int ceres_nct1008_init(void)
 {
 	int ret = 0;
+
+	tegra_add_cdev_trips(ceres_nct1008_pdata.trips,
+			     &ceres_nct1008_pdata.num_trips);
 
 	/* FIXME: enable irq when throttling is supported */
 	ceres_i2c0_nct1008_board_info[0].irq =
@@ -205,8 +172,6 @@ static int ceres_nct1008_init(void)
 		pr_err("%s: set gpio to input failed\n", __func__);
 		gpio_free(CERES_TEMP_ALERT_GPIO);
 	}
-
-	ceres_init_edp_cdev();
 
 	return ret;
 }
