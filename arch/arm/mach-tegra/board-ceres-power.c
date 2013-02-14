@@ -44,6 +44,8 @@
 #include "tegra-board-id.h"
 #include "tegra_cl_dvfs.h"
 #include "devices.h"
+#include "board-ceres.h"
+#include "board-atlantis.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -610,9 +612,9 @@ static int __init ceres_cl_dvfs_init(void)
 
 int __init ceres_regulator_init(void)
 {
+	struct board_info board_info;
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
-	struct board_info board_info;
 	int id;
 
 	/* configure the power management controller to trigger PMU
@@ -626,37 +628,41 @@ int __init ceres_regulator_init(void)
 		board_info.fab, board_info.major_revision,
 		board_info.minor_revision);
 
-	max77660_pdata.en_buck2_ext_ctrl = true;
-	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
-		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
+	if (board_info.board_id == BOARD_E1670) {
+		atlantis_regulator_init();
+	} else {
+		max77660_pdata.en_buck2_ext_ctrl = true;
+		for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
+			max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
 
-	if (board_info.fab > BOARD_FAB_A00) {
-		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
-				MAX77660_PIN_PULL_UP;
-		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
-		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
-				MAX77660_PIN_PULL_NORMAL;
-		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
+		if (board_info.fab > BOARD_FAB_A00) {
+			max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
+					MAX77660_PIN_PULL_UP;
+			max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
+			max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
+					MAX77660_PIN_PULL_NORMAL;
+			max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
-		max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
-		max77660_regulator_idata_buck1.num_consumer_supplies =
-			ARRAY_SIZE(max77660_unused_supply);
-		max77660_regulator_idata_buck2.consumer_supplies = max77660_buck1_supply;
-		max77660_regulator_idata_buck2.num_consumer_supplies =
-						ARRAY_SIZE(max77660_buck1_supply);
+			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
+			max77660_regulator_idata_buck1.num_consumer_supplies =
+				ARRAY_SIZE(max77660_unused_supply);
+			max77660_regulator_idata_buck2.consumer_supplies = max77660_buck1_supply;
+			max77660_regulator_idata_buck2.num_consumer_supplies =
+							ARRAY_SIZE(max77660_buck1_supply);
 
-		max77660_regulator_pdata_buck1.fps_src = FPS_SRC_NONE;
-		max77660_regulator_pdata_buck2.fps_src = FPS_SRC_3;
-		max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
-		max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
-		max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
-		max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
+			max77660_regulator_pdata_buck1.fps_src = FPS_SRC_NONE;
+			max77660_regulator_pdata_buck2.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
+			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
 
-		lp8755_regulator_init();
+			lp8755_regulator_init();
+		}
+
+		i2c_register_board_info(4, max77660_regulators,
+				ARRAY_SIZE(max77660_regulators));
 	}
-
-	i2c_register_board_info(4, max77660_regulators,
-			ARRAY_SIZE(max77660_regulators));
 
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
 	ceres_cl_dvfs_init();
@@ -746,9 +752,13 @@ static struct platform_device *fixed_reg_devs_e1680[] = {
 
 static int __init ceres_fixed_regulator_init(void)
 {
+	struct board_info board_info;
 	if (!of_machine_is_compatible("nvidia,ceres"))
 		return 0;
 
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1670)
+		return atlantis_fixed_regulator_init();
 	return platform_add_devices(fixed_reg_devs_e1680,
 				ARRAY_SIZE(fixed_reg_devs_e1680));
 }
