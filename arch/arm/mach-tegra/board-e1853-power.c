@@ -221,6 +221,7 @@ static struct tps6591x_platform_data tps_platform = {
 	.dev_slp_en	= true,
 	.slp_keepon	= &tps_slp_keepon,
 	.use_power_off	= true,
+	.dev_slp_delayed = true,
 };
 
 static struct i2c_board_info __initdata e1853_regulators[] = {
