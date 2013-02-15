@@ -262,7 +262,7 @@ static struct regulator_consumer_supply palmas_regen7_supply[] = {
 	}
 
 PALMAS_PDATA_INIT(smps12, 900,  1300, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps3, 600,  1500, NULL, 0, 0, 0);
+PALMAS_PDATA_INIT(smps3, 1100,  1100, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps6, 900,  1400, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps7, 2840,  2860, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps8, 1200,  1200, NULL, 0, 0, 1);
@@ -338,7 +338,7 @@ static struct regulator_init_data *atlantis_reg_data[PALMAS_NUM_REGS] = {
 
 PALMAS_REG_INIT(smps12, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps123, 0, PALMAS_EXT_CONTROL_ENABLE1, 0, 0, 0);
-PALMAS_REG_INIT(smps3, 0, 0, 0, 0, 0);
+PALMAS_REG_INIT(smps3, 0, PALMAS_EXT_CONTROL_ENABLE2, 0, 0, 0);
 PALMAS_REG_INIT(smps45, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps457, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(smps6, 0, 0, 0, 0, 0);
