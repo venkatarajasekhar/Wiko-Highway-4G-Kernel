@@ -21,6 +21,9 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
 	-DESCAN_RESULT_PATCH -DHT40_GO -DPASS_ARP_PACKET                      \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
+# for supporting different type of bcm943341_wbfgn_x board.
+DHDCFLAGS += -DNV_BCM943341_WBFGN_MULTI_MODULE_SUPPORT
+
 ifeq ($(CONFIG_BCMDHD_WIFI_CONTROL_FUNC),y)
 DHDCFLAGS += -DCONFIG_WIFI_CONTROL_FUNC
 else
