@@ -27,8 +27,8 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	/* I2S0 pinmux */
 	DEFAULT_PINMUX(DAP1_DIN,      I2S0,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(DAP1_DOUT,     I2S0,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(DAP1_FS,       I2S0,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(DAP1_SCLK,     I2S0,        NORMAL,    NORMAL,   OUTPUT),
+	DEFAULT_PINMUX(DAP1_FS,       I2S0,        NORMAL,    NORMAL,   INPUT),
+	DEFAULT_PINMUX(DAP1_SCLK,     I2S0,        NORMAL,    NORMAL,   INPUT),
 
 	/* UARTB pinmux */
 	DEFAULT_PINMUX(UART2_TXD,     UARTB,       NORMAL,    NORMAL,   OUTPUT),
@@ -39,7 +39,7 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	/* I2S2 pinmux */
 	DEFAULT_PINMUX(DMIC0_DATA,    I2S2,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(DMIC0_CLK,     I2S2,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(DMIC1_DATA,    I2S2,        NORMAL,    NORMAL,   OUTPUT),
+	DEFAULT_PINMUX(DMIC1_DATA,    I2S2,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(DMIC1_CLK,     I2S2,        NORMAL,    NORMAL,   OUTPUT),
 
 	/* PWM0 pinmux */
@@ -135,8 +135,8 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	/* I2S1 pinmux */
 	DEFAULT_PINMUX(DAP2_DIN,      I2S1,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(DAP2_DOUT,     I2S1,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(DAP2_FS,       I2S1,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(DAP2_SCLK,     I2S1,        NORMAL,    NORMAL,   OUTPUT),
+	DEFAULT_PINMUX(DAP2_FS,       I2S1,        NORMAL,    NORMAL,   INPUT),
+	DEFAULT_PINMUX(DAP2_SCLK,     I2S1,        NORMAL,    NORMAL,   INPUT),
 
 	/* UARTA pinmux */
 	DEFAULT_PINMUX(UART1_CTS_N,   UARTA,       NORMAL,    NORMAL,   INPUT),
