@@ -57,6 +57,10 @@ struct cpumask *tegra_cpu_power_mask =
 				to_cpumask(tegra_cpu_power_up_by_fc);
 #define tegra_cpu_power_map	(*(cpumask_t *)tegra_cpu_power_mask)
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+static struct cpumask tegra_cpu_power_mask_saved;
+#endif
+
 #define CLK_RST_CONTROLLER_CLK_CPU_CMPLX \
 	(IO_ADDRESS(TEGRA_CLK_RESET_BASE) + 0x4c)
 #define CLK_RST_CONTROLLER_RST_CPU_CMPLX_SET \
@@ -435,6 +439,18 @@ void tegra_smp_clear_power_mask()
 {
 	cpumask_clear(tegra_cpu_power_mask);
 	cpumask_set_cpu(0, tegra_cpu_power_mask);
+}
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+void tegra_smp_save_power_mask()
+{
+	tegra_cpu_power_mask_saved = *((struct cpumask *)tegra_cpu_power_mask);
+}
+
+void tegra_smp_restore_power_mask()
+{
+	*tegra_cpu_power_mask = tegra_cpu_power_mask_saved;
 }
 #endif
 
