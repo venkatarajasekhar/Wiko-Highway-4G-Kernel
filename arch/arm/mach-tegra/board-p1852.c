@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -305,7 +305,7 @@ static struct platform_device tegra_snd_p1852 = {
 
 static void p1852_i2s_audio_init(void)
 {
-	struct tegra_asoc_vcm_platform_data *pdata;
+	/* struct tegra_asoc_vcm_platform_data *pdata; */
 
 	platform_device_register(&tegra_pcm_device);
 	platform_device_register(&tegra_tdm_pcm_device);
@@ -317,9 +317,9 @@ static void p1852_i2s_audio_init(void)
 	platform_device_register(&tegra_snd_p1852);
 
 	/* Change pinmux of I2S4 for master mode */
-	pdata = tegra_snd_p1852.dev.platform_data;
+/*	pdata = tegra_snd_p1852.dev.platform_data;
 	if (!pdata->codec_info[1].master)
-		p1852_pinmux_set_i2s4_master();
+		p1852_pinmux_set_i2s4_master();*/
 }
 
 

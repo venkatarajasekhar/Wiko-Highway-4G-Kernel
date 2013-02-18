@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -44,13 +44,6 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data1 = {
 	.is_8bit = false,
 };
 
-static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
-	.cd_gpio = -1,
-	.wp_gpio = -1,
-	.power_gpio = -1,
-	.is_8bit = true,
-};
-
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
 	.cd_gpio = -1,
 	.wp_gpio = -1,
@@ -61,11 +54,9 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
 int __init p1852_sdhci_init(void)
 {
 	tegra_sdhci_device1.dev.platform_data = &tegra_sdhci_platform_data1;
-	tegra_sdhci_device2.dev.platform_data = &tegra_sdhci_platform_data2;
 	tegra_sdhci_device4.dev.platform_data = &tegra_sdhci_platform_data4;
 
 	platform_device_register(&tegra_sdhci_device1);
-	platform_device_register(&tegra_sdhci_device2);
 	platform_device_register(&tegra_sdhci_device4);
 
 	return 0;
