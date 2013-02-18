@@ -39,6 +39,7 @@
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT)
 #include <linux/i2c/atmel_mxt_ts.h>
 #endif
+#include <linux/platform_data/tmon_tmp411.h>
 #include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/io_dpd.h>
@@ -65,6 +66,7 @@
 #include "common.h"
 #include "pm.h"
 #include <mach/board_id.h>
+#include "therm-monitor.h"
 
 #if defined(CONFIG_BCM4329_RFKILL)
 static struct resource e1853_bcm4329_rfkill_resources[] = {
@@ -140,6 +142,30 @@ static __initdata struct tegra_clk_init_table e1853_clk_init_table[] = {
 	{ "i2c5",		"pll_p",	3200000,	true},
 	{"wake.sclk",		NULL,		334000000,	true },
 	{ NULL,			NULL,		0,		0},
+};
+
+struct therm_monitor_ldep_data ltemp_reg_data[] = {
+	{
+		.reg_addr = 0x000008b0, /* only Offset */
+		.temperat = {15000, 85000, INT_MAX}, /* Maximum 9 values*/
+		.value    = {0xf1a18000, 0xf1f1a000}, /* Maximum 9 values*/
+	},
+	{
+		.reg_addr = INVALID_ADDR,
+	},
+};/* Local sensor temperature dependent register data. */
+
+struct therm_monitor_data e1853_therm_monitor_data = {
+	.brd_ltemp_reg_data = ltemp_reg_data,
+	.delta_temp = 4000,
+	.delta_time = 2000,
+	.remote_offset = 8000,
+	.local_temp_update = true,
+	.remote_temp_update = false,/* USB registers update is not
+						required for now */
+	.i2c_bus_num = I2C_BUS_TMP411,
+	.i2c_dev_addrs = I2C_ADDR_TMP411,
+	.i2c_dev_name = "tmon-tmp411-sensor",
 };
 
 static struct tegra_i2c_platform_data e1853_i2c1_platform_data = {
@@ -687,6 +713,9 @@ static void __init tegra_e1853_init(void)
 	e1853_pinmux_init();
 	e1853_i2c_init();
 	e1853_gpio_init();
+#ifdef CONFIG_SENSORS_TMON_TMP411
+	register_therm_monitor(&e1853_therm_monitor_data);
+#endif
 	e1853_regulator_init();
 	e1853_suspend_init();
 	e1853_i2s_audio_init();

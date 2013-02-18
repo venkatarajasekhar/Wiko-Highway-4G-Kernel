@@ -273,6 +273,7 @@ obj-${CONFIG_MACH_E1853}               += board-e1853-power.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-panel.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-pinmux.o
 obj-${CONFIG_MACH_E1853}               += board-e1853-sdhci.o
+obj-${CONFIG_MACH_E1853}               += therm-monitor.o
 
 obj-${CONFIG_MACH_M2601}               += board-m2601.o
 obj-${CONFIG_MACH_M2601}               += board-m2601-pinmux.o

@@ -79,4 +79,11 @@ int e1853_pca953x_init(void);
 /* PCA953X I2C IO expander bus addresses */
 #define PCA953X_MISCIO_ADDR		0x75
 
+/* Thermal monitor data */
+#define DELTA_TEMP 4000
+#define DELTA_TIME 2000
+#define REMT_OFFSET 8000
+#define I2C_ADDR_TMP411 0x4c
+#define I2C_BUS_TMP411 4
+
 #endif
