@@ -32,6 +32,7 @@ struct tegra_i2c_platform_data {
 	int sda_gpio;
 	bool is_high_speed_enable;
 	u16 hs_master_code;
+	bool needs_cl_dvfs_clock;
 };
 
 struct tegra_i2c_slave_platform_data {
