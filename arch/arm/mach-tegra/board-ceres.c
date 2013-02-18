@@ -655,6 +655,7 @@ static struct tegra_i2c_platform_data ceres_i2c5_platform_data = {
 	.bus_clk_rate	= 400000,
 	.scl_gpio	= -1,
 	.sda_gpio	= -1,
+	.needs_cl_dvfs_clock = true,
 };
 
 static __maybe_unused struct tegra_i2c_platform_data ceres_i2c6_platform_data = {
