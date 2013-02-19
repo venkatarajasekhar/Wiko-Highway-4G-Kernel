@@ -34,6 +34,7 @@
 #include <mach/pinmux.h>
 #include <linux/nct1008.h>
 #include <mach/edp.h>
+#include <generated/mach-types.h>
 
 #include "cpu-tegra.h"
 #include "devices.h"
@@ -89,18 +90,40 @@ static struct tegra_pingroup_config pbb0_enable =
 			NORMAL, OUTPUT, DEFAULT, DISABLE);
 #endif
 
-/* Disabled for T148 bringup
 static struct throttle_table tj_throttle_table[] = {
-	{      0, 1000 },
-	{ 640000, 1000 },
-	{ 640000, 1000 },
-	{ 640000, 1000 },
-	{ 640000, 1000 },
-	{ 640000, 1000 },
-	{ 760000, 1000 },
-	{ 760000, 1050 },
-	{1000000, 1050 },
-	{1000000, 1100 },
+	/* CPU_THROT_LOW cannot be used by other than CPU */
+	/* NO_CAP cannot be used by CPU */
+	/*    CPU,   C2BUS,   C3BUS,    SCLK,     EMC */
+	{ { 1938000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1836000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1734000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1632000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1530000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1428000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1224000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  564000,  564000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  528000,  528000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  492000,  492000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  420000,  420000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  408000,  408000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  360000,  360000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  360000,  360000,  312000,  NO_CAP } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  408000,  360000,  360000,  312000,  480000 } },
+	{ {  408000,  276000,  276000,  208000,  480000 } },
+	{ {  355200,  276000,  276000,  208000,  204000 } },
+	{ {  306000,  276000,  276000,  208000,  204000 } },
+	{ {  297600,  276000,  228000,  208000,  102000 } },
+	{ {  240000,  276000,  228000,  208000,  102000 } },
+	{ {  102000,  276000,  228000,  208000,  102000 } },
+	{ { CPU_THROT_LOW,  276000,  228000,  208000,  102000 } },
 };
 
 static struct balanced_throttle tj_throttle = {
@@ -110,27 +133,27 @@ static struct balanced_throttle tj_throttle = {
 
 static int __init ceres_throttle_init(void)
 {
-	balanced_throttle_register(&tj_throttle, "ceres-nct");
+	if (machine_is_ceres())
+		balanced_throttle_register(&tj_throttle, "tegra-balanced");
 	return 0;
 }
 module_init(ceres_throttle_init);
-*/
 
 static struct nct1008_platform_data ceres_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
 	.conv_rate = 0x09, /* 0x09 corresponds to 32Hz conversion rate */
-	.offset = 8, /* 4 * 2C. 1C for device accuracies */
-
-	.shutdown_ext_limit = 90, /* C */
+	.shutdown_ext_limit = 95, /* C */
 	.shutdown_local_limit = 100, /* C */
+
+	.passive_delay = 2000,
 
 	.num_trips = 1,
 	.trips = {
 		/* Thermal Throttling */
-		[0] = {
-			.cdev_type = "ceres-nct",
-			.trip_temp = 80000,
+		{
+			.cdev_type = "tegra-balanced",
+			.trip_temp = 85000,
 			.trip_type = THERMAL_TRIP_PASSIVE,
 			.upper = THERMAL_NO_LIMIT,
 			.lower = THERMAL_NO_LIMIT,
