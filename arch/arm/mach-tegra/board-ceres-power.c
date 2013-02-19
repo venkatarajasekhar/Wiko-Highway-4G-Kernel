@@ -673,7 +673,7 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 
 /* LCD_AVDD_EN From PMU GP6 */
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
-	REGULATOR_SUPPLY("unused", NULL),
+	REGULATOR_SUPPLY("avdd_lcd_ext", NULL),
 };
 
 static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
@@ -724,7 +724,7 @@ FIXED_REG(0,	battery,	battery,
 
 FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 	NULL,	0,	0,
-	MAX77660_GPIO_BASE + MAX77660_GPIO6,	true,	true,	1,	2800);
+	MAX77660_GPIO_BASE + MAX77660_GPIO6,	false,	true,	1,	2800);
 FIXED_REG(2,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
 	NULL,	0,	0,
 	MAX77660_GPIO_BASE + MAX77660_GPIO3,	false,	true,	0,	5000);
