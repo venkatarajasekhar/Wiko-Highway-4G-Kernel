@@ -196,6 +196,11 @@ static int ceres_nct1008_init(void)
 		gpio_free(CERES_TEMP_ALERT_GPIO);
 	}
 
+	tegra_add_tj_trips(ceres_nct1008_pdata.trips,
+				&ceres_nct1008_pdata.num_trips);
+	tegra_platform_edp_init(ceres_nct1008_pdata.trips,
+				&ceres_nct1008_pdata.num_trips, 0);
+
 	return ret;
 }
 static int ceres_focuser_power_on(struct ad5816_power_rail *pw)
