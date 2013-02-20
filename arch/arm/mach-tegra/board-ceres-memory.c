@@ -29,7 +29,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x50,       /* Rev 5.0.8 */
 		12750,      /* SDRAM frequency */
-		1100,       /* min voltage */
+		900,       /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4001003e, /* CLK_SOURCE_EMC */
 		130,        /* number of burst_regs */
@@ -190,7 +190,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x50,       /* Rev 5.0.8 */
 		51000,      /* SDRAM frequency */
-		1100,       /* min voltage */
+		900,       /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4001000e, /* CLK_SOURCE_EMC */
 		130,        /* number of burst_regs */
@@ -351,7 +351,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x50,       /* Rev 5.0.8 */
 		102000,     /* SDRAM frequency */
-		1100,       /* min voltage */
+		900,       /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010006, /* CLK_SOURCE_EMC */
 		130,        /* number of burst_regs */
@@ -512,7 +512,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x50,       /* Rev 5.0.8 */
 		204000,     /* SDRAM frequency */
-		1100,       /* min voltage */
+		900,       /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
 		130,        /* number of burst_regs */
@@ -673,7 +673,7 @@ static struct tegra14_emc_table e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x50,       /* Rev 5.0.8 */
 		408000,     /* SDRAM frequency */
-		1100,       /* min voltage */
+		1000,       /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000000, /* CLK_SOURCE_EMC */
 		130,        /* number of burst_regs */
