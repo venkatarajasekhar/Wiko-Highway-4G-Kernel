@@ -46,7 +46,7 @@
 
 #include <mach/arb_sema.h>
 #include <mach/clk.h>
-#include "../video/tegra/nvmap/nvmap.h"
+#include "linux/nvmap.h"
 
 #include <crypto/scatterwalk.h>
 #include <crypto/aes.h>
