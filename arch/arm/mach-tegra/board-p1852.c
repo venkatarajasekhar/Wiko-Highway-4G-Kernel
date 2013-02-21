@@ -38,6 +38,7 @@
 #if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT)
 #include <linux/i2c/atmel_mxt_ts.h>
 #endif
+#include <linux/platform_data/tmon_tmp411.h>
 #include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/irqs.h>
@@ -65,6 +66,7 @@
 #include "fuse.h"
 #include "common.h"
 #include "pm.h"
+#include "therm-monitor.h"
 
 static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	/* name		parent		rate		enabled */
@@ -110,6 +112,46 @@ static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	{ "sdmmc2",		"pll_p",	104000000,	false},
 	{"wake.sclk",		NULL,		334000000,	true },
 	{ NULL,			NULL,		0,		0},
+};
+
+/* Local sensor temperature dependent register data. */
+static struct therm_monitor_ldep_data ltemp_reg_data[] = {
+	{
+		.reg_addr = 0x000008ec, /* only Offset */
+		.temperat = {10000, 85000, INT_MAX}, /* Maximum 9 values*/
+		.value    = {0xf101a000, 0xf161d000}, /* Maximum 9 values*/
+	},
+	{
+		.reg_addr = 0x000008a8,
+		.temperat = {0, 35000, 85000, INT_MAX},
+		.value    = {0x00000038, 0x00606038, 0x00202038},
+	},
+	{
+		.reg_addr = 0x0000f470, /* Shadow register: EMC_REFRESH_0 */
+		.temperat = {80000, 191000, INT_MAX},
+		.value    = {0x00000945, 0x000004A2},
+	},
+	{/* Required for the above register(0x0000f470) update */
+		.reg_addr = 0x0000F428, /* EMC_TIMING_CONTROL_0 */
+		.temperat = {80000, 191000,  INT_MAX},
+		.value    = {0x00000001, 0x00000001},
+	},
+	{
+		.reg_addr = INVALID_ADDR,
+	},
+};
+
+struct therm_monitor_data p1852_therm_monitor_data = {
+	.brd_ltemp_reg_data = ltemp_reg_data,
+	.delta_temp = DELTA_TEMP,
+	.delta_time = DELTA_TIME,
+	.remote_offset = REMT_OFFSET,
+	.local_temp_update = true,
+	.utmip_reg_update = true,
+	.utmip_temp_bound = 20000,
+	.i2c_bus_num = I2C_BUS_TMP411,
+	.i2c_dev_addrs = I2C_ADDR_TMP411,
+	.i2c_dev_name = "tmon-tmp411-sensor",
 };
 
 static struct tegra_i2c_platform_data p1852_i2c1_platform_data = {
@@ -663,6 +705,9 @@ static void __init tegra_p1852_init(void)
 	tegra_soc_device_init("p1852");
 	p1852_pinmux_init();
 	p1852_i2c_init();
+#ifdef CONFIG_SENSORS_TMON_TMP411
+	register_therm_monitor(&p1852_therm_monitor_data);
+#endif
 	p1852_regulator_init();
 	p1852_i2s_audio_init();
 	p1852_gpio_init();

@@ -115,5 +115,11 @@ int p1852_keys_init(void);
 #define TOUCH_BUS_ATMEL_T9  0
 #endif
 
+/*  Thermal monitor data */
+#define DELTA_TEMP 4000
+#define DELTA_TIME 2000
+#define REMT_OFFSET 8000
+#define I2C_ADDR_TMP411 0x4c
+#define I2C_BUS_TMP411 4
 
 #endif
