@@ -25,6 +25,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/palmas.h>
+#include <linux/platform_data/lp8755.h>
 #include <linux/irq.h>
 
 #include <asm/mach-types.h>
@@ -41,6 +42,8 @@
 #define PMC_CTRL_INTR_LOW       (1 << 17)
 #define PALMAS_TEGRA_IRQ_BASE       TEGRA_NR_IRQS
 #define PALMAS_TEGRA_GPIO_BASE      TEGRA_NR_GPIOS
+#define BOARD_SKU_110		110
+#define BOARD_SKU_120		120
 
 /* TPS80036 consumer rails */
 static struct regulator_consumer_supply palmas_smps12_supply[] = {
@@ -231,7 +234,9 @@ static struct regulator_consumer_supply palmas_regen5_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_regen7_supply[] = {
-	REGULATOR_SUPPLY("unused", NULL),
+	REGULATOR_SUPPLY("avdd_lcd_ext", NULL),
+	REGULATOR_SUPPLY("avdd", "spi2.0"),
+	REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
 #define PALMAS_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
@@ -282,7 +287,7 @@ PALMAS_PDATA_INIT(regen1, 4300,  4300, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(regen2, 1200,  1200, palmas_rails(smps8), 0, 0, 0);
 PALMAS_PDATA_INIT(regen4, 1200,  1200, palmas_rails(smps9), 0, 0, 0);
 PALMAS_PDATA_INIT(regen5, 1800,  1800, palmas_rails(smps8), 0, 0, 0);
-PALMAS_PDATA_INIT(regen7, 0,  0, NULL, 0, 0, 0);
+PALMAS_PDATA_INIT(regen7, 2800,  2800, NULL, 1, 0, 1);
 
 #define PALMAS_REG_PDATA(_sname) &reg_idata_##_sname
 
@@ -468,8 +473,14 @@ static struct platform_device *fixed_reg_devs_e1670[] = {
 
 int __init atlantis_fixed_regulator_init(void)
 {
+	struct board_info board_info;
+	int num_fixed_regulators = ARRAY_SIZE(fixed_reg_devs_e1670);
+
+	tegra_get_board_info(&board_info);
+	if (board_info.fab == BOARD_FAB_A00)
+		num_fixed_regulators--;
 	return platform_add_devices(fixed_reg_devs_e1670,
-				ARRAY_SIZE(fixed_reg_devs_e1670));
+					num_fixed_regulators);
 }
 
 static struct palmas_pmic_platform_data pmic_platform = {
@@ -499,13 +510,96 @@ static struct i2c_board_info palma_device[] = {
 	},
 };
 
+/* LP8755 DC-DC converter */
+static struct regulator_consumer_supply lp8755_buck0_supply[] = {
+	REGULATOR_SUPPLY("vdd_cpu", NULL),
+};
+
+#define lp8755_rail(_id) "lp8755_"#_id
+
+#define LP8755_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
+	_boot_on, _apply_uv)						\
+	static struct regulator_init_data reg_idata_##_name = {		\
+		.constraints = {					\
+			.name = lp8755_rail(_name),			\
+			.min_uV = (_minmv)*1000,			\
+			.max_uV = (_maxmv)*1000,			\
+			.valid_modes_mask = (REGULATOR_MODE_NORMAL |	\
+					REGULATOR_MODE_STANDBY),	\
+			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
+					REGULATOR_CHANGE_STATUS |	\
+					REGULATOR_CHANGE_VOLTAGE),	\
+			.always_on = _always_on,			\
+			.boot_on = _boot_on,				\
+			.apply_uV = _apply_uv,				\
+		},							\
+		.num_consumer_supplies =				\
+			ARRAY_SIZE(lp8755_##_name##_supply),		\
+		.consumer_supplies = lp8755_##_name##_supply,		\
+		.supply_regulator = _supply_reg,			\
+	}
+
+LP8755_PDATA_INIT(buck0, 500, 1670, NULL, 0, 0, 0);
+
+#define LP8755_REG_PDATA(_sname) &reg_idata_##_sname
+
+static struct regulator_init_data *lp8755_reg_data[LP8755_BUCK_MAX] = {
+	LP8755_REG_PDATA(buck0),
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
+
+static struct lp8755_platform_data lp8755_pdata;
+
+static struct i2c_board_info lp8755_regulators[] = {
+	{
+		I2C_BOARD_INFO(LP8755_NAME, 0x60),
+		.irq		= 0,
+		.platform_data	= &lp8755_pdata,
+	},
+};
+
+static void lp8755_regulator_init(void)
+{
+	lp8755_pdata.mphase = MPHASE_CONF6;
+	lp8755_pdata.buck_data[LP8755_BUCK0] = lp8755_reg_data[LP8755_BUCK0];
+	lp8755_pdata.ramp_us[LP8755_BUCK0] = 230;
+
+	i2c_register_board_info(4, lp8755_regulators,
+			ARRAY_SIZE(lp8755_regulators));
+}
+
 int __init atlantis_regulator_init(void)
 {
+	struct board_info board_info;
 	int i;
 
+	tegra_get_board_info(&board_info);
 	for (i = 0; i < PALMAS_NUM_REGS ; i++) {
 		pmic_platform.reg_data[i] = atlantis_reg_data[i];
 		pmic_platform.reg_init[i] = atlantis_reg_init[i];
+	}
+	if (board_info.fab != BOARD_FAB_A00) {
+		pmic_platform.reg_data[PALMAS_REG_REGEN7] = NULL;
+		pmic_platform.reg_init[PALMAS_REG_REGEN7] = NULL;
+	}
+	if (board_info.sku == BOARD_SKU_110) {
+		pmic_platform.reg_data[PALMAS_REG_SMPS12] = NULL;
+		pmic_platform.reg_init[PALMAS_REG_SMPS12] = NULL;
+
+		lp8755_regulator_init();
+	} else if (board_info.sku == BOARD_SKU_120) {
+		pmic_platform.reg_data[PALMAS_REG_SMPS12] =
+				atlantis_reg_data[PALMAS_REG_SMPS6];
+		pmic_platform.reg_init[PALMAS_REG_SMPS12] =
+				atlantis_reg_init[PALMAS_REG_SMPS6];
+		pmic_platform.reg_data[PALMAS_REG_SMPS6] = NULL;
+		pmic_platform.reg_init[PALMAS_REG_SMPS6] = NULL;
+
+		lp8755_regulator_init();
 	}
 
 	i2c_register_board_info(4, palma_device,
