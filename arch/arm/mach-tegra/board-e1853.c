@@ -159,7 +159,7 @@ struct therm_monitor_data e1853_therm_monitor_data = {
 	.delta_time = 2000,
 	.remote_offset = 8000,
 	.local_temp_update = true,
-	.remote_temp_update = false,/* USB registers update is not
+	.utmip_reg_update = false, /* USB registers update is not
 						required for now */
 	.i2c_bus_num = I2C_BUS_TMP411,
 	.i2c_dev_addrs = I2C_ADDR_TMP411,
