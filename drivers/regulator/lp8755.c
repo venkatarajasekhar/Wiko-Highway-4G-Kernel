@@ -295,10 +295,7 @@ static int lp8755_is_enabled_buck(struct regulator_dev *rdev)
 	unsigned int reg;
 
 	lp8755_read(pchip, rdev->desc->enable_reg, &reg);
-
-	mutex_lock(&rdev->mutex);
 	reg &= rdev->desc->enable_mask;
-	mutex_unlock(&rdev->mutex);
 
 	return !!(reg);
 }

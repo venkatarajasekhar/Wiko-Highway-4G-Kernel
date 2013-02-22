@@ -345,9 +345,6 @@ int __init harmony_panel_init(void)
 	gpio_request(harmony_lvds_shutdown, "lvds_shdn");
 	gpio_direction_output(harmony_lvds_shutdown, 1);
 
-	gpio_request(harmony_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(harmony_hdmi_hpd);
-
 #if defined(CONFIG_TEGRA_NVMAP)
 	harmony_carveouts[1].base = tegra_carveout_start;
 	harmony_carveouts[1].size = tegra_carveout_size;

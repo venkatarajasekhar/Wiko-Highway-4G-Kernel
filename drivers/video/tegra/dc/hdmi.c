@@ -25,7 +25,7 @@
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
+#include <linux/mutex.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -95,7 +95,7 @@ struct tegra_dc_hdmi_data {
 #endif
 	struct tegra_hdmi_out		info;
 
-	spinlock_t			suspend_lock;
+	struct rt_mutex			suspend_lock;
 	bool				suspended;
 	bool				eld_retrieved;
 	bool				clk_enabled;
@@ -300,13 +300,10 @@ const struct tdms_config tdms_config[] = {
 	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
 		SOR_PLL_TMDS_TERMADJ(0x6),
 	.pe_current = PE_CURRENT0(PE_CURRENT_4_0_mA) |
-		PE_CURRENT1(PE_CURRENT_4_0_mA) |
-		PE_CURRENT2(PE_CURRENT_4_0_mA) |
-		PE_CURRENT3(PE_CURRENT_4_0_mA),
-	.drive_current = DRIVE_CURRENT_LANE0(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE1(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE2(DRIVE_CURRENT_10_500_mA) |
-		DRIVE_CURRENT_LANE3(DRIVE_CURRENT_10_500_mA),
+			PE_CURRENT1(PE_CURRENT_4_0_mA) |
+			PE_CURRENT2(PE_CURRENT_4_0_mA) |
+			PE_CURRENT3(PE_CURRENT_4_0_mA),
+	.drive_current = 0x18181818,
 	},
 };
 #else
@@ -897,9 +894,9 @@ static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)
 {
 	struct tegra_dc *dc = ptr;
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-	unsigned long flags;
 
-	spin_lock_irqsave(&hdmi->suspend_lock, flags);
+	rt_mutex_lock(&hdmi->suspend_lock);
+
 	if (!hdmi->suspended) {
 		__cancel_delayed_work(&hdmi->work);
 		if (tegra_dc_hdmi_hpd(dc))
@@ -909,28 +906,27 @@ static irqreturn_t tegra_dc_hdmi_irq(int irq, void *ptr)
 			queue_delayed_work(system_nrt_wq, &hdmi->work,
 					   msecs_to_jiffies(30));
 	}
-	spin_unlock_irqrestore(&hdmi->suspend_lock, flags);
 
+	rt_mutex_unlock(&hdmi->suspend_lock);
 	return IRQ_HANDLED;
 }
 
 static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-	unsigned long flags;
 
 	tegra_nvhdcp_suspend(hdmi->nvhdcp);
-	spin_lock_irqsave(&hdmi->suspend_lock, flags);
+	rt_mutex_lock(&hdmi->suspend_lock);
 	hdmi->suspended = true;
-	spin_unlock_irqrestore(&hdmi->suspend_lock, flags);
+	rt_mutex_unlock(&hdmi->suspend_lock);
+
 }
 
 static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
-	unsigned long flags;
 
-	spin_lock_irqsave(&hdmi->suspend_lock, flags);
+	rt_mutex_lock(&hdmi->suspend_lock);
 	hdmi->suspended = false;
 
 	if (tegra_dc_hdmi_hpd(dc))
@@ -940,7 +936,8 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 		queue_delayed_work(system_nrt_wq, &hdmi->work,
 				   msecs_to_jiffies(30));
 
-	spin_unlock_irqrestore(&hdmi->suspend_lock, flags);
+	rt_mutex_unlock(&hdmi->suspend_lock);
+
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
 
@@ -1083,7 +1080,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->clk_enabled = false;
 	hdmi->audio_freq = 44100;
 	hdmi->audio_source = AUTO;
-	spin_lock_init(&hdmi->suspend_lock);
+	rt_mutex_init(&hdmi->suspend_lock);
 
 #ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
@@ -1110,18 +1107,32 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_debug_create(hdmi);
 
-	/* TODO: support non-hotplug */
-	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_hdmi_irq,
-		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-		dev_name(&dc->ndev->dev), dc)) {
-		dev_err(&dc->ndev->dev, "hdmi: request_irq %d failed\n",
-			gpio_to_irq(dc->out->hotplug_gpio));
-		err = -EBUSY;
+	err = gpio_is_valid(dc->out->hotplug_gpio);
+	if (!err) {
+		dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed");
 		goto err_nvhdcp_destroy;
+	}
+
+	gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
+	gpio_direction_input(dc->out->hotplug_gpio);
+
+	/* TODO: support non-hotplug */
+	ret = request_threaded_irq(gpio_to_irq(dc->out->hotplug_gpio),
+		NULL, tegra_dc_hdmi_irq,
+		IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+		dev_name(&dc->ndev->dev), dc);
+
+	if (ret) {
+		dev_err(&dc->ndev->dev, "hdmi: request_irq %d failed - %d\n",
+			gpio_to_irq(dc->out->hotplug_gpio), ret);
+		err = -EBUSY;
+		goto err_gpio_free;
 	}
 
 	return 0;
 
+err_gpio_free:
+	gpio_free(dc->out->hotplug_gpio);
 err_nvhdcp_destroy:
 	if (hdmi->nvhdcp)
 		tegra_nvhdcp_destroy(hdmi->nvhdcp);
@@ -1702,6 +1713,10 @@ static void tegra_dc_hdmi_setup_tdms(struct tegra_dc_hdmi_data *hdmi,
 
 	tegra_hdmi_writel(hdmi, tc->peak_current,
 		HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT);
+#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_hdmi_writel(hdmi, tc->drive_current,
+		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);
+	tegra_hdmi_writel(hdmi, 0x800034bb, HDMI_NV_PDISP_SOR_PAD_CTLS0);
 #else
 	tegra_hdmi_writel(hdmi, tc->drive_current | DRIVE_CURRENT_FUSE_OVERRIDE,
 		HDMI_NV_PDISP_SOR_LANE_DRIVE_CURRENT);

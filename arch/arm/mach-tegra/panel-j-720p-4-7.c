@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-j-720p-4-7.c
  *
-  * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,7 +109,11 @@ static int __maybe_unused dsi_j_720p_4_7_check_fb(struct device *dev,
 */
 
 static struct platform_pwm_backlight_data dsi_j_720p_4_7_bl_data = {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	.pwm_id         = 1,
+#else
+	.pwm_id         = 0,
+#endif
 	.max_brightness = 255,
 	.dft_brightness = 77,
 	.pwm_period_ns  = 40000,
@@ -130,7 +134,11 @@ static struct tegra_dsi_out dsi_j_720p_4_7_pdata;
 static int dsi_j_720p_4_7_register_bl_dev(void)
 {
 	int err = 0;
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	err = platform_device_register(&tegra_pwfm1_device);
+#else
+	err = platform_device_register(&tegra_pwfm0_device);
+#endif
 	if (err) {
 		pr_err("disp1 pwm device registration failed");
 		return err;
@@ -309,11 +317,7 @@ static struct tegra_dsi_cmd dsi_j_720p_4_7_init_cmd[] = {
 	DSI_DLY_MS(100),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_1_PARAM, 0xBA, 0x02),
 	DSI_DLY_MS(5),
-#if (DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
 	DSI_CMD_SHORT(DSI_DCS_WRITE_1_PARAM, 0xC2, 0x08),
-#else
-	DSI_CMD_SHORT(DSI_DCS_WRITE_1_PARAM, 0xC2, 0x03),
-#endif
 	DSI_DLY_MS(5),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_1_PARAM, 0xFF, 0x04),
 	DSI_DLY_MS(5),

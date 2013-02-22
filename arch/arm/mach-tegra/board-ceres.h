@@ -27,6 +27,7 @@
 
 /* MAX77660_GPIO Base Address */
 #define MAX77660_GPIO_BASE      TEGRA_NR_GPIOS
+#define MAX77660_IRQ_BASE	TEGRA_NR_IRQS
 
 /* I2C related GPIOs */
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -38,20 +39,34 @@
 #endif
 #define TEGRA_GPIO_I2C2_SCL		TEGRA_GPIO_PT5
 #define TEGRA_GPIO_I2C2_SDA		TEGRA_GPIO_PT6
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define TEGRA_GPIO_I2C3_SCL		TEGRA_GPIO_PBB1
 #define TEGRA_GPIO_I2C3_SDA		TEGRA_GPIO_PBB2
+#else
+#define TEGRA_GPIO_I2C3_SCL		TEGRA_GPIO_PR2
+#define TEGRA_GPIO_I2C3_SDA		TEGRA_GPIO_PR3
+#endif
 #define TEGRA_GPIO_I2C4_SCL		TEGRA_GPIO_PV4
 #define TEGRA_GPIO_I2C4_SDA		TEGRA_GPIO_PV5
 #define TEGRA_GPIO_I2C5_SCL		TEGRA_GPIO_PZ6
 #define TEGRA_GPIO_I2C5_SDA		TEGRA_GPIO_PZ7
 
 /* Camera related GPIOs */
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define CAM_RSTN			TEGRA_GPIO_PBB3
 #define CAM_FLASH_STROBE		TEGRA_GPIO_PBB4
 #define CAM1_POWER_DWN_GPIO		TEGRA_GPIO_PBB6
 #define CAM2_POWER_DWN_GPIO		TEGRA_GPIO_PBB5
 #define CAM_AF_PWDN			TEGRA_GPIO_PBB7
 #define CAM_TORCH_EN			TEGRA_GPIO_PCC1
+#else /* CONFIG_ARCH_TEGRA_14x_SOC */
+#define CAM_RSTN			TEGRA_GPIO_PS0
+#define CAM_FLASH_STROBE		TEGRA_GPIO_PS1
+#define CAM1_POWER_DWN_GPIO		TEGRA_GPIO_PS2
+#define CAM2_POWER_DWN_GPIO		TEGRA_GPIO_PS3
+#define CAM_AF_PWDN			TEGRA_GPIO_PS4
+#define CAM_TORCH_EN			TEGRA_GPIO_PS5
+#endif
 
 /* Touchscreen definitions */
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -77,6 +92,42 @@
 #define TEGRA_GPIO_INT_MIC_EN	-1
 #define TEGRA_GPIO_EXT_MIC_EN	-1
 
+/* Invensense MPU Definitions */
+#define MPU_GYRO_NAME		"mpu9150"
+
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PR3
+#else
+#define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PM7
+#endif
+
+#define MPU_GYRO_ADDR		0x69
+#define MPU_GYRO_BUS_NUM	0
+#define MPU_GYRO_ORIENTATION	{ -1, 0, 0, 0, 1, 0, 0, 0, -1 }
+#define MPU_ACCEL_NAME		"kxtf9"
+#define MPU_ACCEL_IRQ_GPIO	0 /* DISABLE ACCELIRQ:  TEGRA_GPIO_PJ2 */
+#define MPU_ACCEL_ADDR		0x0F
+#define MPU_ACCEL_BUS_NUM	0
+#define MPU_ACCEL_ORIENTATION	{ 0, 1, 0, -1, 0, 0, 0, 0, 1 }
+#define MPU_COMPASS_NAME	"ak8975"
+#define MPU_COMPASS_IRQ_GPIO	0
+#define MPU_COMPASS_ADDR	0x0D
+#define MPU_COMPASS_BUS_NUM	0
+#define MPU_COMPASS_ORIENTATION	{ 0, 1, 0, -1, 0, 0, 0, 0, 1 }
+
+/* PCA954x I2C bus expander bus addresses */
+#define PCA954x_I2C_BUS_BASE    6
+#define PCA954x_I2C_BUS0        (PCA954x_I2C_BUS_BASE + 0)
+#define PCA954x_I2C_BUS1        (PCA954x_I2C_BUS_BASE + 1)
+#define PCA954x_I2C_BUS2        (PCA954x_I2C_BUS_BASE + 2)
+#define PCA954x_I2C_BUS3        (PCA954x_I2C_BUS_BASE + 3)
+
+/* Baseband IDs */
+enum tegra_bb_type {
+	TEGRA_BB_HSIC_HUB = 6,
+};
+
+
 int ceres_sensors_init(void);
 int ceres_keys_init(void);
 int ceres_sdhci_init(void);
@@ -85,4 +136,7 @@ int ceres_suspend_init(void);
 int ceres_pinmux_init(void);
 int ceres_panel_init(void);
 int ceres_soctherm_init(void);
+int ceres_emc_init(void);
+int ceres_pmon_init(void);
+int ceres_edp_init(void);
 #endif

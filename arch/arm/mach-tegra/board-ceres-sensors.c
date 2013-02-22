@@ -17,6 +17,7 @@
  */
 
 #include <linux/i2c.h>
+#include <linux/mpu.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
@@ -24,12 +25,19 @@
 #include <media/imx091.h>
 #include <media/imx132.h>
 #include <media/ad5816.h>
-
+#include <media/max77387.h>
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include <mach/pinmux-t11.h>
+#else
+#include <mach/pinmux-t14.h>
+#endif
 #include <mach/pinmux.h>
+#include <linux/nct1008.h>
+#include <mach/edp.h>
 
 #include "cpu-tegra.h"
 #include "devices.h"
+#include "board-common.h"
 #include "board-ceres.h"
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
@@ -49,6 +57,7 @@ static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 		.ioreset	= TEGRA_PIN_IO_RESET_##_ioreset	\
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 /* Rear sensor clock pinmux settings */
 static struct tegra_pingroup_config mclk_disable =
 	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
@@ -56,7 +65,6 @@ static struct tegra_pingroup_config mclk_disable =
 static struct tegra_pingroup_config mclk_enable =
 	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 /* Front sensor clock pinmux settings */
 static struct tegra_pingroup_config pbb0_disable =
 	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
@@ -64,14 +72,109 @@ static struct tegra_pingroup_config pbb0_disable =
 static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
 #else
+/* Rear sensor clock pinmux settings */
+static struct tegra_pingroup_config mclk_disable =
+	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
+
+static struct tegra_pingroup_config mclk_enable =
+	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
+			NORMAL, OUTPUT, DEFAULT, DISABLE);
+
 /* Front sensor clock pinmux settings */
 static struct tegra_pingroup_config pbb0_disable =
-	VI_PINMUX(GPIO_PBB0, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
 
 static struct tegra_pingroup_config pbb0_enable =
-	VI_PINMUX(GPIO_PBB0, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
+			NORMAL, OUTPUT, DEFAULT, DISABLE);
 #endif
 
+/* Disabled for T148 bringup
+static struct throttle_table tj_throttle_table[] = {
+	{      0, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 640000, 1000 },
+	{ 760000, 1000 },
+	{ 760000, 1050 },
+	{1000000, 1050 },
+	{1000000, 1100 },
+};
+
+static struct balanced_throttle tj_throttle = {
+	.throt_tab_size = ARRAY_SIZE(tj_throttle_table),
+	.throt_tab = tj_throttle_table,
+};
+
+static int __init ceres_throttle_init(void)
+{
+	balanced_throttle_register(&tj_throttle, "ceres-nct");
+	return 0;
+}
+module_init(ceres_throttle_init);
+*/
+
+static struct nct1008_platform_data ceres_nct1008_pdata = {
+	.supported_hwrev = true,
+	.ext_range = true,
+	.conv_rate = 0x09, /* 0x09 corresponds to 32Hz conversion rate */
+	.offset = 8, /* 4 * 2C. 1C for device accuracies */
+
+	.shutdown_ext_limit = 90, /* C */
+	.shutdown_local_limit = 100, /* C */
+
+	.num_trips = 1,
+	.trips = {
+		/* Thermal Throttling */
+		[0] = {
+			.cdev_type = "ceres-nct",
+			.trip_temp = 80000,
+			.trip_type = THERMAL_TRIP_PASSIVE,
+			.upper = THERMAL_NO_LIMIT,
+			.lower = THERMAL_NO_LIMIT,
+			.hysteresis = 0,
+		},
+	},
+};
+
+
+
+static struct i2c_board_info ceres_i2c0_nct1008_board_info[] = {
+	{
+		I2C_BOARD_INFO("nct72", 0x4C),
+		.platform_data = &ceres_nct1008_pdata,
+		.irq = -1,
+	}
+};
+
+#define CERES_TEMP_ALERT_GPIO	TEGRA_GPIO_PO1
+static int ceres_nct1008_init(void)
+{
+	int ret = 0;
+
+	tegra_add_cdev_trips(ceres_nct1008_pdata.trips,
+			     &ceres_nct1008_pdata.num_trips);
+
+	/* FIXME: enable irq when throttling is supported */
+	ceres_i2c0_nct1008_board_info[0].irq =
+		gpio_to_irq(CERES_TEMP_ALERT_GPIO);
+
+	ret = gpio_request(CERES_TEMP_ALERT_GPIO, "temp_alert");
+	if (ret < 0) {
+		pr_err("%s: gpio_request failed\n", __func__);
+		return ret;
+	}
+
+	ret = gpio_direction_input(CERES_TEMP_ALERT_GPIO);
+	if (ret < 0) {
+		pr_err("%s: set gpio to input failed\n", __func__);
+		gpio_free(CERES_TEMP_ALERT_GPIO);
+	}
+
+	return ret;
+}
 static int ceres_focuser_power_on(struct ad5816_power_rail *pw)
 {
 	int err;
@@ -236,7 +339,7 @@ static struct nvc_imager_cap imx091_cap = {
 	.initial_clock_rate_khz	= 6000,
 	.clock_profiles[0] = {
 		.external_clock_khz	= 24000,
-		.clock_multiplier	= 10416667, /* value / 1,000,000 */
+		.clock_multiplier	= 850000, /* value / 1,000,000 */
 	},
 	.clock_profiles[1] = {
 		.external_clock_khz	= 0,
@@ -253,8 +356,8 @@ static struct nvc_imager_cap imx091_cap = {
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
 	.preferred_mode_index	= 0,
-	.focuser_guid		= 0,
-	.torch_guid		= 0,
+	.focuser_guid		= NVC_FOCUS_GUID(0),
+	.torch_guid		= NVC_TORCH_GUID(0),
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
@@ -287,6 +390,51 @@ static struct ad5816_platform_data ceres_ad5816_pdata = {
 	.power_off	= ceres_focuser_power_off,
 };
 
+static unsigned max77387_estates[] = {1000, 800, 600, 400, 200, 100, 0};
+
+static struct max77387_platform_data ceres_max77387_pdata = {
+	.config		= {
+		.led_mask		= 3,
+		.flash_trigger_mode	= 1,
+		/* use ONE-SHOOT flash mode - flash triggered at the
+		 * raising edge of strobe or strobe signal.
+		*/
+		.flash_mode		= 1,
+		.def_ftimer		= 0x24,
+		.max_total_current_mA	= 1000,
+		.max_peak_current_mA	= 600,
+		.led_config[0]	= {
+			.flash_torch_ratio	= 18100,
+			.granularity		= 1000,
+			.flash_levels		= 0,
+			.lumi_levels	= NULL,
+			},
+		.led_config[1]	= {
+			.flash_torch_ratio	= 18100,
+			.granularity		= 1000,
+			.flash_levels		= 0,
+			.lumi_levels		= NULL,
+			},
+		},
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	.pinstate	= {
+		.mask	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		.values	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		},
+#else
+	/* Needs to be validated and changed for t14x */
+#endif
+	.cfg		= NVC_CFG_NODEV,
+	.dev_name	= "torch",
+	.gpio_strobe	= CAM_FLASH_STROBE,
+	.edpc_config	= {
+		.states		= max77387_estates,
+		.num_states	= ARRAY_SIZE(max77387_estates),
+		.e0_index	= 3,
+		.priority	= EDP_MAX_PRIO - 2,
+		},
+};
+
 static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	{
 		I2C_BOARD_INFO("imx091", 0x10),
@@ -299,6 +447,10 @@ static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	{
 		I2C_BOARD_INFO("ad5816", 0x0E),
 		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("max77387", 0x4A),
+		.platform_data = &ceres_max77387_pdata,
 	},
 };
 
@@ -318,9 +470,69 @@ static int ceres_camera_init(void)
 	return 0;
 }
 
+/* MPU board file definition	*/
+static struct mpu_platform_data mpu9150_gyro_data = {
+	.int_config	= 0x10,
+	.level_shifter	= 0,
+	/* Located in board_[platformname].h */
+	.orientation	= MPU_GYRO_ORIENTATION,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_COMPASS,
+	.sec_slave_id	= COMPASS_ID_AK8975,
+	.secondary_i2c_addr	= MPU_COMPASS_ADDR,
+	.secondary_read_reg	= 0x06,
+	.secondary_orientation	= MPU_COMPASS_ORIENTATION,
+	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
+			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
+};
+
+static struct i2c_board_info __initdata inv_mpu9150_i2c1_board_info[] = {
+	{
+		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
+		.platform_data = &mpu9150_gyro_data,
+	},
+};
+
+static void mpuirq_init(void)
+{
+	int ret = 0;
+	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
+	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
+	char *gyro_name = MPU_GYRO_NAME;
+
+	pr_info("*** MPU START *** mpuirq_init...\n");
+
+	ret = gpio_request(gyro_irq_gpio, gyro_name);
+
+	if (ret < 0) {
+		pr_err("%s: gpio_request failed %d\n", __func__, ret);
+		return;
+	}
+
+	ret = gpio_direction_input(gyro_irq_gpio);
+	if (ret < 0) {
+		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
+		gpio_free(gyro_irq_gpio);
+		return;
+	}
+	pr_info("*** MPU END *** mpuirq_init...\n");
+
+	inv_mpu9150_i2c1_board_info[0].irq = gpio_to_irq(MPU_GYRO_IRQ_GPIO);
+	i2c_register_board_info(gyro_bus_num, inv_mpu9150_i2c1_board_info,
+		ARRAY_SIZE(inv_mpu9150_i2c1_board_info));
+}
+
 int __init ceres_sensors_init(void)
 {
+	int err;
 	ceres_camera_init();
+	mpuirq_init();
+
+	err = ceres_nct1008_init();
+	if (err)
+		pr_err("%s: nct1008 init failed\n", __func__);
+	else
+		i2c_register_board_info(0, ceres_i2c0_nct1008_board_info,
+				ARRAY_SIZE(ceres_i2c0_nct1008_board_info));
 
 	i2c_register_board_info(0, ceres_i2c_board_info_max44005,
 			ARRAY_SIZE(ceres_i2c_board_info_max44005));

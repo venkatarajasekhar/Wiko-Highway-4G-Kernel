@@ -113,6 +113,7 @@ config ARCH_TEGRA_11x_SOC
 	select ARM_CPU_SUSPEND if PM
 	select ARM_GIC
 	select ARCH_REQUIRE_GPIOLIB
+	select PINCTRL
 	select ARM_SAVE_DEBUG_CONTEXT if PM_SLEEP
 	select USB_ARCH_HAS_EHCI if USB_SUPPORT
 	select USB_EHCI_TEGRA if USB_SUPPORT
@@ -148,9 +149,9 @@ config ARCH_TEGRA_14x_SOC
 	bool "Tegra 14x family SOC"
 	select CPU_V7
 	select ARM_GIC
-	select ARM_SMP_TWD
 	select TEGRA_LP2_CPU_TIMER if HAVE_ARM_TWD && !TEGRA_RAIL_OFF_MULTIPLE_CPUS
 	select ARCH_REQUIRE_GPIOLIB
+	select PINCTRL
 	select ARM_SAVE_DEBUG_CONTEXT if PM_SLEEP
 	select ARCH_TEGRA_HAS_DUAL_CPU_CLUSTERS
 	select ARM_SAVE_DEBUG_CONTEXT if PM_SLEEP
@@ -165,6 +166,7 @@ config ARCH_TEGRA_14x_SOC
 	select REPORT_PRESENT_CPUS if TEGRA_AUTO_HOTPLUG
 	select ARM_ERRATA_764369 if SMP
 	select SOC_BUS
+	select CPA
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
 	select NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
 	select NVMAP_DEFERRED_CACHE_MAINT
@@ -172,6 +174,8 @@ config ARCH_TEGRA_14x_SOC
 	select ARCH_TEGRA_HAS_CL_DVFS
 	select TEGRA_DUAL_CBUS
 	select PM_GENERIC_DOMAINS if PM
+	select EDP_FRAMEWORK
+	select TEGRA_ERRATA_977223
 	help
 	  Support for NVIDIA Tegra 14x family of SoCs, based upon the
 	  ARM CortexA9MP CPU and the ARM PL310 L2 cache controller
@@ -515,6 +519,7 @@ config TEGRA_CPU_DVFS
 config TEGRA_CORE_DVFS
 	bool "Enable voltage scaling on Tegra core"
 	depends on TEGRA_SILICON_PLATFORM
+	depends on !ARCH_TEGRA_14x_SOC
 	depends on TEGRA_CPU_DVFS
 	default y
 
@@ -630,7 +635,7 @@ config TEGRA_ERRATA_1157520
 
 config TEGRA_ERRATA_977223
 	bool "PTSA ring 1 to ring 0 does not account for forced coalescing"
-	depends on ARCH_TEGRA_11x_SOC
+	depends on ARCH_TEGRA_11x_SOC || ARCH_TEGRA_14x_SOC
 	help
 	  The forced coalescing logic will "drop" the first request of the
 	  coalesced pair after the ring 1 snap arbiter.  This means that for
@@ -745,6 +750,15 @@ config TEGRA_BB_XMM_POWER2
 	  (in flashless configuration).  User-mode application must
 	  insert this LKM to initiate 2nd USB enumeration power sequence
 	  - after modem software has been downloaded to flashless device.
+
+config TEGRA_BBC_PROXY
+	bool "Enable BBC Proxy driver"
+	default n
+	help
+	  Enables driver which handles miscellaneous services required
+	  by the BB core. Handles initialization of EDP, ISO Bandwidth,
+	  and Latency Allowance settings. Additional setting adjustments
+	  can be done from user space through sysfs.
 
 config TEGRA_PLLM_RESTRICTED
 	bool "Restrict PLLM usage as module clock source"

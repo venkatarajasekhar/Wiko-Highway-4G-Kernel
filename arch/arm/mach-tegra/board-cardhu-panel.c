@@ -1509,8 +1509,6 @@ int __init cardhu_panel_init(void)
 #endif
 
 skip_lvds:
-	gpio_request(cardhu_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(cardhu_hdmi_hpd);
 
 #if !(DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
 	gpio_request(e1506_lcd_te, "lcd_te");

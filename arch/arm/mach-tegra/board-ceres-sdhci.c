@@ -25,6 +25,7 @@
 #include <linux/err.h>
 #include <linux/mmc/host.h>
 #include <linux/wl12xx.h>
+#include <linux/mfd/max77660/max77660-core.h>
 
 #include <asm/mach-types.h>
 #include <mach/irqs.h>
@@ -36,9 +37,15 @@
 #include "board.h"
 #include "board-ceres.h"
 
-
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define CERES_WLAN_PWR	TEGRA_GPIO_PCC5
 #define CERES_WLAN_WOW	TEGRA_GPIO_PU5
+#else
+#define CERES_WLAN_PWR  TEGRA_GPIO_PL7
+#define CERES_WLAN_WOW  TEGRA_GPIO_PO2
+#endif
+
+#define CERES_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
@@ -152,7 +159,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
-	.cd_gpio = -1,
+	.cd_gpio = CERES_SD_CD,
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.tap_delay = 0x3,

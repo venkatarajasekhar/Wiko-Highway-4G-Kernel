@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,7 +38,8 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	/* I2S2 pinmux */
 	DEFAULT_PINMUX(DAP3_DIN,      I2S2,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(DAP3_DOUT,     I2S2,        NORMAL,    NORMAL,   INPUT),
-	DEFAULT_PINMUX(DAP3_FS,       I2S2,        NORMAL,    NORMAL,   INPUT),
+	/* for jdi smart panel, route lcd_te to dap3_fs instead of gmi_rst_n */
+	DEFAULT_PINMUX(DAP3_FS,       RSVD2,       NORMAL,    TRISTATE, INPUT),
 	DEFAULT_PINMUX(DAP3_SCLK,     I2S2,        NORMAL,    NORMAL,   INPUT),
 
 	/* UARTD pinmux */
@@ -199,8 +200,8 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 
 	/* OWR pinmux */
 	DEFAULT_PINMUX(OWR,           OWR,         NORMAL,    NORMAL,   INPUT),
-
-	DEFAULT_PINMUX(KB_ROW6,       RSVD2,       NORMAL,    NORMAL,   INPUT),
+	/*lcd_te is connected to gmi_rst_n but route it to dap3_fs */
+	DEFAULT_PINMUX(GMI_RST_N,     RSVD3,       NORMAL,    TRISTATE, INPUT),
 	DEFAULT_PINMUX(GPIO_X1_AUD,   RSVD1,       NORMAL,    TRISTATE, INPUT),
 
 	/* CEC pinmux */
@@ -272,7 +273,7 @@ static struct gpio_init_pin_info init_gpio_mode_ceres_common[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PQ5, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PQ6, false, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PQ7, false, 0),
-	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PR3, false, 0),
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PR3, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PR4, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PR5, false, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PR7, true, 0),

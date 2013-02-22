@@ -779,9 +779,7 @@ void __init tegra_init_timer(void)
 
 	register_syscore_ops(&tegra_timer_syscore_ops);
 
-#if defined(CONFIG_ARM_ARCH_TIMER) || defined(CONFIG_HAVE_ARM_TWD)
 	late_time_init = tegra_init_late_timer;
-#endif
 }
 
 struct sys_timer tegra_timer = {

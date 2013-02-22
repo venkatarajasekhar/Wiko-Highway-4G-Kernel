@@ -99,7 +99,7 @@ static struct platform_device dolak_backlight_device = {
 };
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
-static int dolak_panel_enable(void)
+static int dolak_panel_enable(struct device *dev)
 {
 #if DSI_PANEL_218
 	/* TODO: DSI panel enable */
@@ -274,6 +274,7 @@ static struct tegra_dsi_out dolak_dsi = {
 	.lp_read_cmd_mode_freq_khz = 200000,
 };
 
+#if !defined(CONFIG_TEGRA_SIMULATION_PLATFORM)
 static struct tegra_dc_sd_settings dolak_sd_settings = {
 	.enable = 0, /* disabled by default */
 	.use_auto_pwm = false,
@@ -323,6 +324,7 @@ static struct tegra_dc_sd_settings dolak_sd_settings = {
 	.sd_brightness = &sd_brightness,
 	.bl_device = (struct backlight_device *)&dolak_backlight_device,
 };
+#endif
 
 static struct tegra_dc_out dolak_disp1_out = {
 #if defined(CONFIG_TEGRA_SIMULATION_PLATFORM)

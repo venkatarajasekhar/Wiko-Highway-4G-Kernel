@@ -36,7 +36,11 @@ obj-y                                   += tegra_core_volt_cap.o
 ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
 obj-y                                   += wakeups-t3.o
 else
+ifeq ($(CONFIG_ARCH_TEGRA_14x_SOC),y)
+obj-y                                   += wakeups-t14x.o
+else
 obj-y                                   += wakeups-t11x.o
+endif
 endif
 ifeq ($(CONFIG_CPU_IDLE),y)
 ifeq ($(CONFIG_PM_SLEEP),y)
@@ -139,6 +143,7 @@ ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpuquiet.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += cpuquiet.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += cpuquiet.o
 else
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += cpu-tegra3.o
 endif
@@ -147,11 +152,13 @@ obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 obj-$(CONFIG_USB_SUPPORT)               += usb_phy.o
 ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra11_soctherm.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11_soctherm.o
 endif
 ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += tegra2_throttle.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_throttle.o
 obj-$(CONFIG_ARCH_TEGRA_11x_SOC)        += tegra3_throttle.o
+obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra3_throttle.o
 endif
 obj-$(CONFIG_TEGRA_IOVMM)               += iovmm.o
 obj-$(CONFIG_TEGRA_IOVMM_GART)          += iovmm-gart.o
@@ -341,15 +348,21 @@ obj-${CONFIG_MACH_CERES}                += board-ceres.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-kbc.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sdhci.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-power.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-powermon.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-pinmux.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-sensors.o
 obj-${CONFIG_MACH_CERES}                += board-ceres-panel.o
+obj-${CONFIG_MACH_CERES}                += board-ceres-memory.o
+obj-${CONFIG_MACH_CERES}                += panel-l-720p-5.o
+obj-${CONFIG_MACH_CERES}                += panel-j-720p-4-7.o
 obj-${CONFIG_MACH_CERES}                += panel-s-1080p-5.o
+obj-${CONFIG_MACH_CERES}                += panel-j-720p-4-7.o
 
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
 obj-${CONFIG_TEGRA_BASEBAND}            += tegra_bb.o
+obj-$(CONFIG_TEGRA_BBC_PROXY)           += tegra_bbc_proxy.o
 
 obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 

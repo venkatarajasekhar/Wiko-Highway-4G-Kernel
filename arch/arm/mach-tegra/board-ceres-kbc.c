@@ -24,67 +24,18 @@
 #include <linux/input.h>
 #include <mach/io.h>
 #include <mach/iomap.h>
-#include <mach/kbc.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
-#include <linux/mfd/palmas.h>
+#include <linux/mfd/max77660/max77660-core.h>
 
 #include "tegra-board-id.h"
 #include "board.h"
 #include "board-ceres.h"
 #include "devices.h"
 
-/*
-static const u32 kbd_keymap[] = {
-	KEY(0, 0, KEY_POWER),
-	KEY(0, 1, KEY_HOME),
+#define CERES_POWER_ON_INT (MAX77660_IRQ_BASE + MAX77660_IRQ_GLBL_EN0_F)
+#define CERES_POWER_LONGPRESS_INT (MAX77660_IRQ_BASE + MAX77660_IRQ_GLBL_EN0_1SEC)
 
-	KEY(1, 0, KEY_RESERVED),
-	KEY(1, 1, KEY_VOLUMEDOWN),
-
-	KEY(2, 0, KEY_CAMERA),
-	KEY(2, 1, KEY_VOLUMEUP),
-	KEY(2, 2, KEY_2),
-};
-
-static const struct matrix_keymap_data keymap_data = {
-	.keymap		= kbd_keymap,
-	.keymap_size	= ARRAY_SIZE(kbd_keymap),
-};
-
-static struct tegra_kbc_wake_key ceres_wake_cfg[] = {
-	[0] = {
-		.row = 0,
-		.col = 0,
-	},
-};
-
-static struct tegra_kbc_platform_data ceres_kbc_platform_data = {
-	.debounce_cnt = 20 * 32,
-	.repeat_cnt = 1,
-	.scan_count = 30,
-	.wakeup = true,
-	.keymap_data = &keymap_data,
-	.wake_cnt = 2,
-	.wake_cfg = &ceres_wake_cfg[0],
-	.wakeup_key = KEY_POWER,
-#ifdef CONFIG_ANDROID
-	.disable_ev_rep = true,
-#endif
-};
-*/
-/*
-#define GPIO_IKEY(_id, _irq, _iswake, _deb)	\
-	{					\
-		.code = _id,			\
-		.gpio = -1,			\
-		.irq = _irq,			\
-		.desc = #_id,			\
-		.type = EV_KEY,			\
-		.wakeup = _iswake,		\
-		.debounce_interval = _deb,	\
-	}
-*/
 #define GPIO_KEY(_id, _gpio, _iswake)		\
 	{					\
 		.code = _id,			\
@@ -94,6 +45,17 @@ static struct tegra_kbc_platform_data ceres_kbc_platform_data = {
 		.type = EV_KEY,			\
 		.wakeup = _iswake,		\
 		.debounce_interval = 10,	\
+	}
+
+#define GPIO_IKEY(_id, _irq, _iswake, _deb)	\
+	{					\
+		.code = _id,			\
+		.gpio = -1,			\
+		.irq = _irq,			\
+		.desc = #_id,			\
+		.type = EV_KEY,			\
+		.wakeup = _iswake,		\
+		.debounce_interval = _deb,	\
 	}
 
 static struct gpio_keys_button ceres_int_keys[] = {
@@ -106,12 +68,13 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PQ2, 0),
 
 #else
-	[0] = GPIO_KEY(KEY_HOME, PV1, 0),
-	[1] = GPIO_KEY(KEY_MENU, PV2, 0),
-	[2] = GPIO_KEY(KEY_BACK, PV3, 0),
-	[3] = GPIO_KEY(KEY_POWER, PV4, 1),
-	[4] = GPIO_KEY(KEY_VOLUMEUP, PV5, 0),
-	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PV6, 0),
+	[0] = GPIO_KEY(KEY_HOME, PJ1, 0),
+	[1] = GPIO_KEY(KEY_MENU, PJ2, 0),
+	[2] = GPIO_KEY(KEY_BACK, PJ3, 0),
+	[3] = GPIO_IKEY(KEY_POWER, CERES_POWER_ON_INT, 1, 100),
+	[4] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 0),
+	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 0),
+	[6] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1000),
 
 #endif
 };

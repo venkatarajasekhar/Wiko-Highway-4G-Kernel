@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 NVIDIA Corporation.
+ * Copyright (C) 2012-2013 NVIDIA Corporation.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,6 +29,11 @@
 #define NVSHM_CONFIG_VERSION (0x00010001) /* Current configuration version */
 
 #define NVSHM_AP_POOL_ID (128) /* IOPOOL ID - use 128-255 for AP */
+
+#define NVSHM_RATE_LIMIT_TTY (256)
+#define NVSHM_RATE_LIMIT_LOG (512)
+#define NVSHM_RATE_LIMIT_NET (2048)
+#define NVSHM_RATE_LIMIT_TRESHOLD (8)
 
 /* NVSHM_IPC mailbox messages ids */
 enum nvshm_ipc_mailbox {
@@ -131,8 +136,9 @@ struct nvshm_iobuf {
 struct nvshm_channel {
 	int index;
 	struct nvshm_chan_map map;
-	const struct nvshm_if_operations *ops;
+	struct nvshm_if_operations *ops;
 	void *data;
+	int rate_counter;
 };
 
 

@@ -27,10 +27,15 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <asm/io.h>
+#include <linux/regulator/consumer.h>
+#include <linux/clk.h>
 
+#include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/tegra_bb.h>
 #include <linux/platform_data/nvshm.h>
+
+#include "clock.h"
 
 /* BB mailbox offset */
 #define TEGRA_BB_REG_MAILBOX (0x0)
@@ -44,6 +49,7 @@
 #define APBDEV_PMC_IPC_PMC_IPC_STS_0 (0x500)
 #define APBDEV_PMC_IPC_PMC_IPC_STS_0_AP2BB_RESET_SHIFT (1)
 #define APBDEV_PMC_IPC_PMC_IPC_STS_0_AP2BB_RESET_DEFAULT_MASK (1)
+#define APBDEV_PMC_IPC_PMC_IPC_STS_0_BB2AP_MEM_REQ_SHIFT (3)
 
 #define APBDEV_PMC_IPC_PMC_IPC_SET_0 (0x504)
 #define APBDEV_PMC_IPC_PMC_IPC_SET_0_AP2BB_RESET_SHIFT (1)
@@ -93,6 +99,8 @@ struct tegra_bb {
 	unsigned long ipc_size;
 	unsigned long ipc_irq;
 	unsigned int irq;
+	struct regulator *vdd_buck4;
+	struct regulator *vdd_ldo8;
 	void (*ipc_cb)(void *data);
 	void  *ipc_cb_data;
 	struct miscdevice dev_priv;
@@ -155,7 +163,9 @@ EXPORT_SYMBOL_GPL(tegra_bb_register_ipc);
 void tegra_bb_generate_ipc(struct platform_device *pdev)
 {
 	struct tegra_bb *bb;
+#ifndef CONFIG_TEGRA_BASEBAND_SIMU
 	void __iomem *flow = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
+#endif
 	struct tegra_bb_platform_data *pdata;
 
 	if (!pdev) {
@@ -201,16 +211,22 @@ EXPORT_SYMBOL_GPL(tegra_bb_generate_ipc);
 void tegra_bb_clear_ipc(struct platform_device *dev)
 {
 	void __iomem *fctrl = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
-	int sts;
 
-	/* read/clear INT status */
-	sts = readl(fctrl + FLOW_CTLR_IPC_FLOW_IPC_STS_0);
-	if (sts & (1 << FLOW_CTLR_IPC_FLOW_IPC_STS_0_BB2AP_INT0_STS_SHIFT)) {
-		writel(1 << FLOW_CTLR_IPC_FLOW_IPC_CLR_0_BB2AP_INT0_STS_SHIFT,
-		       fctrl + FLOW_CTLR_IPC_FLOW_IPC_CLR_0);
-	}
+	/* clear BB2AP INT status */
+	writel(1 << FLOW_CTLR_IPC_FLOW_IPC_CLR_0_BB2AP_INT0_STS_SHIFT,
+	       fctrl + FLOW_CTLR_IPC_FLOW_IPC_CLR_0);
 }
 EXPORT_SYMBOL_GPL(tegra_bb_clear_ipc);
+
+void tegra_bb_abort_ipc(struct platform_device *dev)
+{
+	void __iomem *fctrl = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
+
+	/* clear AP2BB INT status */
+	writel(1 << FLOW_CTLR_IPC_FLOW_IPC_CLR_0_AP2BB_INT0_STS_SHIFT,
+	       fctrl + FLOW_CTLR_IPC_FLOW_IPC_CLR_0);
+}
+EXPORT_SYMBOL_GPL(tegra_bb_abort_ipc);
 
 int tegra_bb_check_ipc(struct platform_device *dev)
 {
@@ -507,6 +523,7 @@ static ssize_t store_tegra_bb_reset(struct device *dev,
 		       1 << APBDEV_PMC_IPC_PMC_IPC_SET_0_AP2BB_MEM_STS_SHIFT,
 			pmc + APBDEV_PMC_IPC_PMC_IPC_SET_0);
 	}
+
 	return ret;
 }
 
@@ -520,6 +537,7 @@ static ssize_t show_tegra_bb_reset(struct device *dev,
 						    struct platform_device,
 						    dev);
 	/* reset is active low - sysfs interface assume reset is active high */
+
 	sts = readl(pmc + APBDEV_PMC_IPC_PMC_IPC_STS_0);
 	dev_dbg(&pdev->dev, "%s IPC_STS=0x%x\n",
 		 __func__,
@@ -536,6 +554,29 @@ static ssize_t show_tegra_bb_reset(struct device *dev,
 static DEVICE_ATTR(reset, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP,
 		   show_tegra_bb_reset, store_tegra_bb_reset);
 
+static ssize_t show_tegra_bb_state(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	unsigned int sts, mem_req;
+	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
+	struct platform_device *pdev = container_of(dev,
+						    struct platform_device,
+						    dev);
+	sts = readl(pmc + APBDEV_PMC_IPC_PMC_IPC_STS_0);
+	dev_dbg(&pdev->dev, "%s IPC_STS=0x%x\n", __func__,
+			 (unsigned int)sts);
+
+	mem_req = (sts >> APBDEV_PMC_IPC_PMC_IPC_STS_0_BB2AP_MEM_REQ_SHIFT) & 1;
+
+	dev_dbg(&pdev->dev, "%s mem_req =%d\n", __func__,
+			(unsigned int)mem_req);
+	return sprintf(buf, "%d\n", (unsigned int)mem_req);
+}
+
+static DEVICE_ATTR(state, S_IRUSR | S_IRGRP, show_tegra_bb_state, NULL);
+
+#ifndef CONFIG_TEGRA_BASEBAND_SIMU
 static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 {
 	struct tegra_bb *bb = (struct tegra_bb *)data;
@@ -568,6 +609,7 @@ static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 	bb->status = sts;
 	return IRQ_HANDLED;
 }
+#endif
 
 static int tegra_bb_probe(struct platform_device *pdev)
 {
@@ -577,6 +619,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		pdev->dev.platform_data;
 	void __iomem *tegra_mc = IO_ADDRESS(TEGRA_MC_BASE);
 	unsigned int size, bbc_mem_regions_0;
+	struct clk *c;
 
 
 	if (!pdev) {
@@ -604,7 +647,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	/* Private region */
 	bbc_mem_regions_0 = readl(tegra_mc + MC_BBC_MEM_REGIONS_0_OFFSET);
 
-	pr_debug("%s MC_BBC_MEM_REGIONS_0=0x%x\n", __func__, bbc_mem_regions_0);
+	pr_info("%s MC_BBC_MEM_REGIONS_0=0x%x\n", __func__, bbc_mem_regions_0);
 
 	size = (bbc_mem_regions_0 >> MC_BBC_MEM_REGIONS_0_PRIV_SIZE_SHIFT) &
 		MC_BBC_MEM_REGIONS_0_PRIV_SIZE_MASK;
@@ -664,11 +707,11 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		((bbc_mem_regions_0 >> MC_BBC_MEM_REGIONS_0_IPC_BASE_SHIFT)
 		 & MC_BBC_MEM_REGIONS_0_IPC_BASE_MASK) << 23;
 
-	pr_debug("%s  priv@0x%lx/0x%lx\n", __func__,
+	pr_info("%s  priv@0x%lx/0x%lx\n", __func__,
 		 (unsigned long)bb->priv_phy,
 		bb->priv_size);
 
-	pr_debug("%s  ipc@0x%lx/0x%lx\n", __func__,
+	pr_info("%s  ipc@0x%lx/0x%lx\n", __func__,
 		 (unsigned long)bb->ipc_phy,
 		bb->ipc_size);
 
@@ -684,6 +727,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	/* Map mb_virt uncached (first 4K of IPC) */
 	bb->mb_virt = ioremap_nocache(bb->ipc_phy,
 					      SZ_1K*4);
+	pr_debug("%s: uncached IPC Virtual=0x%p\n", __func__, bb->mb_virt);
 
 	/* Private is uncached */
 	bb->priv_virt =  ioremap_nocache(bb->priv_phy,
@@ -697,6 +741,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 
 	/* clear the first 4K of IPC memory */
 	memset(bb->mb_virt, 0, SZ_1K*4);
+
 	/* init value of cold boot */
 	*(unsigned int *)bb->mb_virt = TEGRA_BB_IPC_COLDBOOT |
 		((~TEGRA_BB_IPC_COLDBOOT) << 16);
@@ -744,8 +789,39 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	ret = device_create_file(&pdev->dev, &dev_attr_priv_size);
 	ret = device_create_file(&pdev->dev, &dev_attr_ipc_size);
 	ret = device_create_file(&pdev->dev, &dev_attr_reset);
+	ret = device_create_file(&pdev->dev, &dev_attr_state);
 
 	bb->sd = sysfs_get_dirent(pdev->dev.kobj.sd, NULL, "status");
+
+	bb->vdd_buck4 = regulator_get(NULL, "vdd_bb");
+	if (IS_ERR_OR_NULL(bb->vdd_buck4)) {
+		pr_err("vdd_bb regulator get failed\n");
+		bb->vdd_buck4 = NULL;
+	} else {
+		regulator_set_voltage(bb->vdd_buck4, 1100000, 1100000);
+		regulator_enable(bb->vdd_buck4);
+	}
+
+	bb->vdd_ldo8 = regulator_get(NULL, "avdd_bb_pll");
+	if (IS_ERR_OR_NULL(bb->vdd_ldo8)) {
+		pr_err("avdd_bb_pll regulator get failed\n");
+		bb->vdd_ldo8 = NULL;
+	} else {
+		regulator_set_voltage(bb->vdd_ldo8, 900000, 900000);
+		regulator_enable(bb->vdd_ldo8);
+	}
+
+	/* clk enable for mc_bbc / pll_p_bbc */
+	c = tegra_get_clock_by_name("mc_bbc");
+	if (IS_ERR_OR_NULL(c))
+		pr_err("mc_bbc get failed\n");
+	else
+		clk_enable(c);
+	c = tegra_get_clock_by_name("pll_p_bbc");
+	if (IS_ERR_OR_NULL(c))
+		pr_err("pll_p_bbc get failed\n");
+	else
+		clk_enable(c);
 
 	bb->nvshm_pdata.ipc_base_virt = bb->ipc_virt;
 	bb->nvshm_pdata.ipc_size = bb->ipc_size;

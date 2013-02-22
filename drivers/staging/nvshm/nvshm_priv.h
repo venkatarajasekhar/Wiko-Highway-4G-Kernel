@@ -53,9 +53,8 @@
 	do {	\
 		unsigned long _pa_ = page_to_phys(vmalloc_to_page((va))) \
 			+ ((unsigned long)va & ~PAGE_MASK);              \
-		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
 		outer_inv_range(_pa_, _pa_+(size_t)(size));		\
-		dsb(); \
+		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
 	} while (0)
 
 struct nvshm_handle {
@@ -81,6 +80,7 @@ struct nvshm_handle {
 	struct work_struct nvshm_work;
 	struct workqueue_struct *nvshm_wq;
 	struct hrtimer wake_timer;
+	int timeout;
 	char wq_name[16];
 	struct device *dev;
 	void *ipc_data;

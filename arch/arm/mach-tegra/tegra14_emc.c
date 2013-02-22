@@ -39,10 +39,8 @@
 #include "board.h"
 #include "tegra14_emc.h"
 
-#define EMULATE_CLOCK_SWITCH
-
 #ifdef CONFIG_TEGRA_EMC_SCALING_ENABLE
-static bool emc_enable = true;
+static bool emc_enable = false;
 #else
 static bool emc_enable;
 #endif
@@ -85,8 +83,10 @@ enum {
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_WEXT),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_WDV),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_WDV_MASK),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_QUSE_WIDTH),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_IBDLY),			\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_PUTERM_EXTRA),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_PUTERM),			\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_PUTERM_WIDTH),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_CDB_CNTL_2),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_QRST),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_RDV_MASK),		\
@@ -109,32 +109,52 @@ enum {
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_TCLKSTABLE),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_TCLKSTOP),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_TREFBW),			\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_QUSE_EXTRA),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_ODT_WRITE),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_ODT_READ),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_FBIO_CFG5),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_CFG_DIG_DLL),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_CFG_DIG_DLL_PERIOD),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS0),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS1),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS2),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS3),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS4),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS5),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS6),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS7),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE0),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE1),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE2),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE3),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE4),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE5),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE6),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE7),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR0),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR1),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR2),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS0),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS1),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS2),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS3),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS4),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS5),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS6),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS7),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ0),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ1),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ2),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ3),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2CMDPADCTRL),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2CMDPADCTRL4),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQSPADCTRL2),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQPADCTRL2),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2CLKPADCTRL),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2CLKPADCTRL2),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2COMPPADCTRL),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2VTTGENPADCTRL),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2VTTGENPADCTRL2),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQSPADCTRL3),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQSPADCTRL4),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DSR_VTTGEN_DRV),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_TXDSRVTTGEN),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_FBIO_SPARE),		\
@@ -145,44 +165,21 @@ enum {
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_MRS_WAIT_CNT2),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_AUTO_CAL_CONFIG2),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_AUTO_CAL_CONFIG3),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_AUTO_CAL_CONFIG),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_CTT),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_CTT_DURATION),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_DYN_SELF_REF_CONTROL),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_CA_TRAINING_TIMING_CNTL1),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_CA_TRAINING_TIMING_CNTL2),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_CDB_CNTL_1),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_FBIO_CFG6),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_QUSE),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_EINPUT),			\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_EINPUT_DURATION),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS0),		\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_QSAFE),			\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE0),	\
 	DEFINE_REG(TEGRA_EMC_BASE, EMC_RDV),			\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQSPADCTRL4),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2DQSPADCTRL3),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ0),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_AUTO_CAL_CONFIG),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR0),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_XM2CLKPADCTRL2),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS0),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR1),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_ADDR2),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS1),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS2),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQS3),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ1),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ2),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_DQ3),		\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS1),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS2),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLI_TRIM_TXDQS3),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE1),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE2),	\
-	DEFINE_REG(TEGRA_EMC_BASE, EMC_DLL_XFORM_QUSE3),	\
-								\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_FBIO_CFG6),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_PIPE_MACRO_CTL),		\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_QPOP),			\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_CFG),		\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_OUTSTANDING_REQ),	\
+	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_OUTSTANDING_REQ_RING3),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_TIMING_RCD),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_TIMING_RP),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_TIMING_RC),	\
@@ -198,7 +195,8 @@ enum {
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_DA_TURNS),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_DA_COVERS),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_MISC0),		\
-	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_RING1_THROTTLE),
+	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_RING1_THROTTLE),	\
+	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_RING3_THROTTLE),	\
 
 #define BURST_UP_DOWN_REG_LIST \
 	DEFINE_REG(TEGRA_MC_BASE, MC_PTSA_GRANT_DECREMENT),	\
@@ -373,23 +371,7 @@ static inline void auto_cal_disable(void)
 static inline bool dqs_preset(const struct tegra14_emc_table *next_timing,
 			      const struct tegra14_emc_table *last_timing)
 {
-	bool ret = false;
-
-#define DQS_SET(reg, bit)						      \
-	do {								      \
-		if ((next_timing->burst_regs[EMC_##reg##_INDEX] &	      \
-		     EMC_##reg##_##bit##_ENABLE) &&			      \
-		    (!(last_timing->burst_regs[EMC_##reg##_INDEX] &	      \
-		       EMC_##reg##_##bit##_ENABLE)))   {		      \
-			emc_writel(last_timing->burst_regs[EMC_##reg##_INDEX] \
-				   | EMC_##reg##_##bit##_ENABLE, EMC_##reg);  \
-			ret = true;					      \
-		}							      \
-	} while (0)
-
-	DQS_SET(XM2DQSPADCTRL2, VREF);
-
-	return ret;
+	return true;
 }
 
 static inline int get_dll_change(const struct tegra14_emc_table *next_timing,
@@ -794,7 +776,7 @@ static inline const struct clk_mux_sel *get_emc_input(u32 val)
 }
 
 static int find_matching_input(const struct tegra14_emc_table *table,
-			struct clk *pll_c, struct emc_sel *emc_clk_sel)
+	struct clk *pll_c, struct clk *pll_m, struct emc_sel *emc_clk_sel)
 {
 	u32 div_value = (table->src_sel_reg & EMC_CLK_DIV_MASK) >>
 		EMC_CLK_DIV_SHIFT;
@@ -805,7 +787,7 @@ static int find_matching_input(const struct tegra14_emc_table *table,
 	const struct clk_mux_sel *sel = get_emc_input(src_value);
 
 #ifdef CONFIG_TEGRA_PLLM_SCALED
-	struct clk *scalable_pll = emc->parent; /* pll_m is a boot parent */
+	struct clk *scalable_pll = pll_m;
 #else
 	struct clk *scalable_pll = pll_c;
 #endif
@@ -941,6 +923,7 @@ static int init_emc_table(const struct tegra14_emc_table *table, int table_size)
 	bool emc_max_dvfs_sel = get_emc_max_dvfs();
 	unsigned long boot_rate, max_rate;
 	struct clk *pll_c = tegra_get_clock_by_name("pll_c");
+	struct clk *pll_m = tegra_get_clock_by_name("pll_m");
 
 	emc_stats.clkchange_count = 0;
 	spin_lock_init(&emc_stats.spinlock);
@@ -952,19 +935,13 @@ static int init_emc_table(const struct tegra14_emc_table *table, int table_size)
 		return -ENODATA;
 	}
 
-	if (emc->parent != tegra_get_clock_by_name("pll_m")) {
-		pr_err("tegra: boot parent %s is not supported by EMC DFS\n",
-			emc->parent->name);
-		return -ENODATA;
-	}
-
 	if (!table || !table_size) {
 		pr_err("tegra: EMC DFS table is empty\n");
 		return -ENODATA;
 	}
 
 	boot_rate = clk_get_rate(emc) / 1000;
-	max_rate = clk_get_rate(emc->parent) / 1000;
+	max_rate = boot_rate;
 
 	tegra_emc_table_size = min(table_size, TEGRA_EMC_TABLE_MAX_SIZE);
 	switch (table[0].rev) {
@@ -989,7 +966,7 @@ static int init_emc_table(const struct tegra14_emc_table *table, int table_size)
 
 		BUG_ON(table[i].rev != table[0].rev);
 
-		if (find_matching_input(&table[i], pll_c,
+		if (find_matching_input(&table[i], pll_c, pll_m,
 					&tegra_emc_clk_sel[i]))
 			continue;
 
@@ -997,13 +974,13 @@ static int init_emc_table(const struct tegra14_emc_table *table, int table_size)
 			emc_stats.last_sel = i;
 
 		if (emc_max_dvfs_sel) {
-			/* EMC max rate = max table entry above boot pll_m */
+			/* EMC max rate = max table entry above boot rate */
 			if (table_rate >= max_rate) {
 				max_rate = table_rate;
 				max_entry = true;
 			}
 		} else if (table_rate == max_rate) {
-			/* EMC max rate = boot pll_m rate */
+			/* EMC max rate = boot rate */
 			max_entry = true;
 			break;
 		}
@@ -1021,11 +998,11 @@ static int init_emc_table(const struct tegra14_emc_table *table, int table_size)
 	/*
 	 * Purge rates that cannot be reached because table does not specify
 	 * proper backup source. If maximum rate was purged, fall back on boot
-	 * pll_m rate as maximum limit. In any case propagate new maximum limit
+	 * rate as maximum limit. In any case propagate new maximum limit
 	 * down stream to shared users, and check it against nominal voltage.
 	 */
 	if (purge_emc_table(max_rate))
-		max_rate = clk_get_rate(emc->parent) / 1000;
+		max_rate = boot_rate;
 	tegra_init_max_rate(emc, max_rate * 1000);
 
 	if (emc->dvfs) {
@@ -1129,7 +1106,7 @@ static u32 soc_to_dram_bit_swap(u32 soc_val, u32 dram_mask, u32 dram_shift)
 static int emc_read_mrr(int dev, int addr)
 {
 	int ret;
-	u32 val;
+	u32 val, emc_cfg;
 
 	if (dram_type != DRAM_TYPE_LPDDR2)
 		return -ENODEV;
@@ -1138,11 +1115,21 @@ static int emc_read_mrr(int dev, int addr)
 	if (ret)
 		return ret;
 
+	emc_cfg = emc_readl(EMC_CFG);
+	if (emc_cfg & EMC_CFG_DRAM_ACPD) {
+		emc_writel(emc_cfg & ~EMC_CFG_DRAM_ACPD, EMC_CFG);
+		emc_timing_update();
+	}
+
 	val = dev ? DRAM_DEV_SEL_1 : DRAM_DEV_SEL_0;
 	val |= (addr << EMC_MRR_MA_SHIFT) & EMC_MRR_MA_MASK;
 	emc_writel(val, EMC_MRR);
 
 	ret = wait_for_update(EMC_STATUS, EMC_STATUS_MRR_DIVLD, true);
+	if (emc_cfg & EMC_CFG_DRAM_ACPD) {
+		emc_writel(emc_cfg, EMC_CFG);
+		emc_timing_update();
+	}
 	if (ret)
 		return ret;
 

@@ -39,11 +39,11 @@ struct nvshm_iobuf *nvshm_iobuf_alloc(struct nvshm_channel *chan, int size)
 	struct nvshm_handle *handle = nvshm_get_handle();
 	struct nvshm_iobuf *desc = NULL;
 
-	spin_lock(&alloc.lock);
+	spin_lock_irq(&alloc.lock);
 	if (alloc.free_pool_head) {
 		if (size > (alloc.free_pool_head->totalLength -
 			    NVSHM_DEFAULT_OFFSET)) {
-			spin_unlock(&alloc.lock);
+			spin_unlock_irq(&alloc.lock);
 			pr_err("%s: requested size (%d > %d) too big\n",
 			       __func__,
 			       size,
@@ -73,13 +73,13 @@ struct nvshm_iobuf *nvshm_iobuf_alloc(struct nvshm_channel *chan, int size)
 		desc->ref = 1;
 
 	} else {
-		spin_unlock(&alloc.lock);
+		spin_unlock_irq(&alloc.lock);
 		pr_err("%s: no more alloc space\n", __func__);
 		/* No error since it's only Xoff situation */
 		return desc;
 	}
 
-	spin_unlock(&alloc.lock);
+	spin_unlock_irq(&alloc.lock);
 
 	return desc;
 }
@@ -88,6 +88,7 @@ struct nvshm_iobuf *nvshm_iobuf_alloc(struct nvshm_channel *chan, int size)
 void nvshm_iobuf_free(struct nvshm_iobuf *desc)
 {
 	struct nvshm_handle *priv = nvshm_get_handle();
+	int callback = 0, chan;
 
 	if (desc->ref == 0) {
 		pr_err("%s: freeing an already freed iobuf (0x%x)\n",
@@ -95,12 +96,20 @@ void nvshm_iobuf_free(struct nvshm_iobuf *desc)
 		       (unsigned int)desc);
 		return;
 	}
-	spin_lock(&alloc.lock);
-	pr_debug("%s: free 0x%x ref %d pool %x\n", __func__,
-		 (unsigned long)desc, desc->ref, desc->pool_id);
+	spin_lock_irq(&alloc.lock);
+	pr_debug("%s: free 0x%p ref %d pool %x\n", __func__,
+		 desc, desc->ref, desc->pool_id);
 	desc->ref--;
+	chan = desc->chan;
 	if (desc->ref == 0) {
 		if (desc->pool_id >= NVSHM_AP_POOL_ID) {
+			/* update rate counter */
+			if ((chan >= 0) &&
+			    (chan < NVSHM_MAX_CHANNELS)) {
+				if (priv->chan[chan].rate_counter++ ==
+				    NVSHM_RATE_LIMIT_TRESHOLD)
+					callback = 1;
+			}
 			desc->sg_next = NULL;
 			desc->next = NULL;
 			desc->length = 0;
@@ -124,13 +133,15 @@ void nvshm_iobuf_free(struct nvshm_iobuf *desc)
 			desc->length = 0;
 			desc->dataOffset = 0;
 			desc->qnext = NULL;
-			spin_unlock(&alloc.lock);
+			spin_unlock_irq(&alloc.lock);
 			nvshm_queue_put(priv, desc);
 			nvshm_generate_ipc(priv);
 			return;
 		}
 	}
-	spin_unlock(&alloc.lock);
+	spin_unlock_irq(&alloc.lock);
+	if (callback)
+		nvshm_start_tx(&priv->chan[chan]);
 }
 
 void nvshm_iobuf_free_cluster(struct nvshm_iobuf *list)
@@ -161,9 +172,9 @@ int nvshm_iobuf_ref(struct nvshm_iobuf *iob)
 {
 	int ref;
 
-	spin_lock(&alloc.lock);
+	spin_lock_irq(&alloc.lock);
 	ref = iob->ref++;
-	spin_unlock(&alloc.lock);
+	spin_unlock_irq(&alloc.lock);
 	return ref;
 }
 
@@ -171,9 +182,9 @@ int nvshm_iobuf_unref(struct nvshm_iobuf *iob)
 {
 	int ref;
 
-	spin_lock(&alloc.lock);
+	spin_lock_irq(&alloc.lock);
 	ref = iob->ref--;
-	spin_unlock(&alloc.lock);
+	spin_unlock_irq(&alloc.lock);
 	return ref;
 }
 
@@ -280,6 +291,7 @@ int nvshm_iobuf_check(struct nvshm_channel *chan, struct nvshm_iobuf *iob)
 	return 0;
 }
 
+#ifdef IOBUF_CHECK
 static int iobuf_sanity_check(struct nvshm_handle *handle)
 {
 	struct nvshm_iobuf *list = NULL, *iob = NULL;
@@ -394,6 +406,7 @@ static int iobuf_sanity_check(struct nvshm_handle *handle)
 	}
 	return 0;
 }
+#endif
 
 int nvshm_iobuf_init(struct nvshm_handle *handle)
 {
@@ -457,7 +470,7 @@ int nvshm_iobuf_init(struct nvshm_handle *handle)
 			 (long)alloc.free_pool_tail
 			 - (long)alloc.free_pool_head);
 	spin_unlock(&alloc.lock);
-#if 0
+#ifdef IOBUF_CHECK
 	if (iobuf_sanity_check(handle))
 		pr_err("%s iobuf sanity check failure!\n", __func__);
 #endif

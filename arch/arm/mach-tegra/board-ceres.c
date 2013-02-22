@@ -41,6 +41,8 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/isomgr.h>
+#include <mach/tegra_bb.h>
+#include <mach/tegra_bbc_proxy.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -56,11 +58,26 @@
 #include "devices.h"
 #include "common.h"
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define CERES_BT_EN		TEGRA_GPIO_PQ6
+#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PU6
+#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PEE1
+#define CERES_NFC_IRQ		TEGRA_GPIO_PW2
+#define CERES_NFC_EN		TEGRA_GPIO_PU4
+#define CERES_NFC_WAKE		TEGRA_GPIO_PX7
+#else
+#define CERES_BT_EN		TEGRA_GPIO_PM3
+#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM2
+#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PM1
+#define CERES_NFC_IRQ		TEGRA_GPIO_PM4
+#define CERES_NFC_EN		TEGRA_GPIO_PI0
+#define CERES_NFC_WAKE		TEGRA_GPIO_PM0
+#endif
+
 #ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
 	.name           = "bt_rfkill",
-	.shutdown_gpio  = TEGRA_GPIO_PQ7,
-	.reset_gpio	= TEGRA_GPIO_PQ6,
+	.reset_gpio	= CERES_BT_EN,
 	.type           = RFKILL_TYPE_BLUETOOTH,
 };
 
@@ -80,14 +97,14 @@ static noinline void __init ceres_setup_bt_rfkill(void)
 static struct resource ceres_bluesleep_resources[] = {
 	[0] = {
 		.name = "gpio_host_wake",
-			.start  = TEGRA_GPIO_PU6,
-			.end    = TEGRA_GPIO_PU6,
+			.start  = CERES_BT_HOST_WAKE,
+			.end    = CERES_BT_HOST_WAKE,
 			.flags  = IORESOURCE_IO,
 	},
 	[1] = {
 		.name = "gpio_ext_wake",
-			.start  = TEGRA_GPIO_PEE1,
-			.end    = TEGRA_GPIO_PEE1,
+			.start  = CERES_BT_EXT_WAKE,
+			.end    = CERES_BT_EXT_WAKE,
 			.flags  = IORESOURCE_IO,
 	},
 	[2] = {
@@ -107,7 +124,7 @@ static noinline void __init ceres_setup_bluesleep(void)
 {
 	ceres_bluesleep_resources[2].start =
 		ceres_bluesleep_resources[2].end =
-			gpio_to_irq(TEGRA_GPIO_PU6);
+			gpio_to_irq(CERES_BT_HOST_WAKE);
 	platform_device_register(&ceres_bluesleep_device);
 	return;
 }
@@ -115,30 +132,25 @@ static noinline void __init ceres_setup_bluesleep(void)
 static struct resource ceres_bluedroid_pm_resources[] = {
 	[0] = {
 		.name   = "shutdown_gpio",
-		.start  = TEGRA_GPIO_PQ7,
-		.end    = TEGRA_GPIO_PQ7,
+		.start  = CERES_BT_EN,
+		.end    = CERES_BT_EN,
 		.flags  = IORESOURCE_IO,
 	},
+
 	[1] = {
 		.name = "host_wake",
 		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	},
 	[2] = {
 		.name = "gpio_ext_wake",
-		.start  = TEGRA_GPIO_PEE1,
-		.end    = TEGRA_GPIO_PEE1,
+		.start  = CERES_BT_EXT_WAKE,
+		.end    = CERES_BT_EXT_WAKE,
 		.flags  = IORESOURCE_IO,
 	},
 	[3] = {
 		.name = "gpio_host_wake",
-		.start  = TEGRA_GPIO_PU6,
-		.end    = TEGRA_GPIO_PU6,
-		.flags  = IORESOURCE_IO,
-	},
-	[4] = {
-		.name = "reset_gpio",
-		.start  = TEGRA_GPIO_PQ6,
-		.end    = TEGRA_GPIO_PQ6,
+		.start  = CERES_BT_HOST_WAKE,
+		.end    = CERES_BT_HOST_WAKE,
 		.flags  = IORESOURCE_IO,
 	},
 };
@@ -154,15 +166,15 @@ static noinline void __init ceres_setup_bluedroid_pm(void)
 {
 	ceres_bluedroid_pm_resources[1].start =
 		ceres_bluedroid_pm_resources[1].end =
-					gpio_to_irq(TEGRA_GPIO_PU6);
+					gpio_to_irq(CERES_BT_HOST_WAKE);
 	platform_device_register(&ceres_bluedroid_pm_device);
 }
 #endif
 
 static struct bcm2079x_platform_data nfc_pdata = {
-	.irq_gpio = TEGRA_GPIO_PW2,
-	.en_gpio = TEGRA_GPIO_PU4,
-	.wake_gpio = TEGRA_GPIO_PX7,
+	.irq_gpio = CERES_NFC_IRQ,
+	.en_gpio = CERES_NFC_EN,
+	.wake_gpio = CERES_NFC_WAKE,
 	};
 
 static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
@@ -171,7 +183,6 @@ static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
 		.platform_data = &nfc_pdata,
 	},
 };
-
 
 static struct resource tegra_rtc_resources[] = {
 	[0] = {
@@ -223,11 +234,20 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
 	.gpio_ldo1_en		= TEGRA_GPIO_LDO1_EN,
 	.i2s_param[HIFI_CODEC]	= {
-		.audio_port_id	= 1,
+		.audio_port_id	= 0,
 		.is_i2s_master	= 1,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
 		.channels       = 2,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= 1,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+		.sample_size	= 16,
+		.rate		= 16000,
+		.channels	= 1,
+		.bit_clk        = 768000,
 	},
 };
 
@@ -243,6 +263,17 @@ static struct platform_device tegra_camera = {
 	.id = -1,
 };
 
+#if defined(CONFIG_TEGRA_BASEBAND)
+static struct tegra_bb_platform_data ceres_tegra_bb_data;
+
+static struct platform_device ceres_tegra_bb_device = {
+	.name = "tegra_bb",
+	.id = 0,
+	.dev = {
+		.platform_data = &ceres_tegra_bb_data,
+	},
+};
+#endif
 
 static struct platform_device *ceres_spi_devices[] __initdata = {
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
@@ -264,7 +295,7 @@ struct spi_clk_parent spi_parent_clk_ceres[] = {
 };
 
 static struct tegra_spi_platform_data ceres_spi_pdata = {
-	.is_dma_based           = false,
+	.is_dma_based           = true,
 	.max_dma_buffer         = 16 * 1024,
 	.is_clkon_always        = false,
 	.max_rate               = 25000000,
@@ -301,6 +332,33 @@ static void __init ceres_spi_init(void)
 	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
 }
 
+#define BBC_BOOT_EDP_MAX 0
+static unsigned int bbc_boot_edp_states[] = {500};
+static struct edp_client bbc_boot_edp_client = {
+	.name = "bbc_boot",
+	.states = bbc_boot_edp_states,
+	.num_states = ARRAY_SIZE(bbc_boot_edp_states),
+	.e0_index = BBC_BOOT_EDP_MAX,
+	.priority = EDP_MAX_PRIO,
+};
+
+static struct tegra_bbc_proxy_platform_data bbc_proxy_pdata = {
+	.modem_boot_edp_client = &bbc_boot_edp_client,
+	.edp_manager_name = NULL, /* FIXME when edp manager present */
+	.i_breach_ppm = 500000,
+	.i_thresh_3g_adjperiod = 10000,
+	.i_thresh_lte_adjperiod = 10000,
+};
+
+static struct platform_device tegra_bbc_proxy_device = {
+	.name = "tegra_bbc_proxy",
+	.id = -1,
+	.dev = {
+		.platform_data = &bbc_proxy_pdata,
+	},
+};
+
+
 static struct platform_device *ceres_audio_devices[] __initdata = {
 	&tegra_ahub_device,
 	&tegra_pcm_device,
@@ -333,12 +391,20 @@ static struct platform_device *ceres_devices[] __initdata = {
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,
 #endif
+	&tegra_bbc_proxy_device,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	&tegra_mipi_bif_device,
+#endif
+};
 
+static struct i2c_board_info __initdata max97236_board_info = {
+	I2C_BOARD_INFO("max97236", 0x40),
 };
 
 static void ceres_audio_init(void)
 {
-	i2c_register_board_info(0, &max98090_board_info, 1);
+	i2c_register_board_info(5, &max97236_board_info, 1);
+	i2c_register_board_info(5, &max98090_board_info, 1);
 
 	platform_add_devices(ceres_audio_devices,
 			ARRAY_SIZE(ceres_audio_devices));
@@ -348,6 +414,10 @@ static void ceres_audio_init(void)
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
+	.builtin_host_disabled = true,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	.support_pmu_vbus = true,
+#endif
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_DEVICE,
 	.u_data.dev = {
@@ -373,6 +443,10 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
 	.unaligned_dma_buf_supported = false,
+	.builtin_host_disabled = true,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	.support_pmu_vbus = true,
+#endif
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -397,6 +471,9 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_device = &tegra_ehci1_device,
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	.extcon_dev_name = "max77660-charger-extcon",
+#endif
 };
 
 static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
@@ -420,25 +497,34 @@ static void ceres_usb_init(void)
 
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
+}
 
-	tegra_ehci2_device.dev.platform_data =
-		&tegra_ehci2_hsic_smsc_hub_pdata;
-	platform_device_register(&tegra_ehci2_device);
+static void ceres_modem_init(void)
+{
+	int modem_id = tegra_get_modem_id();
+
+	if (TEGRA_BB_HSIC_HUB == modem_id) {
+		tegra_ehci2_device.dev.platform_data =
+			&tegra_ehci2_hsic_smsc_hub_pdata;
+		platform_device_register(&tegra_ehci2_device);
+	}
 }
 
 #else
 static void ceres_usb_init(void) { }
+static void ceres_modem_init(void) { }
 #endif
 
 static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",	NULL,		0,		false},
 	{ "vi_sensor",	"pll_p",	150000000,	false},
-	{ "cilab",	"pll_p",	150000000,	false},
-	{ "cilcd",	"pll_p",	150000000,	false},
-	{ "cile",	"pll_p",	150000000,	false},
+	{ "vi_sensor2",	"pll_p",	150000000,	false},
+	{ "cilab",	"pll_p",	102000000,	false},
+	{ "cile",	"pll_p",	102000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
+	{ "i2c6",	"pll_p",	3200000,	false},
 	{ "hda",	"pll_p",	108000000,	false},
 	{ "hda2codec_2x", "pll_p",	48000000,	false},
 	{ "i2s0",	"pll_a_out0",	0,		false},
@@ -549,8 +635,16 @@ static struct tegra_i2c_platform_data ceres_i2c5_platform_data = {
 	.sda_gpio	= -1,
 };
 
+static __maybe_unused struct tegra_i2c_platform_data ceres_i2c6_platform_data = {
+	.bus_clk_rate	= 400000,
+	.scl_gpio	= TEGRA_GPIO_I2C5_SCL,
+	.sda_gpio	= TEGRA_GPIO_I2C5_SDA,
+};
+
 static void ceres_i2c_init(void)
 {
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+
 	tegra11_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
 	tegra11_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
 	tegra11_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
@@ -562,10 +656,30 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra11_i2c_device3);
 	platform_device_register(&tegra11_i2c_device2);
 	platform_device_register(&tegra11_i2c_device1);
-	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(TEGRA_GPIO_PW2);
+
+#else
+
+	tegra14_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
+	tegra14_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
+	tegra14_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
+	tegra14_i2c_device4.dev.platform_data = &ceres_i2c4_platform_data;
+	tegra14_i2c_device5.dev.platform_data = &ceres_i2c5_platform_data;
+	tegra14_i2c_device6.dev.platform_data = &ceres_i2c6_platform_data;
+
+	platform_device_register(&tegra14_i2c_device6);
+	platform_device_register(&tegra14_i2c_device5);
+	platform_device_register(&tegra14_i2c_device4);
+	platform_device_register(&tegra14_i2c_device3);
+	platform_device_register(&tegra14_i2c_device2);
+	platform_device_register(&tegra14_i2c_device1);
+
+#endif
+
+	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(CERES_NFC_IRQ);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "extern2",	"pll_p",	41000000,	false},
@@ -612,15 +726,72 @@ static int __init ceres_touch_init(void)
 	return 0;
 }
 
+#else
+static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
+	/* name		parent		rate		enabled */
+	{ "vi_sensor",	"pll_p",	41000000,	true},
+	{ "csus",	NULL,		00000000,	true},
+	{ NULL,		NULL,		0,		0},
+};
+
+struct rm_spi_ts_platform_data rm31080ts_ceres_data = {
+	.gpio_reset = 0,
+	.config = 0,
+	.platform_id = RM_PLATFORM_P005,
+	.name_of_clock = "csus",
+};
+
+static struct tegra_spi_device_controller_data dev_cdata = {
+	.rx_clk_tap_delay = 0,
+	.tx_clk_tap_delay = 0,
+};
+
+struct spi_board_info rm31080a_ceres_spi_board[1] = {
+	{
+		.modalias = "rm_ts_spidev",
+		.bus_num = 2,
+		.chip_select = 0,
+		.max_speed_hz = 9 * 1000 * 1000,
+		.mode = SPI_MODE_0,
+		.controller_data = &dev_cdata,
+		.platform_data = &rm31080ts_ceres_data,
+	},
+};
+
+static int __init ceres_touch_init(void)
+{
+	tegra_clk_init_from_table(touch_clk_init_table);
+	clk_enable(tegra_get_clock_by_name("csus"));
+	mdelay(20);
+	rm31080a_ceres_spi_board[0].irq =
+		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+				TOUCH_GPIO_RST_RAYDIUM_SPI,
+				&rm31080ts_ceres_data,
+				&rm31080a_ceres_spi_board[0],
+				ARRAY_SIZE(rm31080a_ceres_spi_board));
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_TEGRA_BASEBAND)
+static void ceres_tegra_bb_init(void)
+{
+	pr_info("%s: registering tegra bb\n", __func__);
+	ceres_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
+	platform_device_register(&ceres_tegra_bb_device);
+}
+#endif
+
 static void __init tegra_ceres_init(void)
 {
 	tegra_clk_init_from_table(ceres_clk_init_table);
+	tegra_smmu_init();
 	tegra_enable_pinmux();
 	ceres_pinmux_init();
 	ceres_i2c_init();
 	ceres_spi_init();
 	ceres_uart_init();
-	tegra_smmu_init();
 	ceres_usb_init();
 	tegra_soc_device_init("ceres");
 	ceres_keys_init();
@@ -630,11 +801,23 @@ static void __init tegra_ceres_init(void)
 	ceres_sdhci_init();
 	isomgr_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
+#else
+	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_CPU, NULL, -1, -1);
+#endif
 	ceres_panel_init();
+	ceres_edp_init();
 	ceres_sensors_init();
+	ceres_modem_init();
+#if defined(CONFIG_TEGRA_BASEBAND)
+	ceres_tegra_bb_init();
+#endif
 	tegra_register_fuse();
+/* Disabled for T148 bringup 
 	ceres_soctherm_init();
+*/
+	ceres_emc_init();
 #ifdef CONFIG_BT_BLUESLEEP
 	ceres_setup_bluesleep();
 	ceres_setup_bt_rfkill();
@@ -642,6 +825,7 @@ static void __init tegra_ceres_init(void)
 	ceres_setup_bluedroid_pm();
 #endif
 	ceres_audio_init();
+	ceres_pmon_init();
 }
 
 static void __init tegra_ceres_dt_init(void)

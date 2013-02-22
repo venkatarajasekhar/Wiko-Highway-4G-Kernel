@@ -419,9 +419,12 @@ static __initdata struct tegra_clk_init_table tegra14x_clk_init_table[] = {
 	{ "pll_p_out2",	 "pll_p",	102000000,	false },
 	{ "sclk",	 "pll_p_out2",	102000000,	true },
 	{ "pll_p_out4",	 "pll_p",	204000000,	true },
+	{ "hclk",	"sclk",		102000000,	true },
+	{ "pclk",	"hclk",		51000000,	true },
+	{ "mselect",	"pll_p",	102000000,	true },
 	{ "host1x",	"pll_p",	102000000,	false },
-	{ "cl_dvfs_ref", "pll_p",       54000000,       false },
-	{ "cl_dvfs_soc", "pll_p",       54000000,       false },
+	{ "cl_dvfs_ref", "pll_p",       51000000,       true },
+	{ "cl_dvfs_soc", "pll_p",       51000000,       true },
 #else
 	{ "pll_p",	NULL,		0,		true },
 	{ "pll_p_out1",	"pll_p",	0,		false },
@@ -450,19 +453,22 @@ static __initdata struct tegra_clk_init_table tegra14x_clk_init_table[] = {
 	{ "sbc1.sclk",	NULL,		40000000,	false},
 	{ "sbc2.sclk",	NULL,		40000000,	false},
 	{ "sbc3.sclk",	NULL,		40000000,	false},
-	{ "sbc4.sclk",	NULL,		40000000,	false},
-	{ "sbc5.sclk",	NULL,		40000000,	false},
-	{ "sbc6.sclk",	NULL,		40000000,	false},
+	{ "msenc",	"pll_p",	108000000,	false },
+	{ "tsec",	"pll_p",	108000000,	false },
+	{ "mc_capa",	"emc",		0,		true },
+	{ "mc_cbpa",	"emc",		0,		true },
+	{ "soc_therm",	"pll_p",	136000000,	false },
+	/* Initialize c2bus, c3bus, or cbus at the end of the list
+	 * after all the clocks are moved under the proper parents.
+	 */
 #ifdef CONFIG_TEGRA_DUAL_CBUS
-	{ "c2bus",	"pll_c2",	300000000,	false },
-	{ "c3bus",	"pll_c3",	300000000,	false },
+	{ "c2bus",	"pll_c2",	200000000,	false },
+	{ "c3bus",	"pll_c3",	200000000,	false },
+	{ "pll_c",	NULL,		624000000,	false },
 #else
-	{ "cbus",	"pll_c",	416000000,	false },
-	{ "pll_c_out1",	"pll_c",	208000000,	false },
+	{ "cbus",	"pll_c",	200000000,	false },
 #endif
-	/* FIXME: pllp_bbc and mc_bbc has to be turned on by drivers */
-	{ "pll_p_bbc",	"pll_p",	0,		true },
-	{ "mc_bbc",	"emc",		0,		true },
+	{ "pll_c_out1",	"pll_c",	100000000,	false },
 	{ NULL,		NULL,		0,		0},
 };
 #endif
@@ -568,11 +574,19 @@ void tegra_init_cache(bool init)
 #else
 #ifdef CONFIG_TEGRA_SILICON_PLATFORM
 	if (is_lp_cluster()) {
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+		tag_latency = 0x110;
+		data_latency = 0x331;
+#else
 		tag_latency = 0x221;
 		data_latency = 0x221;
+#endif
 	} else {
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+		tag_latency = 0x111;
+		data_latency = 0x441;
+#else
 		u32 speedo;
-
 		/* relax l2-cache latency for speedos 4,5,6 (T33's chips) */
 		speedo = tegra_cpu_speedo_id();
 		if (speedo == 4 || speedo == 5 || speedo == 6 ||
@@ -583,6 +597,7 @@ void tegra_init_cache(bool init)
 			tag_latency = 0x441;
 			data_latency = 0x551;
 		}
+#endif
 	}
 #else
 	tag_latency = 0x770;
@@ -594,7 +609,12 @@ void tegra_init_cache(bool init)
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
-	writel(7, p + L2X0_PREFETCH_CTRL);
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	/* Enable double line fill */
+	writel(0x40000007, p + L2X0_PREFETCH_CTRL);
+#else
+	writel(0x7, p + L2X0_PREFETCH_CTRL);
+#endif
 	writel(0x3, p + L2X0_POWER_CTRL);
 #endif
 #endif

@@ -68,11 +68,9 @@
 #define GPIO_HP_DET     BIT(4)
 
 #define DAI_LINK_HIFI		0
-#define DAI_LINK_SPDIF		1
-#define DAI_LINK_BTSCO		2
-#define DAI_LINK_VOICE_CALL	3
-#define DAI_LINK_BT_VOICE_CALL	4
-#define NUM_DAI_LINKS       5
+#define DAI_LINK_BTSCO		1
+#define DAI_LINK_VOICE_CALL	2
+#define DAI_LINK_BT_VOICE_CALL	3
 
 const char *tegra_max98090_i2s_dai_name[TEGRA30_NR_I2S_IFC] = {
 	"tegra30-i2s.0",
@@ -148,13 +146,25 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 		for (i = 0; i < machine->pcard->num_links; i++)
 			machine->pcard->dai_link[i].ignore_suspend = 1;
 
-		tegra30_make_voice_call_connections(
-			&machine->codec_info[codec_index],
-			&machine->codec_info[BASEBAND], 1);
+		if (machine_is_ceres()) {
+			t14x_make_voice_call_connections(
+				&machine->codec_info[codec_index],
+				&machine->codec_info[BASEBAND], 0);
+		} else {
+			tegra30_make_voice_call_connections(
+				&machine->codec_info[codec_index],
+				&machine->codec_info[BASEBAND], 1);
+		}
 	} else {
-		tegra30_break_voice_call_connections(
+		if (machine_is_ceres()) {
+			t14x_break_voice_call_connections(
 			&machine->codec_info[codec_index],
-			&machine->codec_info[BASEBAND], 1);
+			&machine->codec_info[BASEBAND], 0);
+		} else {
+			tegra30_break_voice_call_connections(
+				&machine->codec_info[codec_index],
+				&machine->codec_info[BASEBAND], 1);
+		}
 
 		for (i = 0; i < machine->pcard->num_links; i++)
 			machine->pcard->dai_link[i].ignore_suspend = 0;
@@ -186,19 +196,33 @@ static int tegra_max98090_set_dam_cif(int dam_ifc, int srate,
 				srate);
 	tegra30_dam_set_samplerate(dam_ifc, TEGRA30_DAM_CHIN1,
 				srate);
+#ifndef CONFIG_ARCH_TEGRA_3x_SOC
+	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN1,
+		channels, bit_size, channels,
+				32);
+	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHOUT,
+		channels, bit_size, channels,
+				32);
+#else
 	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN1,
 		channels, bit_size, channels,
 				bit_size);
 	tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHOUT,
 		channels, bit_size, channels,
 				bit_size);
+#endif
 
 	if (src_on) {
 		tegra30_dam_set_gain(dam_ifc, TEGRA30_DAM_CHIN0_SRC, 0x1000);
 		tegra30_dam_set_samplerate(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
 			src_srate);
+#ifndef CONFIG_ARCH_TEGRA_3x_SOC
+		tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
+			src_channels, src_bit_size, 1, 32);
+#else
 		tegra30_dam_set_acif(dam_ifc, TEGRA30_DAM_CHIN0_SRC,
 			src_channels, src_bit_size, 1, 16);
+#endif
 	}
 
 	return 0;
@@ -314,51 +338,6 @@ static int tegra_max98090_hw_params(struct snd_pcm_substream *substream,
 		tegra_max98090_set_dam_cif(i2s->dam_ifc, srate,
 			params_channels(params), sample_size, 0, 0, 0, 0);
 #endif
-
-	return 0;
-}
-
-static int tegra_spdif_hw_params(struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *card = rtd->card;
-	struct tegra_max98090 *machine = snd_soc_card_get_drvdata(card);
-	int srate, mclk, min_mclk;
-	int err;
-
-	srate = params_rate(params);
-	switch (srate) {
-	case 11025:
-	case 22050:
-	case 44100:
-	case 88200:
-		mclk = 11289600;
-		break;
-	case 8000:
-	case 16000:
-	case 32000:
-	case 48000:
-	case 64000:
-	case 96000:
-		mclk = 12288000;
-		break;
-	default:
-		return -EINVAL;
-	}
-	min_mclk = 128 * srate;
-
-	err = tegra_asoc_utils_set_rate(&machine->util_data, srate, mclk);
-	if (err < 0) {
-		if (!(machine->util_data.set_mclk % min_mclk))
-			mclk = machine->util_data.set_mclk;
-		else {
-			dev_err(card->dev, "Can't configure clocks\n");
-			return err;
-		}
-	}
-
-	tegra_asoc_utils_lock_clk_rate(&machine->util_data, 1);
 
 	return 0;
 }
@@ -797,11 +776,6 @@ static struct snd_soc_ops tegra_max98090_ops = {
 #endif
 };
 
-static struct snd_soc_ops tegra_spdif_ops = {
-	.hw_params = tegra_spdif_hw_params,
-	.hw_free = tegra_hw_free,
-};
-
 static struct snd_soc_ops tegra_voice_call_ops = {
 	.hw_params = tegra_voice_call_hw_params,
 	.shutdown = tegra_voice_call_shutdown,
@@ -1107,24 +1081,15 @@ static int tegra_max98090_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static struct snd_soc_dai_link tegra_max98090_dai[NUM_DAI_LINKS] = {
+static struct snd_soc_dai_link tegra_max98090_dai[] = {
 	[DAI_LINK_HIFI] = {
 			.name = "MAX98090",
 			.stream_name = "MAX98090 HIFI",
-			.codec_name = "max98090.0-0010",
+			.codec_name = "max98090.5-0010",
 			.platform_name = "tegra-pcm-audio",
 			.codec_dai_name = "HiFi",
 			.init = tegra_max98090_init,
 			.ops = &tegra_max98090_ops,
-		},
-	[DAI_LINK_SPDIF] = {
-			.name = "SPDIF",
-			.stream_name = "SPDIF PCM",
-			.codec_name = "spdif-dit.0",
-			.platform_name = "tegra-pcm-audio",
-			.cpu_dai_name = "tegra30-spdif",
-			.codec_dai_name = "dit-hifi",
-			.ops = &tegra_spdif_ops,
 		},
 	[DAI_LINK_BTSCO] = {
 			.name = "BT SCO",
@@ -1138,7 +1103,7 @@ static struct snd_soc_dai_link tegra_max98090_dai[NUM_DAI_LINKS] = {
 	[DAI_LINK_VOICE_CALL] = {
 			.name = "VOICE CALL",
 			.stream_name = "VOICE CALL PCM",
-			.codec_name = "max98090.0-0010",
+			.codec_name = "max98090.5-0010",
 			.platform_name = "tegra-pcm-audio",
 			.cpu_dai_name = "dit-hifi",
 			.codec_dai_name = "HiFi",
@@ -1233,6 +1198,20 @@ static int tegra_max98090_set_bias_level_post(struct snd_soc_card *card,
 	return 0 ;
 }
 
+static struct snd_soc_aux_dev max97236_aux_devs[] = {
+	{
+		.name = "max97236",
+		.codec_name = "max97236.5-0040",
+	},
+};
+
+static struct snd_soc_codec_conf max97236_codec_conf[] = {
+	{
+		.dev_name = "max97236.5-0040",
+		.name_prefix = "Amp",
+	},
+};
+
 static struct snd_soc_card snd_soc_tegra_max98090 = {
 	.name = "tegra-max98090",
 	.owner = THIS_MODULE,
@@ -1242,6 +1221,10 @@ static struct snd_soc_card snd_soc_tegra_max98090 = {
 	.resume_pre = tegra_max98090_resume_pre,
 	.set_bias_level = tegra_max98090_set_bias_level,
 	.set_bias_level_post = tegra_max98090_set_bias_level_post,
+	.aux_dev = max97236_aux_devs,
+	.num_aux_devs = ARRAY_SIZE(max97236_aux_devs),
+	.codec_conf = max97236_codec_conf,
+	.num_configs = ARRAY_SIZE(max97236_codec_conf),
 
 	.controls = tegra_max98090_controls,
 	.num_controls = ARRAY_SIZE(tegra_max98090_controls),

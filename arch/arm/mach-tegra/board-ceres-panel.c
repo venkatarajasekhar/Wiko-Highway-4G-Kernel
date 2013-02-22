@@ -26,6 +26,7 @@
 #include <linux/tegra_pwm_bl.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pwm_backlight.h>
+#include <linux/mfd/max77660/max77660-core.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/dc.h>
@@ -36,6 +37,7 @@
 #include "board-ceres.h"
 #include "board-panel.h"
 #include "common.h"
+#include "tegra-board-id.h"
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include "tegra11_host1x_devices.h"
@@ -46,9 +48,14 @@
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+#define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PH1
+#define TE_GPIO			0
 #else
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PG4
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PG3
+#define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PG2
+#define TE_GPIO			TEGRA_GPIO_PG1
+
 #endif
 
 struct platform_device * __init ceres_host1x_init(void)
@@ -71,10 +78,17 @@ struct platform_device * __init ceres_host1x_init(void)
 #ifdef CONFIG_TEGRA_DC
 
 /* hdmi pins for hotplug */
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define ceres_hdmi_hpd		TEGRA_GPIO_PN7
+#else
+#define ceres_hdmi_hpd		(MAX77660_GPIO_BASE + MAX77660_GPIO2)
+#endif
 
 /* hdmi related regulators */
+static struct regulator *ceres_hdmi_reg;
+static struct regulator *ceres_hdmi_pll;
 static struct regulator *ceres_hdmi_vddio;
+static struct regulator *ceres_hdmi_1v8;
 
 static struct resource ceres_disp1_resources[] = {
 	{
@@ -145,13 +159,77 @@ static struct tegra_dc_out ceres_disp1_out = {
 
 static int ceres_hdmi_enable(struct device *dev)
 {
-	/* TODO */
+	int ret;
+	if (!ceres_hdmi_reg) {
+			ceres_hdmi_reg = regulator_get(dev, "avdd_hdmi");
+			if (IS_ERR_OR_NULL(ceres_hdmi_reg)) {
+				pr_err("hdmi: couldn't get regulator avdd_hdmi\n");
+				ceres_hdmi_reg = NULL;
+				return PTR_ERR(ceres_hdmi_reg);
+			}
+	}
+	ret = regulator_enable(ceres_hdmi_reg);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi\n");
+		return ret;
+	}
+	if (!ceres_hdmi_pll) {
+		ceres_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
+		if (IS_ERR_OR_NULL(ceres_hdmi_pll)) {
+			pr_err("hdmi: couldn't get regulator avdd_hdmi_pll\n");
+			ceres_hdmi_pll = NULL;
+			regulator_put(ceres_hdmi_reg);
+			ceres_hdmi_reg = NULL;
+			return PTR_ERR(ceres_hdmi_pll);
+		}
+	}
+	ret = regulator_enable(ceres_hdmi_pll);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator avdd_hdmi_pll\n");
+		return ret;
+	}
+
+	if (!ceres_hdmi_1v8) {
+		ceres_hdmi_1v8 = regulator_get(dev, "vdd_1v8_hdmi");
+		if (IS_ERR_OR_NULL(ceres_hdmi_1v8)) {
+			pr_err("hdmi: couldn't get regulator vdd_1v8_hdmi\n");
+			ceres_hdmi_1v8 = NULL;
+			regulator_put(ceres_hdmi_pll);
+			ceres_hdmi_pll = NULL;
+			regulator_put(ceres_hdmi_reg);
+			ceres_hdmi_reg = NULL;
+			return PTR_ERR(ceres_hdmi_1v8);
+		}
+	}
+	ret = regulator_enable(ceres_hdmi_1v8);
+	if (ret < 0) {
+		pr_err("hdmi: couldn't enable regulator vdd_1v8_hdmi\n");
+		return ret;
+	}
+
 	return 0;
 }
 
 static int ceres_hdmi_disable(void)
 {
-	/* TODO */
+	if (ceres_hdmi_reg) {
+		regulator_disable(ceres_hdmi_reg);
+		regulator_put(ceres_hdmi_reg);
+		ceres_hdmi_reg = NULL;
+	}
+
+	if (ceres_hdmi_pll) {
+		regulator_disable(ceres_hdmi_pll);
+		regulator_put(ceres_hdmi_pll);
+		ceres_hdmi_pll = NULL;
+	}
+
+	if (ceres_hdmi_1v8) {
+		regulator_disable(ceres_hdmi_1v8);
+		regulator_put(ceres_hdmi_1v8);
+		ceres_hdmi_1v8 = NULL;
+	}
+
 	return 0;
 }
 
@@ -350,12 +428,20 @@ static void ceres_panel_select(void)
 	tegra_get_display_board_info(&board);
 
 	switch (board.board_id) {
+	case BOARD_E1605:
+		panel = &dsi_j_720p_4_7;
+		dsi_instance = DSI_INSTANCE_0;
+		break;
 	case BOARD_E1582:
 	/* fall through */
 	default:
-		panel = &dsi_s_1080p_5;
-		/* ceres uses instance 0 for Sharp 1080p panel */
-		dsi_instance = DSI_INSTANCE_0;
+		if (tegra_get_board_panel_id()) {
+			panel = &dsi_s_1080p_5;
+			dsi_instance = DSI_INSTANCE_0;
+		} else {
+			panel = &dsi_l_720p_5;
+			dsi_instance = DSI_INSTANCE_0;
+		}
 		break;
 	}
 
@@ -368,6 +454,11 @@ static void ceres_panel_select(void)
 		ceres_disp1_out.dsi->dsi_panel_rst_gpio = DSI_PANEL_RST_GPIO;
 		ceres_disp1_out.dsi->dsi_panel_bl_en_gpio =
 			DSI_PANEL_BL_EN_GPIO;
+		ceres_disp1_out.dsi->dsi_panel_bl_pwm_gpio =
+			DSI_PANEL_BL_PWM_GPIO;
+		ceres_disp1_out.dsi->te_gpio = TE_GPIO;
+		/* update the init cmd if dependent on reset GPIO */
+		tegra_dsi_update_init_cmd_gpio_rst(&ceres_disp1_out);
 	}
 
 	if (panel->init_fb_data)
@@ -386,6 +477,22 @@ static void ceres_panel_select(void)
 		panel->register_bl_dev();
 
 }
+
+void ceres_set_hotplug_gpio(void)
+{
+	struct tegra_dc_platform_data *pdata;
+	struct board_info board_info;
+	int hdmi_hpd_gpio = ceres_hdmi_hpd;
+
+	pdata = ceres_disp2_device.dev.platform_data;
+	tegra_get_board_info(&board_info);
+
+	if (board_info.fab > BOARD_FAB_A00)
+		hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);
+
+	pdata->default_out->hotplug_gpio = hdmi_hpd_gpio;
+}
+
 int __init ceres_panel_init(void)
 {
 	int err = 0;
@@ -408,8 +515,6 @@ int __init ceres_panel_init(void)
 		return err;
 	}
 #endif
-	gpio_request(ceres_hdmi_hpd, "hdmi_hpd");
-	gpio_direction_input(ceres_hdmi_hpd);
 
 	phost1x = ceres_host1x_init();
 	if (!phost1x) {
@@ -438,6 +543,10 @@ int __init ceres_panel_init(void)
 		pr_err("disp1 device registration failed\n");
 		return err;
 	}
+
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
+	ceres_set_hotplug_gpio();
+#endif
 
 	ceres_disp2_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&ceres_disp2_device);

@@ -281,7 +281,7 @@ static unsigned int tegra_sdhci_get_ro(struct sdhci_host *sdhci)
 	if (!gpio_is_valid(plat->wp_gpio))
 		return -1;
 
-	return gpio_get_value(plat->wp_gpio);
+	return gpio_get_value_cansleep(plat->wp_gpio);
 }
 #endif
 
@@ -500,7 +500,8 @@ static irqreturn_t carddetect_irq(int irq, void *data)
 
 	plat = pdev->dev.platform_data;
 
-	tegra_host->card_present = (gpio_get_value(plat->cd_gpio) == 0);
+	tegra_host->card_present =
+			(gpio_get_value_cansleep(plat->cd_gpio) == 0);
 
 	if (tegra_host->card_present) {
 		if (!tegra_host->is_rail_enabled) {
@@ -1175,8 +1176,10 @@ static int tegra_sdhci_resume(struct sdhci_host *sdhci)
 	pdev = to_platform_device(mmc_dev(sdhci->mmc));
 	plat = pdev->dev.platform_data;
 
-	if (gpio_is_valid(plat->cd_gpio))
-		tegra_host->card_present = (gpio_get_value(plat->cd_gpio) == 0);
+	if (gpio_is_valid(plat->cd_gpio)) {
+		tegra_host->card_present =
+			(gpio_get_value_cansleep(plat->cd_gpio) == 0);
+	}
 
 	/* Enable the power rails if any */
 	if (tegra_host->card_present) {
@@ -1457,7 +1460,8 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 		}
 		gpio_direction_input(plat->cd_gpio);
 
-		tegra_host->card_present = (gpio_get_value(plat->cd_gpio) == 0);
+		tegra_host->card_present =
+			(gpio_get_value_cansleep(plat->cd_gpio) == 0);
 
 		rc = request_threaded_irq(gpio_to_irq(plat->cd_gpio), NULL,
 				 carddetect_irq,

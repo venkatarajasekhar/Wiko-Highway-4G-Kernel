@@ -1,7 +1,7 @@
 /*
  * max77660_sys_wdt.c -- MAX77660 System WatchDog Timer.
  *
- * Watchdog timer for MAIXM MAX77660 PMIC.
+ * System watchdog timer for MAXIM MAX77660 PMIC.
  *
  * Copyright (c) 2013, NVIDIA Corporation.
  *
@@ -31,6 +31,7 @@
 #include <linux/module.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/platform_device.h>
+#include <linux/pm.h>
 #include <linux/slab.h>
 #include <linux/watchdog.h>
 
@@ -38,16 +39,13 @@ static bool nowayout = WATCHDOG_NOWAYOUT;
 
 struct max77660_sys_wdt {
 	struct watchdog_device wdt_dev;
-	int irq;
-	struct device *parent;
 	struct device *dev;
+	struct device *parent;
+	int timeout;
+	int irq;
 };
 
 static int max77660_twd_sys[] = {16, 32, 64, 128};
-
-#define MAX77660_TWD_SYS(i)		((i & 0x3) << 4)
-#define MAX77660_WDT_CHG_CLR		0x1
-#define MAX77660_WDTEN_SYS		BIT(5)
 
 static irqreturn_t max77660_sys_wdt_irq(int irq, void *data)
 {
@@ -56,10 +54,10 @@ static irqreturn_t max77660_sys_wdt_irq(int irq, void *data)
 
 	/* Reset timer before any debug prints */
 	ret = max77660_reg_write(wdt->parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_GLOBAL_CFG4, MAX77660_WDT_CHG_CLR);
+			MAX77660_REG_GLOBAL_CFG4,
+			MAX77660_GLBLCNFG4_WDTC_SYS_CLR);
 	if (ret < 0)
-		dev_err(wdt->dev,
-			"MAX77660_REG_GLOBAL_CFG6 update failed: %d\n", ret);
+		dev_err(wdt->dev, "GLOBAL_CFG4 update failed: %d\n", ret);
 
 	dev_info(wdt->dev, "System WDT interrupt occur\n");
 	return IRQ_HANDLED;
@@ -71,10 +69,9 @@ static int max77660_sys_wdt_start(struct watchdog_device *wdt_dev)
 	int ret;
 
 	ret = max77660_reg_set_bits(wdt->parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_GLOBAL_CFG1, MAX77660_WDTEN_SYS);
+			MAX77660_REG_GLOBAL_CFG1, MAX77660_GLBLCNFG1_WDTEN_SYS);
 	if (ret < 0) {
-		dev_err(wdt->dev,
-			"MAX77660_REG_GLOBAL_CFG1 update failed: %d\n", ret);
+		dev_err(wdt->dev, "GLOBAL_CFG1 update failed: %d\n", ret);
 		return ret;
 	}
 	return 0;
@@ -86,10 +83,9 @@ static int max77660_sys_wdt_stop(struct watchdog_device *wdt_dev)
 	int ret;
 
 	ret = max77660_reg_clr_bits(wdt->parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_GLOBAL_CFG1, MAX77660_WDTEN_SYS);
+			MAX77660_REG_GLOBAL_CFG1, MAX77660_GLBLCNFG1_WDTEN_SYS);
 	if (ret < 0) {
-		dev_err(wdt->dev,
-			"MAX77660_REG_GLOBAL_CFG1 update failed: %d\n", ret);
+		dev_err(wdt->dev, "GLOBAL_CFG1 update failed: %d\n", ret);
 		return ret;
 	}
 	return 0;
@@ -108,17 +104,19 @@ static int max77660_sys_wdt_set_timeout(struct watchdog_device *wdt_dev,
 	}
 
 	if (i == ARRAY_SIZE(max77660_twd_sys)) {
-		dev_err(wdt->dev, " Not a valid timeout: %u\n", timeout);
+		dev_err(wdt->dev, "Not a valid timeout: %u\n", timeout);
 		return -EINVAL;
 	}
 
 	ret = max77660_reg_update(wdt->parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_GLOBAL_CFG2, 0x30, MAX77660_TWD_SYS(i));
+			MAX77660_REG_GLOBAL_CFG2,
+			MAX77660_GLBLCNFG2_TWD_SYS_MASK,
+			MAX77660_GLBLCNFG2_TWD_SYS(i));
 	if (ret < 0) {
-		dev_err(wdt->dev,
-			"MAX77660_REG_GLOBAL_CFG2 update failed: %d\n", ret);
+		dev_err(wdt->dev, "GLOBAL_CFG2 update failed: %d\n", ret);
 		return ret;
 	}
+	wdt->timeout = timeout;
 	return 0;
 }
 
@@ -180,16 +178,14 @@ static int __devinit max77660_sys_wdt_probe(struct platform_device *pdev)
 	ret = max77660_reg_read(wdt->parent, MAX77660_PWR_SLAVE,
 			MAX77660_REG_GLOBAL_CFG1, &regval);
 	if (ret < 0) {
-		dev_err(wdt->dev,
-			"MAX77660_REG_GLOBAL_CFG1 read failed: %d\n", ret);
+		dev_err(wdt->dev, "GLOBAL_CFG1 read failed: %d\n", ret);
 		goto scrub;
 	}
 
-	if (regval & MAX77660_WDTEN_SYS)
+	if (regval & MAX77660_GLBLCNFG1_WDTEN_SYS)
 		dev_info(wdt->dev, "System watchdog timer enabled\n");
 	else
 		dev_info(wdt->dev, "System watchdog timer disabled\n");
-
 
 	ret = max77660_sys_wdt_stop(wdt_dev);
 	if (ret < 0) {
@@ -211,6 +207,8 @@ static int __devinit max77660_sys_wdt_probe(struct platform_device *pdev)
 		}
 	}
 
+	device_set_wakeup_capable(&pdev->dev, 1);
+
 	return 0;
 scrub:
 	free_irq(wdt->irq, wdt);
@@ -222,21 +220,69 @@ static int __devexit max77660_sys_wdt_remove(struct platform_device *pdev)
 {
 	struct max77660_sys_wdt *wdt = platform_get_drvdata(pdev);
 
-	free_irq(wdt->irq, wdt);
+	max77660_sys_wdt_stop(&wdt->wdt_dev);
 	watchdog_unregister_device(&wdt->wdt_dev);
+	free_irq(wdt->irq, wdt);
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int max77660_sys_wdt_suspend(struct device *dev)
+{
+	struct max77660_sys_wdt *wdt = dev_get_drvdata(dev);
+	int ret;
+
+	if (device_may_wakeup(dev)) {
+		enable_irq_wake(wdt->irq);
+	} else if (wdt->timeout > 0) {
+		ret = max77660_sys_wdt_stop(&wdt->wdt_dev);
+		if (ret < 0)
+			dev_err(wdt->dev, "wdt stop failed: %d\n", ret);
+	}
+	return 0;
+}
+
+static int max77660_sys_wdt_resume(struct device *dev)
+{
+	struct max77660_sys_wdt *wdt = dev_get_drvdata(dev);
+	int ret;
+
+	if (device_may_wakeup(dev)) {
+		disable_irq_wake(wdt->irq);
+	} else if (wdt->timeout > 0) {
+		ret = max77660_sys_wdt_start(&wdt->wdt_dev);
+		if (ret < 0)
+			dev_err(wdt->dev, "wdt start failed: %d\n", ret);
+	}
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops max77660_sys_wdt_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(max77660_sys_wdt_suspend, max77660_sys_wdt_resume)
+};
 
 static struct platform_driver max77660_sys_wdt_driver = {
 	.driver	= {
 		.name	= "max77660-sys-wdt",
 		.owner	= THIS_MODULE,
+		.pm = &max77660_sys_wdt_pm_ops,
 	},
 	.probe	= max77660_sys_wdt_probe,
 	.remove	= __devexit_p(max77660_sys_wdt_remove),
 };
 
-module_platform_driver(max77660_sys_wdt_driver);
+static int __init max77660_sys_wdt_init(void)
+{
+	return platform_driver_register(&max77660_sys_wdt_driver);
+}
+subsys_initcall(max77660_sys_wdt_init);
+
+static void __exit max77660_reg_exit(void)
+{
+	platform_driver_unregister(&max77660_sys_wdt_driver);
+}
+module_exit(max77660_reg_exit);
 
 MODULE_ALIAS("platform:max77660-sys-wdt");
 MODULE_DESCRIPTION("Maxim Max77660 system watchdog timer driver");
