@@ -524,6 +524,7 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "cile",	"pll_p",	102000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
+	{ "i2c3",	"pll_p",	3200000,	false},
 	{ "i2c5",	"pll_p",	3200000,	false},
 	{ "i2c6",	"pll_p",	3200000,	false},
 	{ "hda",	"pll_p",	108000000,	false},
@@ -619,7 +620,7 @@ static struct tegra_i2c_platform_data ceres_i2c2_platform_data = {
 };
 
 static struct tegra_i2c_platform_data ceres_i2c3_platform_data = {
-	.bus_clk_rate	= 100000,
+	.bus_clk_rate	= 400000,
 	.scl_gpio	= -1,
 	.sda_gpio	= -1,
 };
