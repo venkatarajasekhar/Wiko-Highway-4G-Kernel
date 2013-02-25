@@ -232,12 +232,12 @@ static inline int __pm_genpd_remove_callbacks(struct device *dev, bool clear_td)
 	return -ENOSYS;
 }
 static inline int pm_genpd_attach_cpuidle(struct generic_pm_domain *genpd, int st,
-					struct cpuidle_device *cpuidle_dev);
+					struct cpuidle_device *cpuidle_dev)
 {
 	return -ENOSYS;
 }
 static inline int pm_genpd_name_attach_cpuidle(const char *name, int state,
-					struct cpuidle_device *cpuidle_dev);
+					struct cpuidle_device *cpuidle_dev)
 {
 	return -ENOSYS;
 }
