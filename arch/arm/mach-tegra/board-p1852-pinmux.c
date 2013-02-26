@@ -481,7 +481,6 @@ static struct gpio p1852_sku8_gpios[] = {
 	{TEGRA_GPIO_PA7,	GPIOF_OUT_INIT_HIGH,	"a7"},
 	{TEGRA_GPIO_PB4,	GPIOF_OUT_INIT_HIGH,	"b4"},
 	{TEGRA_GPIO_PD5,	GPIOF_OUT_INIT_HIGH,	"d5"},
-	{TEGRA_GPIO_PN7,	GPIOF_IN,		"pn7"},
 };
 
 int __init p1852_gpio_init(void)
