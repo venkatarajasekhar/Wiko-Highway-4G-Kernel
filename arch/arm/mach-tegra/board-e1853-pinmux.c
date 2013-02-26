@@ -481,7 +481,6 @@ static struct gpio e1853_sku8_gpios[] = {
 	{TEGRA_GPIO_PW0,	GPIOF_IN,		"w0"},
 	{TEGRA_GPIO_PD2,	GPIOF_OUT_INIT_HIGH,	"d2"},
 	{TEGRA_GPIO_PW1,	GPIOF_IN,		"w1"},
-	{TEGRA_GPIO_PB2,	GPIOF_IN,		"b2"},
 	{TEGRA_GPIO_PC1,	GPIOF_IN,		"c1"},
 	{TEGRA_GPIO_PC6,	GPIOF_IN,		"c6"},
 	{TEGRA_GPIO_PZ3,	GPIOF_IN,		"z3"},
