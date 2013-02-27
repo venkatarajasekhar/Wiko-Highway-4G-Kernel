@@ -459,7 +459,7 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 		.states		= max77387_estates,
 		.num_states	= ARRAY_SIZE(max77387_estates),
 		.e0_index	= 3,
-		.priority	= EDP_MAX_PRIO - 2,
+		.priority	= EDP_MAX_PRIO + 2,
 		},
 };
 
