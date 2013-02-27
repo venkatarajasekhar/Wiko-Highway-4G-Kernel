@@ -795,6 +795,7 @@ static void __init tegra_ceres_init(void)
 	ceres_sdhci_init();
 	isomgr_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
+	tegra_ram_console_debug_init();
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 #else
