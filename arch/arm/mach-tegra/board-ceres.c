@@ -687,6 +687,7 @@ struct rm_spi_ts_platform_data rm31080ts_ceres_data = {
 	.config = 0,
 	.platform_id = RM_PLATFORM_P005,
 	.name_of_clock = "clk_out_2",
+	.name_of_clock_con = "extern2",
 };
 
 static struct tegra_spi_device_controller_data dev_cdata = {
@@ -709,8 +710,6 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 static int __init ceres_touch_init(void)
 {
 	tegra_clk_init_from_table(touch_clk_init_table);
-	clk_enable(tegra_get_clock_by_name("clk_out_2"));
-	mdelay(20);
 	rm31080a_ceres_spi_board[0].irq =
 		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
 	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
@@ -733,7 +732,9 @@ struct rm_spi_ts_platform_data rm31080ts_ceres_data = {
 	.gpio_reset = 0,
 	.config = 0,
 	.platform_id = RM_PLATFORM_P005,
-	.name_of_clock = "csus",
+	/* Clocks are defined in tegraXX_clocks.c:  CLK_DUPLICATE(...)» */
+	.name_of_clock = "touch_clk",
+	.name_of_clock_con = "e1680_ts_clk_con",
 };
 
 static struct tegra_spi_device_controller_data dev_cdata = {
@@ -756,8 +757,6 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 static int __init ceres_touch_init(void)
 {
 	tegra_clk_init_from_table(touch_clk_init_table);
-	clk_enable(tegra_get_clock_by_name("csus"));
-	mdelay(20);
 	rm31080a_ceres_spi_board[0].irq =
 		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
 	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
