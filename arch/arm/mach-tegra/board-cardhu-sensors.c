@@ -31,6 +31,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
@@ -1079,7 +1080,7 @@ static struct i2c_board_info cardhu_i2c2_isl_board_info[] = {
 
 static struct i2c_board_info cardhu_i2c2_ltr_board_info[] = {
 	{
-		I2C_BOARD_INFO("LTR_558ALS", 0x23),
+		I2C_BOARD_INFO("ltr558", 0x23),
 	}
 };
 
