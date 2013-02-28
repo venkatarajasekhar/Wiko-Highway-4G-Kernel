@@ -292,6 +292,10 @@ static void __init ceres_gpio_init_configure(void)
 
 static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 	/* DEFAULT_DRIVE(<pin_group>), */
+	/* Audio DAP */
+	SET_DRIVE(DAP1, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
+	SET_DRIVE(DAP2, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
+
 	/* SDMMC1 */
 	SET_DRIVE(SDIO1, ENABLE, DISABLE, DIV_1, 54, 70, FASTEST, FASTEST),
 
