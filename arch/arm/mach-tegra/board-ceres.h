@@ -23,6 +23,7 @@
 #include <mach/gpio-tegra.h>
 #include <mach/irqs.h>
 #include <linux/mfd/palmas.h>
+#include <linux/mfd/max77660/max77660-core.h>
 #include "gpio-names.h"
 
 /* MAX77660_GPIO Base Address */
@@ -85,7 +86,7 @@
 #else
 #define TEGRA_GPIO_CDC_IRQ		TEGRA_GPIO_PO5
 #define TEGRA_GPIO_LDO1_EN		TEGRA_GPIO_PN3
-#define TEGRA_GPIO_HP_DET		TEGRA_GPIO_PO0
+#define TEGRA_GPIO_HP_DET		(MAX77660_GPIO_BASE + MAX77660_GPIO5)
 #endif
 
 #define TEGRA_GPIO_SPKR_EN		-1

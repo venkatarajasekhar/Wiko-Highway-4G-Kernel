@@ -36,6 +36,7 @@
 #include <linux/spi/rm31080a_ts.h>
 #include <linux/spi-tegra.h>
 #include <sound/max98090.h>
+#include <sound/max97236.h>
 #include <asm/hardware/gic.h>
 
 #include <mach/iomap.h>
@@ -208,9 +209,6 @@ static struct max98090_eq_cfg max98090_eq_cfg[] = {
 };
 
 static struct max98090_pdata ceres_max98090_pdata = {
-	/* Headphone Detection */
-	.irq = TEGRA_GPIO_HP_DET,
-
 	/* Equalizer Configuration */
 	.eq_cfg = max98090_eq_cfg,
 	.eq_cfgcnt = ARRAY_SIZE(max98090_eq_cfg),
@@ -256,6 +254,16 @@ static struct platform_device ceres_audio_max98090_device = {
 	.id	= 0,
 	.dev	= {
 		.platform_data = &ceres_audio_max98090_pdata,
+	},
+};
+
+static struct max97236_pdata ceres_audio_max97236_pdata;
+
+static struct platform_device ceres_audio_max97236_device = {
+	.name	= "tegra-snd-max97236",
+	.id		= -1,
+	.dev = {
+		.platform_data = &ceres_audio_max97236_pdata,
 	},
 };
 
@@ -374,6 +382,7 @@ static struct platform_device *ceres_audio_devices[] __initdata = {
 	&tegra_hda_device,
 #endif
 	&ceres_audio_max98090_device,
+	&ceres_audio_max97236_device,
 };
 
 static struct platform_device *ceres_devices[] __initdata = {
@@ -394,6 +403,7 @@ static struct platform_device *ceres_devices[] __initdata = {
 
 static struct i2c_board_info __initdata max97236_board_info = {
 	I2C_BOARD_INFO("max97236", 0x40),
+	.irq = TEGRA_GPIO_HP_DET,
 };
 
 static void ceres_audio_init(void)
