@@ -549,6 +549,164 @@ static void mpuirq_init(void)
 		ARRAY_SIZE(inv_mpu9150_i2c1_board_info));
 }
 
+#ifdef CONFIG_TEGRA_SKIN_THROTTLE
+static int tegra_skin_match(struct thermal_zone_device *thz, void *data)
+{
+	return strcmp((char *)data, thz->type) == 0;
+}
+
+static int tegra_skin_get_temp(void *data, long *temp)
+{
+	struct thermal_zone_device *thz;
+
+	thz = thermal_zone_device_find(data, tegra_skin_match);
+
+	if (!thz || thz->ops->get_temp(thz, temp))
+		*temp = 25000;
+
+	return 0;
+}
+
+static struct therm_est_data skin_data = {
+	.cdev_type = "skin-balanced",
+	.toffset = 9793,
+	.polling_period = 1100,
+	.ndevs = 2,
+	.tc1 = 10,
+	.tc2 = 1,
+	.devs = {
+			{
+				.dev_data = "nct_ext",
+				.get_temp = tegra_skin_get_temp,
+				.coeffs = {
+					2, 1, 1, 1,
+					1, 1, 1, 1,
+					1, 1, 1, 0,
+					1, 1, 0, 0,
+					0, 0, -1, -7
+				},
+			},
+			{
+				.dev_data = "nct_int",
+				.get_temp = tegra_skin_get_temp,
+				.coeffs = {
+					-11, -7, -5, -3,
+					-3, -2, -1, 0,
+					0, 0, 1, 1,
+					1, 2, 2, 3,
+					4, 6, 11, 18
+				},
+			},
+	},
+	.trip_temp = 45000,
+	.passive_delay = 15000,
+};
+
+static struct throttle_table skin_throttle_table[] = {
+	/* CPU_THROT_LOW cannot be used by other than CPU */
+	/* NO_CAP cannot be used by CPU */
+	/*    CPU,   C2BUS,   C3BUS,    SCLK,     EMC */
+	{ { 1938000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1836000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1734000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1632000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1530000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1530000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1326000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1122000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ { 1020000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  918000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  816000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  714000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  NO_CAP,  NO_CAP,  NO_CAP,  NO_CAP } },
+	{ {  612000,  564000,  564000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  564000,  564000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  528000,  528000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  528000,  528000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  492000,  492000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  492000,  492000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  420000,  420000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  420000,  420000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  408000,  408000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  408000,  408000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  360000,  360000,  NO_CAP,  NO_CAP } },
+	{ {  612000,  360000,  360000,  NO_CAP,  NO_CAP } },
+	{ {  510000,  360000,  360000,  312000,  NO_CAP } },
+	{ {  510000,  360000,  360000,  312000,  NO_CAP } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  510000,  360000,  360000,  312000,  480000 } },
+	{ {  408000,  360000,  360000,  312000,  480000 } },
+	{ {  408000,  360000,  360000,  312000,  480000 } },
+	{ {  408000,  276000,  276000,  208000,  480000 } },
+	{ {  408000,  276000,  276000,  208000,  480000 } },
+	{ {  355200,  276000,  276000,  208000,  204000 } },
+	{ {  355200,  276000,  276000,  208000,  204000 } },
+	{ {  306000,  276000,  276000,  208000,  204000 } },
+	{ {  306000,  276000,  276000,  208000,  204000 } },
+	{ {  297600,  276000,  228000,  208000,  102000 } },
+	{ {  297600,  276000,  228000,  208000,  102000 } },
+	{ {  240000,  276000,  228000,  208000,  102000 } },
+	{ {  240000,  276000,  228000,  208000,  102000 } },
+	{ {  102000,  276000,  228000,  208000,  102000 } },
+	{ { CPU_THROT_LOW,  276000,  228000,  208000,  102000 } },
+};
+
+static struct balanced_throttle skin_throttle = {
+	.throt_tab_size = ARRAY_SIZE(skin_throttle_table),
+	.throt_tab = skin_throttle_table,
+};
+
+static int __init ceres_skin_init(void)
+{
+	if (machine_is_ceres()) {
+		balanced_throttle_register(&skin_throttle, "skin-balanced");
+		tegra_skin_therm_est_device.dev.platform_data = &skin_data;
+		platform_device_register(&tegra_skin_therm_est_device);
+	}
+
+	return 0;
+}
+late_initcall(ceres_skin_init);
+#endif
+
 int __init ceres_sensors_init(void)
 {
 	int err;
