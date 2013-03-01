@@ -52,6 +52,7 @@
 #include <mach/tegra_asoc_pdata.h>
 
 #include "board.h"
+#include "tegra-board-id.h"
 #include "board-ceres.h"
 #include "board-common.h"
 #include "board-touch-raydium.h"
@@ -505,6 +506,13 @@ static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 
 static void ceres_usb_init(void)
 {
+	struct board_info bi;
+
+	tegra_get_board_info(&bi);
+
+	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671)
+		tegra_otg_pdata.extcon_dev_name = "palmas-extcon.10";
+
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
 	platform_device_register(&tegra_otg_device);
 
