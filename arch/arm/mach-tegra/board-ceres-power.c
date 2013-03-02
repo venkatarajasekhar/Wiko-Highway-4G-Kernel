@@ -689,7 +689,8 @@ static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
 /* Macro for defining fixed regulator sub device data */
 #define FIXED_SUPPLY(_name) "fixed_reg_"#_name
 #define FIXED_REG(_id, _var, _name, _in_supply, _always_on, _boot_on,	\
-	_gpio_nr, _open_drain, _active_high, _boot_state, _millivolts)	\
+	_gpio_nr, _open_drain, _active_high, _boot_state, _millivolts,	\
+	_delay)	\
 	static struct regulator_init_data ri_data_##_var =		\
 	{								\
 		.supply_regulator = _in_supply,				\
@@ -715,6 +716,7 @@ static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
 		.enable_high = _active_high,				\
 		.enabled_at_boot = _boot_state,				\
 		.init_data = &ri_data_##_var,				\
+		.startup_delay = _delay,				\
 	};								\
 	static struct platform_device fixed_reg_##_var##_dev = {	\
 		.name = "reg-fixed-voltage",				\
@@ -726,14 +728,16 @@ static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
 
 FIXED_REG(0,	battery,	battery,
 	NULL,	0,	0,
-	-1,	false, true,	0,	3300);
+	-1,	false, true,	0,	3300, 0);
 
 FIXED_REG(1,	avdd_lcd,	avdd_lcd,
 	NULL,	0,	0,
-	MAX77660_GPIO_BASE + MAX77660_GPIO6,	false,	true,	1,	2800);
+	MAX77660_GPIO_BASE + MAX77660_GPIO6,	false,	true,
+	1,	2800, 0);
 FIXED_REG(2,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
 	NULL,	0,	0,
-	MAX77660_GPIO_BASE + MAX77660_GPIO3,	false,	true,	0,	5000);
+	MAX77660_GPIO_BASE + MAX77660_GPIO3,	false,	true,
+	0,	5000, 250000);
 /*
  * Creating the fixed regulator device tables
  */
