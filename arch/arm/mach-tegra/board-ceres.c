@@ -537,6 +537,7 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "cile",	"pll_p",	102000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
+	{ "i2c5",	"pll_p",	3200000,	false},
 	{ "i2c6",	"pll_p",	3200000,	false},
 	{ "hda",	"pll_p",	108000000,	false},
 	{ "hda2codec_2x", "pll_p",	48000000,	false},
