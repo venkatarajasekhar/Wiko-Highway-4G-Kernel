@@ -520,6 +520,7 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "pll_m",	NULL,		0,		false},
 	{ "vi_sensor",	"pll_p",	150000000,	false},
 	{ "vi_sensor2",	"pll_p",	150000000,	false},
+	{ "vi",		"pll_p",	100000000,	false},
 	{ "cilab",	"pll_p",	102000000,	false},
 	{ "cile",	"pll_p",	102000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
