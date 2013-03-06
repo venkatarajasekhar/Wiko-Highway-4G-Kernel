@@ -574,6 +574,12 @@ static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
 	},
 };
 
+static struct i2c_board_info __initdata ceres_i2c_board_info_tcs3772[] = {
+	{
+		I2C_BOARD_INFO("tcs3772", 0x29),
+	},
+};
+
 static int ceres_camera_init(void)
 {
 	tegra_pinmux_config_table(&mclk_disable, 1);
@@ -832,8 +838,13 @@ int __init ceres_sensors_init(void)
 		i2c_register_board_info(0, ceres_i2c0_nct1008_board_info,
 				ARRAY_SIZE(ceres_i2c0_nct1008_board_info));
 
-	i2c_register_board_info(0, ceres_i2c_board_info_max44005,
-			ARRAY_SIZE(ceres_i2c_board_info_max44005));
+	if (board_info.board_id != BOARD_E1670) {
+		i2c_register_board_info(0, ceres_i2c_board_info_max44005,
+				ARRAY_SIZE(ceres_i2c_board_info_max44005));
+	} else {
+		i2c_register_board_info(0, ceres_i2c_board_info_tcs3772,
+				ARRAY_SIZE(ceres_i2c_board_info_tcs3772));
+	}
 
 	i2c_register_board_info(0, max77660_fg_board_info, 1);
 
