@@ -38,6 +38,7 @@
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/clk.h>
+#include <mach/pm_domains.h>
 
 #include "apbio.h"
 #include "clock.h"
@@ -1257,6 +1258,7 @@ static int __init tegra_dma_probe(struct platform_device *pdev)
 	struct device *dev = &tegra_dma_device.dev;
 
 	tegra_clk_disable_unprepare(dma_clk);
+	tegra_pd_add_device(&tegra_mc_chain_b, dev);
 	pm_runtime_enable(dev);
 
 	return 0;

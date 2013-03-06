@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 
 #include <mach/iomap.h>
+#include <mach/pm_domains.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -93,6 +94,7 @@ static int __devinit vi_probe(struct platform_device *dev)
 	if (err)
 		goto camera_register_fail;
 
+	tegra_pd_add_device(&tegra_mc_chain_a, &dev->dev);
 	pm_runtime_use_autosuspend(&dev->dev);
 	pm_runtime_set_autosuspend_delay(&dev->dev, 100);
 	pm_runtime_enable(&dev->dev);

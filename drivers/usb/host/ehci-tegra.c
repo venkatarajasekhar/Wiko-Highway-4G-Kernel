@@ -26,6 +26,7 @@
 
 #include <mach/usb_phy.h>
 #include <mach/iomap.h>
+#include <mach/pm_domains.h>
 
 #if 0
 #define EHCI_DBG(stuff...)	pr_info("ehci-tegra: " stuff)
@@ -579,6 +580,9 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 			otg_set_host(tegra->transceiver->otg, &hcd->self);
 	}
 #endif
+
+	tegra_pd_add_device(&tegra_mc_chain_b, &pdev->dev);
+
 	return err;
 
 fail_phy:
