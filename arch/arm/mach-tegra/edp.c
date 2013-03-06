@@ -509,8 +509,8 @@ static inline s64 edp_pow(s64 val, int pwr)
 /*
  * Find the maximum frequency that results in dynamic and leakage current that
  * is less than the regulator current limit.
- * temp_C - always valid
- * power_mW - valid or -1 (infinite)
+ * temp_C - valid or -EINVAL
+ * power_mW - valid or -1 (infinite) or -EINVAL
  */
 static unsigned int edp_calculate_maxf(
 				struct tegra_edp_cpu_leakage_params *params,
@@ -563,6 +563,13 @@ static unsigned int edp_calculate_maxf(
 				}
 			}
 		}
+		/* leakage cannot be negative => leakage model has error */
+		if (leakage_mA <= 0) {
+			pr_err("VDD_CPU EDP failed: IDDQ too high (%d mA)\n",
+			       iddq_mA);
+			return -EINVAL;
+		}
+
 		leakage_mA *= params->leakage_consts_n[n_cores_idx];
 		/* leakage_const_n was pre-multiplied by 1,000,000 */
 		leakage_mA = div64_s64(leakage_mA, 1000000);
@@ -584,7 +591,7 @@ static unsigned int edp_calculate_maxf(
 			return freq_KHz;
 		}
 	}
-	return 0;
+	return -EINVAL;
 }
 
 static int edp_relate_freq_voltage(struct clk *clk_cpu_g,
@@ -723,6 +730,8 @@ static int init_cpu_edp_limits_calculated(void)
 						   -1,
 						   iddq_mA,
 						   n_cores_idx);
+			if (limit == -EINVAL)
+				return -EINVAL;
 			/* apply safety cap if it is specified */
 			if (n_cores_idx < 4) {
 				cap = params->safety_cap[n_cores_idx];
@@ -742,6 +751,8 @@ static int init_cpu_edp_limits_calculated(void)
 						   power_cap_levels[pwr_idx],
 						   iddq_mA,
 						   n_cores_idx);
+			if (limit == -EINVAL)
+				return -EINVAL;
 			power_edp_calc_limits[pwr_idx].
 				freq_limits[n_cores_idx] = limit;
 		}
@@ -827,9 +838,19 @@ static int __init init_cpu_edp_limits_lookup(void)
 
 void tegra_recalculate_cpu_edp_limits(void)
 {
-	if (tegra_chip_id == TEGRA_CHIPID_TEGRA11 ||
-	    tegra_chip_id == TEGRA_CHIPID_TEGRA14)
-		init_cpu_edp_limits_calculated();
+	if (tegra_chip_id != TEGRA_CHIPID_TEGRA11 &&
+	    tegra_chip_id != TEGRA_CHIPID_TEGRA14)
+		return;
+
+	if (init_cpu_edp_limits_calculated() == 0)
+		return;
+
+	/* Revert to default EDP table on error */
+	edp_limits = edp_default_limits;
+	edp_limits_size = ARRAY_SIZE(edp_default_limits);
+
+	power_edp_limits = power_edp_default_limits;
+	power_edp_limits_size = ARRAY_SIZE(power_edp_default_limits);
 }
 
 /*
@@ -981,7 +1002,7 @@ static int edp_debugfs_show(struct seq_file *s, void *data)
 	th_idx = 0;
 #endif
 	seq_printf(s, "-- VDD_CPU %sEDP table (%umA = %umA - %umA) --\n",
-		   edp_limits == edp_default_limits ? "default " : "",
+		   edp_limits == edp_default_limits ? "**default** " : "",
 		   regulator_cur - edp_reg_override_mA,
 		   regulator_cur, edp_reg_override_mA);
 	seq_printf(s, "%6s %10s %10s %10s %10s\n",
@@ -996,7 +1017,9 @@ static int edp_debugfs_show(struct seq_file *s, void *data)
 			   edp_limits[i].freq_limits[3]);
 	}
 
-	seq_printf(s, "-- VDD_CPU Power EDP table --\n");
+	seq_printf(s, "-- VDD_CPU %sPower EDP table --\n",
+		   power_edp_limits == power_edp_default_limits ?
+		   "**default** " : "");
 	seq_printf(s, "%6s %10s %10s %10s %10s\n",
 		   " Power", "1-core", "2-cores", "3-cores", "4-cores");
 	for (i = 0; i < power_edp_limits_size; i++) {
@@ -1016,7 +1039,6 @@ static int edp_debugfs_show(struct seq_file *s, void *data)
 			   system_edp_limits[2],
 			   system_edp_limits[3]);
 	}
-
 	return 0;
 }
 
