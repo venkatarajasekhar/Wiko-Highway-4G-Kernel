@@ -1220,6 +1220,15 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 	palmas->pmic = pmic;
 	platform_set_drvdata(pdev, pmic);
 
+	/* Clearing VREF0P425 of LDO_CTRL register for TPS80036 */
+	if (palmas->id == TPS80036) {
+		ret = palmas_update_bits(palmas, PALMAS_LDO_BASE,
+			PALMAS_LDO_CTRL, PALMAS_LDO_CTRL_VREF_425,
+				~PALMAS_LDO_CTRL_VREF_425);
+		if (ret)
+			goto err_unregister_regulator;
+	}
+
 	ret = palmas_smps_read(palmas, PALMAS_SMPS_CTRL, &reg);
 	if (ret)
 		goto err_unregister_regulator;
