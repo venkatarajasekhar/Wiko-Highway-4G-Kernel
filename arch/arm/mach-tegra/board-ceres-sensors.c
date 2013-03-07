@@ -40,6 +40,8 @@
 #include "devices.h"
 #include "board-common.h"
 #include "board-ceres.h"
+#include "tegra-board-id.h"
+#include "board.h"
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
@@ -513,6 +515,20 @@ static struct mpu_platform_data mpu9150_gyro_data = {
 			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
 };
 
+static struct mpu_platform_data mpu9150_gyro_data_e1680 = {
+	.int_config	= 0x10,
+	.level_shifter	= 0,
+	/* Located in board_[platformname].h */
+	.orientation	= MPU_GYRO_ORIENTATION_E1680,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_COMPASS,
+	.sec_slave_id	= COMPASS_ID_AK8975,
+	.secondary_i2c_addr	= MPU_COMPASS_ADDR,
+	.secondary_read_reg	= 0x06,
+	.secondary_orientation	= MPU_COMPASS_ORIENTATION_E1680,
+	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
+			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
+};
+
 static struct i2c_board_info __initdata inv_mpu9150_i2c1_board_info[] = {
 	{
 		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
@@ -522,6 +538,8 @@ static struct i2c_board_info __initdata inv_mpu9150_i2c1_board_info[] = {
 
 static void mpuirq_init(void)
 {
+	struct board_info board_info;
+
 	int ret = 0;
 	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
 	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
@@ -543,6 +561,11 @@ static void mpuirq_init(void)
 		return;
 	}
 	pr_info("*** MPU END *** mpuirq_init...\n");
+
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1680)
+		inv_mpu9150_i2c1_board_info[0].platform_data
+					= &mpu9150_gyro_data_e1680;
 
 	inv_mpu9150_i2c1_board_info[0].irq = gpio_to_irq(MPU_GYRO_IRQ_GPIO);
 	i2c_register_board_info(gyro_bus_num, inv_mpu9150_i2c1_board_info,
@@ -710,7 +733,9 @@ late_initcall(ceres_skin_init);
 int __init ceres_sensors_init(void)
 {
 	int err;
+
 	ceres_camera_init();
+
 	mpuirq_init();
 
 	err = ceres_nct1008_init();
