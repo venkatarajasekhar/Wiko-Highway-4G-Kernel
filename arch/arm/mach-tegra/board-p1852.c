@@ -439,8 +439,6 @@ static struct platform_device *p1852_devices[] __initdata = {
 	&tegra_camera,
 
 	&tegra_wdt0_device,
-	&tegra_wdt1_device,
-	&tegra_wdt2_device
 };
 
 
