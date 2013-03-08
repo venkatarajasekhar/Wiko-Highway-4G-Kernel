@@ -138,6 +138,11 @@ static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 	 REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
+static struct regulator_consumer_supply max77660_ldo4_display_config0_supply[] = {
+	 REGULATOR_SUPPLY("avdd", "spi2.0"),
+	 REGULATOR_SUPPLY("vin", "2-004a"),
+};
+
 static struct regulator_consumer_supply max77660_ldo5_supply[] = {
 	REGULATOR_SUPPLY("avdd_aud", NULL),
 };
@@ -327,6 +332,9 @@ MAX77660_PDATA_INIT(LDO3, ldo3, 2800, 2800, NULL,
 		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL,
+		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO4, ldo4_display_config0, 3000, 3000, NULL,
 		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO5, ldo5, 1800, 1800, NULL,
@@ -824,6 +832,10 @@ int __init ceres_regulator_init(void)
 		return -1;
 	}
 
+	if (get_display_config() == 0)
+		max77660_reg_pdata[MAX77660_REGULATOR_ID_LDO4] =
+			&max77660_regulator_pdata_ldo4_display_config0;
+
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
 
@@ -844,7 +856,7 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 
 /* LCD_AVDD_EN From PMU GP6 */
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
-	REGULATOR_SUPPLY("avdd_lcd_ext", NULL),
+	REGULATOR_SUPPLY("avdd_lcd", NULL),
 };
 
 static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
@@ -911,12 +923,16 @@ FIXED_REG(2,	vdd_hdmi_5v0,	vdd_hdmi_5v0,
 
 #define CERES_COMMON_FIXED_REG		\
 	ADD_FIXED_REG(battery),		\
-	ADD_FIXED_REG(avdd_lcd),		\
-	ADD_FIXED_REG(vdd_hdmi_5v0)		\
+	ADD_FIXED_REG(vdd_hdmi_5v0)	\
 
-/* Gpio switch regulator platform data for Ceres E1680 */
+
+/*Gpio switch regulator platform data for Ceres E1680 */
 static struct platform_device *fixed_reg_devs_e1680[] = {
-	CERES_COMMON_FIXED_REG
+	CERES_COMMON_FIXED_REG,
+};
+
+static struct platform_device *fixed_reg_devs_e1680_display_config[] = {
+	ADD_FIXED_REG(avdd_lcd),
 };
 
 static int __init ceres_fixed_regulator_init(void)
@@ -928,6 +944,11 @@ static int __init ceres_fixed_regulator_init(void)
 	tegra_get_board_info(&board_info);
 	if (board_info.board_id == BOARD_E1670)
 		return atlantis_fixed_regulator_init();
+
+	if(get_display_config() == 0)
+		platform_add_devices(fixed_reg_devs_e1680_display_config,
+				ARRAY_SIZE(fixed_reg_devs_e1680_display_config));
+
 	return platform_add_devices(fixed_reg_devs_e1680,
 				ARRAY_SIZE(fixed_reg_devs_e1680));
 }
