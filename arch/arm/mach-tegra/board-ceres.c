@@ -933,6 +933,7 @@ static void ceres_tegra_bb_init(void)
 {
 	pr_info("%s: registering tegra bb\n", __func__);
 	ceres_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
+	ceres_tegra_bb_data.mem_req_soon = INT_BB2AP_MEM_REQ_SOON_INT;
 	platform_device_register(&ceres_tegra_bb_device);
 }
 #endif
