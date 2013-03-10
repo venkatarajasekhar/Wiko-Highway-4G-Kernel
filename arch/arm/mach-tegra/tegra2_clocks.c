@@ -1322,15 +1322,15 @@ static void tegra2_emc_clk_init(struct clk *c)
 
 static long tegra2_emc_clk_round_rate(struct clk *c, unsigned long rate)
 {
-	long emc_rate;
-	long clk_rate;
+	unsigned long emc_rate;
+	unsigned long clk_rate;
 
 	/*
 	 * The slowest entry in the EMC clock table that is at least as
 	 * fast as rate.
 	 */
 	emc_rate = tegra_emc_round_rate(rate);
-	if (emc_rate < 0)
+	if (IS_ERR_VALUE(emc_rate))
 		return c->max_rate;
 
 	/*
@@ -1641,10 +1641,10 @@ static void tegra_clk_shared_bus_user_init(struct clk *c)
 static int tegra_clk_shared_bus_user_set_rate(struct clk *c, unsigned long rate)
 {
 	int ret;
-	long new_rate = rate;
+	unsigned long new_rate = rate;
 
 	new_rate = clk_round_rate(c->parent, new_rate);
-	if (new_rate < 0)
+	if (IS_ERR_VALUE(new_rate))
 		return new_rate;
 
 	c->u.shared_bus_user.rate = new_rate;

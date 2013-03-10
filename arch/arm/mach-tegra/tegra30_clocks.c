@@ -2627,10 +2627,10 @@ static void tegra3_emc_clk_init(struct clk *c)
 
 static long tegra3_emc_clk_round_rate(struct clk *c, unsigned long rate)
 {
-	long new_rate = max(rate, c->min_rate);
+	unsigned long new_rate = max(rate, c->min_rate);
 
 	new_rate = tegra_emc_round_rate(new_rate);
-	if (new_rate < 0)
+	if (IS_ERR_VALUE(new_rate))
 		new_rate = c->max_rate;
 
 	return new_rate;
