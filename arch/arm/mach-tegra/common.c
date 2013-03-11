@@ -1816,11 +1816,8 @@ static const char * __init tegra_get_family(void)
 static const char * __init tegra_get_soc_id(void)
 {
 	int package_id = tegra_package_id();
-	struct board_info board_info;
-	tegra_get_board_info(&board_info);
-	return kasprintf(GFP_KERNEL, "REV=%s:SKU=%d:PID=0x%x",
-		tegra_revision_name[tegra_revision], board_info.sku,
-		package_id);
+	return kasprintf(GFP_KERNEL, "REV=%s:SKU=0x%x:PID=0x%x",
+		tegra_revision_name[tegra_revision], tegra_sku_id, package_id);
 }
 
 static void __init tegra_soc_info_populate(struct soc_device_attribute
