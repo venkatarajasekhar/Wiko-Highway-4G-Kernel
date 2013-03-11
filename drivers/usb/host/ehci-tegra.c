@@ -23,6 +23,7 @@
 #include <linux/gpio.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
+#include <linux/pm_runtime.h>
 
 #include <mach/usb_phy.h>
 #include <mach/iomap.h>
@@ -582,6 +583,7 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 #endif
 
 	tegra_pd_add_device(&tegra_mc_chain_b, &pdev->dev);
+	pm_runtime_enable(&pdev->dev);
 
 	return err;
 
