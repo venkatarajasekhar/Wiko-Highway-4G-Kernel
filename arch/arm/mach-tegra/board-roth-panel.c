@@ -39,6 +39,7 @@
 #include "board.h"
 #include "devices.h"
 #include "gpio-names.h"
+#include "board-panel.h"
 #include "tegra11_host1x_devices.h"
 
 struct platform_device * __init roth_host1x_init(void)
@@ -70,8 +71,6 @@ struct platform_device * __init roth_host1x_init(void)
 
 /* HDMI Hotplug detection pin */
 #define roth_hdmi_hpd	TEGRA_GPIO_PN7
-
-static atomic_t sd_brightness = ATOMIC_INIT(255);
 
 static bool reg_requested;
 static bool gpio_requested;
@@ -986,11 +985,6 @@ int __init roth_panel_init(int board_id)
 		tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
 
-	res = platform_get_resource_byname(&roth_disp2_device,
-					 IORESOURCE_MEM, "fbmem");
-	res->start = tegra_fb2_start;
-	res->end = tegra_fb2_start + tegra_fb2_size - 1;
-
 	/*
 	 * only roth supports initialized mode.
 	 */
@@ -1004,12 +998,9 @@ int __init roth_panel_init(int board_id)
 		return err;
 	}
 
-	roth_disp2_device.dev.parent = &phost1x->dev;
-	err = platform_device_register(&roth_disp2_device);
-	if (err) {
-		pr_err("disp2 device registration failed\n");
+	err = tegra_init_hdmi(&roth_disp2_device, phost1x);
+	if (err)
 		return err;
-	}
 
 #if IS_EXTERNAL_PWM
 	err = platform_add_devices(roth_bl_device,

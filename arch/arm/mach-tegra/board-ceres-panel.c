@@ -533,12 +533,6 @@ int __init ceres_panel_init(void)
 		tegra_fb_start, tegra_bootloader_fb_start,
 			min(tegra_fb_size, tegra_bootloader_fb_size));
 
-	res = platform_get_resource_byname(&ceres_disp2_device,
-					 IORESOURCE_MEM, "fbmem");
-
-	res->start = tegra_fb2_start;
-	res->end = tegra_fb2_start + tegra_fb2_size - 1;
-
 	ceres_disp1_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&ceres_disp1_device);
 	if (err) {
@@ -548,12 +542,9 @@ int __init ceres_panel_init(void)
 
 	ceres_set_hotplug_gpio();
 
-	ceres_disp2_device.dev.parent = &phost1x->dev;
-	err = platform_device_register(&ceres_disp2_device);
-	if (err) {
-		pr_err("disp2 device registration failed\n");
+	err = tegra_init_hdmi(&ceres_disp2_device, phost1x);
+	if (err)
 		return err;
-	}
 
 #ifdef CONFIG_TEGRA_NVAVP
 	nvavp_device.dev.parent = &phost1x->dev;

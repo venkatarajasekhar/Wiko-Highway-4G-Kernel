@@ -20,11 +20,14 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
 
 #include <mach/dc.h>
 #include <mach/iomap.h>
 
 #include "board-panel.h"
+#include "board.h"
 
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
@@ -158,3 +161,45 @@ fail:
 	of_node_put(node);
 	return err;
 }
+
+#ifdef CONFIG_TEGRA_DC
+/**
+ * tegra_init_hdmi - initialize and add HDMI device if not disabled by DT
+ */
+int tegra_init_hdmi(struct platform_device *pdev,
+		     struct platform_device *phost1x)
+{
+	struct resource __maybe_unused *res;
+	bool enabled = true;
+	int err;
+#ifdef CONFIG_OF
+	struct device_node *hdmi_node = NULL;
+
+	hdmi_node = of_find_node_by_path("/host1x/hdmi");
+	/* disable HDMI if explicitly set that way in the device tree */
+	enabled = !hdmi_node || of_device_is_available(hdmi_node);
+#endif
+
+	if (enabled) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						   "fbmem");
+		res->start = tegra_fb2_start;
+		res->end = tegra_fb2_start + tegra_fb2_size - 1;
+
+		pdev->dev.parent = &phost1x->dev;
+		err = platform_device_register(pdev);
+		if (err) {
+			dev_err(&pdev->dev, "device registration failed\n");
+			return err;
+		}
+	}
+
+	return 0;
+}
+#else
+int tegra_init_hdmi(struct platform_device *pdev,
+		     struct platform_device *phost1x)
+{
+	return 0;
+}
+#endif
