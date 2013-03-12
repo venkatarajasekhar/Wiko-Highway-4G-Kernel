@@ -38,6 +38,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/i2c/atmel_mxt_ts.h>
 #include <linux/platform_data/tmon_tmp411.h>
+#include <linux/platform_data/tegra_ahci.h>
 #include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/io_dpd.h>
@@ -662,8 +663,13 @@ static void e1853_nor_init(void)
 }
 
 #ifdef CONFIG_SATA_AHCI_TEGRA
+static struct tegra_ahci_platform_data ahci_plat_data = {
+	.gen2_rx_eq = 7,
+};
+
 static void e1853_sata_init(void)
 {
+	tegra_sata_device.dev.platform_data = &ahci_plat_data;
 	platform_device_register(&tegra_sata_device);
 }
 #else
