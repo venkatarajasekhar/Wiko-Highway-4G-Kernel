@@ -132,6 +132,18 @@ config SND_SOC_TEGRA_E1853
 	  used by the system integrator needs to be provided while instantiating
 	  the driver.
 
+config SND_SOC_TEGRA_M2601
+	tristate "SoC Audio support for M2601 SKUs"
+	depends on SND_SOC_TEGRA
+	depends on MACH_M2601
+	select SND_SOC_TEGRA30_I2S if ARCH_TEGRA_3x_SOC
+	select SND_SOC_AD193X
+	help
+	  Say Y or M here if you want to add support for SoC audio on the
+	  TEGRA M2601 SKUs. These are plug-n-play boards and and the codecs
+	  used by the system integrator needs to be provided while instantiating
+	  the driver.
+
 config MACH_HAS_SND_SOC_TEGRA_WM8753
 	bool
 	help
