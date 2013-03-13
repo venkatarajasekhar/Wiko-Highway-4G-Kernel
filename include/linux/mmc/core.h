@@ -144,6 +144,8 @@ extern struct mmc_async_req *mmc_start_req(struct mmc_host *,
 					   struct mmc_async_req *, int *);
 extern int mmc_interrupt_hpi(struct mmc_card *);
 extern int mmc_bkops_start(struct mmc_card *card, bool is_synchronous);
+extern void mmc_bkops_work(struct work_struct *work);
+extern void mmc_refresh_work(struct work_struct *work);
 extern void mmc_refresh(unsigned long data);
 
 extern void mmc_wait_for_req(struct mmc_host *, struct mmc_request *);

@@ -4,7 +4,7 @@
  *  Copyright (C) 2003-2004 Russell King, All Rights Reserved.
  *  Copyright (C) 2005-2007 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
- *  Copyright (c) 2012 NVIDIA Corporation, All Rights Reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -957,6 +957,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			goto free_card;
 
 		if (card->ext_csd.refresh) {
+			INIT_WORK(&card->bkops, (work_func_t) mmc_bkops_work);
+			INIT_WORK(&card->refresh,
+				(work_func_t) mmc_refresh_work);
 			init_timer(&card->timer);
 			card->timer.data = (unsigned long) card;
 			card->timer.function = mmc_refresh;

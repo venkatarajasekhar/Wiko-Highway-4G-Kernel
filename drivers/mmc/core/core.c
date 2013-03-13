@@ -5,7 +5,7 @@
  *  SD support Copyright (C) 2004 Ian Molton, All Rights Reserved.
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
- *  Copyright (c) 2012 NVIDIA Corporation, All Rights Reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -490,18 +490,20 @@ int mmc_bkops_start(struct mmc_card *card, bool is_synchronous)
 }
 EXPORT_SYMBOL(mmc_bkops_start);
 
-static void mmc_bkops_work(struct work_struct *work)
+void mmc_bkops_work(struct work_struct *work)
 {
 	struct mmc_card *card = container_of(work, struct mmc_card, bkops);
 	mmc_bkops_start(card, true);
 }
+EXPORT_SYMBOL(mmc_bkops_work);
 
-static void mmc_refresh_work(struct work_struct *work)
+void mmc_refresh_work(struct work_struct *work)
 {
 	struct mmc_card *card = container_of(work, struct mmc_card, refresh);
 	char buf[512];
 	mmc_gen_cmd(card, buf, 0x44, 0x1, 0x0, 0x1);
 }
+EXPORT_SYMBOL(mmc_refresh_work);
 
 void mmc_refresh(unsigned long data)
 {
@@ -511,9 +513,6 @@ void mmc_refresh(unsigned long data)
 
 	if ((!card) || (!card->ext_csd.refresh))
 		return;
-
-	INIT_WORK(&card->bkops, (work_func_t) mmc_bkops_work);
-	INIT_WORK(&card->refresh, (work_func_t) mmc_refresh_work);
 
 	do_gettimeofday(&cur_time);
 	timeout1 = MMC_REFRESH_INTERVAL - (cur_time.tv_sec -
