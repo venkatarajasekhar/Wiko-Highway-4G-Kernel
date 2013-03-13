@@ -39,3 +39,4 @@ obj-$(CONFIG_ADT7410) += adt7410.o
 obj-$(CONFIG_AD7280) += ad7280a.o
 obj-$(CONFIG_MAX77660_ADC) += max77660-adc.o
 obj-$(CONFIG_LPC32XX_ADC) += lpc32xx_adc.o
+obj-$(CONFIG_PALMAS_GPADC) += palmas_gpadc.o
