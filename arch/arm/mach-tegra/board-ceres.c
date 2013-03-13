@@ -979,12 +979,16 @@ err_ret:
 static inline void ceres_battery_edp_init(void) {}
 #endif
 
-static void __init tegra_ceres_init(void)
+static void __init tegra_ceres_early_init(void)
 {
 	ceres_battery_edp_init();
 	tegra_clk_init_from_table(ceres_clk_init_table);
 	tegra_clk_verify_parents();
-	tegra_enable_pinmux();
+}
+
+static void __init tegra_ceres_late_init(void)
+{
+	platform_device_register(&tegra_pinmux_device);
 	ceres_pinmux_init();
 	ceres_i2c_init();
 	ceres_spi_init();
@@ -1022,10 +1026,12 @@ static void __init tegra_ceres_init(void)
 
 static void __init tegra_ceres_dt_init(void)
 {
+	tegra_ceres_early_init();
+
 	of_platform_populate(NULL,
 		of_default_bus_match_table, NULL, &platform_bus);
 
-	tegra_ceres_init();
+	tegra_ceres_late_init();
 }
 
 static void __init tegra_ceres_reserve(void)
