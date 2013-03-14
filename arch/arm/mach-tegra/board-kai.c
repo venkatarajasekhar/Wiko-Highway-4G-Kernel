@@ -76,6 +76,7 @@
 #include "pm.h"
 #include "wdt-recovery.h"
 #include "common.h"
+#include "board-touch.h"
 
 /* wl128x BT, FM, GPS connectivity chip */
 struct ti_st_plat_data kai_wilink_pdata = {
@@ -578,6 +579,41 @@ struct spi_board_info rm31080a_kai_spi_board[1] = {
 	 },
 };
 
+static struct synaptics_gpio_data synaptics_gpio_kai_data = {
+	.attn_gpio = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.reset_gpio = SYNAPTICS_RESET_GPIO,
+};
+
+static struct rmi_device_platform_data synaptics_kai_platformdata = {
+	.sensor_name   = "TM2002",
+	.attn_gpio     = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.gpio_data     = &synaptics_gpio_kai_data,
+	.gpio_config   = synaptics_touchpad_gpio_setup,
+	.spi_data = {
+		.block_delay_us = 15,
+		.read_delay_us = 15,
+		.write_delay_us = 2,
+	},
+	.power_management = {
+		.nosleep = RMI_F01_NOSLEEP_OFF,
+	},
+	.f19_button_map = &synaptics_button_map,
+};
+
+static struct spi_board_info synaptics_2002_spi_board_kai[] = {
+	{
+		.modalias = "rmi_spi",
+		.bus_num = 0,
+		.chip_select = 0,
+		.max_speed_hz = 8*1000*1000,
+		.mode = SPI_MODE_3,
+		.platform_data = &synaptics_kai_platformdata,
+	},
+};
+
+
 static int __init kai_touch_init(void)
 {
 	int touch_id;
@@ -651,7 +687,8 @@ static int __init kai_touch_init(void)
 		break;
 	case 3:
 		pr_info("Synaptics PCB based touch init\n");
-		touch_init_synaptics_kai();
+		touch_init_synaptics(synaptics_2002_spi_board_kai,
+				ARRAY_SIZE(synaptics_2002_spi_board_kai));
 		break;
 	default:
 		pr_err("touch_id error, no touch %d\n", touch_id);

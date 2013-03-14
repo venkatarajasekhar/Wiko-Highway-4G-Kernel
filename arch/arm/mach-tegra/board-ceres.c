@@ -63,6 +63,7 @@
 #include "clock.h"
 #include "devices.h"
 #include "common.h"
+#include "board-touch.h"
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define CERES_BT_EN		TEGRA_GPIO_PQ6
@@ -782,16 +783,58 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 	},
 };
 
+static struct synaptics_gpio_data synaptics_gpio_ceres_data = {
+	.attn_gpio = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.reset_gpio = SYNAPTICS_RESET_GPIO,
+};
+
+static struct rmi_device_platform_data synaptics_ceres_platformdata = {
+	.sensor_name   = "TM9999",
+	.attn_gpio     = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.gpio_data     = &synaptics_gpio_ceres_data,
+	.gpio_config   = synaptics_touchpad_gpio_setup,
+	.spi_data = {
+		.block_delay_us = 15,
+		.read_delay_us = 15,
+		.write_delay_us = 2,
+	},
+	.power_management = {
+		.nosleep = RMI_F01_NOSLEEP_OFF,
+	},
+	.f19_button_map = &synaptics_button_map,
+	.f54_direct_touch_report_size = 944,
+};
+
+static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
+	{
+		.modalias = "rmi_spi",
+		.bus_num = 3,
+		.chip_select = 2,
+		.max_speed_hz = 8*1000*1000,
+		.mode = SPI_MODE_3,
+		.platform_data = &synaptics_ceres_platformdata,
+	},
+};
+
 static int __init ceres_touch_init(void)
 {
 	tegra_clk_init_from_table(touch_clk_init_table);
-	rm31080a_ceres_spi_board[0].irq =
-		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
-	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
-				TOUCH_GPIO_RST_RAYDIUM_SPI,
-				&rm31080ts_ceres_data,
-				&rm31080a_ceres_spi_board[0],
-				ARRAY_SIZE(rm31080a_ceres_spi_board));
+	if (tegra_get_touch_id() == RAYDIUM_TOUCH) {
+		pr_info("%s: initializing raydium\n", __func__);
+		rm31080a_ceres_spi_board[0].irq =
+			gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+					TOUCH_GPIO_RST_RAYDIUM_SPI,
+					&rm31080ts_ceres_data,
+					&rm31080a_ceres_spi_board[0],
+					ARRAY_SIZE(rm31080a_ceres_spi_board));
+	} else {
+		pr_info("%s: initializing synaptics\n", __func__);
+		touch_init_synaptics(synaptics_9999_spi_board_ceres,
+				ARRAY_SIZE(synaptics_9999_spi_board_ceres));
+	}
 	return 0;
 }
 
@@ -829,16 +872,58 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 	},
 };
 
+static struct synaptics_gpio_data synaptics_gpio_ceres_data = {
+	.attn_gpio = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.reset_gpio = SYNAPTICS_RESET_GPIO,
+};
+
+static struct rmi_device_platform_data synaptics_ceres_platformdata = {
+	.sensor_name   = "TM9999",
+	.attn_gpio     = SYNAPTICS_ATTN_GPIO,
+	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
+	.gpio_data     = &synaptics_gpio_ceres_data,
+	.gpio_config   = synaptics_touchpad_gpio_setup,
+	.spi_data = {
+		.block_delay_us = 15,
+		.read_delay_us = 15,
+		.write_delay_us = 2,
+	},
+	.power_management = {
+		.nosleep = RMI_F01_NOSLEEP_OFF,
+	},
+	.f19_button_map = &synaptics_button_map,
+	.f54_direct_touch_report_size = 944,
+};
+
+static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
+	{
+		.modalias = "rmi_spi",
+		.bus_num = 2,
+		.chip_select = 0,
+		.max_speed_hz = 8*1000*1000,
+		.mode = SPI_MODE_3,
+		.platform_data = &synaptics_ceres_platformdata,
+	},
+};
+
 static int __init ceres_touch_init(void)
 {
 	tegra_clk_init_from_table(touch_clk_init_table);
-	rm31080a_ceres_spi_board[0].irq =
-		gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
-	touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
-				TOUCH_GPIO_RST_RAYDIUM_SPI,
-				&rm31080ts_ceres_data,
-				&rm31080a_ceres_spi_board[0],
-				ARRAY_SIZE(rm31080a_ceres_spi_board));
+	if (tegra_get_touch_id() == RAYDIUM_TOUCH) {
+		pr_info("%s: initializing raydium\n", __func__);
+		rm31080a_ceres_spi_board[0].irq =
+			gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
+		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
+					TOUCH_GPIO_RST_RAYDIUM_SPI,
+					&rm31080ts_ceres_data,
+					&rm31080a_ceres_spi_board[0],
+					ARRAY_SIZE(rm31080a_ceres_spi_board));
+	} else {
+		pr_info("%s: initializing synaptics\n", __func__);
+		touch_init_synaptics(synaptics_9999_spi_board_ceres,
+				ARRAY_SIZE(synaptics_9999_spi_board_ceres));
+	}
 	return 0;
 }
 #endif
