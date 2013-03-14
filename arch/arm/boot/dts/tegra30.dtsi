@@ -17,6 +17,7 @@
 		reg = <0x50000000 0x00024000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
 			      0 67 0x04>; /* mpcore general */
+		nvidia,memory-clients = <6>;
 
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -26,37 +27,44 @@
 		mpe {
 			compatible = "nvidia,tegra30-mpe";
 			reg = <0x54040000 0x00040000>;
+			nvidia,memory-clients = <11>;
 		};
 
 		vi {
 			compatible = "nvidia,tegra30-vi";
 			reg = <0x54080000 0x00040000>;
+			nvidia,memory-clients = <18>;
 		};
 
 		epp {
 			compatible = "nvidia,tegra30-epp";
 			reg = <0x540c0000 0x00040000>;
+			nvidia,memory-clients = <4>;
 		};
 
 		isp {
 			compatible = "nvidia,tegra30-isp";
 			reg = <0x54100000 0x00040000>;
+			nvidia,memory-clients = <8>;
 		};
 
 		gr2d {
 			compatible = "nvidia,tegra30-gr2d";
 			reg = <0x54140000 0x00040000>;
+			nvidia,memory-clients = <5>;
 		};
 
 		gr3d {
 			compatible = "nvidia,tegra30-gr3d";
 			reg = <0x54180000 0x00040000>;
+			nvidia,memory-clients = <12 13>;
 		};
 
 		dc@54200000 {
 			compatible = "nvidia,tegra30-dc";
 			reg = <0x54200000 0x00040000>;
 			interrupts = <0 73 0x04>;
+			nvidia,memory-clients = <2>;
 
 			rgb {
 				status = "disabled";
@@ -67,6 +75,7 @@
 			compatible = "nvidia,tegra30-dc";
 			reg = <0x54240000 0x00040000>;
 			interrupts = <0 74 0x04>;
+			nvidia,memory-clients = <3>;
 
 			rgb {
 				status = "disabled";
@@ -162,6 +171,12 @@
 		#interrupt-cells = <2>;
 		interrupt-controller;
 		status = "disable";
+	};
+
+	vde {
+		reg = <0x6001a000 0x3bff>;
+		compatible = "nvidia,tegra30-vde";
+		nvidia,memory-clients = <17>;
 	};
 
 	pinmux: pinmux@70000868 {
@@ -283,6 +298,7 @@
 		compatible = "nvidia,tegra30-sdhci", "nvidia,tegra20-sdhci";
 		reg = <0x78000000 0x200>;
 		interrupts = <0 14 0x04>;
+		nvidia,memory-clients = <14>;
 		status = "disable";
 	};
 
@@ -290,6 +306,7 @@
 		compatible = "nvidia,tegra30-sdhci", "nvidia,tegra20-sdhci";
 		reg = <0x78000200 0x200>;
 		interrupts = <0 15 0x04>;
+		nvidia,memory-clients = <14>;
 		status = "disable";
 	};
 
@@ -297,6 +314,7 @@
 		compatible = "nvidia,tegra30-sdhci", "nvidia,tegra20-sdhci";
 		reg = <0x78000400 0x200>;
 		interrupts = <0 19 0x04>;
+		nvidia,memory-clients = <14>;
 		status = "disable";
 	};
 
@@ -304,6 +322,7 @@
 		compatible = "nvidia,tegra30-sdhci", "nvidia,tegra20-sdhci";
 		reg = <0x78000600 0x200>;
 		interrupts = <0 31 0x04>;
+		nvidia,memory-clients = <14>;
 		status = "disable";
 	};
 
