@@ -1588,6 +1588,8 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 #ifdef CONFIG_MMC_BKOPS
 	host->mmc->caps2 |= MMC_CAP2_BKOPS;
 #endif
+	/* disable access to boot partitions */
+	host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
 
 	tegra_sdhost_min_freq = TEGRA_SDHOST_MIN_FREQ;
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
