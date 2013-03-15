@@ -617,11 +617,6 @@ int __init ceres_regulator_init(void)
 	u32 pmc_ctrl;
 	int id;
 
-	/* configure the power management controller to trigger PMU
-	 * interrupts when low */
-	pmc_ctrl = readl(pmc + PMC_CTRL);
-	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
-
 	tegra_get_board_info(&board_info);
 	pr_info("board_info: id:sku:fab:major:minor = 0x%04x:0x%04x:0x%02x:0x%02x:0x%02x\n",
 		board_info.board_id, board_info.sku,
@@ -631,6 +626,11 @@ int __init ceres_regulator_init(void)
 	if (board_info.board_id == BOARD_E1670) {
 		atlantis_regulator_init();
 	} else {
+		/* configure the power management controller to trigger PMU
+		 * interrupts when low */
+		pmc_ctrl = readl(pmc + PMC_CTRL);
+		writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+
 		max77660_pdata.en_buck2_ext_ctrl = true;
 		for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
 			max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];

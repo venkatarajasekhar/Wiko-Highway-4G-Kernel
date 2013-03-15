@@ -573,7 +573,15 @@ static void lp8755_regulator_init(void)
 int __init atlantis_regulator_init(void)
 {
 	struct board_info board_info;
+	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
+	u32 pmc_ctrl;
 	int i;
+
+	/* configure the power management controller to trigger PMU
+	 * interrupts when high */
+	pmc_ctrl = readl(pmc + PMC_CTRL);
+	writel(pmc_ctrl & ~PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+
 
 	tegra_get_board_info(&board_info);
 	for (i = 0; i < PALMAS_NUM_REGS ; i++) {
