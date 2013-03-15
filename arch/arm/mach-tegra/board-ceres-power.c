@@ -494,8 +494,29 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 			.inst_pol = 1,
 			.pwrdn_debouncecnt = 0x10,
 		},
-
 	},
+};
+
+static struct max77660_haptic_platform_data max77660_haptic_pdata = {
+	/*
+	 * FIXME: external pwm mode not tested, only internal mode tested
+	 */
+	.type = MAX77660_HAPTIC_ERM,
+	.mode = MAX77660_INTERNAL_MODE,
+	.internal_mode_pattern = 0,
+	.pattern_cycle = 10,
+	.pattern_signal_period = 0xFF,
+	.feedback_duty_cycle = 0xF /* 100% duty cycle */ ,
+	.invert = MAX77660_INVERT_OFF,
+	.cont_mode = MAX77660_CONT_MODE,
+	.motor_startup_val = 0,
+	.scf_val = 7,
+	/* FIXME: edp_states */
+};
+
+static struct max77660_haptic_platform_data_encl max77660_haptic_pdata_encl = {
+	.pdata = &max77660_haptic_pdata,
+	.size = sizeof(max77660_haptic_pdata),
 };
 
 static struct max77660_platform_data max77660_pdata = {
@@ -512,6 +533,8 @@ static struct max77660_platform_data max77660_pdata = {
 	.adc_pdata = &max77660_adc_pdata,
 
 	.sim_pdata = &max77660_sim_pdata,
+
+	.haptic_pdata = &max77660_haptic_pdata_encl,
 
 	.flags	= 0x00,
 	.use_power_off	= true,
@@ -715,6 +738,7 @@ int __init ceres_regulator_init(void)
 static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_bl", NULL),
 	REGULATOR_SUPPLY("vdd_sys_cam", NULL),
+	REGULATOR_SUPPLY("vdd_vbrtr", NULL),
 };
 
 /* LCD_AVDD_EN From PMU GP6 */
