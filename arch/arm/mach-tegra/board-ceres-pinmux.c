@@ -367,6 +367,7 @@ int __init ceres_pinmux_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1690:
 		ceres_gpio_init_configure();
 		tegra_pinmux_config_table(ceres_pinmux_common,
 			ARRAY_SIZE(ceres_pinmux_common));
@@ -385,6 +386,7 @@ int __init ceres_pinmux_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1690:
 		tegra_pinmux_config_table(ceres_unused_pins_lowpower,
 			ARRAY_SIZE(ceres_unused_pins_lowpower));
 		break;
