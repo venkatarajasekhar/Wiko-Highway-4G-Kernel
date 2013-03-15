@@ -189,6 +189,7 @@ static struct tegra_dc_platform_data e1853_hdmi_pdata = {
 	.fb              = &e1853_hdmi_fb_data,
 };
 
+#if defined(CONFIG_TEGRA_NVMAP)
 static struct nvmap_platform_carveout e1853_carveouts[] = {
 	[0] = {
 		.name		= "iram",
@@ -211,8 +212,19 @@ static struct nvmap_platform_data e1853_nvmap_data = {
 	.nr_carveouts	= ARRAY_SIZE(e1853_carveouts),
 };
 
+static struct platform_device e1853_nvmap_device = {
+	.name	= "tegra-nvmap",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &e1853_nvmap_data,
+	},
+};
+#endif
+
 static struct platform_device *e1853_gfx_devices[] __initdata = {
-	&tegra_nvmap_device,
+#if defined(CONFIG_TEGRA_NVMAP)
+	&e1853_nvmap_device,
+#endif
 };
 
 static void e1853_config_CLAA101WB03_lcd(void)
@@ -244,7 +256,6 @@ int __init e1853_panel_init(void)
 
 	e1853_carveouts[1].base = tegra_carveout_start;
 	e1853_carveouts[1].size = tegra_carveout_size;
-	tegra_nvmap_device.dev.platform_data = &e1853_nvmap_data;
 	tegra_disp1_device.dev.platform_data = &e1853_disp1_pdata;
 	tegra_disp2_device.dev.platform_data = &e1853_hdmi_pdata;
 
@@ -271,6 +282,18 @@ int __init e1853_panel_init(void)
 		res->end = tegra_fb_start + tegra_fb_size - 1;
 	}
 
+	/*
+	 * If the bootloader fb is valid, copy it to the fb, or else
+	 * clear fb to avoid garbage on dispaly1.
+	 */
+	if (tegra_bootloader_fb_size)
+		__tegra_move_framebuffer(&e1853_nvmap_device,
+				tegra_fb_start, tegra_bootloader_fb_start,
+				min(tegra_fb_size, tegra_bootloader_fb_size));
+	else
+		__tegra_clear_framebuffer(&e1853_nvmap_device,
+					  tegra_fb_start, tegra_fb_size);
+
 	if (!err) {
 		tegra_disp1_device.dev.parent = &phost1x->dev;
 		err = platform_device_register(&tegra_disp1_device);
@@ -282,6 +305,18 @@ int __init e1853_panel_init(void)
 		res->start = tegra_fb2_start;
 		res->end = tegra_fb2_start + tegra_fb2_size - 1;
 	}
+
+	/*
+	 * If the bootloader fb2 is valid, copy it to the fb2, or else
+	 * clear fb2 to avoid garbage on dispaly2.
+	 */
+	if (tegra_bootloader_fb2_size)
+		__tegra_move_framebuffer(&e1853_nvmap_device,
+			tegra_fb2_start, tegra_bootloader_fb2_start,
+			min(tegra_fb2_size, tegra_bootloader_fb2_size));
+	else
+		__tegra_clear_framebuffer(&e1853_nvmap_device,
+					  tegra_fb2_start, tegra_fb2_size);
 
 	if (!err) {
 		tegra_disp2_device.dev.parent = &phost1x->dev;

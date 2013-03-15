@@ -694,6 +694,7 @@ static void __init tegra_e1853_init(void)
 	platform_add_devices(e1853_devices, ARRAY_SIZE(e1853_devices));
 	e1853_panel_init();
 	e1853_nor_init();
+	tegra_release_bootloader_fb();
 	e1853_pcie_init();
 	e1853_pca953x_init();
 	e1853_sata_init();

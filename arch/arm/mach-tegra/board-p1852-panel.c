@@ -356,6 +356,7 @@ static struct tegra_dc_platform_data p1852_hdmi_pdata = {
 
 /* End of platform data */
 
+#if defined(CONFIG_TEGRA_NVMAP)
 static struct nvmap_platform_carveout p1852_carveouts[] = {
 	[0] = {
 		.name		= "iram",
@@ -378,8 +379,19 @@ static struct nvmap_platform_data p1852_nvmap_data = {
 	.nr_carveouts	= ARRAY_SIZE(p1852_carveouts),
 };
 
+static struct platform_device p1852_nvmap_device = {
+	.name	= "tegra-nvmap",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &p1852_nvmap_data,
+	},
+};
+#endif
+
 static struct platform_device *p1852_gfx_devices[] __initdata = {
-	&tegra_nvmap_device,
+#if defined(CONFIG_TEGRA_NVMAP)
+	&p1852_nvmap_device,
+#endif
 };
 
 static int __init p1852_sku2_panel_init(void)
@@ -391,7 +403,6 @@ static int __init p1852_sku2_panel_init(void)
 
 	p1852_carveouts[1].base = tegra_carveout_start;
 	p1852_carveouts[1].size = tegra_carveout_size;
-	tegra_nvmap_device.dev.platform_data = &p1852_nvmap_data;
 	/*
 	 * sku2 has primary LVDS out and secondary LVDS out
 	 * (via HDMI->RGB->Serializer)
@@ -422,6 +433,18 @@ static int __init p1852_sku2_panel_init(void)
 		res->end = tegra_fb_start + tegra_fb_size - 1;
 	}
 
+	/*
+	 * If the bootloader fb is valid, copy it to the fb, or else
+	 * clear fb to avoid garbage on dispaly1.
+	 */
+	if (tegra_bootloader_fb_size)
+		__tegra_move_framebuffer(&p1852_nvmap_device,
+				tegra_fb_start, tegra_bootloader_fb_start,
+				min(tegra_fb_size, tegra_bootloader_fb_size));
+	else
+		__tegra_clear_framebuffer(&p1852_nvmap_device,
+				tegra_fb_start, tegra_fb_size);
+
 	if (!err) {
 		tegra_disp1_device.dev.parent = &phost1x->dev;
 		err = platform_device_register(&tegra_disp1_device);
@@ -433,6 +456,18 @@ static int __init p1852_sku2_panel_init(void)
 		res->start = tegra_fb2_start;
 		res->end = tegra_fb2_start + tegra_fb2_size - 1;
 	}
+
+	/*
+	 * If the bootloader fb2 is valid, copy it to the fb2, or else
+	 * clear fb2 to avoid garbage on dispaly2.
+	 */
+	if (tegra_bootloader_fb2_size)
+		__tegra_move_framebuffer(&p1852_nvmap_device,
+			tegra_fb2_start, tegra_bootloader_fb2_start,
+			min(tegra_fb2_size, tegra_bootloader_fb2_size));
+	else
+		__tegra_clear_framebuffer(&p1852_nvmap_device,
+					  tegra_fb2_start, tegra_fb2_size);
 
 	if (!err) {
 		tegra_disp2_device.dev.parent = &phost1x->dev;
@@ -464,7 +499,6 @@ static int __init p1852_sku8_panel_init(void)
 
 	p1852_carveouts[1].base = tegra_carveout_start;
 	p1852_carveouts[1].size = tegra_carveout_size;
-	tegra_nvmap_device.dev.platform_data = &p1852_nvmap_data;
 	/* sku 8 has primary RGB out and secondary HDMI out */
 	tegra_disp1_device.dev.platform_data = &p1852_disp1_pdata;
 	tegra_disp2_device.dev.platform_data = &p1852_hdmi_pdata;
@@ -492,6 +526,18 @@ static int __init p1852_sku8_panel_init(void)
 		res->end = tegra_fb_start + tegra_fb_size - 1;
 	}
 
+	/*
+	 * If the bootloader fb is valid, copy it to the fb, or else
+	 * clear fb to avoid garbage on dispaly1.
+	 */
+	if (tegra_bootloader_fb_size)
+		__tegra_move_framebuffer(&p1852_nvmap_device,
+				tegra_fb_start, tegra_bootloader_fb_start,
+				min(tegra_fb_size, tegra_bootloader_fb_size));
+	else
+		__tegra_clear_framebuffer(&p1852_nvmap_device,
+				tegra_fb_start, tegra_fb_size);
+
 	if (!err) {
 		tegra_disp1_device.dev.parent = &phost1x->dev;
 		err = platform_device_register(&tegra_disp1_device);
@@ -503,6 +549,18 @@ static int __init p1852_sku8_panel_init(void)
 		res->start = tegra_fb2_start;
 		res->end = tegra_fb2_start + tegra_fb2_size - 1;
 	}
+
+	/*
+	 * If the bootloader fb2 is valid, copy it to the fb2, or else
+	 * clear fb2 to avoid garbage on dispaly2.
+	 */
+	if (tegra_bootloader_fb2_size)
+		__tegra_move_framebuffer(&p1852_nvmap_device,
+			tegra_fb2_start, tegra_bootloader_fb2_start,
+			min(tegra_fb2_size, tegra_bootloader_fb2_size));
+	else
+		__tegra_clear_framebuffer(&p1852_nvmap_device,
+					  tegra_fb2_start, tegra_fb2_size);
 
 	if (!err) {
 		tegra_disp2_device.dev.parent = &phost1x->dev;
