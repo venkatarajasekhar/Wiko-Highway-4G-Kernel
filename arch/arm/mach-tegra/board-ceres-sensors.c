@@ -150,7 +150,7 @@ static struct nct1008_platform_data ceres_nct1008_pdata = {
 
 	.passive_delay = 2000,
 
-	.num_trips = 1,
+	.num_trips = 2,
 	.trips = {
 		/* Thermal Throttling */
 		{
@@ -160,6 +160,14 @@ static struct nct1008_platform_data ceres_nct1008_pdata = {
 			.upper = THERMAL_NO_LIMIT,
 			.lower = THERMAL_NO_LIMIT,
 			.hysteresis = 0,
+		},
+		{
+			.cdev_type = "suspend_soctherm",
+			.trip_temp = 50000,
+			.trip_type = THERMAL_TRIP_ACTIVE,
+			.upper = 1,
+			.lower = 1,
+			.hysteresis = 5000,
 		},
 	},
 };
