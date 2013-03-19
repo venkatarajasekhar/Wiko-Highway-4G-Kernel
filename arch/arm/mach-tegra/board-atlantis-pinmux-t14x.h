@@ -248,7 +248,7 @@ static struct gpio_init_pin_info init_gpio_mode_atlantis_common[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PO5, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PO6, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN4, false, 0),
-	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN3, false, 0),
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN3, false, 1),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PM7, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN0, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN1, true, 0),
