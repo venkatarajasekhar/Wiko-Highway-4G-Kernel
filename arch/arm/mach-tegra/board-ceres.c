@@ -326,7 +326,7 @@ static void __init ceres_spi_init(void)
 }
 
 #define BBC_BOOT_EDP_MAX 0
-static unsigned int bbc_boot_edp_states[] = {500};
+static unsigned int bbc_boot_edp_states[] = { 1900, 0 };
 static struct edp_client bbc_boot_edp_client = {
 	.name = "bbc_boot",
 	.states = bbc_boot_edp_states,
@@ -337,7 +337,7 @@ static struct edp_client bbc_boot_edp_client = {
 
 static struct tegra_bbc_proxy_platform_data bbc_proxy_pdata = {
 	.modem_boot_edp_client = &bbc_boot_edp_client,
-	.edp_manager_name = NULL, /* FIXME when edp manager present */
+	.edp_manager_name = "battery",
 	.i_breach_ppm = 500000,
 	.i_thresh_3g_adjperiod = 10000,
 	.i_thresh_lte_adjperiod = 10000,
