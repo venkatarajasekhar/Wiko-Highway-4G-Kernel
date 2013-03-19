@@ -500,7 +500,6 @@ static void __init tegra_m2601_init(void)
 	tegra_init_board_info();
 	tegra_clk_init_from_table(m2601_clk_init_table);
 	tegra_enable_pinmux();
-	tegra_smmu_init();
 	tegra_soc_device_init("m2601");
 	m2601_pinmux_init();
 	m2601_i2c_init();

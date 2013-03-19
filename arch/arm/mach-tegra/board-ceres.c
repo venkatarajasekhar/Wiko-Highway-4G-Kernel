@@ -977,7 +977,6 @@ static void __init tegra_ceres_init(void)
 {
 	ceres_battery_edp_init();
 	tegra_clk_init_from_table(ceres_clk_init_table);
-	tegra_smmu_init();
 	tegra_enable_pinmux();
 	ceres_pinmux_init();
 	ceres_i2c_init();

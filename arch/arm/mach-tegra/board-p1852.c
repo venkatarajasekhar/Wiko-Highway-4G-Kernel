@@ -699,7 +699,6 @@ static void __init tegra_p1852_init(void)
 	tegra_init_board_info();
 	tegra_clk_init_from_table(p1852_clk_init_table);
 	tegra_enable_pinmux();
-	tegra_smmu_init();
 	tegra_soc_device_init("p1852");
 	p1852_pinmux_init();
 	p1852_i2c_init();

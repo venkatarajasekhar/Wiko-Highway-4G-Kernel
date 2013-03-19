@@ -1317,7 +1317,6 @@ static void __init tegra_cardhu_init(void)
 	tegra_get_board_info(&board_info);
 	tegra_clk_init_from_table(cardhu_clk_init_table);
 	tegra_enable_pinmux();
-	tegra_smmu_init();
 	tegra_soc_device_init("cardhu");
 	cardhu_pinmux_init();
 	cardhu_gpio_init();
