@@ -18,4 +18,10 @@
                 reg = <0x50041000 0x1000>,
                       <0x50040100 0x0100>;
         };
+
+	vde {
+		reg = <0x6001a000 0x3bff>;
+		compatible = "nvidia,tegra30-vde";
+		nvidia,memory-clients = <17>;
+	};
 };
