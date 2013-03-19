@@ -786,8 +786,45 @@ static void ceres_tegra_bb_init(void)
 }
 #endif
 
+#ifdef CONFIG_EDP_FRAMEWORK
+static struct edp_manager battery_edp_manager = {
+	.name = "battery",
+	.max = 20000
+};
+
+static void __init ceres_battery_edp_init(void)
+{
+	struct edp_governor *g;
+	int r;
+
+	r = edp_register_manager(&battery_edp_manager);
+	if (r)
+		goto err_ret;
+
+	/* start with priority governor */
+	g = edp_get_governor("priority");
+	if (!g) {
+		r = -EFAULT;
+		goto err_ret;
+	}
+
+	r = edp_set_governor(&battery_edp_manager, g);
+	if (r)
+		goto err_ret;
+
+	return;
+
+err_ret:
+	pr_err("Battery EDP init failed with error %d\n", r);
+	WARN_ON(1);
+}
+#else
+static inline void ceres_battery_edp_init(void) {}
+#endif
+
 static void __init tegra_ceres_init(void)
 {
+	ceres_battery_edp_init();
 	tegra_clk_init_from_table(ceres_clk_init_table);
 	tegra_smmu_init();
 	tegra_enable_pinmux();
