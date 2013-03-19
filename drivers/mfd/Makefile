@@ -6,6 +6,9 @@ GCOV_PROFILE := y
 
 88pm860x-objs			:= 88pm860x-core.o 88pm860x-i2c.o
 obj-$(CONFIG_MFD_88PM860X)	+= 88pm860x.o
+obj-$(CONFIG_MFD_AIC3256)	+= tlv320aic3256-core.o tlv320aic3256-irq.o
+obj-$(CONFIG_MFD_AIC3256_SPI)	+= tlv320aic3256-spi.o
+obj-$(CONFIG_MFD_AIC3256_I2C)	+= tlv320aic3256-i2c.o
 obj-$(CONFIG_MFD_SM501)		+= sm501.o
 obj-$(CONFIG_MFD_ASIC3)		+= asic3.o tmio_core.o
 
@@ -57,7 +60,9 @@ obj-$(CONFIG_TWL4030_POWER)    += twl4030-power.o
 obj-$(CONFIG_MFD_TWL4030_AUDIO)	+= twl4030-audio.o
 obj-$(CONFIG_TWL6030_PWM)	+= twl6030-pwm.o
 obj-$(CONFIG_TWL6040_CORE)	+= twl6040-core.o twl6040-irq.o
-obj-$(CONFIG_AIC3XXX_CORE)	+= tlv320aic3xxx-i2c.o tlv320aic3xxx-spi.o tlv320aic3xxx-core.o tlv320aic3xxx-irq.o
+obj-$(CONFIG_AIC3XXX_CORE)	+= tlv320aic3xxx-core.o tlv320aic3xxx-irq.o
+obj-$(CONFIG_AIC3XXX_I2C_REGMAP)	+= tlv320aic3xxx-i2c.o
+obj-$(CONFIG_AIC3XXX_SPI_REGMAP)	+= tlv320aic3xxx-spi.o
 obj-$(CONFIG_MFD_MC13XXX)	+= mc13xxx-core.o
 
 obj-$(CONFIG_MFD_CORE)		+= mfd-core.o
