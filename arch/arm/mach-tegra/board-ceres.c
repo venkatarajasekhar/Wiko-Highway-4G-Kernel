@@ -407,7 +407,7 @@ static void ceres_audio_init(void)
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
-	.builtin_host_disabled = true,
+	.id_det_type = TEGRA_USB_VIRTUAL_ID,
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	.support_pmu_vbus = true,
 #endif
@@ -436,7 +436,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
 	.unaligned_dma_buf_supported = false,
-	.builtin_host_disabled = true,
+	.id_det_type = TEGRA_USB_VIRTUAL_ID,
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	.support_pmu_vbus = true,
 #endif
