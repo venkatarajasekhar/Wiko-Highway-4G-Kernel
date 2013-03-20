@@ -600,11 +600,7 @@ static struct mpu_platform_data mpu9150_gyro_data = {
 	.level_shifter	= 0,
 	/* Located in board_[platformname].h */
 	.orientation	= MPU_GYRO_ORIENTATION,
-	.sec_slave_type	= SECONDARY_SLAVE_TYPE_COMPASS,
-	.sec_slave_id	= COMPASS_ID_AK8975,
-	.secondary_i2c_addr	= MPU_COMPASS_ADDR,
-	.secondary_read_reg	= 0x06,
-	.secondary_orientation	= MPU_COMPASS_ORIENTATION,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_NONE,
 	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
 			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
 };
@@ -614,19 +610,43 @@ static struct mpu_platform_data mpu9150_gyro_data_e1680 = {
 	.level_shifter	= 0,
 	/* Located in board_[platformname].h */
 	.orientation	= MPU_GYRO_ORIENTATION_E1680,
-	.sec_slave_type	= SECONDARY_SLAVE_TYPE_COMPASS,
-	.sec_slave_id	= COMPASS_ID_AK8975,
-	.secondary_i2c_addr	= MPU_COMPASS_ADDR,
-	.secondary_read_reg	= 0x06,
-	.secondary_orientation	= MPU_COMPASS_ORIENTATION_E1680,
+	.sec_slave_type	= SECONDARY_SLAVE_TYPE_NONE,
 	.key		= {0x4E, 0xCC, 0x7E, 0xEB, 0xF6, 0x1E, 0x35, 0x22,
 			   0x00, 0x34, 0x0D, 0x65, 0x32, 0xE9, 0x94, 0x89},
+};
+
+static struct mpu_platform_data mpu_compass_data = {
+	.orientation	= MPU_COMPASS_ORIENTATION,
+	.config		= NVI_CONFIG_BOOT_MPU,
+};
+
+static struct mpu_platform_data mpu_compass_data_e1680 = {
+	.orientation	= MPU_COMPASS_ORIENTATION_E1680,
+	.config		= NVI_CONFIG_BOOT_MPU,
+};
+
+static struct mpu_platform_data bmp180_pdata = {
+	.config		= NVI_CONFIG_BOOT_MPU,
 };
 
 static struct i2c_board_info __initdata inv_mpu9150_i2c1_board_info[] = {
 	{
 		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
 		.platform_data = &mpu9150_gyro_data,
+	},
+	{
+		/* The actual BMP180 address is 0x77 but because this conflicts
+		 * with another device, this address is hacked so Linux will
+		 * call the driver.  The conflict is technically okay since the
+		 * BMP180 is behind the MPU.  Also, the BMP180 driver uses a
+		 * hard-coded address of 0x77 since it can't be changed anyway.
+		 */
+		I2C_BOARD_INFO("bmp180", 0x78),
+		.platform_data = &bmp180_pdata,
+	},
+	{
+		I2C_BOARD_INFO(MPU_COMPASS_NAME, MPU_COMPASS_ADDR),
+		.platform_data = &mpu_compass_data,
 	},
 };
 
@@ -654,10 +674,13 @@ static void mpuirq_init(void)
 	}
 	pr_info("*** MPU END *** mpuirq_init...\n");
 
-	if (board_info.board_id == BOARD_E1680)
+	if (board_info.board_id == BOARD_E1680) {
 		inv_mpu9150_i2c1_board_info[0].platform_data
 					= &mpu9150_gyro_data_e1680;
 
+		inv_mpu9150_i2c1_board_info[2].platform_data
+					= &mpu_compass_data_e1680;
+	}
 	inv_mpu9150_i2c1_board_info[0].irq = gpio_to_irq(MPU_GYRO_IRQ_GPIO);
 	i2c_register_board_info(gyro_bus_num, inv_mpu9150_i2c1_board_info,
 		ARRAY_SIZE(inv_mpu9150_i2c1_board_info));
