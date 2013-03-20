@@ -296,7 +296,7 @@ MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK4, buck4,  600, 1500, NULL,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3 | DISABLE_DVFS);
+		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3);
 
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
@@ -480,10 +480,10 @@ static struct max77660_platform_data max77660_pdata = {
 	.use_power_off	= true,
 	.system_watchdog_timeout = 32,
 	.dvfs_pd = {
-		.en_pwm = false,
-		.step_voltage_uV = 25000,
+		.en_pwm = true,
+		.step_voltage_uV = 12500,
 		.default_voltage_uV = 900000,
-		.base_voltage_uV = 600000,
+		.base_voltage_uV = 700000,
 		.max_voltage_uV = 1100000,
 	},
 };
