@@ -38,6 +38,7 @@
 #include "board-panel.h"
 #include "common.h"
 #include "tegra-board-id.h"
+#include "board-atlantis.h"
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include "tegra11_host1x_devices.h"
@@ -487,7 +488,9 @@ void ceres_set_hotplug_gpio(void)
 	pdata = ceres_disp2_device.dev.platform_data;
 	tegra_get_board_info(&board_info);
 
-	if (board_info.fab > BOARD_FAB_A00)
+	if (board_info.board_id == BOARD_E1670) {
+		hdmi_hpd_gpio = (PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO14);
+	} else if (board_info.fab > BOARD_FAB_A00)
 		hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);
 
 	pdata->default_out->hotplug_gpio = hdmi_hpd_gpio;
