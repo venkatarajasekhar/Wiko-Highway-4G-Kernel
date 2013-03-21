@@ -17,5 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define PALMAS_TEGRA_IRQ_BASE       TEGRA_NR_IRQS
+#define PALMAS_TEGRA_GPIO_BASE      TEGRA_NR_GPIOS
+
 int atlantis_regulator_init(void);
 int atlantis_fixed_regulator_init(void);

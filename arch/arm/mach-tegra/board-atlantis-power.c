@@ -37,11 +37,10 @@
 #include "pm.h"
 #include "board.h"
 #include "tegra-board-id.h"
+#include "board-atlantis.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
-#define PALMAS_TEGRA_IRQ_BASE       TEGRA_NR_IRQS
-#define PALMAS_TEGRA_GPIO_BASE      TEGRA_NR_GPIOS
 #define BOARD_SKU_110		110
 #define BOARD_SKU_120		120
 
@@ -237,6 +236,9 @@ static struct regulator_consumer_supply palmas_regen7_supply[] = {
 	REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
+static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
+};
+
 #define PALMAS_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
 	_boot_on, _apply_uv)						\
 	static struct regulator_init_data reg_idata_##_name = {		\
@@ -286,6 +288,7 @@ PALMAS_PDATA_INIT(regen2, 1200,  1200, palmas_rails(smps8), 0, 0, 0);
 PALMAS_PDATA_INIT(regen4, 1200,  1200, palmas_rails(smps9), 0, 0, 0);
 PALMAS_PDATA_INIT(regen5, 1800,  1800, palmas_rails(smps8), 0, 0, 0);
 PALMAS_PDATA_INIT(regen7, 2800,  2800, NULL, 1, 0, 1);
+PALMAS_PDATA_INIT(chargerpump, 5000,  5000, NULL, 0, 0, 0);
 
 #define PALMAS_REG_PDATA(_sname) &reg_idata_##_sname
 
@@ -322,6 +325,9 @@ static struct regulator_init_data *atlantis_reg_data[PALMAS_NUM_REGS] = {
 	PALMAS_REG_PDATA(regen4),
 	PALMAS_REG_PDATA(regen5),
 	PALMAS_REG_PDATA(regen7),
+	NULL,
+	NULL,
+	PALMAS_REG_PDATA(chargerpump),
 };
 
 #define PALMAS_REG_INIT(_name, _warm_reset, _roof_floor, _mode_sleep,	\
@@ -408,6 +414,9 @@ static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
 	REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
+static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
+	REGULATOR_SUPPLY("vdd_hdmi_5v0", "tegradc.1"),
+};
 
 /* Macro for defining fixed regulator sub device data */
 #define FIXED_SUPPLY(_name) "fixed_reg_"#_name
@@ -458,12 +467,16 @@ FIXED_REG(1, avdd_lcd, avdd_lcd,
 	PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO3,
 	false, true, 1, 3200, 0);
 
+FIXED_REG(2, vdd_hdmi_5v0, vdd_hdmi_5v0,
+	palmas_rails(chargerpump), 0, 0, PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO9,
+	false, true, 0, 5000, 250000);
 
 #define ADD_FIXED_REG(_name)    (&fixed_reg_##_name##_dev)
 
 #define ATLANTIS_COMMON_FIXED_REG	\
 	ADD_FIXED_REG(battery),		\
-	ADD_FIXED_REG(avdd_lcd)
+	ADD_FIXED_REG(avdd_lcd),	\
+	ADD_FIXED_REG(vdd_hdmi_5v0)
 
 static struct platform_device *fixed_reg_devs_e1670[] = {
 	ATLANTIS_COMMON_FIXED_REG
