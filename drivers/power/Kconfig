@@ -376,13 +376,6 @@ config AB8500_BATTERY_THERM_ON_BATCTRL
 	  Say Y to enable battery temperature measurements using
 	  thermistor connected on BATCTRL ADC.
 
-config BATTERY_MAX77660
-	tristate "MAX77660 Fuel Gauge support"
-	depends on MFD_MAX77660
-	help
-	 MAX77660 PMIC has fuel-gauge system for lithium-ion (Li+) batteries
-	 in handheld and portable equipment.
-
 config CHARGER_MAX77660
 	tristate "MAX77660 battery charger support"
 	depends on MFD_MAX77660 && EXTCON
