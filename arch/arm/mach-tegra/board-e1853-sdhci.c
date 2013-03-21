@@ -101,6 +101,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.is_8bit = 1,
+	.tap_delay = 0x06,
 	.ddr_clk_limit = 30000000,
 	.mmc_data = {
 		.built_in = 1,
