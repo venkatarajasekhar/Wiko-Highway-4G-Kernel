@@ -511,6 +511,7 @@ static struct palmas_platform_data palmas_pdata = {
 	.pad4 = PALMAS_PRIMARY_SECONDARY_PAD4_GPIO_13_MASK,
 	.irq_type = IRQ_TYPE_LEVEL_HIGH,
 	.use_power_off = true,
+	.watchdog_timer_initial_period = 128,
 };
 
 static struct i2c_board_info palma_device[] = {
