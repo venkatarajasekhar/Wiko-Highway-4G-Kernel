@@ -38,6 +38,7 @@
 #include "board.h"
 #include "tegra-board-id.h"
 #include "board-atlantis.h"
+#include "board-pmu-defines.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -241,6 +242,7 @@ static struct regulator_consumer_supply palmas_regen7_supply[] = {
 static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
 };
 
+#undef PALMAS_PDATA_INIT
 #define PALMAS_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
 	_boot_on, _apply_uv)						\
 	static struct regulator_init_data reg_idata_##_name = {		\
@@ -501,19 +503,42 @@ static struct palmas_pmic_platform_data pmic_platform = {
 	.disabe_ldo8_tracking_suspend = true,
 };
 
+static struct palmas_pinctrl_config palmas_pincfg[] = {
+	PALMAS_PINMUX(POWERGOOD, POWERGOOD, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(VAC, VAC, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO0, ID, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO1, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO2, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO3, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO4, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO5, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO6, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO7, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO8, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO9, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO10, GPIO, PULL_UP, DEFAULT),
+	PALMAS_PINMUX(GPIO11, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO12, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO13, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO14, GPIO, PULL_UP, DEFAULT),
+	PALMAS_PINMUX(GPIO15, GPIO, DEFAULT, DEFAULT),
+};
+
+static struct palmas_pinctrl_platform_data palmas_pinctrl_pdata = {
+	.pincfg = palmas_pincfg,
+	.num_pinctrl = ARRAY_SIZE(palmas_pincfg),
+	.dvfs1_enable = true,
+	.dvfs2_enable = false,
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
 	.pmic_pdata = &pmic_platform,
-	.mux_from_pdata = true,
-	.pad1 = 0,
-	.pad2 = (PALMAS_PRIMARY_SECONDARY_PAD2_GPIO_5_MASK &
-			(1 << PALMAS_PRIMARY_SECONDARY_PAD2_GPIO_5_SHIFT)),
-	.pad3 = PALMAS_PRIMARY_SECONDARY_PAD3_DVFS2,
-	.pad4 = PALMAS_PRIMARY_SECONDARY_PAD4_GPIO_13_MASK,
 	.irq_type = IRQ_TYPE_LEVEL_HIGH,
 	.use_power_off = true,
 	.watchdog_timer_initial_period = 128,
+	.pinctrl_pdata = &palmas_pinctrl_pdata,
 };
 
 static struct i2c_board_info palma_device[] = {
