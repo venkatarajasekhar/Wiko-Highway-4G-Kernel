@@ -27,10 +27,12 @@
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/mfd/max77660/max77660-core.h>
+#include <linux/mfd/palmas.h>
 
 #include "tegra-board-id.h"
 #include "board.h"
 #include "board-ceres.h"
+#include "board-atlantis.h"
 #include "devices.h"
 
 #define CERES_POWER_ON_INT (MAX77660_IRQ_BASE + MAX77660_IRQ_GLBL_EN0_F)
@@ -94,6 +96,15 @@ static struct platform_device ceres_int_keys_device = {
 
 int __init ceres_keys_init(void)
 {
+	struct board_info bi;
+
+	tegra_get_board_info(&bi);
+	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671) {
+		ceres_int_keys[3].gpio = TEGRA_GPIO_PJ4;
+		ceres_int_keys[3].active_low = 1;
+		ceres_int_keys[3].debounce_interval = 10;
+	}
+
 	platform_device_register(&ceres_int_keys_device);
 
 	return 0;
