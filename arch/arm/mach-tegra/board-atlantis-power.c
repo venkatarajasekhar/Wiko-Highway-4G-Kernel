@@ -212,7 +212,7 @@ static struct regulator_consumer_supply palmas_regen2_supply[] = {
 static struct regulator_consumer_supply palmas_regen4_supply[] = {
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.0"),
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.1"),
-	REGULATOR_SUPPLY("avdd_dsi_csi", "tegra_camera"),
+	REGULATOR_SUPPLY("avdd_dsi_csi", "vi"),
 	REGULATOR_SUPPLY("vdd_1v2_lcd", NULL),
 	REGULATOR_SUPPLY("vdd_1v2_cdc", NULL),
 	REGULATOR_SUPPLY("vrefdq_lpddr3", NULL),
