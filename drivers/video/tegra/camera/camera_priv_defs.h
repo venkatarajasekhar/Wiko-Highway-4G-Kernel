@@ -34,7 +34,7 @@
 #include <mach/clk.h>
 #include <mach/mc.h>
 #include <mach/iomap.h>
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if defined(CONFIG_TEGRA_ISOMGR)
 #include <mach/isomgr.h>
 #endif
 
@@ -83,7 +83,7 @@ struct tegra_camera {
 	struct mutex tegra_camera_lock;
 	atomic_t in_use;
 	int power_on;
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif
 };
