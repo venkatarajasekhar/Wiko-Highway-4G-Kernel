@@ -50,6 +50,8 @@
 #include "sleep.h"
 #include "timer.h"
 
+#define DRAM_SELF_REFRESH_EXIT_LATENCY	10000
+
 int tegra_pg_exit_latency;
 static int tegra_pd_power_off_time;
 static unsigned int tegra_pd_min_residency;
@@ -200,10 +202,28 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 		tegra_cpu_power_good_time();
 	if (state->target_residency < tegra_pd_min_residency)
 		state->target_residency = tegra_pd_min_residency;
-	state->power_usage = 0;
+	state->power_usage = 100;
 	state->flags = CPUIDLE_FLAG_TIME_VALID;
 	state->enter = tegra_idle_enter_pd;
 	dev->state_count++;
+
+	if (cpu == 0) {
+		state = &dev->states[2];
+		snprintf(state->name, CPUIDLE_NAME_LEN, "mc-clock");
+		snprintf(state->desc, CPUIDLE_DESC_LEN, "MC clock stop");
+		state->exit_latency = tegra_cpu_power_good_time() +
+			DRAM_SELF_REFRESH_EXIT_LATENCY;
+		state->target_residency = tegra_cpu_power_off_time() +
+			tegra_cpu_power_good_time() + DRAM_SELF_REFRESH_EXIT_LATENCY;
+		if (state->target_residency < tegra_mc_clk_stop_min_residency())
+			state->target_residency =
+					tegra_mc_clk_stop_min_residency();
+		state->power_usage = 0;
+		state->flags = CPUIDLE_FLAG_TIME_VALID;
+		state->enter = tegra_idle_enter_pd;
+		state->disabled = true;
+		dev->state_count++;
+	}
 #endif
 
 	if (cpuidle_register_device(dev)) {
