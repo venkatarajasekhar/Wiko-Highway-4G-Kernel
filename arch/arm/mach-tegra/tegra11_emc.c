@@ -168,7 +168,8 @@ enum {
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_DA_TURNS),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_DA_COVERS),	\
 	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_MISC0),		\
-	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_RING1_THROTTLE),
+	DEFINE_REG(TEGRA_MC_BASE, MC_EMEM_ARB_RING1_THROTTLE),	\
+	DEFINE_REG(TEGRA_EMC_BASE, EMC_SEL_DPD_CTRL),
 
 #define BURST_UP_DOWN_REG_LIST \
 	DEFINE_REG(TEGRA_MC_BASE, MC_PTSA_GRANT_DECREMENT),	\
@@ -1325,6 +1326,7 @@ static int init_emc_table(const struct tegra11_emc_table *table, int table_size)
 	switch (table[0].rev) {
 	case 0x40:
 	case 0x41:
+	case 0x42:
 		start_timing.burst_regs_num = table[0].burst_regs_num;
 		start_timing.emc_trimmers_num = table[0].emc_trimmers_num;
 		break;
