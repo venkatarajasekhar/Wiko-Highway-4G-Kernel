@@ -474,10 +474,7 @@ static void ceres_audio_init(void)
 static struct tegra_usb_platform_data tegra_udc_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
-	.id_det_type = TEGRA_USB_VIRTUAL_ID,
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	.support_pmu_vbus = true,
-#endif
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_DEVICE,
 	.u_data.dev = {
@@ -503,10 +500,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = true,
 	.has_hostpc = true,
 	.unaligned_dma_buf_supported = false,
-	.id_det_type = TEGRA_USB_VIRTUAL_ID,
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	.support_pmu_vbus = true,
-#endif
 	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
 	.op_mode = TEGRA_USB_OPMODE_HOST,
 	.u_data.host = {
@@ -531,9 +525,6 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_device = &tegra_ehci1_device,
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
-	.extcon_dev_name = "max77660-charger-extcon",
-#endif
 };
 
 static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
@@ -556,8 +547,31 @@ static void ceres_usb_init(void)
 
 	tegra_get_board_info(&bi);
 
-	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671)
+	switch (bi.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
+		/* Device cable is detected through PMU Interrupt */
+		tegra_otg_pdata.extcon_dev_name = "max77660-charger-extcon";
+
+		/* Host cable is detected through GPIO from PMU */
+		tegra_udc_pdata.id_det_type = TEGRA_USB_GPIO_ID;
+		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_GPIO_ID;
+		tegra_otg_pdata.id_det_gpio =
+					MAX77660_GPIO_BASE + MAX77660_GPIO8;
+		break;
+	case BOARD_E1670:
+	case BOARD_E1671:
+		/* Device cable is detected through PMU Interrupt */
 		tegra_otg_pdata.extcon_dev_name = "palmas-extcon.10";
+
+		/* Host cable is detected through PMU Interrupt */
+		tegra_udc_pdata.id_det_type = TEGRA_USB_PMU_ID;
+		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_PMU_ID;
+		break;
+	default:
+		pr_err("%s: board_id=%#x unknown tegra14x board.\n", __func__,
+					bi.board_id);
+	}
 
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
 	platform_device_register(&tegra_otg_device);
