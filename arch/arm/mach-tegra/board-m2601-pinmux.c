@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-m2601-pinmux.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -341,10 +341,10 @@ static __initdata struct tegra_pingroup_config m2601_pinmux_common[] = {
 	DEFAULT_PINMUX(ULPI_DATA7,	SPI2,		PULL_UP,	NORMAL,		INPUT),
 
 	/* I2S 2 */
-	DEFAULT_PINMUX(DAP3_FS,		I2S2,		PULL_DOWN,	NORMAL,		OUTPUT),
-	DEFAULT_PINMUX(DAP3_DIN,	I2S2,		PULL_DOWN,	NORMAL,		INPUT),
-	DEFAULT_PINMUX(DAP3_DOUT,	I2S2,		PULL_DOWN,	NORMAL,		OUTPUT),
-	DEFAULT_PINMUX(DAP3_SCLK,	I2S2,		NORMAL,		NORMAL,		OUTPUT),
+	DEFAULT_PINMUX(DAP3_FS,		I2S2,		NORMAL,		NORMAL,		INPUT),
+	DEFAULT_PINMUX(DAP3_DIN,	I2S2,		NORMAL,		NORMAL,		INPUT),
+	DEFAULT_PINMUX(DAP3_DOUT,	I2S2,		NORMAL,		NORMAL,		OUTPUT),
+	DEFAULT_PINMUX(DAP3_SCLK,	I2S2,		NORMAL,		NORMAL,		INPUT),
 
 	/* PCIE  - Please review the change*/
 

@@ -49,6 +49,7 @@
 #include <asm/hardware/gic.h>
 #include <asm/system.h>
 #include <mach/usb_phy.h>
+#include <mach/tegra_asoc_vcm_pdata.h>
 #include <mach/tegra_fiq_debugger.h>
 #include <sound/wm8903.h>
 #include <mach/tsensor.h>
@@ -376,6 +377,44 @@ static struct gpio_addr	m2601_gpio_addr[M2601_NUM_GPIO_ADDR] = {
 			{TEGRA_GPIO_PV3, 29},
 };
 
+
+static struct tegra_asoc_vcm_platform_data m2601_audio_pdata = {
+	.codec_info[0] = {
+		.i2s_format = format_tdm,
+		/* Audio Codec is Master */
+		.master = 1,
+		.num_slots = 8,
+		.slot_width = 32,
+		.tx_mask = 0xff,
+		.rx_mask = 0xff,
+	},
+};
+
+static struct platform_device tegra_snd_m2601 = {
+	.name       = "tegra-snd-m2601",
+	.id = 0,
+	.dev    = {
+		.platform_data = &m2601_audio_pdata,
+	},
+};
+
+static struct i2c_board_info __initdata ad1937_i2s2_board_info = {
+	I2C_BOARD_INFO("ad1937", 0x07),
+};
+
+static void m2601_i2s_audio_init(void)
+{
+	/* Register the PCM driver for TDM mode */
+	platform_device_register(&tegra_tdm_pcm_device);
+	/* Register the I2S2 controller driver */
+	platform_device_register(&tegra_i2s_device2);
+	/* Register the AHUB controller */
+	platform_device_register(&tegra_ahub_device);
+
+	i2c_register_board_info(0, &ad1937_i2s2_board_info, 1);
+	platform_device_register(&tegra_snd_m2601);
+}
+
 static void m2601_nor_init(void)
 {
 	tegra_nor_device.resource[2].end = TEGRA_NOR_FLASH_BASE +
@@ -504,7 +543,7 @@ static void __init tegra_m2601_init(void)
 	m2601_pinmux_init();
 	m2601_i2c_init();
 	m2601_sata_init();
-/*	m2601_i2s_audio_init(); */
+	m2601_i2s_audio_init();
 	m2601_uart_init();
 	m2601_usb_init();
 	m2601_sdhci_init();
