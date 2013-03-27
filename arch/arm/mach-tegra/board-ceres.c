@@ -295,6 +295,27 @@ static struct platform_device ceres_audio_aic325x_device = {
 	},
 };
 
+static struct tegra_asoc_platform_data dmic_platform_data = {
+	.codec_name = "dmic-codec",
+	.codec_dai_name = "dmic-hifi",
+};
+
+static struct platform_device ceres_dmic_device = {
+	.name	= "tegra-snd-dmic_rev1.0",
+	.id	= 0,
+	.dev = {
+		.platform_data = &dmic_platform_data,
+	},
+};
+
+static struct platform_device dmic_codec_device = {
+	.name	= "dmic-codec",
+	.id	= 0,
+	.dev = {
+		.platform_data = &dmic_platform_data,
+	},
+};
+
 #if defined(CONFIG_TEGRA_BASEBAND)
 static struct tegra_bb_platform_data ceres_tegra_bb_data;
 
@@ -394,6 +415,10 @@ static struct platform_device *ceres_audio_devices[] __initdata = {
 	&tegra_i2s_device2,
 	&tegra_i2s_device3,
 	&tegra_i2s_device4,
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+	&tegra_dmic_device0,
+	&tegra_dmic_device1,
+#endif
 	&spdif_dit_device,
 	&tegra_spdif_device,
 	&bluetooth_dit_device,
@@ -401,6 +426,8 @@ static struct platform_device *ceres_audio_devices[] __initdata = {
 #if defined(CONFIG_SND_HDA_PLATFORM_NVIDIA_TEGRA)
 	&tegra_hda_device,
 #endif
+	&dmic_codec_device,
+	&ceres_dmic_device,
 	&ceres_audio_max98090_device,
 	&ceres_audio_max97236_device,
 	&ceres_audio_aic325x_device,
@@ -601,6 +628,8 @@ static __initdata struct tegra_clk_init_table ceres_clk_init_table[] = {
 	{ "i2s2",	"pll_a_out0",	0,		false},
 	{ "i2s3",	"pll_a_out0",	0,		false},
 	{ "i2s4",	"pll_a_out0",	0,		false},
+	{ "dmic0",	"pll_a_out0",	0,		false},
+	{ "dmic1",	"pll_a_out0",	0,		false},
 	{ "d_audio",	"clk_m",	12000000,	false},
 	{ "dam0",	"clk_m",	12000000,	false},
 	{ "dam1",	"clk_m",	12000000,	false},
