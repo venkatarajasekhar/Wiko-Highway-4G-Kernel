@@ -137,6 +137,7 @@ struct tegra_uart_port {
 	struct tasklet_struct	tlet;
 };
 
+static void tegra_irda_baud_delta(struct uart_port *u);
 static void tegra_set_baudrate(struct tegra_uart_port *t, unsigned int baud);
 static void do_handle_rx_pio(struct tegra_uart_port *t);
 static void do_handle_rx_dma(struct tegra_uart_port *t);
@@ -644,6 +645,33 @@ static irqreturn_t tegra_uart_isr(int irq, void *data)
 	}
 }
 
+/* Hack to increase SIR decoder's +delta tolerance */
+static void tegra_irda_baud_delta(struct uart_port *u)
+{
+	unsigned int new_baud;
+	static unsigned int orig_baud;
+	struct tegra_uart_port *t;
+
+	t = container_of(u, struct tegra_uart_port, uport);
+
+	if (t->rx_in_progress) {	/* Increase baud by 1 percent*/
+		orig_baud = t->baud;
+		new_baud = orig_baud;
+		do_div(new_baud, 100);
+		new_baud += orig_baud;
+		dev_dbg(u->dev, "%s: Baud with 1perc delta: %u\n",
+							__func__, new_baud);
+	} else {			/* Remove the delta introduced */
+		new_baud = orig_baud;
+		dev_dbg(u->dev, "%s: Reverting to baud : %u\n",
+							__func__, new_baud);
+	}
+
+	tegra_set_baudrate(t, new_baud);
+
+	return;
+}
+
 static void tegra_start_rx(struct uart_port *u)
 {
 	struct tegra_uart_port *t;
@@ -670,6 +698,9 @@ static void tegra_start_rx(struct uart_port *u)
 		uart_writeb(t, t->ier_shadow, UART_IER);
 
 		t->rx_in_progress = 1;
+
+		if (t->is_irda)
+			tegra_irda_baud_delta(u);
 
 		if (t->use_rx_dma && t->rx_dma)
 			tegra_dma_enqueue_req(t->rx_dma, &t->rx_dma_req);
@@ -699,6 +730,9 @@ static void tegra_stop_rx(struct uart_port *u)
 		t->ier_shadow = ier;
 		uart_writeb(t, ier, UART_IER);
 		t->rx_in_progress = 0;
+
+		if (t->is_irda)
+			tegra_irda_baud_delta(u);
 
 		if (t->use_rx_dma && t->rx_dma)
 			tegra_dma_dequeue_req(t->rx_dma, &t->rx_dma_req);
@@ -1416,6 +1450,10 @@ static void tegra_set_termios(struct uart_port *u, struct ktermios *termios,
 	baud = uart_get_baud_rate(u, termios, oldtermios, 200, 4000000);
 	spin_unlock_irqrestore(&u->lock, flags);
 	tegra_set_baudrate(t, baud);
+
+	if (t->is_irda)
+		tegra_irda_baud_delta(u);
+
 	spin_lock_irqsave(&u->lock, flags);
 
 	/* Flow control */
