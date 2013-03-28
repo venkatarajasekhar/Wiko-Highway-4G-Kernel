@@ -26,6 +26,7 @@
 #include <media/imx132.h>
 #include <media/ad5816.h>
 #include <media/max77387.h>
+#include <media/lm3565.h>
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #include <mach/pinmux-t11.h>
 #else
@@ -42,6 +43,8 @@
 #include "board-ceres.h"
 #include "tegra-board-id.h"
 #include "board.h"
+
+static struct board_info board_info;
 
 static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
@@ -473,6 +476,22 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 		},
 };
 
+static struct lm3565_platform_data atlantis_lm3565_pdata = {
+	.config		= {
+		.max_peak_current_mA	= 930,
+		.vin_low_v_mV		= 3000,
+		.vin_low_c_mA		= 210,
+		.strobe_type		= 1,
+		},
+	.enable_gpio	= {
+		.gpio_type		= 1,
+		.gpio			= TEGRA_GPIO_PS1,
+		.init_en		= true,
+		.active_high		= true,
+		},
+	.dev_name	= "torch",
+};
+
 static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	{
 		I2C_BOARD_INFO("imx091", 0x10),
@@ -492,6 +511,25 @@ static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 	},
 };
 
+static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
+	{
+		I2C_BOARD_INFO("imx091", 0x10),
+		.platform_data = &ceres_imx091_data,
+	},
+	{
+		I2C_BOARD_INFO("imx132", 0x36),
+		.platform_data = &ceres_imx132_data,
+	},
+	{
+		I2C_BOARD_INFO("ad5816", 0x0E),
+		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("lm3565", 0x30),
+		.platform_data = &atlantis_lm3565_pdata,
+	},
+};
+
 static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
 	{
 		I2C_BOARD_INFO("max44005", 0x44),
@@ -503,8 +541,12 @@ static int ceres_camera_init(void)
 	tegra_pinmux_config_table(&mclk_disable, 1);
 	tegra_pinmux_config_table(&pbb0_disable, 1);
 
-	i2c_register_board_info(2, ceres_i2c_board_info_e1707,
-		ARRAY_SIZE(ceres_i2c_board_info_e1707));
+	if (board_info.board_id == BOARD_E1670)
+		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
+			ARRAY_SIZE(ceres_i2c_board_info_e1697));
+	else
+		i2c_register_board_info(2, ceres_i2c_board_info_e1707,
+			ARRAY_SIZE(ceres_i2c_board_info_e1707));
 	return 0;
 }
 
@@ -546,8 +588,6 @@ static struct i2c_board_info __initdata inv_mpu9150_i2c1_board_info[] = {
 
 static void mpuirq_init(void)
 {
-	struct board_info board_info;
-
 	int ret = 0;
 	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
 	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
@@ -570,7 +610,6 @@ static void mpuirq_init(void)
 	}
 	pr_info("*** MPU END *** mpuirq_init...\n");
 
-	tegra_get_board_info(&board_info);
 	if (board_info.board_id == BOARD_E1680)
 		inv_mpu9150_i2c1_board_info[0].platform_data
 					= &mpu9150_gyro_data_e1680;
@@ -741,6 +780,8 @@ late_initcall(ceres_skin_init);
 int __init ceres_sensors_init(void)
 {
 	int err;
+
+	tegra_get_board_info(&board_info);
 
 	ceres_camera_init();
 
