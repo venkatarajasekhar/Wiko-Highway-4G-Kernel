@@ -463,6 +463,13 @@ struct max77660_adc_platform_data max77660_adc_pdata = {
 	.adc_ref_enabled = 1,
 };
 
+struct max77660_clk32k_platform_data clk32_pdata = {
+	.en_clk32out1 = true,
+	.en_clk32out2 = true,
+	.clk32k_mode = MAX77660_CLK_MODE_LOW_JITTER,
+	.clk32k_load_cap = MAX77660_CLK_LOAD_CAP_22pF,
+};
+
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
@@ -472,11 +479,11 @@ static struct max77660_platform_data max77660_pdata = {
 
 	.charger_pdata = &max77660_charger_pdata,
 
+	.clk32k_pdata = &clk32_pdata,
+
 	.adc_pdata = &max77660_adc_pdata,
 
 	.flags	= 0x00,
-	.en_clk32out1 = true,
-	.en_clk32out2 = true,
 	.use_power_off	= true,
 	.system_watchdog_timeout = 32,
 	.system_watchdog_reset_timeout = 20,
