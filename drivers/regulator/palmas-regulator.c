@@ -57,6 +57,7 @@ static const struct regs_info palmas_regs_info[] = {
 		.name		= "SMPS3",
 		.vsel_addr	= PALMAS_SMPS3_VOLTAGE,
 		.ctrl_addr	= PALMAS_SMPS3_CTRL,
+		.fvsel_addr	= PALMAS_SMPS3_FORCE,
 		.sleep_id	= PALMAS_SLEEP_REQSTR_ID_SMPS3,
 	},
 	{
@@ -1387,6 +1388,9 @@ static void palmas_dvfs_init(struct palmas *palmas,
 		reg =  (1 << PALMAS_SMPS_DVFS1_ENABLE_SHIFT);
 		if (dvfs_pd->step_20mV)
 			reg |= (1 << PALMAS_SMPS_DVFS1_OFFSET_STEP_SHIFT);
+		/* only DVFS1_CTRL register contains smps select bit */
+		if (dvfs_pd->smps3_ctrl && (i == 0))
+			reg |= (1 << PALMAS_SMPS_DVFS1_SMPS_SELECT_SHIFT);
 
 		ret = regmap_write(palmas->regmap[slave], addr, reg);
 		if (ret)
@@ -1401,6 +1405,12 @@ static void palmas_dvfs_init(struct palmas *palmas,
 		reg = DIV_ROUND_UP((dvfs_pd->max_voltage_uV -
 			DVFS_BASE_VOLTAGE_UV), DVFS_VOLTAGE_STEP_UV) + 6;
 		ret = regmap_write(palmas->regmap[slave], addr, reg);
+		if (ret)
+			goto err;
+
+		addr = palmas_regs_info[dvfs_pd->reg_id].ctrl_addr;
+		ret = palmas_update_bits(palmas, PALMAS_SMPS_BASE, addr,
+			PALMAS_SMPS12_CTRL_ROOF_FLOOR_EN, 0);
 		if (ret)
 			goto err;
 
