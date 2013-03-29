@@ -565,8 +565,8 @@ static void ceres_usb_init(void)
 		tegra_otg_pdata.extcon_dev_name = "palmas-extcon.10";
 
 		/* Host cable is detected through PMU Interrupt */
-		tegra_udc_pdata.id_det_type = TEGRA_USB_PMU_ID;
-		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_PMU_ID;
+		tegra_udc_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
+		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
 		break;
 	default:
 		pr_err("%s: board_id=%#x unknown tegra14x board.\n", __func__,
