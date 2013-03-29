@@ -481,7 +481,7 @@ static struct lm3565_platform_data atlantis_lm3565_pdata = {
 		.max_peak_current_mA	= 930,
 		.vin_low_v_mV		= 3000,
 		.vin_low_c_mA		= 210,
-		.strobe_type		= 1,
+		.strobe_type		= 2, /* Edge signal strobe */
 		},
 	.enable_gpio	= {
 		.gpio_type		= 1,
