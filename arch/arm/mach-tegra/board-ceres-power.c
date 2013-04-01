@@ -262,6 +262,7 @@ static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
 			.min_uV = _min_uV*1000,				\
 			.max_uV = _max_uV*1000,				\
 			.valid_modes_mask = (REGULATOR_MODE_NORMAL |	\
+					     REGULATOR_MODE_FAST |	\
 					     REGULATOR_MODE_STANDBY),	\
 			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
 					   REGULATOR_CHANGE_STATUS |	\
@@ -301,10 +302,10 @@ MAX77660_PDATA_INIT(BUCK4, buck4,  600, 1500, NULL,
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK6, buck6,  1700, 1700, NULL,
+MAX77660_PDATA_INIT(BUCK6, buck6,  1700, 1800, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2650, NULL,
+MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2800, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO1, ldo1, 800, 800, max77660_rails(buck3),
