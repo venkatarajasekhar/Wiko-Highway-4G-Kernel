@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres-sdhci.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/mmc/host.h>
 #include <linux/wl12xx.h>
 #include <linux/mfd/max77660/max77660-core.h>
+#include <linux/mfd/palmas.h>
 
 #include <asm/mach-types.h>
 #include <mach/irqs.h>
@@ -36,6 +37,8 @@
 #include "gpio-names.h"
 #include "board.h"
 #include "board-ceres.h"
+#include "board-atlantis.h"
+#include "tegra-board-id.h"
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC
 #define CERES_WLAN_PWR	TEGRA_GPIO_PCC5
@@ -45,7 +48,8 @@
 #define CERES_WLAN_WOW  TEGRA_GPIO_PO2
 #endif
 
-#define CERES_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
+#define MAXIM77660_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
+#define PALMAS_SD_CD	(PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO10)
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
@@ -159,7 +163,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
-	.cd_gpio = CERES_SD_CD,
+	.cd_gpio = MAXIM77660_SD_CD,
 	.wp_gpio = -1,
 	.power_gpio = -1,
 	.tap_delay = 0x3,
@@ -287,6 +291,12 @@ subsys_initcall_sync(ceres_wifi_prepower);
 
 int __init ceres_sdhci_init(void)
 {
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1670)
+		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
+
 	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device2);
 	platform_device_register(&tegra_sdhci_device0);
