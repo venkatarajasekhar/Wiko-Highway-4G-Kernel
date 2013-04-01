@@ -454,6 +454,7 @@ static struct regulator_init_data vbus_reg_init_data = {
 };
 
 static struct max77660_charger_platform_data max77660_charger_pdata = {
+	.ext_conn_name = "max77660-extcon",
 	.vbus_reg_init_data = &vbus_reg_init_data,
 };
 
