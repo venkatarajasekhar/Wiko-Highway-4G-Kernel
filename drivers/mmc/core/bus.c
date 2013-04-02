@@ -371,6 +371,8 @@ void mmc_remove_card(struct mmc_card *card)
 			pr_info("%s: card %04x removed\n",
 				mmc_hostname(card->host), card->rca);
 		}
+		if (card->ext_csd.refresh)
+			del_timer_sync(&card->timer);
 		device_del(&card->dev);
 	}
 

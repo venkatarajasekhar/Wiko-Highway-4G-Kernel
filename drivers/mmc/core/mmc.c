@@ -1455,7 +1455,7 @@ static int mmc_resume(struct mmc_host *host)
 	if (host->card->ext_csd.refresh) {
 		host->card->timer.expires = jiffies +
 			((MMC_BKOPS_INTERVAL < MMC_REFRESH_INTERVAL) ?
-			 MMC_BKOPS_INTERVAL : MMC_REFRESH_INTERVAL);
+			 MMC_BKOPS_INTERVAL : MMC_REFRESH_INTERVAL) * HZ;
 		add_timer(&host->card->timer);
 	}
 	mmc_claim_host(host);
