@@ -785,6 +785,7 @@ static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.core_off_timer = 2000,
 	.corereq_high	= true,
 	.sysclkreq_high	= true,
+	.cpu_lp2_min_residency = 1000,
 };
 
 
