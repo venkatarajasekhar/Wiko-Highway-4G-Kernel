@@ -2,6 +2,7 @@
  * Driver for Regulator part of Palmas PMIC Chips
  *
  * Copyright 2011-2012 Texas Instruments Inc.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Graeme Gregory <gg@slimlogic.co.uk>
  *
@@ -27,6 +28,10 @@
 #define PALMA_SMPS10_BOOST_EN	BIT(2)
 #define PALMA_SMPS10_BYPASS_EN	BIT(1)
 #define PALMA_SMPS10_SWITCH_EN	BIT(0)
+
+#define EXT_PWR_REQ (PALMAS_EXT_CONTROL_ENABLE1 |	\
+		     PALMAS_EXT_CONTROL_ENABLE2 |	\
+		     PALMAS_EXT_CONTROL_NSLEEP)
 
 struct regs_info {
 	char	*name;
@@ -344,6 +349,9 @@ static int palmas_is_enabled_smps(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return true;
+
 	palmas_smps_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
 	reg &= PALMAS_SMPS12_CTRL_MODE_ACTIVE_MASK;
@@ -357,6 +365,9 @@ static int palmas_enable_smps(struct regulator_dev *dev)
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
 	int id = rdev_get_id(dev);
 	unsigned int reg;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	palmas_smps_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
@@ -376,6 +387,9 @@ static int palmas_disable_smps(struct regulator_dev *dev)
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
 	int id = rdev_get_id(dev);
 	unsigned int reg;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	palmas_smps_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
@@ -623,8 +637,12 @@ static struct regulator_ops palmas_ops_smps = {
 static int palmas_is_enabled_smps10(struct regulator_dev *dev)
 {
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
+	int id = rdev_get_id(dev);
 	unsigned int reg;
 	int ret;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return true;
 
 	ret = palmas_smps_read(pmic->palmas, PALMAS_SMPS10_STATUS, &reg);
 	if (ret < 0) {
@@ -645,6 +663,9 @@ static int palmas_enable_smps10(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 	int ret;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	ret = palmas_smps_read(pmic->palmas,
 				palmas_regs_info[id].ctrl_addr, &reg);
@@ -671,6 +692,9 @@ static int palmas_disable_smps10(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 	int ret;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	ret = palmas_smps_read(pmic->palmas,
 				palmas_regs_info[id].ctrl_addr, &reg);
@@ -764,6 +788,9 @@ static int palmas_is_enabled_ldo(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return true;
+
 	palmas_ldo_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
 	reg &= PALMAS_LDO1_CTRL_STATUS;
@@ -776,6 +803,9 @@ static int palmas_enable_ldo(struct regulator_dev *dev)
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
 	int id = rdev_get_id(dev);
 	unsigned int reg;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	palmas_ldo_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
@@ -791,6 +821,9 @@ static int palmas_disable_ldo(struct regulator_dev *dev)
 	struct palmas_pmic *pmic = rdev_get_drvdata(dev);
 	int id = rdev_get_id(dev);
 	unsigned int reg;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	palmas_ldo_read(pmic->palmas, palmas_regs_info[id].ctrl_addr, &reg);
 
@@ -876,6 +909,9 @@ static int palmas_is_enabled_extreg(struct regulator_dev *dev)
 	unsigned int reg;
 	int ret;
 
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return true;
+
 	ret = palmas_resource_read(pmic->palmas,
 			palmas_regs_info[id].ctrl_addr, &reg);
 	reg &= PALMAS_REGEN1_CTRL_STATUS;
@@ -891,6 +927,9 @@ static int palmas_enable_extreg(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 	int ret;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	ret = palmas_resource_read(pmic->palmas,
 			palmas_regs_info[id].ctrl_addr, &reg);
@@ -909,6 +948,9 @@ static int palmas_disable_extreg(struct regulator_dev *dev)
 	int id = rdev_get_id(dev);
 	unsigned int reg;
 	int ret;
+
+	if (EXT_PWR_REQ & pmic->roof_floor[id])
+		return 0;
 
 	ret = palmas_resource_read(pmic->palmas,
 			palmas_regs_info[id].ctrl_addr, &reg);
@@ -1592,6 +1634,7 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 		if (pdata && pdata->reg_init) {
 			reg_init = pdata->reg_init[id];
 			if (reg_init) {
+				pmic->roof_floor[id] = reg_init->roof_floor;
 				ret = palmas_smps_init(palmas, id, reg_init);
 				if (ret)
 					goto err_unregister_regulator;
@@ -1692,6 +1735,7 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 		if (pdata->reg_init) {
 			reg_init = pdata->reg_init[id];
 			if (reg_init) {
+				pmic->roof_floor[id] = reg_init->roof_floor;
 				if (id < PALMAS_REG_REGEN1)
 					ret = palmas_ldo_init(palmas, id,
 								reg_init);
