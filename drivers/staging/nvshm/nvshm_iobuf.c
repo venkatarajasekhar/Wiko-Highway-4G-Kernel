@@ -1,15 +1,17 @@
 /*
- * Copyright (C) 2012-2013 NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "nvshm_types.h"
@@ -76,6 +78,12 @@ struct nvshm_iobuf *nvshm_iobuf_alloc(struct nvshm_channel *chan, int size)
 
 	spin_lock_irqsave(&alloc.lock, f);
 	if (alloc.free_pool_head) {
+		int check = nvshm_iobuf_check(alloc.free_pool_head);
+
+		if (check) {
+			pr_err("%s: iobuf check ret %d\n", __func__, check);
+			return NULL;
+		}
 		if (size > (alloc.free_pool_head->totalLength -
 			    NVSHM_DEFAULT_OFFSET)) {
 			spin_unlock_irqrestore(&alloc.lock, f);
@@ -338,40 +346,53 @@ int nvshm_iobuf_flags(struct nvshm_iobuf *iob,
 	return 0;
 }
 
-int nvshm_iobuf_check(struct nvshm_channel *chan, struct nvshm_iobuf *iob)
+int nvshm_iobuf_check(struct nvshm_iobuf *iob)
 {
 	struct nvshm_handle *priv = nvshm_get_handle();
 
-	if (((int)iob->npduData < NVSHM_IPC_BB_BASE) ||
-	    ((int)iob->npduData > (NVSHM_IPC_BB_BASE+priv->ipc_size))) {
-		pr_err("%s: npduData @ check failed 0x%x\n",
+	/* Check iobuf is in IPC space */
+	if (ADDR_OUTSIDE(iob, priv->ipc_base_virt, priv->ipc_size)) {
+		pr_err("%s: iob @ check failed 0x%lx\n",
 		       __func__,
-		       (int)iob->npduData);
+		       (long)iob);
 		return -1;
 	}
-	if ((((int)iob->npduData + iob->dataOffset) <
-	     NVSHM_IPC_BB_BASE) ||
-	    (((int)iob->npduData + iob->dataOffset) >
-	     (NVSHM_IPC_BB_BASE+priv->ipc_size))) {
-		pr_err("%s: npduData + offset @ check failed 0x%x\n",
-		       __func__, (int)iob->npduData);
+
+	if (ADDR_OUTSIDE(iob->npduData, NVSHM_IPC_BB_BASE, priv->ipc_size)) {
+		pr_err("%s: npduData @ check failed 0x%lx\n",
+		       __func__,
+		       (long)iob->npduData);
 		return -2;
 	}
+	if (ADDR_OUTSIDE(iob->npduData + iob->dataOffset,
+			NVSHM_IPC_BB_BASE, priv->ipc_size)) {
+		pr_err("%s: npduData + offset @ check failed 0x%lx/0x%lx\n",
+		       __func__, (long)iob->npduData, (long)iob->dataOffset);
+		return -3;
+	}
 	if (iob->next) {
-		if (((int)iob->next < NVSHM_IPC_BB_BASE) ||
-		    ((int)iob->next > (NVSHM_IPC_BB_BASE+priv->ipc_size))) {
-			pr_err("%s: next @ check failed 0x%x\n",
+		if (ADDR_OUTSIDE(iob->next,
+				NVSHM_IPC_BB_BASE, priv->ipc_size)) {
+			pr_err("%s: next @ check failed 0x%lx\n",
 			       __func__,
-			       (int)iob->next);
-			return -3;
+			       (long)iob->next);
+			return -4;
 		}
 	}
 	if (iob->sg_next) {
-		if (((int)iob->sg_next < NVSHM_IPC_BB_BASE) ||
-		    ((int)iob->sg_next > (NVSHM_IPC_BB_BASE+priv->ipc_size))) {
-			pr_err("%s:sg_next @ check failed 0x%x\n",
-			       __func__, (int)iob->sg_next);
-			return -4;
+		if (ADDR_OUTSIDE(iob->sg_next,
+				NVSHM_IPC_BB_BASE, priv->ipc_size)) {
+			pr_err("%s:sg_next @ check failed 0x%lx\n",
+			       __func__, (long)iob->sg_next);
+			return -5;
+		}
+	}
+	if (iob->qnext) {
+		if (ADDR_OUTSIDE(iob->qnext,
+				NVSHM_IPC_BB_BASE, priv->ipc_size)) {
+			pr_err("%s:qnext @ check failed 0x%lx\n",
+			       __func__, (long)iob->qnext);
+			return -6;
 		}
 	}
 	return 0;
