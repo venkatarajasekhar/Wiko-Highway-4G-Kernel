@@ -22,3 +22,5 @@
 
 int atlantis_regulator_init(void);
 int atlantis_fixed_regulator_init(void);
+int atlantis_vibrator_init(void);
+int atlantis_pwm_init(void);

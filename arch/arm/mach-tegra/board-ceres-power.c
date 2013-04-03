@@ -663,6 +663,8 @@ int __init ceres_regulator_init(void)
 
 	if (board_info.board_id == BOARD_E1670) {
 		atlantis_regulator_init();
+		atlantis_pwm_init();
+		atlantis_vibrator_init();
 	} else {
 		/* configure the power management controller to trigger PMU
 		 * interrupts when low */

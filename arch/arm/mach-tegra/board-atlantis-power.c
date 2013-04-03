@@ -27,6 +27,7 @@
 #include <linux/mfd/palmas.h>
 #include <linux/platform_data/lp8755.h>
 #include <linux/irq.h>
+#include <linux/input/drv2603-vibrator.h>
 
 #include <asm/mach-types.h>
 
@@ -39,6 +40,7 @@
 #include "tegra-board-id.h"
 #include "board-atlantis.h"
 #include "board-pmu-defines.h"
+#include "devices.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -628,6 +630,31 @@ static void lp8755_regulator_init(void)
 
 	i2c_register_board_info(4, lp8755_regulators,
 			ARRAY_SIZE(lp8755_regulators));
+}
+
+static struct drv2603_platform_data atlantis_vibrator_pdata = {
+	.pwm_id = 0,
+	.vibrator_mode = ERM_MODE,
+	.gpio = PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO6,
+	.duty_cycle = 80,
+};
+
+static struct platform_device atlantis_vibrator_device = {
+	.name = "drv2603-vibrator",
+	.id = -1,
+	.dev = {
+		.platform_data = &atlantis_vibrator_pdata,
+	},
+};
+
+int atlantis_pwm_init(void)
+{
+	return platform_device_register(&tegra_pwfm0_device);
+}
+
+int atlantis_vibrator_init(void)
+{
+	return platform_device_register(&atlantis_vibrator_device);
 }
 
 int __init atlantis_regulator_init(void)
