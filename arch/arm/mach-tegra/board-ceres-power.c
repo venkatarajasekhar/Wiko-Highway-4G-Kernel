@@ -754,18 +754,18 @@ int __init ceres_regulator_init(void)
 		pmc_ctrl = readl(pmc + PMC_CTRL);
 		writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 
-		max77660_pdata.en_buck2_ext_ctrl = true;
 		for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
 			max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
 
-		if (board_info.fab > BOARD_FAB_A00) {
-			max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
 					MAX77660_PIN_PULL_UP;
-			max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
-			max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].pullup_dn_normal =
 					MAX77660_PIN_PULL_NORMAL;
-			max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
+		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
+		if (board_info.sku == 1000) {
+			max77660_pdata.en_buck2_ext_ctrl = true;
 			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
 			max77660_regulator_idata_buck1.num_consumer_supplies =
 				ARRAY_SIZE(max77660_unused_supply);
@@ -781,6 +781,13 @@ int __init ceres_regulator_init(void)
 			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
 
 			lp8755_regulator_init();
+		} else {
+			max77660_regulator_pdata_buck1.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
+			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
+			max77660_pdata.en_buck2_ext_ctrl = true;
 		}
 
 		i2c_register_board_info(4, max77660_regulators,
