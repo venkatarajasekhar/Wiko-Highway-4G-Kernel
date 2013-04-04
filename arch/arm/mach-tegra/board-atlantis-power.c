@@ -537,10 +537,22 @@ static struct palmas_extcon_platform_data palmas_extcon_pdata = {
 	.enable_id_pin_detection = true,
 };
 
+struct palmas_clk32k_init_data atlantis_palmas_clk32k_idata[] = {
+	{
+		.clk32k_id = PALMAS_CLOCK32KG,
+		.enable = true,
+	}, {
+		.clk32k_id = PALMAS_CLOCK32KG_AUDIO,
+		.enable = true,
+	},
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
 	.pmic_pdata = &pmic_platform,
+	.clk32k_init_data =  atlantis_palmas_clk32k_idata,
+	.clk32k_init_data_size = ARRAY_SIZE(atlantis_palmas_clk32k_idata),
 	.irq_type = IRQ_TYPE_LEVEL_HIGH,
 	.use_power_off = true,
 	.watchdog_timer_initial_period = 128,
