@@ -2608,6 +2608,7 @@ int __init ceres_emc_init(void)
 
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1690:
 		pr_info("Loading Ceres EMC tables.\n");
 		tegra_emc_device.dev.platform_data = &ceres_emc_pdata;
 		break;
