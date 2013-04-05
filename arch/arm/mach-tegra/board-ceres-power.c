@@ -27,6 +27,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/platform_data/lp8755.h>
+#include <linux/max17048_battery.h>
 
 #include <asm/mach-types.h>
 
@@ -443,6 +444,10 @@ static struct regulator_consumer_supply max77660_vbus_sypply[] = {
 	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 };
 
+static struct regulator_consumer_supply max77660_batt_supply[] = {
+	REGULATOR_SUPPLY("usb_bat_chg", "tegra-udc.0"),
+};
+
 static struct regulator_init_data vbus_reg_init_data = {
 	.constraints = {
 		.name = "max77660-vbus",
@@ -461,6 +466,11 @@ static struct regulator_init_data vbus_reg_init_data = {
 static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.ext_conn_name = "max77660-extcon",
 	.vbus_reg_init_data = &vbus_reg_init_data,
+	.max_charge_current_mA = 3000,
+	.consumer_supplies = max77660_batt_supply,
+	.num_consumer_supplies = ARRAY_SIZE(max77660_batt_supply),
+	.update_status	= max17048_battery_status,
+	.wdt_timeout    = 32,
 };
 
 struct max77660_adc_platform_data max77660_adc_pdata = {
