@@ -248,6 +248,5 @@ static struct gpio_init_pin_info init_gpio_mode_ceres_common[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN0, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN1, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN2, false, 0),
-	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
 };
 
