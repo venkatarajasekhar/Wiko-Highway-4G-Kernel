@@ -2068,6 +2068,10 @@ static struct tegra_sdhci_platform_data * __devinit sdhci_tegra_dt_parse_pdata(
 	int val;
 	struct tegra_sdhci_platform_data *plat;
 	struct device_node *np = pdev->dev.of_node;
+	struct property *prop;
+	const __be32 *p;
+	u32 u;
+	int i = 0;
 
 	if (!np)
 		return NULL;
@@ -2083,6 +2087,18 @@ static struct tegra_sdhci_platform_data * __devinit sdhci_tegra_dt_parse_pdata(
 	plat->power_gpio = of_get_named_gpio(np, "power-gpios", 0);
 	if (of_find_property(np, "support-8bit", NULL))
 		plat->is_8bit = 1;
+
+	if (of_find_property(np, "edp_support", NULL)) {
+		plat->edp_support = true;
+		of_property_for_each_u32(np, "edp_states", prop, p, u) {
+			if (i == SD_EDP_NUM_STATES)
+				break;
+			plat->edp_states[i] = u;
+			i++;
+		}
+		p = NULL;
+		prop = NULL;
+	}
 
 	of_property_read_u32(np, "tap-delay", &plat->tap_delay);
 	of_property_read_u32(np, "trim-delay", &plat->trim_delay);
@@ -2408,6 +2424,11 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 
 	if (plat->nominal_vcore_uV)
 		tegra_host->nominal_vcore_uV = plat->nominal_vcore_uV;
+
+	host->edp_support = plat->edp_support;
+	if (host->edp_support)
+		for (rc = 0; rc < SD_EDP_NUM_STATES; rc++)
+			host->edp_states[rc] = plat->edp_states[rc];
 
 	rc = sdhci_add_host(host);
 
