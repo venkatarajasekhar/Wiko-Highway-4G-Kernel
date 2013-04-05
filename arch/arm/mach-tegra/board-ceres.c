@@ -219,6 +219,14 @@ static struct i2c_board_info __initdata ceres_codec_aic325x_info = {
 	.platform_data = &aic3256_codec_pdata,
 };
 
+struct ahub_bbc1_config ahub_bbc1_pdata = {
+	.port_id	= 0,
+	.sample_size	= 16,
+	.rate		= 16000,
+	.channels	= 1,
+	.bit_clk	= 768000,
+};
+
 static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
@@ -241,15 +249,7 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 		.channels	= 1,
 		.bit_clk	= 512000,
 	},
-	.i2s_param[BASEBAND]	= {
-		.audio_port_id	= 5,
-		.is_i2s_master	= 1,
-		.i2s_mode	= TEGRA_DAIFMT_I2S,
-		.sample_size	= 16,
-		.rate		= 16000,
-		.channels	= 1,
-		.bit_clk        = 768000,
-	},
+	.ahub_bbc1_param	= &ahub_bbc1_pdata,
 };
 
 static struct platform_device ceres_audio_max98090_device = {
@@ -292,15 +292,7 @@ static struct tegra_asoc_platform_data ceres_audio_aic325x_pdata = {
 		.channels	= 1,
 		.bit_clk	= 512000,
 	},
-	.i2s_param[BASEBAND]	= {
-		.audio_port_id	= 5,
-		.is_i2s_master	= 1,
-		.i2s_mode	= TEGRA_DAIFMT_I2S,
-		.sample_size	= 16,
-		.rate		= 16000,
-		.channels	= 1,
-		.bit_clk        = 768000,
-	},
+	.ahub_bbc1_param	= &ahub_bbc1_pdata,
 };
 
 static struct platform_device ceres_audio_aic325x_device = {
