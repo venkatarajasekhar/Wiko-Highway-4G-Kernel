@@ -835,13 +835,11 @@ int __init ceres_sensors_init(void)
 	if (board_info.board_id != BOARD_E1670) {
 		i2c_register_board_info(0, ceres_i2c_board_info_max44005,
 				ARRAY_SIZE(ceres_i2c_board_info_max44005));
+		i2c_register_board_info(0, max77660_fg_board_info, 1);
 	} else {
 		i2c_register_board_info(0, ceres_i2c_board_info_tcs3772,
 				ARRAY_SIZE(ceres_i2c_board_info_tcs3772));
 	}
-
-	i2c_register_board_info(0, max77660_fg_board_info, 1);
-
 
 	return 0;
 }
