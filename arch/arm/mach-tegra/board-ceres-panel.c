@@ -441,6 +441,7 @@ static void ceres_panel_select(void)
 		dsi_instance = DSI_INSTANCE_0;
 		break;
 	case BOARD_E1582:
+	case BOARD_E1563:
 	/* fall through */
 	default:
 		if (tegra_get_board_panel_id()) {
