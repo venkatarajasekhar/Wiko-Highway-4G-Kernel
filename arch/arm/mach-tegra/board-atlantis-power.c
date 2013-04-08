@@ -44,6 +44,7 @@
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
+#define BOARD_SKU_100		100
 #define BOARD_SKU_110		110
 #define BOARD_SKU_120		120
 
@@ -346,7 +347,7 @@ static struct regulator_init_data *atlantis_reg_data[PALMAS_NUM_REGS] = {
 		.vsel = _vsel,		\
 	}
 
-PALMAS_REG_INIT(smps12, 0, 0, 0, 0, 0);
+PALMAS_REG_INIT(smps12, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(smps123, 0, PALMAS_EXT_CONTROL_ENABLE1, 0, 0, 0);
 PALMAS_REG_INIT(smps3, 0, PALMAS_EXT_CONTROL_ENABLE2, 0, 0, 0);
 PALMAS_REG_INIT(smps45, 0, 0, 0, 0, 0);
@@ -684,6 +685,8 @@ int __init atlantis_regulator_init(void)
 		pmic_platform.reg_init[PALMAS_REG_SMPS12] = NULL;
 
 		lp8755_regulator_init();
+	} else if (board_info.sku == BOARD_SKU_100) {
+		reg_init_data_smps12.roof_floor = PALMAS_EXT_CONTROL_ENABLE1;
 	} else if (board_info.sku == BOARD_SKU_120) {
 		pmic_platform.reg_data[PALMAS_REG_SMPS12] =
 				atlantis_reg_data[PALMAS_REG_SMPS6];
