@@ -117,6 +117,21 @@ static const struct resource battery_resource[] = {
 	},
 };
 
+static const struct resource sim_resource[] = {
+	{
+		.name = "SIM1",
+		.start = PALMAS_SIM1_IRQ,
+		.end = PALMAS_SIM1_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{
+		.name = "SIM2",
+		.start = PALMAS_SIM2_IRQ,
+		.end = PALMAS_SIM2_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 enum palmas_ids {
 	PALMAS_PIN_MUX_ID,
 	PALMAS_PMIC_ID,
@@ -132,7 +147,8 @@ enum palmas_ids {
 	PALMAS_USB_ID,
 	PALMAS_EXTCON_ID,
 	PALMAS_BATTERY_GAUGE_ID,
-	PALMAS_CHARGER_ID
+	PALMAS_CHARGER_ID,
+	PALMAS_SIM_ID,
 };
 
 static const struct mfd_cell palmas_children[] = {
@@ -210,6 +226,12 @@ static const struct mfd_cell palmas_children[] = {
 		.name = "palmas-charger",
 		.id = PALMAS_CHARGER_ID,
 	},
+	{
+		.name = "palmas-sim",
+		.num_resources = ARRAY_SIZE(sim_resource),
+		.resources = sim_resource,
+		.id = PALMAS_SIM_ID,
+	},
 };
 
 static bool is_volatile_palma_func_reg(struct device *dev, unsigned int reg)
@@ -275,6 +297,7 @@ static struct palmas_irq_regs palmas_irq_regs = {
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT3_MASK),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT4_MASK),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT5_MASK),
+		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT6_MASK),
 	},
 	.status_reg = {
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT1_STATUS),
@@ -282,6 +305,7 @@ static struct palmas_irq_regs palmas_irq_regs = {
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT3_STATUS),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT4_STATUS),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT5_STATUS),
+		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT6_STATUS),
 	},
 	.edge_reg = {
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE,
@@ -300,6 +324,10 @@ static struct palmas_irq_regs palmas_irq_regs = {
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT4_EDGE_DETECT2),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT5_EDGE_DETECT1),
 		PALMAS_REGS(PALMAS_INTERRUPT_BASE, PALMAS_INT5_EDGE_DETECT2),
+		PALMAS_REGS(PALMAS_INTERRUPT_BASE,
+					PALMAS_INT6_EDGE_DETECT1_RESERVED),
+		PALMAS_REGS(PALMAS_INTERRUPT_BASE,
+					PALMAS_INT6_EDGE_DETECT2_RESERVED),
 	},
 };
 
@@ -401,6 +429,9 @@ static struct palmas_irq palmas_irqs[] = {
 	PALMAS_IRQ(GPIO_15_IRQ, INT5_STATUS_GPIO_15, 4,
 			PALMAS_INT5_EDGE_DETECT2_GPIO_15_RISING,
 			PALMAS_INT5_EDGE_DETECT2_GPIO_15_FALLING, 9),
+	/* INT6 IRQs */
+	PALMAS_IRQ(SIM1_IRQ, INT6_STATUS_SIM1, 5, 0, 0, 0),
+	PALMAS_IRQ(SIM2_IRQ, INT6_STATUS_SIM2, 5, 0, 0, 0),
 };
 
 struct palmas_irq_chip_data {
