@@ -291,10 +291,10 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 	}
 
 
-MAX77660_PDATA_INIT(BUCK1, buck1,  900, 1400, NULL,
+MAX77660_PDATA_INIT(BUCK1, buck1,  650, 1400, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK2, buck2,  900, 1300, NULL,
+MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL,
 		1, 1, 0, FPS_SRC_DEF, 0, 0, 0);
 
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
