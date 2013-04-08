@@ -471,6 +471,28 @@ struct max77660_clk32k_platform_data clk32_pdata = {
 	.clk32k_load_cap = MAX77660_CLK_LOAD_CAP_22pF,
 };
 
+struct max77660_sim_platform_data max77660_sim_pdata = {
+	.sim_reg = {
+		{
+			.detect_en = 1,
+			.batremove_en = 0,
+			.det_debouncecnt = 0x10,
+			.auto_pwrdn_en = 1,
+			.inst_pol = 1,
+			.pwrdn_debouncecnt = 0x10,
+		},
+		{
+			.detect_en = 1,
+			.batremove_en = 0,
+			.det_debouncecnt = 0x10,
+			.auto_pwrdn_en = 1,
+			.inst_pol = 1,
+			.pwrdn_debouncecnt = 0x10,
+		},
+
+	},
+};
+
 static struct max77660_platform_data max77660_pdata = {
 	.irq_base	= MAX77660_IRQ_BASE,
 	.gpio_base	= MAX77660_GPIO_BASE,
@@ -483,6 +505,8 @@ static struct max77660_platform_data max77660_pdata = {
 	.clk32k_pdata = &clk32_pdata,
 
 	.adc_pdata = &max77660_adc_pdata,
+
+	.sim_pdata = &max77660_sim_pdata,
 
 	.flags	= 0x00,
 	.use_power_off	= true,
