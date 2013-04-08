@@ -518,14 +518,14 @@ static struct palmas_pinctrl_config palmas_pincfg[] = {
 	PALMAS_PINMUX(GPIO5, GPIO, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO6, GPIO, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO7, GPIO, DEFAULT, DEFAULT),
-	PALMAS_PINMUX(GPIO8, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO8, SIM1RSTI, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO9, GPIO, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO10, GPIO, PULL_UP, DEFAULT),
 	PALMAS_PINMUX(GPIO11, GPIO, DEFAULT, DEFAULT),
-	PALMAS_PINMUX(GPIO12, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO12, SIM2RSTO, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO13, GPIO, DEFAULT, DEFAULT),
 	PALMAS_PINMUX(GPIO14, GPIO, PULL_DOWN, DEFAULT),
-	PALMAS_PINMUX(GPIO15, GPIO, DEFAULT, DEFAULT),
+	PALMAS_PINMUX(GPIO15, SIM2RSTI, DEFAULT, DEFAULT),
 };
 
 static struct palmas_pinctrl_platform_data palmas_pinctrl_pdata = {
@@ -704,12 +704,25 @@ struct bq2419x_platform_data bq2419x_pdata = {
 	.bcharger_pdata = &bq2419x_charger_pdata,
 };
 
+static struct palmas_sim_platform_data sim_platform = {
+	.dbcnt = 0x10,
+	.pwrdncnt = 0x10,
+	.pwrdnen1 = 1,
+	.pwrdnen2 = 1,
+	.det_polarity = 0,
+	.det1_pu = 1,
+	.det1_pd = 0,
+	.det2_pu = 1,
+	.det2_pd = 0,
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
 	.pmic_pdata = &pmic_platform,
 	.clk32k_init_data =  atlantis_palmas_clk32k_idata,
 	.clk32k_init_data_size = ARRAY_SIZE(atlantis_palmas_clk32k_idata),
+	.sim_pdata = &sim_platform,
 	.irq_type = IRQ_TYPE_LEVEL_HIGH,
 	.use_power_off = true,
 	.watchdog_timer_initial_period = 128,
