@@ -1,6 +1,6 @@
 /* arch/arm/mach-tegra/board-ceres-pinmux-t14x.h
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -74,7 +74,8 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	VI_PINMUX(CAM1_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, ENABLE),
 
 	/* VIMCLK2 pinmux */
-	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE),
+	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
+				NORMAL, OUTPUT, DEFAULT, DISABLE),
 
 	/* SDMMC1 pinmux */
 	DEFAULT_PINMUX(SDMMC1_CLK,    SDMMC1,      NORMAL,    NORMAL,   INPUT),

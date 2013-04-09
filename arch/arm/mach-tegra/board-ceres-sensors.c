@@ -27,8 +27,6 @@
 #include <media/ad5816.h>
 #include <media/max77387.h>
 #include <media/lm3565.h>
-#include <mach/pinmux-t14.h>
-#include <mach/pinmux.h>
 #include <linux/nct1008.h>
 #include <linux/max17048_battery.h>
 #include <mach/edp.h>
@@ -47,34 +45,6 @@ static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
 	{IMX091_GPIO_PWDN, CAM1_POWER_DWN_GPIO, true, false},
 };
-
-#define VI_PINMUX(_pingroup, _mux, _pupd, _tri, _io, _lock, _ioreset) \
-	{							\
-		.pingroup	= TEGRA_PINGROUP_##_pingroup,	\
-		.func		= TEGRA_MUX_##_mux,		\
-		.pupd		= TEGRA_PUPD_##_pupd,		\
-		.tristate	= TEGRA_TRI_##_tri,		\
-		.io		= TEGRA_PIN_##_io,		\
-		.lock		= TEGRA_PIN_LOCK_##_lock,	\
-		.od		= TEGRA_PIN_OD_DEFAULT,		\
-		.ioreset	= TEGRA_PIN_IO_RESET_##_ioreset	\
-}
-
-/* Rear sensor clock pinmux settings */
-static struct tegra_pingroup_config mclk_disable =
-	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
-
-static struct tegra_pingroup_config mclk_enable =
-	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
-			NORMAL, OUTPUT, DEFAULT, DISABLE);
-
-/* Front sensor clock pinmux settings */
-static struct tegra_pingroup_config pbb0_disable =
-	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
-
-static struct tegra_pingroup_config pbb0_enable =
-	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
-			NORMAL, OUTPUT, DEFAULT, DISABLE);
 
 static struct throttle_table tj_throttle_table[] = {
 	/* CPU_THROT_LOW cannot be used by other than CPU */
@@ -282,7 +252,6 @@ static int ceres_imx091_power_on(struct nvc_regulator *vreg)
 	usleep_range(1, 2);
 	gpio_set_value(CAM1_POWER_DWN_GPIO, 1);
 
-	tegra_pinmux_config_table(&mclk_enable, 1);
 	usleep_range(300, 310);
 
 	return 1;
@@ -305,7 +274,7 @@ static int ceres_imx091_power_off(struct nvc_regulator *vreg)
 		return -EFAULT;
 
 	usleep_range(1, 2);
-	tegra_pinmux_config_table(&mclk_disable, 1);
+
 	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
 	usleep_range(1, 2);
 
@@ -323,8 +292,6 @@ static int ceres_imx132_power_on(struct imx132_power_rail *pw)
 		return -EFAULT;
 
 	gpio_set_value(CAM2_POWER_DWN_GPIO, 0);
-
-	tegra_pinmux_config_table(&pbb0_enable, 1);
 
 
 	err = regulator_enable(pw->avdd);
@@ -352,7 +319,6 @@ imx132_dvdd_fail:
 	regulator_disable(pw->avdd);
 
 imx132_avdd_fail:
-	tegra_pinmux_config_table(&pbb0_disable, 1);
 
 	return -ENODEV;
 }
@@ -369,8 +335,6 @@ static int ceres_imx132_power_off(struct imx132_power_rail *pw)
 	regulator_disable(pw->iovdd);
 	regulator_disable(pw->dvdd);
 	regulator_disable(pw->avdd);
-
-	tegra_pinmux_config_table(&pbb0_disable, 1);
 
 	return 0;
 }
@@ -549,9 +513,6 @@ static struct i2c_board_info __initdata ceres_i2c_board_info_tcs3772[] = {
 
 static int ceres_camera_init(void)
 {
-	tegra_pinmux_config_table(&mclk_disable, 1);
-	tegra_pinmux_config_table(&pbb0_disable, 1);
-
 	if (board_info.board_id == BOARD_E1670)
 		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
 			ARRAY_SIZE(ceres_i2c_board_info_e1697));
