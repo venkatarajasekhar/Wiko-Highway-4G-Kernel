@@ -58,6 +58,7 @@
 #include "board.h"
 #include "tegra-board-id.h"
 #include "board-ceres.h"
+#include "board-atlantis.h"
 #include "board-common.h"
 #include "board-touch-raydium.h"
 #include "clock.h"
@@ -264,10 +265,10 @@ static struct platform_device ceres_audio_max97236_device = {
 static struct tegra_asoc_platform_data ceres_audio_aic325x_pdata = {
 	.gpio_ldo1_en = TEGRA_GPIO_LDO1_EN,
 	.gpio_spkr_en = -1,
-	.gpio_hp_det = -1,
+	.gpio_hp_det = (PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO4),
 	.gpio_hp_mute = -1,
 	.gpio_int_mic_en = -1,
-	.gpio_ext_mic_en = -1,
+	.gpio_ext_mic_en = TEGRA_GPIO_HP_MIC_DET,
 	.debounce_time_hp = 200,
 	.i2s_param[HIFI_CODEC]  = {
 		.audio_port_id	= 0,

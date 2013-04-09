@@ -59,7 +59,6 @@ static __initdata struct tegra_pingroup_config atlantis_pinmux_common[] = {
 	DEFAULT_PINMUX(SPI2_MISO,     SPI2,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(SPI2_MOSI,     SPI2,        NORMAL,    NORMAL,   OUTPUT),
 	DEFAULT_PINMUX(SPI2_CS0_N,    SPI2,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(SPI2_CS1_N,    SPI2,        PULL_UP,    NORMAL,   OUTPUT),
 
 	/* I2C1 pinmux */
 	I2C_PINMUX(I2C1_SCL, I2C1, NORMAL, NORMAL, INPUT, DEFAULT, DISABLE),
@@ -215,7 +214,7 @@ static __initdata struct tegra_pingroup_config atlantis_pinmux_common[] = {
 	GPIO_PINMUX(ALS_PROX_INT_L, PULL_UP, NORMAL, INPUT),
 	GPIO_PINMUX(TOUCH_INT_L, PULL_UP, NORMAL, INPUT),
 	GPIO_PINMUX(TOUCH_RESET_L, NORMAL, NORMAL, OUTPUT),
-
+	GPIO_PINMUX(SPI2_CS1_N, PULL_UP, NORMAL, OUTPUT),
 };
 
 static struct gpio_init_pin_info init_gpio_mode_atlantis_common[] = {
@@ -253,4 +252,5 @@ static struct gpio_init_pin_info init_gpio_mode_atlantis_common[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN0, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN1, true, 0),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PN2, false, 0),
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 0),
 };
