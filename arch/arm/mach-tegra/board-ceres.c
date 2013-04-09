@@ -543,7 +543,7 @@ static void ceres_usb_init(void)
 	case BOARD_E1680:
 	case BOARD_E1681:
 		/* Device cable is detected through PMU Interrupt */
-		tegra_otg_pdata.extcon_dev_name = "max77660-extcon";
+		tegra_otg_pdata.vbus_extcon_dev_name = "max77660-extcon";
 
 		/* Host cable is detected through GPIO from PMU */
 		tegra_udc_pdata.id_det_type = TEGRA_USB_GPIO_ID;
@@ -554,7 +554,7 @@ static void ceres_usb_init(void)
 	case BOARD_E1670:
 	case BOARD_E1671:
 		/* Device cable is detected through PMU Interrupt */
-		tegra_otg_pdata.extcon_dev_name = "palmas-extcon";
+		tegra_otg_pdata.vbus_extcon_dev_name = "palmas-extcon";
 
 		/* Host cable is detected through PMU Interrupt */
 		tegra_udc_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
