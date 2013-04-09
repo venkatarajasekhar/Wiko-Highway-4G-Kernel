@@ -312,8 +312,8 @@ MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL,
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK4, buck4,  600, 1500, NULL,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3 | DISABLE_DVFS);
+MAX77660_PDATA_INIT(BUCK4, buck4,  1100, 1100, NULL,
+		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3);
 
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
@@ -348,7 +348,7 @@ MAX77660_PDATA_INIT(LDO6, ldo6, 1200, 1200, max77660_rails(buck5),
 MAX77660_PDATA_INIT(LDO7, ldo7, 1050, 1050, max77660_rails(buck3),
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(LDO8, ldo8, 600, 2175, max77660_rails(buck3),
+MAX77660_PDATA_INIT(LDO8, ldo8, 1100, 1100, max77660_rails(buck3),
 		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3);
 
 MAX77660_PDATA_INIT(LDO9, ldo9, 2800, 2800, NULL,
@@ -565,11 +565,11 @@ static struct max77660_platform_data max77660_pdata = {
 	.system_watchdog_timeout = 32,
 	.system_watchdog_reset_timeout = 20,
 	.dvfs_pd = {
-		.en_pwm = false,
+		.en_pwm = true,
 		.step_voltage_uV = 12500,
-		.default_voltage_uV = 900000,
-		.base_voltage_uV = 700000,
-		.max_voltage_uV = 1100000,
+		.default_voltage_uV = 1100000,
+		.base_voltage_uV = 900000,
+		.max_voltage_uV = 1200000,
 	},
 };
 
