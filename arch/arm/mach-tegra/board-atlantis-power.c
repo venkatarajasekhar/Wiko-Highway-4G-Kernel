@@ -286,7 +286,7 @@ PALMAS_PDATA_INIT(ldo5, 1100,  1100, palmas_rails(smps8), 1, 0, 1);
 PALMAS_PDATA_INIT(ldo6, 2700,  2700, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(ldo7, 1800,  3000, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(ldo8, 1800,  1800, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo9, 900,  900, palmas_rails(smps8), 0, 0, 1);
+PALMAS_PDATA_INIT(ldo9, 1100,  1100, palmas_rails(smps8), 0, 0, 1);
 PALMAS_PDATA_INIT(ldo10, 1800,  3300, palmas_rails(smps7), 0, 0, 0);
 PALMAS_PDATA_INIT(ldo11, 2800,  2800, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(ldo12, 1800,  1800, palmas_rails(smps9), 0, 0, 1);
@@ -506,9 +506,25 @@ int __init atlantis_fixed_regulator_init(void)
 					num_fixed_regulators);
 }
 
+static struct palmas_dvfs_init_data palmas_dvfs_idata[] = {
+	{
+		.en_pwm = true,
+		.ext_ctrl = PALMAS_EXT_CONTROL_ENABLE2,
+		.reg_id = PALMAS_REG_SMPS3,
+		.step_20mV = true,
+		.base_voltage_uV = 900000,
+		.max_voltage_uV = 1200000,
+		.smps3_ctrl = true,
+	}, {
+		.en_pwm = false,
+	},
+};
+
 static struct palmas_pmic_platform_data pmic_platform = {
 	.enable_ldo8_tracking = true,
 	.disabe_ldo8_tracking_suspend = true,
+	.dvfs_init_data = palmas_dvfs_idata,
+	.dvfs_init_data_size = ARRAY_SIZE(palmas_dvfs_idata),
 };
 
 static struct palmas_pinctrl_config palmas_pincfg[] = {
