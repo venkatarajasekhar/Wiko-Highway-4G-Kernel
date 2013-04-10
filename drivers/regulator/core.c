@@ -2113,6 +2113,14 @@ int regulator_set_voltage(struct regulator *regulator, int min_uV, int max_uV)
 	struct regulator_dev *rdev = regulator->rdev;
 	int ret = 0;
 
+#ifdef CONFIG_REGULATOR_DUMMY
+	if (!strcmp(rdev->desc->name, "dummy")) {
+		rdev_info(rdev,
+			"regulator is dummy, skipping voltage change...\n");
+		return ret;
+	}
+#endif
+
 	mutex_lock(&rdev->mutex);
 
 	/* If we're setting the same range as last time the change
