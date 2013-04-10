@@ -30,6 +30,7 @@ int e1853_gpio_init(void);
 int e1853_pins_state_init(void);
 int e1853_suspend_init(void);
 int e1853_regulator_init(void);
+int e1853_wifi_init(void);
 int e1853_pca953x_init(void);
 
 /* External peripheral act as gpio */

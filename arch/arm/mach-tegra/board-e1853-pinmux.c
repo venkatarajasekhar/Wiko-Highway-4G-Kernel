@@ -524,8 +524,8 @@ int __init e1853_gpio_init(void)
 static struct gpio e1853_system_gpios[] = {
 	{MISCIO_BT_WAKEUP_GPIO,	GPIOF_OUT_INIT_HIGH,	"bt_wk"},
 	{MISCIO_ABB_RST_GPIO,	GPIOF_OUT_INIT_HIGH,	"ebb_rst"},
-	{MISCIO_USER_LED2_GPIO,	GPIOF_OUT_INIT_LOW,		"usr_led2"},
-	{MISCIO_USER_LED1_GPIO, GPIOF_OUT_INIT_LOW,		"usr_led1"},
+	{MISCIO_USER_LED2_GPIO,	GPIOF_OUT_INIT_LOW,	"usr_led2"},
+	{MISCIO_USER_LED1_GPIO, GPIOF_OUT_INIT_LOW,	"usr_led1"},
 };
 
 static int __init e1853_system_gpio_init(void)
@@ -560,6 +560,10 @@ static int pca953x_client_setup(struct i2c_client *client,
 	int ret = 0;
 
 	ret = e1853_system_gpio_init();
+	if (ret < 0)
+		goto fail;
+
+	ret = e1853_wifi_init();
 	if (ret < 0)
 		goto fail;
 
