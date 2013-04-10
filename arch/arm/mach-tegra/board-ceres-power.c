@@ -621,15 +621,23 @@ static void lp8755_regulator_init(void)
 }
 
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
+/* VDD_CPU can source from extrenal CPU regulator or from one of the  *
+ * voltage rail of the PMIC. For different boards, the configuration  *
+ * used as below:
+ *  E1690(CERES FFD): CPU_VDD is from Buck2 of Max 77660
+ *  E1680(CERES)    : For SKU 1001 CPU_VDD is from Buck2 of Max 77660
+ *		      For SKU 1000 CPU_VDD is from LP8755LME	     */
+
+
 /* LP8755LME: fixed 10mV steps from 500mV to 1670mV, with offset 0x80 */
-#define PMU_CPU_VDD_MAP_SIZE ((1670000 - 500000) / 10000 + 1)
-static struct voltage_reg_map pmu_cpu_vdd_map[PMU_CPU_VDD_MAP_SIZE];
-static inline void fill_reg_map(void)
+#define LP8755_CPU_VDD_MAP_SIZE ((1670000 - 500000) / 10000 + 1)
+static struct voltage_reg_map  lp8755_cpu_vdd_map[LP8755_CPU_VDD_MAP_SIZE];
+static inline void lp8755_vdd_cpu_fill_reg_map(void)
 {
 	int i;
-	for (i = 0; i < PMU_CPU_VDD_MAP_SIZE; i++) {
-		pmu_cpu_vdd_map[i].reg_value = i + 0x80;
-		pmu_cpu_vdd_map[i].reg_uV = 500000 + 10000 * i;
+	for (i = 0; i < LP8755_CPU_VDD_MAP_SIZE; i++) {
+		lp8755_cpu_vdd_map[i].reg_value = i + 0x80;
+		lp8755_cpu_vdd_map[i].reg_uV = 500000 + 10000 * i;
 	}
 }
 
@@ -646,7 +654,7 @@ static struct tegra_cl_dvfs_cfg_param ceres_cl_dvfs_param = {
 	.scale_out_ramp = 0x0,
 };
 
-static struct tegra_cl_dvfs_platform_data ceres_cl_dvfs_data = {
+static struct tegra_cl_dvfs_platform_data ceres_cl_dvfs_lp8755_vdd_cpu_data = {
 	.dfll_clk_name = "dfll_cpu",
 	.pmu_if = TEGRA_CL_DVFS_PMU_I2C,
 	.u.pmu_i2c = {
@@ -654,16 +662,68 @@ static struct tegra_cl_dvfs_platform_data ceres_cl_dvfs_data = {
 		.slave_addr = 0xc0,
 		.reg = 0x00,
 	},
-	.vdd_map = pmu_cpu_vdd_map,
-	.vdd_map_size = PMU_CPU_VDD_MAP_SIZE,
+	.vdd_map = lp8755_cpu_vdd_map,
+	.vdd_map_size = LP8755_CPU_VDD_MAP_SIZE,
 
 	.cfg_param = &ceres_cl_dvfs_param,
 };
 
+/* Maxim 77660 Buck2: fixed 6.25mV steps from 600mV to 1500mV, with offset 0 */
+#define MAX77660_CPU_VDD_MAP_SIZE ((1500000 - 600000) / 6250 + 1)
+static struct voltage_reg_map max77660_cpu_vdd_map[MAX77660_CPU_VDD_MAP_SIZE];
+static inline void max77660_vdd_cpu_fill_reg_map(void)
+{
+	int i;
+	for (i = 0; i < MAX77660_CPU_VDD_MAP_SIZE; i++) {
+		max77660_cpu_vdd_map[i].reg_value = i + 0x0;
+		max77660_cpu_vdd_map[i].reg_uV = 600000 + 6250 * i;
+	}
+}
+
+static struct tegra_cl_dvfs_platform_data \
+				ceres_cl_dvfs_max77660_vdd_cpu_data = {
+	.dfll_clk_name = "dfll_cpu",
+	.pmu_if = TEGRA_CL_DVFS_PMU_I2C,
+	.u.pmu_i2c = {
+		.fs_rate = 400000,
+		.slave_addr = 0x46,
+		.reg = 0x47,
+	},
+	.vdd_map = max77660_cpu_vdd_map,
+	.vdd_map_size = MAX77660_CPU_VDD_MAP_SIZE,
+
+	.cfg_param = &ceres_cl_dvfs_param,
+};
+
+int tegra_get_cvb_alignment_uV(void)
+{
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if ((board_info.board_id == BOARD_E1690) ||
+	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001))
+		return 6250;
+	else
+		return 10000;
+}
+
+
+
 static int __init ceres_cl_dvfs_init(void)
 {
-	fill_reg_map();
-	tegra_cl_dvfs_device.dev.platform_data = &ceres_cl_dvfs_data;
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if ((board_info.board_id == BOARD_E1690) ||
+	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001)) {
+		max77660_vdd_cpu_fill_reg_map();
+		tegra_cl_dvfs_device.dev.platform_data =
+					&ceres_cl_dvfs_max77660_vdd_cpu_data;
+	} else {
+		lp8755_vdd_cpu_fill_reg_map();
+		tegra_cl_dvfs_device.dev.platform_data =
+					&ceres_cl_dvfs_lp8755_vdd_cpu_data;
+	}
 	platform_device_register(&tegra_cl_dvfs_device);
 
 	return 0;
