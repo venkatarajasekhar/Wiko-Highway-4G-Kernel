@@ -406,7 +406,7 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_com", NULL),
 	REGULATOR_SUPPLY("vdd_sys_gps", NULL),
 	REGULATOR_SUPPLY("vdd_sys_nfc", NULL),
-	REGULATOR_SUPPLY("vdd_sys_vbrtr", NULL),
+	REGULATOR_SUPPLY("vdd_vbrtr", NULL),
 	REGULATOR_SUPPLY("vdd_sys_kb", NULL),
 	REGULATOR_SUPPLY("vdd_sys_flash", NULL),
 	REGULATOR_SUPPLY("vdd_sys_lcd", NULL),
@@ -638,6 +638,7 @@ static struct drv2603_platform_data atlantis_vibrator_pdata = {
 	.vibrator_mode = ERM_MODE,
 	.gpio = PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO6,
 	.duty_cycle = 80,
+	.edp_states = {64, 0},
 };
 
 static struct platform_device atlantis_vibrator_device = {
