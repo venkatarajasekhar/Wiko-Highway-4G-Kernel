@@ -57,7 +57,7 @@ enum max77665_mode {
 };
 
 struct max77665_muic_platform_data {
-	const char *ext_conn_name;
+	int irq_base;
 };
 
 struct max77665_charger_cable {
