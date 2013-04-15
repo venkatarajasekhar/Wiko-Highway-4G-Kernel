@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra3_clocks.c
  *
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (C) 2010-2013 NVIDIA Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -5225,6 +5225,8 @@ static struct syscore_ops tegra_clk_syscore_ops = {
 #define CLK_RSTENB_DEV_L_0_2D_BIT	(1 << 21)
 #define CLK_RSTENB_DEV_L_0_VI_BIT	(1 << 20)
 #define CLK_RSTENB_DEV_L_0_EPP_BIT	(1 << 19)
+#define CLK_RSTENB_DEV_L_0_SPDIF_BIT	(1 << 10)
+
 
 #define CLK_RSTENB_DEV_H_0_VDE_BIT	(1 << 29)
 #define CLK_RSTENB_DEV_H_0_MPE_BIT	(1 << 28)
@@ -5240,6 +5242,30 @@ static struct syscore_ops tegra_clk_syscore_ops = {
 #define DISP1_CLK_SRC_PLLD2_OUT0	5
 #define DISP1_CLK_SRC_CLKM		6
 #define DISP1_CLK_SRC_DEFAULT (DISP1_CLK_SRC_PLLP_OUT0 << DISP1_CLK_SRC_SHIFT)
+
+#define SPDIF_IN_CLK_REG_OFFSET		0x10c
+#define SPDIF_IN_CLK_SRC_SHIFT		30
+#define SPDIF_IN_CLK_SRC_PLLP_OUT0	0
+#define SPDIF_IN_CLK_SRC_PLLC_OUT0	1
+#define SPDIF_IN_CLK_SRC_PLLM_OUT0	2
+#define SPDIF_IN_CLK_SRC_MASK		(0x3 << SPDIF_IN_CLK_SRC_SHIFT)
+#define SPDIF_IN_CLK_SRC_DEFAULT (\
+		SPDIF_IN_CLK_SRC_PLLP_OUT0 << SPDIF_IN_CLK_SRC_SHIFT)
+#define SPDIF_IN_CLK_DIV_SHIFT		0
+#define SPDIF_IN_CLK_DIV_DEFAULT	(8 << SPDIF_IN_CLK_DIV_SHIFT)
+#define SPDIF_IN_CLK_DIV_MASK		(0xff << SPDIF_IN_CLK_DIV_SHIFT)
+
+#define VI_SENSOR_CLK_SRC_SHIFT		30
+#define VI_SENSOR_CLK_SRC_PLLM_OUT0	0
+#define VI_SENSOR_CLK_SRC_PLLC_OUT0	1
+#define VI_SENSOR_CLK_SRC_PLLP_OUT0	2
+#define VI_SENSOR_CLK_SRC_PLLA_OUT0	3
+#define VI_SENSOR_CLK_SRC_MASK		(0x3 << VI_SENSOR_CLK_SRC_SHIFT)
+#define VI_SENSOR_CLK_SRC_DEFAULT (\
+		VI_SENSOR_CLK_SRC_PLLP_OUT0 << VI_SENSOR_CLK_SRC_SHIFT)
+#define VI_SENSOR_CLK_DIV_SHIFT		0
+#define VI_SENSOR_CLK_DIV_DEFAULT	(4 << VI_SENSOR_CLK_DIV_SHIFT)
+#define VI_SENSOR_CLK_DIV_MASK		(0xff << VI_SENSOR_CLK_DIV_SHIFT)
 
 #define HOST1X_CLK_REG_OFFSET		0x180
 #define HOST1X_CLK_SRC_SHIFT		30
@@ -5453,6 +5479,21 @@ static int __init tegra_soc_preinit_clocks(void)
 	vclk_init('H', VDE_CLK_REG_OFFSET, CLK_RSTENB_DEV_H_0_VDE_BIT);
 	vclk_init('H', MPE_CLK_REG_OFFSET, CLK_RSTENB_DEV_H_0_MPE_BIT);
 	vclk_init('V', G3D2_CLK_REG_OFFSET, CLK_RSTENB_DEV_V_0_3D2_BIT);
+
+
+	clk_setbit(RST_DEVICES_L, CLK_RSTENB_DEV_L_0_SPDIF_BIT);
+	clk_setbit(CLK_OUT_ENB_L, CLK_RSTENB_DEV_L_0_SPDIF_BIT);
+	clk_setbits(SPDIF_IN_CLK_REG_OFFSET,
+		    SPDIF_IN_CLK_DIV_DEFAULT, SPDIF_IN_CLK_DIV_MASK);
+	clk_setbits(SPDIF_IN_CLK_REG_OFFSET,
+		    SPDIF_IN_CLK_SRC_DEFAULT, SPDIF_IN_CLK_SRC_MASK);
+	clk_clrbit(RST_DEVICES_L, CLK_RSTENB_DEV_L_0_SPDIF_BIT);
+
+
+	clk_setbits(VI_SENSOR_CLK_REG_OFFSET,
+		    VI_SENSOR_CLK_DIV_DEFAULT, VI_SENSOR_CLK_DIV_MASK);
+	clk_setbits(VI_SENSOR_CLK_REG_OFFSET,
+		    VI_SENSOR_CLK_SRC_DEFAULT, VI_SENSOR_CLK_SRC_MASK);
 
 	return 0;
 }
