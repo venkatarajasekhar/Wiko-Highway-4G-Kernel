@@ -40,18 +40,34 @@
 #include "tegra-board-id.h"
 #include "board-atlantis.h"
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#include "tegra11_host1x_devices.h"
+#else
 #include "tegra14_host1x_devices.h"
+#endif
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PH3
+#define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PH2
+#define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PH1
+#define TE_GPIO			0
+#else
 #define DSI_PANEL_RST_GPIO	TEGRA_GPIO_PG4
 #define DSI_PANEL_BL_EN_GPIO	TEGRA_GPIO_PG3
 #define DSI_PANEL_BL_PWM_GPIO	TEGRA_GPIO_PG2
 #define TE_GPIO			TEGRA_GPIO_PG1
 
+#endif
+
 struct platform_device * __init ceres_host1x_init(void)
 {
 	struct platform_device *pdev = NULL;
 #ifdef CONFIG_TEGRA_GRHOST
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	pdev = tegra11_register_host1x_devices();
+#else
 	pdev = tegra14_register_host1x_devices();
+#endif
 	if (!pdev) {
 		pr_err("host1x devices registration failed\n");
 		return NULL;
@@ -63,7 +79,11 @@ struct platform_device * __init ceres_host1x_init(void)
 #ifdef CONFIG_TEGRA_DC
 
 /* hdmi pins for hotplug */
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define ceres_hdmi_hpd		TEGRA_GPIO_PN7
+#else
 #define ceres_hdmi_hpd		(MAX77660_GPIO_BASE + MAX77660_GPIO2)
+#endif
 
 /* hdmi related regulators */
 static struct regulator *ceres_hdmi_reg;
@@ -536,7 +556,9 @@ int __init ceres_panel_init(void)
 		return err;
 	}
 
+#ifndef CONFIG_ARCH_TEGRA_11x_SOC
 	ceres_set_hotplug_gpio();
+#endif
 
 	ceres_disp2_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&ceres_disp2_device);

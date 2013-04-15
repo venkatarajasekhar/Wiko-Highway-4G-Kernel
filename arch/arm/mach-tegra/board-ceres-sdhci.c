@@ -40,8 +40,13 @@
 #include "board-atlantis.h"
 #include "tegra-board-id.h"
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#define CERES_WLAN_PWR	TEGRA_GPIO_PCC5
+#define CERES_WLAN_WOW	TEGRA_GPIO_PU5
+#else
 #define CERES_WLAN_PWR  TEGRA_GPIO_PL7
 #define CERES_WLAN_WOW  TEGRA_GPIO_PO2
+#endif
 
 #define MAXIM77660_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
 #define PALMAS_SD_CD	(PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO10)

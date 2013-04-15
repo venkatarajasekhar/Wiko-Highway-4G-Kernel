@@ -27,7 +27,11 @@
 #include <media/ad5816.h>
 #include <media/max77387.h>
 #include <media/lm3565.h>
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+#include <mach/pinmux-t11.h>
+#else
 #include <mach/pinmux-t14.h>
+#endif
 #include <mach/pinmux.h>
 #include <linux/nct1008.h>
 #include <linux/max17048_battery.h>
@@ -60,6 +64,21 @@ static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
 		.ioreset	= TEGRA_PIN_IO_RESET_##_ioreset	\
 }
 
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+/* Rear sensor clock pinmux settings */
+static struct tegra_pingroup_config mclk_disable =
+	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+
+static struct tegra_pingroup_config mclk_enable =
+	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+
+/* Front sensor clock pinmux settings */
+static struct tegra_pingroup_config pbb0_disable =
+	VI_PINMUX(CAM_MCLK, VI, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+
+static struct tegra_pingroup_config pbb0_enable =
+	VI_PINMUX(CAM_MCLK, VI_ALT3, NORMAL, NORMAL, OUTPUT, DEFAULT, DEFAULT);
+#else
 /* Rear sensor clock pinmux settings */
 static struct tegra_pingroup_config mclk_disable =
 	VI_PINMUX(CAM2_MCLK, VIMCLK2, NORMAL, NORMAL, OUTPUT, DEFAULT, DISABLE);
@@ -75,6 +94,7 @@ static struct tegra_pingroup_config pbb0_disable =
 static struct tegra_pingroup_config pbb0_enable =
 	VI_PINMUX(CAM2_MCLK, VIMCLK2_ALT_ALT, PULL_UP,
 			NORMAL, OUTPUT, DEFAULT, DISABLE);
+#endif
 
 static struct throttle_table tj_throttle_table[] = {
 	/* CPU_THROT_LOW cannot be used by other than CPU */
@@ -475,6 +495,14 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 			.lumi_levels		= NULL,
 			},
 		},
+#ifdef CONFIG_ARCH_TEGRA_11x_SOC
+	.pinstate	= {
+		.mask	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		.values	= 1 << (CAM_FLASH_STROBE - TEGRA_GPIO_PBB0),
+		},
+#else
+	/* Needs to be validated and changed for t14x */
+#endif
 	.cfg		= NVC_CFG_NODEV,
 	.dev_name	= "torch",
 	.gpio_strobe	= CAM_FLASH_STROBE,
