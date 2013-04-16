@@ -1230,7 +1230,7 @@ static void dvfs_show_one(struct seq_file *s, struct dvfs *d, int level)
 {
 	seq_printf(s, "%*s  %-*s%21s%d mV\n",
 			level * 3 + 1, "",
-			30 - level * 3, d->dvfs_rail->reg_id,
+			35 - level * 3, d->dvfs_rail->reg_id,
 			"",
 			d->cur_millivolts);
 }
@@ -1269,7 +1269,7 @@ static void clock_tree_show_one(struct seq_file *s, struct clk *c, int level)
 		level * 3 + 1, "",
 		rate > max_rate ? '!' : ' ',
 		!c->set ? '*' : ' ',
-		30 - level * 3, c->name,
+		35 - level * 3, c->name,
 		c->cansleep ? '$' : ' ',
 		state, c->refcnt, div, rate);
 	if (c->parent && !list_empty(&c->parent->shared_bus_list))
@@ -1293,8 +1293,8 @@ static void clock_tree_show_one(struct seq_file *s, struct clk *c, int level)
 static int clock_tree_show(struct seq_file *s, void *data)
 {
 	struct clk *c;
-	seq_printf(s, "   clock                          state  ref div      rate       (shared rate)\n");
-	seq_printf(s, "------------------------------------------------------------------------------\n");
+	seq_printf(s, "   clock                               state  ref div      rate       (shared rate)\n");
+	seq_printf(s, "-----------------------------------------------------------------------------------\n");
 
 	mutex_lock(&clock_list_lock);
 #ifndef CONFIG_TEGRA_FPGA_PLATFORM
@@ -1607,7 +1607,10 @@ static int clk_debugfs_register_one(struct clk *c)
 			goto err_out;
 	}
 
-	if (c->ops && c->ops->round_rate && c->ops->shared_bus_update) {
+	/* show possible rates only of the top-most shared buses */
+	if ((c->ops && c->ops->round_rate && c->ops->shared_bus_update) &&
+	    !(c->parent && c->parent->ops && c->parent->ops->round_rate &&
+	       c->parent->ops->shared_bus_update)) {
 		d = debugfs_create_file("possible_rates", S_IRUGO, c->dent,
 			c, &possible_rates_fops);
 		if (!d)
