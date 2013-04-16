@@ -61,15 +61,6 @@
 	}
 
 static struct gpio_keys_button ceres_int_keys[] = {
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	[0] = GPIO_KEY(KEY_HOME, PR0, 0),
-	[1] = GPIO_KEY(KEY_MENU, PR1, 0),
-	[2] = GPIO_KEY(KEY_BACK, PR2, 0),
-	[3] = GPIO_KEY(KEY_POWER, PQ0, 1),
-	[4] = GPIO_KEY(KEY_VOLUMEUP, PQ1, 0),
-	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PQ2, 0),
-
-#else
 	[0] = GPIO_KEY(KEY_HOME, PJ1, 0),
 	[1] = GPIO_KEY(KEY_MENU, PJ2, 0),
 	[2] = GPIO_KEY(KEY_BACK, PJ3, 0),
@@ -77,8 +68,6 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[4] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 0),
 	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 0),
 	[6] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1000),
-
-#endif
 };
 
 static struct gpio_keys_platform_data ceres_int_keys_pdata = {

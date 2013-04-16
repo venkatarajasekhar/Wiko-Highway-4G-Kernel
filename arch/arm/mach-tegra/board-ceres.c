@@ -65,21 +65,12 @@
 #include "common.h"
 #include "board-touch.h"
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-#define CERES_BT_EN		TEGRA_GPIO_PQ6
-#define CERES_BT_HOST_WAKE	TEGRA_GPIO_PU6
-#define CERES_BT_EXT_WAKE	TEGRA_GPIO_PEE1
-#define CERES_NFC_IRQ		TEGRA_GPIO_PW2
-#define CERES_NFC_EN		TEGRA_GPIO_PU4
-#define CERES_NFC_WAKE		TEGRA_GPIO_PX7
-#else
 #define CERES_BT_EN		TEGRA_GPIO_PM3
 #define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM2
 #define CERES_BT_EXT_WAKE	TEGRA_GPIO_PM1
 #define CERES_NFC_IRQ		TEGRA_GPIO_PM4
 #define CERES_NFC_EN		TEGRA_GPIO_PI0
 #define CERES_NFC_WAKE		TEGRA_GPIO_PM0
-#endif
 
 #ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
@@ -316,12 +307,8 @@ static struct platform_device ceres_tegra_bb_device = {
 #endif
 
 static struct platform_device *ceres_spi_devices[] __initdata = {
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	&tegra11_spi_device4,
-#else
 	&tegra11_spi_device2,
 	&tegra11_spi_device3,
-#endif
 };
 
 struct spi_clk_parent spi_parent_clk_ceres[] = {
@@ -363,12 +350,8 @@ static void __init ceres_spi_init(void)
 	ceres_spi_pdata.parent_clk_list = spi_parent_clk_ceres;
 	ceres_spi_pdata.parent_clk_count = ARRAY_SIZE(spi_parent_clk_ceres);
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	tegra11_spi_device4.dev.platform_data = &ceres_spi_pdata;
-#else
 	tegra11_spi_device2.dev.platform_data = &ceres_spi_pdata;
 	tegra11_spi_device3.dev.platform_data = &ceres_spi_pdata;
-#endif
 	platform_add_devices(ceres_spi_devices, ARRAY_SIZE(ceres_spi_devices));
 }
 
@@ -729,22 +712,6 @@ static __maybe_unused struct tegra_i2c_platform_data ceres_i2c6_platform_data = 
 
 static void ceres_i2c_init(void)
 {
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-
-	tegra11_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
-	tegra11_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
-	tegra11_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
-	tegra11_i2c_device4.dev.platform_data = &ceres_i2c4_platform_data;
-	tegra11_i2c_device5.dev.platform_data = &ceres_i2c5_platform_data;
-
-	platform_device_register(&tegra11_i2c_device5);
-	platform_device_register(&tegra11_i2c_device4);
-	platform_device_register(&tegra11_i2c_device3);
-	platform_device_register(&tegra11_i2c_device2);
-	platform_device_register(&tegra11_i2c_device1);
-
-#else
-
 	tegra14_i2c_device1.dev.platform_data = &ceres_i2c1_platform_data;
 	tegra14_i2c_device2.dev.platform_data = &ceres_i2c2_platform_data;
 	tegra14_i2c_device3.dev.platform_data = &ceres_i2c3_platform_data;
@@ -759,101 +726,10 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra14_i2c_device2);
 	platform_device_register(&tegra14_i2c_device1);
 
-#endif
-
 	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(CERES_NFC_IRQ);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
 
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
-	/* name		parent		rate		enabled */
-	{ "extern2",	"pll_p",	41000000,	false},
-	{ "clk_out_2",	"extern2",	40800000,	false},
-	{ NULL,		NULL,		0,		0},
-};
-
-struct rm_spi_ts_platform_data rm31080ts_ceres_data = {
-	.gpio_reset = 0,
-	.config = 0,
-	.platform_id = RM_PLATFORM_P005,
-	.name_of_clock = "clk_out_2",
-	.name_of_clock_con = "extern2",
-};
-
-static struct tegra_spi_device_controller_data dev_cdata = {
-	.rx_clk_tap_delay = 0,
-	.tx_clk_tap_delay = 0,
-};
-
-struct spi_board_info rm31080a_ceres_spi_board[1] = {
-	{
-		.modalias = "rm_ts_spidev",
-		.bus_num = 3,
-		.chip_select = 2,
-		.max_speed_hz = 12 * 1000 * 1000,
-		.mode = SPI_MODE_0,
-		.controller_data = &dev_cdata,
-		.platform_data = &rm31080ts_ceres_data,
-	},
-};
-
-static struct synaptics_gpio_data synaptics_gpio_ceres_data = {
-	.attn_gpio = SYNAPTICS_ATTN_GPIO,
-	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
-	.reset_gpio = SYNAPTICS_RESET_GPIO,
-};
-
-static struct rmi_device_platform_data synaptics_ceres_platformdata = {
-	.sensor_name   = "TM9999",
-	.attn_gpio     = SYNAPTICS_ATTN_GPIO,
-	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
-	.gpio_data     = &synaptics_gpio_ceres_data,
-	.gpio_config   = synaptics_touchpad_gpio_setup,
-	.spi_data = {
-		.block_delay_us = 15,
-		.read_delay_us = 15,
-		.write_delay_us = 2,
-	},
-	.power_management = {
-		.nosleep = RMI_F01_NOSLEEP_OFF,
-	},
-	.f19_button_map = &synaptics_button_map,
-	.f54_direct_touch_report_size = 944,
-};
-
-static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
-	{
-		.modalias = "rmi_spi",
-		.bus_num = 3,
-		.chip_select = 2,
-		.max_speed_hz = 8*1000*1000,
-		.mode = SPI_MODE_3,
-		.platform_data = &synaptics_ceres_platformdata,
-	},
-};
-
-static int __init ceres_touch_init(void)
-{
-	tegra_clk_init_from_table(touch_clk_init_table);
-	if (tegra_get_touch_id() == RAYDIUM_TOUCH) {
-		pr_info("%s: initializing raydium\n", __func__);
-		rm31080a_ceres_spi_board[0].irq =
-			gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
-		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
-					TOUCH_GPIO_RST_RAYDIUM_SPI,
-					&rm31080ts_ceres_data,
-					&rm31080a_ceres_spi_board[0],
-					ARRAY_SIZE(rm31080a_ceres_spi_board));
-	} else {
-		pr_info("%s: initializing synaptics\n", __func__);
-		touch_init_synaptics(synaptics_9999_spi_board_ceres,
-				ARRAY_SIZE(synaptics_9999_spi_board_ceres));
-	}
-	return 0;
-}
-
-#else
 static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "vi_sensor",	"pll_p",	41000000,	true},
@@ -941,7 +817,6 @@ static int __init ceres_touch_init(void)
 	}
 	return 0;
 }
-#endif
 
 #if defined(CONFIG_TEGRA_BASEBAND)
 static void ceres_tegra_bb_init(void)
@@ -1008,11 +883,7 @@ static void __init tegra_ceres_init(void)
 	isomgr_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_ram_console_debug_init();
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
-#else
 	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_CPU, NULL, -1, -1);
-#endif
 	ceres_panel_init();
 	ceres_edp_init();
 	ceres_sensors_init();
@@ -1061,11 +932,7 @@ DT_MACHINE_START(CERES, "Ceres")
 	.soc			= &tegra_soc_desc,
 	.map_io			= tegra_map_common_io,
 	.reserve		= tegra_ceres_reserve,
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
-	.init_early		= tegra11x_init_early,
-#else
 	.init_early		= tegra14x_init_early,
-#endif
 	.init_irq		= tegra_dt_init_irq,
 	.handle_irq		= gic_handle_irq,
 	.timer			= &tegra_timer,

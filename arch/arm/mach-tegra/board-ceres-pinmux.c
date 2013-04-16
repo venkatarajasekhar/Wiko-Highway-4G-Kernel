@@ -25,11 +25,7 @@
 #include "devices.h"
 #include "gpio-names.h"
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-#include <mach/pinmux-t11.h>
-#else
 #include <mach/pinmux-t14.h>
-#endif
 
 #define DEFAULT_DRIVE(_name)					\
 	{							\
@@ -184,113 +180,6 @@
 		.value		= _value,	\
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-
-static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
-	/* DEFAULT_DRIVE(<pin_group>), */
-	SET_DRIVE(DAP1, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-	SET_DRIVE(DAP2, DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* SDMMC1 */
-	SET_DRIVE(SDIO1, ENABLE, DISABLE, DIV_1, 36, 20, SLOW, SLOW),
-
-	/* SDMMC3 */
-	SET_DRIVE(SDIO3, ENABLE, DISABLE, DIV_1, 22, 36, FASTEST, FASTEST),
-
-	/* SDMMC4 */
-	SET_DRIVE_WITH_TYPE(GMA, ENABLE, DISABLE, DIV_1, 2, 1, FASTEST,
-								FASTEST, 1),
-};
-
-/* Initially setting all used GPIO's to non-TRISTATE */
-static __initdata struct tegra_pingroup_config ceres_pinmux_set_nontristate[] = {
-	DEFAULT_PINMUX(GPIO_X4_AUD,    RSVD,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_X5_AUD,    RSVD,    PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_X6_AUD,    RSVD3,   PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_X7_AUD,    RSVD,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_W2_AUD,    RSVD1,   PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_W3_AUD,    SPI6,    PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_X1_AUD,    RSVD3,   PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_X3_AUD,    RSVD3,   PULL_UP,      NORMAL,    INPUT),
-
-	DEFAULT_PINMUX(GPIO_PV0,      RSVD3,    NORMAL,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GPIO_PV1,      RSVD,     NORMAL,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(ULPI_DATA0,    ULPI,     NORMAL,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(ULPI_DATA1,    ULPI,     NORMAL,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(ULPI_DATA2,    ULPI,     NORMAL,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(ULPI_DATA3,    ULPI,     NORMAL,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(ULPI_DATA4,    ULPI,     NORMAL,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(ULPI_DATA5,    ULPI,     NORMAL,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(ULPI_DATA6,    ULPI,     NORMAL,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(ULPI_DATA7,    ULPI,     NORMAL,      NORMAL,    OUTPUT),
-
-	DEFAULT_PINMUX(GPIO_PBB3,     RSVD3,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PBB5,     RSVD3,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PBB6,     RSVD3,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PBB7,     RSVD3,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PCC1,     RSVD3,    PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GPIO_PCC2,     RSVD3,    PULL_DOWN,    NORMAL,    INPUT),
-
-	DEFAULT_PINMUX(GMI_AD1,     GMI,      NORMAL,       NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_AD10,    GMI,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_AD12,    GMI,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_AD13,    GMI,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_AD14,    GMI,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_AD2,     GMI,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_AD3,     GMI,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_AD8,     GMI,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_ADV_N,   GMI,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_CLK,     GMI,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_CS0_N,   GMI,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_CS3_N,   GMI,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(GMI_CS4_N,   GMI,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_CS7_N,   GMI,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_IORDY,   GMI,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(GMI_RST_N,   GMI,      PULL_DOWN,    NORMAL,    INPUT),
-
-	DEFAULT_PINMUX(SDMMC1_WP_N, SDMMC1,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(CLK2_REQ,    RSVD3,     NORMAL,       NORMAL,    OUTPUT),
-
-	DEFAULT_PINMUX(KB_COL3,     KBC,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_COL4,     KBC,      PULL_UP,      NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_COL6,     KBC,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(KB_COL7,     KBC,      PULL_UP,      NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(KB_ROW3,     KBC,      NORMAL,       NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW4,     KBC,      PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW5,     KBC,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(KB_ROW6,     KBC,      PULL_DOWN,    NORMAL,    OUTPUT),
-	DEFAULT_PINMUX(KB_ROW7,     KBC,      PULL_DOWN,    NORMAL,    INPUT),
-	DEFAULT_PINMUX(KB_ROW8,     KBC,      PULL_DOWN,    NORMAL,    INPUT),
-
-	DEFAULT_PINMUX(CLK3_REQ,    RSVD3,    NORMAL,      NORMAL,     OUTPUT),
-	DEFAULT_PINMUX(GPIO_PU4,    RSVD3,     NORMAL,      NORMAL,     OUTPUT),
-	DEFAULT_PINMUX(GPIO_PU5,    RSVD3,     NORMAL,      NORMAL,     INPUT),
-	DEFAULT_PINMUX(GPIO_PU6,    RSVD3,      NORMAL,      NORMAL,     INPUT),
-
-	DEFAULT_PINMUX(HDMI_INT,    RSVD,      PULL_DOWN,    NORMAL,    INPUT),
-};
-
-#include "board-ceres-pinmux-t11x.h"
-
-
-static void __init ceres_gpio_init_configure(void)
-{
-	int len;
-	int i;
-	struct gpio_init_pin_info *pins_info;
-
-	len = ARRAY_SIZE(init_gpio_mode_ceres_common);
-	pins_info = init_gpio_mode_ceres_common;
-
-	for (i = 0; i < len; ++i) {
-		tegra_gpio_init_configure(pins_info->gpio_nr,
-			pins_info->is_input, pins_info->value);
-		pins_info++;
-	}
-}
-
-#else
-
 static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 	/* DEFAULT_DRIVE(<pin_group>), */
 	/* Audio DAP */
@@ -344,25 +233,11 @@ static void __init atlantis_gpio_init_configure(void)
 	}
 }
 
-#endif
-
 int __init ceres_pinmux_init(void)
 {
 	struct board_info board_info;
 	tegra_get_board_info(&board_info);
 	/*BUG_ON(board_info.board_id != BOARD_E1565);*/
-
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	tegra_pinmux_config_table(ceres_pinmux_set_nontristate,
-					ARRAY_SIZE(ceres_pinmux_set_nontristate));
-	ceres_gpio_init_configure();
-
-	tegra_pinmux_config_table(ceres_pinmux_common, ARRAY_SIZE(ceres_pinmux_common));
-	tegra_drive_pinmux_config_table(ceres_drive_pinmux,
-					ARRAY_SIZE(ceres_drive_pinmux));
-	tegra_pinmux_config_table(unused_pins_lowpower,
-		ARRAY_SIZE(unused_pins_lowpower));
-#else
 
 	switch (board_info.board_id) {
 	case BOARD_E1680:
@@ -400,8 +275,6 @@ int __init ceres_pinmux_init(void)
 			__func__, board_info.board_id);
 		return -EINVAL;
 	}
-
-#endif
 
 	return 0;
 }
