@@ -19,6 +19,13 @@
 #ifndef _MACH_TEGRA_BOARD_M2601_H
 #define _MACH_TEGRA_BOARD_M2601_H
 
+
+/* M2601 skus */
+#define TEGRA_M2601_SKU1_A00  0x010000UL
+#define TEGRA_M2601_SKU1_B00  0x010100UL
+
+
+extern unsigned int system_rev;
 int m2601_sdhci_init(void);
 int m2601_pinmux_init(void);
 int m2601_gpio_init(void);

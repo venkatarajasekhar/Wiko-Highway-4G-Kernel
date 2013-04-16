@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-m2601-sdhci.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -53,11 +53,16 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data4 = {
 
 int __init m2601_sdhci_init(void)
 {
-	tegra_sdhci_device3.dev.platform_data = &tegra_sdhci_platform_data3;
-	tegra_sdhci_device4.dev.platform_data = &tegra_sdhci_platform_data4;
+	if (system_rev == TEGRA_M2601_SKU1_A00) {
 
-	platform_device_register(&tegra_sdhci_device3);
-	platform_device_register(&tegra_sdhci_device4);
+		tegra_sdhci_device3.dev.platform_data =
+						&tegra_sdhci_platform_data3;
+		tegra_sdhci_device4.dev.platform_data =
+						&tegra_sdhci_platform_data4;
+
+		platform_device_register(&tegra_sdhci_device3);
+		platform_device_register(&tegra_sdhci_device4);
+	}
 
 	return 0;
 }

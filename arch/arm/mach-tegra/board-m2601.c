@@ -61,6 +61,11 @@
 #include "fuse.h"
 #include "common.h"
 
+/* B00 boards shared GMI address space */
+#define GMI_SRAM_BASE_OFFSET	0x0000000
+#define GMI_SRAM_PCA9665_BASE_OFFSET	0x2000000
+#define GMI_PCA9663_BASE_OFFSET	0x2000100
+
 static __initdata struct tegra_clk_init_table m2601_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "pll_m",		NULL,		0,		true},
@@ -460,7 +465,8 @@ static struct tegra_nor_chip_parms m2601_gmi_sram_data = {
 			.csinfo = {
 				.cs = CS_7,
 				.num_cs_gpio = 0,
-				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE),
+				.virt = IO_ADDRESS(TEGRA_NOR_FLASH_BASE +
+							GMI_SRAM_BASE_OFFSET),
 				.size = 32768,
 				.phys = TEGRA_NOR_FLASH_BASE,
 			}
@@ -530,6 +536,21 @@ struct platform_device tegra_gmi_pca_device = {
 
 static void m2601_gmi_pca_init(void)
 {
+	if (system_rev != TEGRA_M2601_SKU1_A00) {
+
+		m2601_gmi_pca_data.csinfo.cs = CS_7;
+		m2601_gmi_pca_data.csinfo.virt =
+				IO_ADDRESS(TEGRA_NOR_FLASH_BASE +
+						GMI_SRAM_PCA9665_BASE_OFFSET);
+		m2601_gmi_pca_data.csinfo.phys =
+			TEGRA_NOR_FLASH_BASE + GMI_SRAM_PCA9665_BASE_OFFSET;
+		m2601_gmi_pca_data.csinfo.size = 4;
+		m2601_gmi_pca_data.csinfo.gpio_cs.gpio_num = TEGRA_GPIO_PZ0;
+
+		/* LOW selects PCA9665 & HIGH selects PCA9663 */
+		m2601_gmi_pca_data.csinfo.gpio_cs.value = LOW;
+		strcpy(m2601_gmi_pca_data.csinfo.gpio_cs.label, "PZ0");
+	}
 	tegra_gmi_pca_device.dev.platform_data = &m2601_gmi_pca_data;
 	platform_device_register(&tegra_gmi_pca_device);
 
@@ -553,7 +574,7 @@ static void __init tegra_m2601_init(void)
 	m2601_pcie_init();
 	m2601_gmi_sram_init();
 	m2601_gmi_pca_init();
-
+	m2601_gpio_init();
 }
 
 MACHINE_START(M2601, "m2601")
