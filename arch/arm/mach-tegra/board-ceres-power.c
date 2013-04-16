@@ -774,7 +774,8 @@ int __init ceres_regulator_init(void)
 					MAX77660_PIN_PULL_NORMAL;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
-		if (board_info.sku == 1000) {
+		if ((board_info.sku == 1000) &&
+		    (board_info.board_id != BOARD_E1690)) {
 			max77660_pdata.en_buck2_ext_ctrl = true;
 			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
 			max77660_regulator_idata_buck1.num_consumer_supplies =
