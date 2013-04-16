@@ -674,21 +674,21 @@ static struct therm_est_subdevice skin_devs[] = {
 	{
 		.dev_data = "nct_ext",
 		.coeffs = {
-			2, 1, 1, 1,
-			1, 1, 1, 1,
-			1, 1, 1, 0,
-			1, 1, 0, 0,
-			0, 0, -1, -7
+			-2, 0, 0, 0,
+			0, 0, 0, 0,
+			0, 0, 0, 0,
+			0, 0, 0, -1,
+			-1, -1, -1, -3
 		},
 	},
 	{
 		.dev_data = "nct_int",
 		.coeffs = {
-			-11, -7, -5, -3,
-			-3, -2, -1, 0,
-			0, 0, 1, 1,
-			1, 2, 2, 3,
-			4, 6, 11, 18
+			6, 5, 5, 5,
+			5, 5, 5, 5,
+			5, 5, 4, 4,
+			4, 4, 4, 3,
+			3, 2, 2, 1
 		},
 	},
 };
@@ -696,7 +696,7 @@ static struct therm_est_subdevice skin_devs[] = {
 static struct therm_est_data skin_data = {
 	.num_trips = ARRAY_SIZE(skin_trips),
 	.trips = skin_trips,
-	.toffset = 9793,
+	.toffset = 7450,
 	.polling_period = 1100,
 	.passive_delay = 15000,
 	.tc1 = 10,
