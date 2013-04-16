@@ -2,6 +2,7 @@
  * arch/arm/mach-tegra/delay.S
  *
  * Copyright (C) 2010 Google, Inc.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *  Colin Cross <ccross@google.com>
@@ -44,6 +45,9 @@ ENDPROC(__const_udelay)
 ENDPROC(__udelay)
 
 
+/* Natural-Align this 2-instruction loop.
+*/
+.align 3
 @ Delay routine
 ENTRY(__delay)
     subs  r0, r0, #1
