@@ -691,6 +691,8 @@ int __init atlantis_regulator_init(void)
 	} else if (board_info.sku == BOARD_SKU_120) {
 		pmic_platform.reg_data[PALMAS_REG_SMPS12] =
 				atlantis_reg_data[PALMAS_REG_SMPS6];
+		pmic_platform.reg_data[PALMAS_REG_SMPS12]->constraints.name =
+				palmas_rails(smps12);
 		pmic_platform.reg_init[PALMAS_REG_SMPS12] =
 				atlantis_reg_init[PALMAS_REG_SMPS6];
 		pmic_platform.reg_data[PALMAS_REG_SMPS6] = NULL;
