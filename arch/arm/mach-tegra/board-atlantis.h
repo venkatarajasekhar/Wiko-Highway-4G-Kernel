@@ -20,6 +20,9 @@
 #define PALMAS_TEGRA_IRQ_BASE       TEGRA_NR_IRQS
 #define PALMAS_TEGRA_GPIO_BASE      TEGRA_NR_GPIOS
 
+#define PMC_WAKE_STATUS		0x14
+#define PMC_WAKE2_STATUS	0x168
+
 int atlantis_regulator_init(void);
 int atlantis_fixed_regulator_init(void);
 int atlantis_vibrator_init(void);

@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/input.h>
 #include <mach/io.h>
+#include <linux/io.h>
 #include <mach/iomap.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
@@ -34,6 +35,7 @@
 #include "board-ceres.h"
 #include "board-atlantis.h"
 #include "devices.h"
+#include "wakeups-t14x.h"
 
 #define CERES_POWER_ON_INT (MAX77660_IRQ_BASE + MAX77660_IRQ_GLBL_EN0_F)
 #define CERES_POWER_LONGPRESS_INT (MAX77660_IRQ_BASE + MAX77660_IRQ_GLBL_EN0_1SEC)
@@ -70,6 +72,21 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[6] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1000),
 };
 
+static int atlantis_wakeup_key(void)
+{
+	int wakeup_key;
+	u64 status = readl(IO_ADDRESS(TEGRA_PMC_BASE) + PMC_WAKE_STATUS)
+		| (u64)readl(IO_ADDRESS(TEGRA_PMC_BASE)
+		+ PMC_WAKE2_STATUS) << 32;
+
+	if (status & ((u64)1 << TEGRA_WAKE_GPIO_PJ4))
+		wakeup_key = KEY_POWER;
+	else
+		wakeup_key = KEY_RESERVED;
+
+	return wakeup_key;
+}
+
 static struct gpio_keys_platform_data ceres_int_keys_pdata = {
 	.buttons	= ceres_int_keys,
 	.nbuttons	= ARRAY_SIZE(ceres_int_keys),
@@ -88,10 +105,12 @@ int __init ceres_keys_init(void)
 	struct board_info bi;
 
 	tegra_get_board_info(&bi);
+
 	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671) {
 		ceres_int_keys[3].gpio = TEGRA_GPIO_PJ4;
 		ceres_int_keys[3].active_low = 1;
 		ceres_int_keys[3].debounce_interval = 10;
+		ceres_int_keys_pdata.wakeup_key	= atlantis_wakeup_key;
 	}
 
 	platform_device_register(&ceres_int_keys_device);
