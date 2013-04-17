@@ -233,8 +233,10 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 		return -EIO;
 	}
 
+#ifdef CONFIG_TEGRA_MC_DOMAINS
 	if (cpu == 0)
 		pm_genpd_attach_cpuidle(&tegra_mc_clk.gpd, 2, dev);
+#endif
 
 	return 0;
 }
