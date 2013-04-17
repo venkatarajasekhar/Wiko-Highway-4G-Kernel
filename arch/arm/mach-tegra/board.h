@@ -233,4 +233,5 @@ void tegra_set_vdd_cpu_ramp_rate(void);
 #endif
 extern void tegra_set_usb_vbus_internal_wake(bool enable);
 extern void tegra_set_usb_id_internal_wake(bool enable);
+int tegra_get_pmic_rst_reason(void);
 #endif
