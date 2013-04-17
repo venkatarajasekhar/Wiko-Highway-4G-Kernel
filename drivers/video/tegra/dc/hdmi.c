@@ -215,17 +215,32 @@ const struct tmds_config tmds_config[] = {
 };
 #elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
 const struct tmds_config tmds_config[] = {
-	/* TODO: 480p modes */
-	/* TODO: 720p modes */
-	{ /* 1080p modes */
+	{ /* 480p modes / 27MHz modes*/
+	.pclk = 27000000,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(0) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x00000000,
+	.drive_current = 0x1f1f1f1f,
+	.peak_current = 0x00000000,
+	},
+	{ /* 720p modes / 74.25MHz modes */
+	.pclk = 74250000,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(1) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_PE_EN | SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x00000000,
+	.drive_current = 0x20202020,
+	.peak_current = 0x00000000,
+	},
+	{ /* 1080p / 148.5MHz modes */
 	.pclk = INT_MAX,
-	.pll0 = SOR_PLL_BG_V17_S(3) | SOR_PLL_ICHPMP(1) |
-		SOR_PLL_RESISTORSEL_EXT | SOR_PLL_VCOCAP(3) |
-		SOR_PLL_TX_REG_LOAD(0),
-	.pll1 = SOR_PLL_TMDS_TERM_ENABLE | SOR_PLL_PE_EN |
-		SOR_PLL_TMDS_TERMADJ(0x6),
-	.pe_current = 0x08080808,
-	.drive_current = 0x18181818,
+	.pll0 = SOR_PLL_ICHPMP(1) | SOR_PLL_BG_V17_S(3) |
+		SOR_PLL_VCOCAP(3) | SOR_PLL_RESISTORSEL_EXT,
+	.pll1 = SOR_PLL_PE_EN | SOR_PLL_LOADADJ(3) | SOR_PLL_TMDS_TERMADJ(0),
+	.pe_current = 0x0f0f0f0f,
+	.drive_current = 0x22222222,
+	.peak_current = 0x00000000,
 	},
 };
 #else
