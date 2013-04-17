@@ -197,13 +197,13 @@ EXPORT_SYMBOL(tegra_dma_flush);
 
 static void tegra_dma_clk_enable(struct device *dev)
 {
-	clk_prepare_enable(dma_clk);
+	tegra_clk_prepare_enable(dma_clk);
 	pm_runtime_get(dev);
 }
 
 static void tegra_dma_clk_disable(struct device *dev)
 {
-	clk_disable_unprepare(dma_clk);
+	tegra_clk_disable_unprepare(dma_clk);
 	pm_runtime_put(dev);
 }
 
