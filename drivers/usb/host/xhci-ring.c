@@ -297,7 +297,7 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 	xhci_dbg(xhci, "Abort command ring\n");
 
 	if (!(xhci->cmd_ring_state & CMD_RING_STATE_RUNNING)) {
-		xhci_dbg(xhci, "The command ring isn't running, "\
+		xhci_dbg(xhci, "The command ring isn't running, "
 				"Have the command ring been stopped?\n");
 		return 0;
 	}
@@ -321,7 +321,7 @@ static int xhci_abort_cmd_ring(struct xhci_hcd *xhci)
 	ret = handshake(xhci, &xhci->op_regs->cmd_ring,
 			CMD_RING_RUNNING, 0, 5 * 1000 * 1000);
 	if (ret < 0) {
-		xhci_err(xhci, "Stopped the command ring failed, "\
+		xhci_err(xhci, "Stopped the command ring failed, "
 				"maybe the host is dead\n");
 		xhci->xhc_state |= XHCI_STATE_DYING;
 		xhci_quiesce(xhci);
@@ -367,7 +367,7 @@ int xhci_cancel_cmd(struct xhci_hcd *xhci, struct xhci_command *command,
 	spin_lock_irqsave(&xhci->lock, flags);
 
 	if (xhci->xhc_state & XHCI_STATE_DYING) {
-		xhci_warn(xhci, "Abort the command ring,"\
+		xhci_warn(xhci, "Abort the command ring,"
 				" but the xHCI is dead.\n");
 		retval = -ESHUTDOWN;
 		goto fail;
@@ -1228,6 +1228,17 @@ static void xhci_cmd_to_noop(struct xhci_hcd *xhci, struct xhci_cd *cur_cd)
 	cur_seg = find_trb_seg(xhci->cmd_ring->first_seg,
 			xhci->cmd_ring->dequeue, &cycle_state);
 
+	if (!cur_seg) {
+		xhci_warn(xhci, "Command ring mismatch, dequeue = %p %llx (dma)\n",
+				xhci->cmd_ring->dequeue,
+				(unsigned long long)
+				xhci_trb_virt_to_dma(xhci->cmd_ring->deq_seg,
+					xhci->cmd_ring->dequeue));
+		xhci_debug_ring(xhci, xhci->cmd_ring);
+		xhci_dbg_ring_ptrs(xhci, xhci->cmd_ring);
+		return;
+	}
+
 	/* find the command trb matched by cd from command ring */
 	for (cmd_trb = xhci->cmd_ring->dequeue;
 			cmd_trb != xhci->cmd_ring->enqueue;
@@ -1714,6 +1725,15 @@ cleanup:
 	if (bogus_port_status)
 		return;
 
+	/*
+	 * xHCI port-status-change events occur when the "or" of all the
+	 * status-change bits in the portsc register changes from 0 to 1.
+	 * New status changes won't cause an event if any other change
+	 * bits are still set.  When an event occurs, switch over to
+	 * polling to avoid losing status changes.
+	 */
+	xhci_dbg(xhci, "%s: starting port polling.\n", __func__);
+	set_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	spin_unlock(&xhci->lock);
 	/* Pass this up to the core */
 	usb_hcd_poll_rh_status(hcd);
@@ -2007,8 +2027,8 @@ static int process_ctrl_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		if (event_trb != ep_ring->dequeue &&
 				event_trb != td->last_trb)
 			td->urb->actual_length =
-				td->urb->transfer_buffer_length
-				- TRB_LEN(le32_to_cpu(event->transfer_len));
+				td->urb->transfer_buffer_length -
+				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 		else
 			td->urb->actual_length = 0;
 
@@ -2040,7 +2060,7 @@ static int process_ctrl_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		/* Maybe the event was for the data stage? */
 			td->urb->actual_length =
 				td->urb->transfer_buffer_length -
-				TRB_LEN(le32_to_cpu(event->transfer_len));
+				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 			xhci_dbg(xhci, "Waiting for status "
 					"stage event\n");
 			return 0;
@@ -2076,7 +2096,7 @@ static int process_isoc_td(struct xhci_hcd *xhci, struct xhci_td *td,
 	/* handle completion code */
 	switch (trb_comp_code) {
 	case COMP_SUCCESS:
-		if (TRB_LEN(le32_to_cpu(event->transfer_len)) == 0) {
+		if (EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)) == 0) {
 			frame->status = 0;
 			break;
 		}
@@ -2127,7 +2147,7 @@ static int process_isoc_td(struct xhci_hcd *xhci, struct xhci_td *td,
 				len += TRB_LEN(le32_to_cpu(cur_trb->generic.field[2]));
 		}
 		len += TRB_LEN(le32_to_cpu(cur_trb->generic.field[2])) -
-			TRB_LEN(le32_to_cpu(event->transfer_len));
+			EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 
 		if (trb_comp_code != COMP_STOP_INVAL) {
 			frame->actual_length = len;
@@ -2194,7 +2214,7 @@ static int process_bulk_intr_td(struct xhci_hcd *xhci, struct xhci_td *td,
 	case COMP_SUCCESS:
 		/* Double check that the HW transferred everything. */
 		if (event_trb != td->last_trb ||
-				TRB_LEN(le32_to_cpu(event->transfer_len)) != 0) {
+		    EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)) != 0) {
 			xhci_warn(xhci, "WARN Successful completion "
 					"on short TX\n");
 			if (td->urb->transfer_flags & URB_SHORT_NOT_OK)
@@ -2222,18 +2242,18 @@ static int process_bulk_intr_td(struct xhci_hcd *xhci, struct xhci_td *td,
 				"%d bytes untransferred\n",
 				td->urb->ep->desc.bEndpointAddress,
 				td->urb->transfer_buffer_length,
-				TRB_LEN(le32_to_cpu(event->transfer_len)));
+				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)));
 	/* Fast path - was this the last TRB in the TD for this URB? */
 	if (event_trb == td->last_trb) {
-		if (TRB_LEN(le32_to_cpu(event->transfer_len)) != 0) {
+		if (EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)) != 0) {
 			td->urb->actual_length =
 				td->urb->transfer_buffer_length -
-				TRB_LEN(le32_to_cpu(event->transfer_len));
+				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 			if (td->urb->transfer_buffer_length <
 					td->urb->actual_length) {
 				xhci_warn(xhci, "HC gave bad length "
 						"of %d bytes left\n",
-					  TRB_LEN(le32_to_cpu(event->transfer_len)));
+					  EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)));
 				td->urb->actual_length = 0;
 				if (td->urb->transfer_flags & URB_SHORT_NOT_OK)
 					*status = -EREMOTEIO;
@@ -2275,7 +2295,7 @@ static int process_bulk_intr_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		if (trb_comp_code != COMP_STOP_INVAL)
 			td->urb->actual_length +=
 				TRB_LEN(le32_to_cpu(cur_trb->generic.field[2])) -
-				TRB_LEN(le32_to_cpu(event->transfer_len));
+				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 	}
 
 	return finish_td(xhci, td, event_trb, event, ep, status, false);
@@ -2361,7 +2381,7 @@ static int handle_tx_event(struct xhci_hcd *xhci,
 	 * transfer type
 	 */
 	case COMP_SUCCESS:
-		if (TRB_LEN(le32_to_cpu(event->transfer_len)) == 0)
+		if (EVENT_TRB_LEN(le32_to_cpu(event->transfer_len)) == 0)
 			break;
 		if (xhci->quirks & XHCI_TRUST_TX_LENGTH)
 			trb_comp_code = COMP_SHORT_TX;
@@ -3695,7 +3715,9 @@ static int xhci_queue_isoc_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
 			} else {
 				td->last_trb = ep_ring->enqueue;
 				field |= TRB_IOC;
-				if (xhci->hci_version == 0x100) {
+				if (xhci->hci_version == 0x100 &&
+						!(xhci->quirks &
+							XHCI_AVOID_BEI)) {
 					/* Set BEI bit except for the last td */
 					if (i < num_tds - 1)
 						field |= TRB_BEI;
