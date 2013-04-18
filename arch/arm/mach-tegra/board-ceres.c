@@ -541,8 +541,8 @@ static void ceres_usb_init(void)
 		tegra_otg_pdata.vbus_extcon_dev_name = "palmas-extcon";
 
 		/* Host cable is detected through PMU Interrupt */
-		tegra_udc_pdata.id_det_type = TEGRA_USB_PMU_ID;
-		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_PMU_ID;
+		tegra_udc_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
+		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
 		break;
 	case BOARD_E1690:
 		/* Device cable is detected through PMU Interrupt */
