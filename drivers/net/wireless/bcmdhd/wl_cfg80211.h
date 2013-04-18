@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.h 401713 2013-05-13 12:11:03Z $
+ * $Id: wl_cfg80211.h 431563 2013-10-24 01:50:16Z $
  */
 
 #ifndef _wl_cfg80211_h_
@@ -159,7 +159,7 @@ do {									\
 #define WL_AF_SEARCH_TIME_MAX           450
 #define WL_AF_TX_EXTRA_TIME_MAX         200
 
-#define WL_SCAN_TIMER_INTERVAL_MS	8000 /* Scan timeout */
+#define WL_SCAN_TIMER_INTERVAL_MS	10000 /* Scan timeout */
 #define WL_CHANNEL_SYNC_RETRY 	5
 #define WL_INVALID 		-1
 
@@ -172,7 +172,7 @@ do {									\
 #define WL_SCAN_SUPPRESS_TIMEOUT 31000 /* default Framwork DHCP timeout is 30 sec */
 #define WL_SCAN_SUPPRESS_RETRY 3000
 
-#define WL_PM_ENABLE_TIMEOUT 3000
+#define WL_PM_ENABLE_TIMEOUT 10000
 
 /* driver status */
 enum wl_status {
@@ -256,6 +256,14 @@ enum wl_management_type {
 	WL_PROBE_RESP = 0x2,
 	WL_ASSOC_RESP = 0x4
 };
+
+enum wl_handler_del_type {
+	WL_HANDLER_NOTUSE,
+	WL_HANDLER_DEL,
+	WL_HANDLER_MAINTAIN,
+	WL_HANDLER_PEND
+};
+
 /* beacon / probe_response */
 struct beacon_proberesp {
 	__le64 timestamp;
@@ -472,7 +480,6 @@ struct parsed_ies {
 };
 
 
-
 #define MAX_EVENT_BUF_NUM 16
 typedef struct wl_eventmsg_buf {
     u16 num;
@@ -583,6 +590,9 @@ struct wl_priv {
 	struct mutex event_sync;	/* maily for up/down synchronization */
 	bool pm_enable_work_on;
 	struct delayed_work pm_enable_work;
+	vndr_ie_setbuf_t *ibss_vsie;	/* keep the VSIE for IBSS */
+	int ibss_vsie_len;
+
 };
 
 
@@ -786,21 +796,33 @@ wl_get_netinfo_by_netdev(struct wl_priv *wl, struct net_device *ndev)
 #define ndev_to_wlc_ndev(ndev, wl)	(ndev)
 #endif /* WL_ENABLE_P2P_IF */
 
-#if defined(WL_ENABLE_P2P_IF)
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define wdev_to_wlc_ndev(wdev, wl)	\
+	((wdev->iftype == NL80211_IFTYPE_P2P_DEVICE) ? \
+	wl_to_prmry_ndev(wl) : wdev_to_ndev(wdev))
+#define cfgdev_to_wlc_ndev(cfgdev, wl)	wdev_to_wlc_ndev(cfgdev, wl)
+#elif defined(WL_ENABLE_P2P_IF)
 #define cfgdev_to_wlc_ndev(cfgdev, wl)	ndev_to_wlc_ndev(cfgdev, wl)
 #else
 #define cfgdev_to_wlc_ndev(cfgdev, wl)	(cfgdev)
-#endif 
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define ndev_to_cfgdev(ndev)	ndev_to_wdev(ndev)
+#else
 #define ndev_to_cfgdev(ndev)	(ndev)
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
-#if defined(WL_ENABLE_P2P_IF)
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define scan_req_match(wl)	(((wl) && (wl->scan_request) && \
+	(wl->scan_request->wdev == wl->p2p_wdev)) ? true : false)
+#elif defined(WL_ENABLE_P2P_IF)
 #define scan_req_match(wl)	(((wl) && (wl->scan_request) && \
 	(wl->scan_request->dev == wl->p2p_net)) ? true : false)
 #else
 #define scan_req_match(wl)	(((wl) && p2p_is_on(wl) && p2p_scan(wl)) ? \
 	true : false)
-#endif 
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
 #define wl_to_sr(w) (w->scan_req_int)
 #if defined(STATIC_WL_PRIV_STRUCT)
@@ -901,4 +923,10 @@ extern void get_primary_mac(struct wl_priv *wl, struct ether_addr *mac);
 #define wl_escan_print_sync_id(a, b, c)
 #define wl_escan_increment_sync_id(a, b)
 #define wl_escan_init_sync_id(a)
+extern void wl_cfg80211_ibss_vsie_set_buffer(vndr_ie_setbuf_t *ibss_vsie, int ibss_vsie_len);
+extern s32 wl_cfg80211_ibss_vsie_delete(struct net_device *dev);
+
+/* Action frame specific functions */
+extern u8 wl_get_action_category(void *frame, u32 frame_len);
+extern int wl_get_public_action(void *frame, u32 frame_len, u8 *ret_action);
 #endif				/* _wl_cfg80211_h_ */

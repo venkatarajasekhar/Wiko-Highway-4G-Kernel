@@ -2,13 +2,13 @@
  * DHD Bus Module for SDIO
  *
  * Copyright (C) 1999-2013, Broadcom Corporation
- *
+ * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,12 +16,12 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c 402604 2013-05-16 08:36:25Z $
+ * $Id: dhd_sdio.c 426658 2013-09-30 12:14:01Z $
  */
 
 #include <typedefs.h>
@@ -157,11 +157,15 @@ extern bool  bcmsdh_fatal_error(void *sdh);
 DHD_SPINWAIT_SLEEP_INIT(sdioh_spinwait_sleep);
 #if defined(OOB_INTR_ONLY)
 extern void bcmsdh_set_irq(int flag);
-#endif
+#endif 
 #ifdef PROP_TXSTATUS
 extern void dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success);
 extern void dhd_wlfc_trigger_pktcommit(dhd_pub_t *dhd);
-#endif
+#ifdef DHDTCPACK_SUPPRESS
+extern int dhd_os_wlfc_block(dhd_pub_t *pub);
+extern int dhd_os_wlfc_unblock(dhd_pub_t *pub);
+#endif /* DHDTCPACK_SUPPRESS */
+#endif /* PROP_TXSTATUS */
 
 
 #ifdef DHD_DEBUG
@@ -420,7 +424,7 @@ static uint mesbusyctrl = 80;
 #else
 static const uint watermark = 8;
 static const uint mesbusyctrl = 0;
-#endif
+#endif 
 static const uint firstread = DHD_FIRSTREAD;
 
 #define HDATLEN (firstread - (SDPCM_HDRLEN))
@@ -825,7 +829,7 @@ dhdsdio_clk_kso_enab(dhd_bus_t *bus, bool on)
 		cmp_val = SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |  SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK;
 		bmask = cmp_val;
 
-		usleep_range(5500, 6000);
+		OSL_SLEEP(3);
 	} else {
 		/* Put device to sleep, turn off  KSO  */
 		cmp_val = 0;
@@ -955,15 +959,11 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 		DHD_TRACE(("%s: clk before sleep: 0x%x\n", __FUNCTION__,
 			bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1,
 			SBSDIO_FUNC1_CHIPCLKCSR, &err)));
-#ifdef USE_CMD14
-		err = bcmsdh_sleep(bus->sdh, TRUE);
-#else
 		err = dhdsdio_clk_kso_enab(bus, FALSE);
 		if (OOB_WAKEUP_ENAB(bus))
 		{
 			err = bcmsdh_gpioout(bus->sdh, GPIO_DEV_WAKEUP, FALSE);  /* GPIO_1 is off */
 		}
-#endif /* USE_CMD14 */
 	} else {
 		/* Exit Sleep */
 		/* Make sure we have SD bus access */
@@ -973,41 +973,14 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 		}
 
 		if ((bus->sih->chip == BCM4334_CHIP_ID) && (bus->sih->chiprev == 2)) {
-			SPINWAIT((bcmsdh_gpioin(bus->sdh, GPIO_DEV_SRSTATE) != TRUE),
+			SPINWAIT_SLEEP(sdioh_spinwait_sleep,
+				(bcmsdh_gpioin(bus->sdh, GPIO_DEV_SRSTATE) != TRUE),
 				GPIO_DEV_SRSTATE_TIMEOUT);
 
 			if (bcmsdh_gpioin(bus->sdh, GPIO_DEV_SRSTATE) == FALSE) {
 				DHD_ERROR(("ERROR: GPIO_DEV_SRSTATE still low!\n"));
 			}
 		}
-#ifdef USE_CMD14
-		err = bcmsdh_sleep(bus->sdh, FALSE);
-		if (SLPAUTO_ENAB(bus) && (err != 0)) {
-			OSL_DELAY(10000);
-			DHD_TRACE(("%s: Resync device sleep\n", __FUNCTION__));
-
-			/* Toggle sleep to resync with host and device */
-			err = bcmsdh_sleep(bus->sdh, TRUE);
-			OSL_DELAY(10000);
-			err = bcmsdh_sleep(bus->sdh, FALSE);
-
-			if (err) {
-				OSL_DELAY(10000);
-				DHD_ERROR(("%s: CMD14 exit failed again!\n", __FUNCTION__));
-
-				/* Toggle sleep to resync with host and device */
-				err = bcmsdh_sleep(bus->sdh, TRUE);
-				OSL_DELAY(10000);
-				err = bcmsdh_sleep(bus->sdh, FALSE);
-				if (err) {
-					DHD_ERROR(("%s: CMD14 exit failed twice!\n", __FUNCTION__));
-					DHD_ERROR(("%s: FATAL: Device non-response!\n",
-						__FUNCTION__));
-					err = 0;
-				}
-			}
-		}
-#else
 		if (OOB_WAKEUP_ENAB(bus))
 		{
 			err = bcmsdh_gpioout(bus->sdh, GPIO_DEV_WAKEUP, TRUE);  /* GPIO_1 is on */
@@ -1015,20 +988,20 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 		do {
 			err = dhdsdio_clk_kso_enab(bus, TRUE);
 			if (err)
-				OSL_DELAY(10000);
+				OSL_SLEEP(10);
 		} while ((err != 0) && (++retry < 3));
 
 		if (err != 0) {
 			DHD_ERROR(("ERROR: kso set failed retry: %d\n", retry));
 			err = 0; /* continue anyway */
 		}
-#endif /* !USE_CMD14 */
 
 		if (err == 0) {
 			uint8 csr;
 
 			/* Wait for device ready during transition to wake-up */
-			SPINWAIT((((csr = dhdsdio_sleepcsr_get(bus)) &
+			SPINWAIT_SLEEP(sdioh_spinwait_sleep,
+				(((csr = dhdsdio_sleepcsr_get(bus)) &
 				SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK) !=
 				(SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)), (20000));
 
@@ -1040,7 +1013,8 @@ dhdsdio_clk_devsleep_iovar(dhd_bus_t *bus, bool on)
 				err = BCME_NODEVICE;
 			}
 
-			SPINWAIT((((csr = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1,
+			SPINWAIT_SLEEP(sdioh_spinwait_sleep,
+				(((csr = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1,
 				SBSDIO_FUNC1_CHIPCLKCSR, &err)) & SBSDIO_HT_AVAIL) !=
 				(SBSDIO_HT_AVAIL)), (10000));
 
@@ -1415,10 +1389,6 @@ dhdsdio_bussleep(dhd_bus_t *bus, bool sleep)
 			 * interrupt host
 			 */
 			W_SDREG(bus->hostintmask & ~I_CHIPACTIVE, &bus->regs->hostintmask, retries);
-#ifdef DISABLE_CHIPACTIVE_BUSSLEEP
-			if (((uint16)bus->sih->chip == BCM4324_CHIP_ID) && (bus->sih->chiprev < 3))
-				W_SDREG(bus->hostintmask & ~I_CHIPACTIVE, &bus->regs->hostintmask, retries);
-#endif
 			err = dhdsdio_clk_devsleep_iovar(bus, TRUE /* sleep */);
 		}
 
@@ -1457,10 +1427,6 @@ dhdsdio_bussleep(dhd_bus_t *bus, bool sleep)
 		} else {
 			err = dhdsdio_clk_devsleep_iovar(bus, FALSE /* wake */);
 			W_SDREG(bus->hostintmask, &bus->regs->hostintmask, retries);
-#ifdef DISABLE_CHIPACTIVE_BUSSLEEP
-			if (((uint16)bus->sih->chip == BCM4324_CHIP_ID) && (bus->sih->chiprev < 3))
-				W_SDREG(bus->hostintmask, &bus->regs->hostintmask, retries);
-#endif
 		}
 
 		if (err == 0) {
@@ -1502,7 +1468,7 @@ dhd_enable_oob_intr(struct dhd_bus *bus, bool enable)
 	dhdsdio_clkctl(bus, CLK_SDONLY, FALSE);
 #endif /* !defined(HW_OOB) */
 }
-#endif
+#endif 
 
 #ifdef DHDTCPACK_SUPPRESS
 extern bool dhd_use_tcpack_suppress;
@@ -1624,7 +1590,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 #if defined(DHD_DEBUG)
 		uint32 tcp_seq_num = tcp_header[4] << 24 | tcp_header[5] << 16 |
 			tcp_header[6] << 8 | tcp_header[7];
-#endif
+#endif 
 		uint32 tcp_ack_num = tcp_header[8] << 24 | tcp_header[9] << 16 |
 			tcp_header[10] << 8 | tcp_header[11];
 		uint16 ip_tcp_ttllen =  (ip_header[3] & 0xff) + (ip_header[2] << 8);
@@ -1676,6 +1642,7 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 					* but not delayedequeued yet, it may not have
 					* any additional header yet.
 					*/
+					dhd_os_wlfc_block(dhdp);
 					if (dhdp->wlfc_state &&	(PKTLEN(dhdp->osh, prevpkt) ==
 						tcp_ack_info->ip_tcp_ttllen + ETHER_HDR_LEN))
 						pushed_len = 0;
@@ -1691,6 +1658,9 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 							" TCP ACK replace %ud -> %ud\n", prevpkt,
 							tcp_ack_info->tcpack_number, tcp_ack_num));
 						tcp_ack_info->tcpack_number = tcp_ack_num;
+#ifdef PROP_TXSTATUS
+						dhd_os_wlfc_unblock(dhdp);
+#endif
 						dhd_os_tcpackunlock(dhdp);
 						return TRUE;
 					} else
@@ -1699,6 +1669,10 @@ dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt)
 							PKTLEN(dhdp->osh, pkt), ip_tcp_ttllen,
 							PKTLEN(dhdp->osh, prevpkt),
 							tcp_ack_info->ip_tcp_ttllen));
+#ifdef PROP_TXSTATUS
+							dhd_os_wlfc_unblock(dhdp);
+#endif
+
 				} else {
 #ifdef TCPACK_TEST
 					void *prevpkt = tcp_ack_info->p_tcpackinqueue;
@@ -1739,7 +1713,7 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 	int ret;
 	osl_t *osh;
 	uint8 *frame;
-	uint16 len, pad1 = 0;
+	uint16 len, pad1 = 0, act_len = 0;
 	uint32 swheader;
 	uint retries = 0;
 	uint32 real_pad = 0;
@@ -1754,7 +1728,6 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 	char *p;
 	htsfts_t *htsf_ts;
 #endif
-
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
@@ -1826,7 +1799,8 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 
 #ifdef BCMSDIOH_TXGLOM
 	if (bus->glom_enable) {
-		uint32 hwheader1 = 0, hwheader2 = 0, act_len = len;
+		uint32 hwheader1 = 0, hwheader2 = 0;
+		act_len = len;
 
 		/* Software tag: channel, sequence number, data offset */
 		swheader = ((chan << SDPCM_CHANNEL_SHIFT) & SDPCM_CHANNEL_MASK) |
@@ -1924,6 +1898,7 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 #ifdef BCMLXSDMMC
 				PKTSETLEN(osh, pkt, len);
 #endif /* BCMLXSDMMC */
+
 				/* Post the frame pointer to sdio glom array */
 				dhd_bcmsdh_glom_post(bus, frame, pkt, len);
 				/* Save the pkt pointer in bus glom array */
@@ -1939,7 +1914,7 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 	} else
 #endif /* BCMSDIOH_TXGLOM */
 	{
-	uint32 act_len = len;
+	act_len = len;
 	/* Software tag: channel, sequence number, data offset */
 	swheader = ((chan << SDPCM_CHANNEL_SHIFT) & SDPCM_CHANNEL_MASK) | bus->tx_seq |
 	        (((pad1 + SDPCM_HDRLEN) << SDPCM_DOFFSET_SHIFT) & SDPCM_DOFFSET_MASK);
@@ -1990,9 +1965,15 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 			DHD_ERROR(("CHK3: padding error size %d\n", real_pad));
 			ret = BCME_NOMEM;
 			goto done;
-		} else
+		}
+#ifndef BCMLXSDMMC
+		else
 			PKTSETLEN(osh, pkt, act_len);
+#endif
 	}
+#ifdef BCMLXSDMMC
+	PKTSETLEN(osh, pkt, len);
+#endif /* BCMLXSDMMC */
 	}
 	do {
 		ret = dhd_bcmsdh_send_buf(bus, bcmsdh_cur_sbwad(sdh), SDIO_FUNC_2, F2SYNC,
@@ -2031,8 +2012,8 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 			} else
 #endif
 			{
-				bus->tx_seq = (bus->tx_seq + 1) % SDPCM_SEQUENCE_WRAP;
-			}
+			bus->tx_seq = (bus->tx_seq + 1) % SDPCM_SEQUENCE_WRAP;
+		}
 		}
 	} while ((ret < 0) && retrydata && retries++ < TXRETRIES);
 
@@ -2069,7 +2050,11 @@ done:
 		} else
 #endif /* BCMSDIOH_TXGLOM */
 		{
-	PKTPULL(osh, pkt, SDPCM_HDRLEN + pad1);
+#ifdef BCMLXSDMMC
+			if (act_len > 0)
+				PKTSETLEN(osh, pkt, act_len);
+#endif /* BCMLXSDMMC */
+			PKTPULL(osh, pkt, SDPCM_HDRLEN + pad1);
 		}
 #ifdef PROP_TXSTATUS
 	if (bus->dhd->wlfc_state) {
@@ -2110,13 +2095,11 @@ dhd_bus_txdata(struct dhd_bus *bus, void *pkt)
 	int ret = BCME_ERROR;
 	osl_t *osh;
 	uint datalen, prec;
-#ifdef DHD_TX_DUMP
+#if defined(DHD_TX_DUMP) || defined(DHD_8021X_DUMP)
 	uint8 *dump_data;
 	uint16 protocol;
-#ifdef DHD_TX_FULL_DUMP
-	int i;
-#endif /* DHD_TX_FULL_DUMP */
-#endif /* DHD_TX_DUMP */
+#endif /* DHD_TX_DUMP || DHD_8021X_DUMP */
+
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 	osh = bus->dhd->osh;
@@ -2136,26 +2119,30 @@ dhd_bus_txdata(struct dhd_bus *bus, void *pkt)
 	}
 #endif /* SDTEST */
 
-#ifdef DHD_TX_DUMP
+#if defined(DHD_TX_DUMP) || defined(DHD_8021X_DUMP)
 	dump_data = PKTDATA(osh, pkt);
 	dump_data += 4; /* skip 4 bytes header */
 	protocol = (dump_data[12] << 8) | dump_data[13];
-#ifdef DHD_TX_FULL_DUMP
-	DHD_ERROR(("TX DUMP\n"));
 
-	for (i = 0; i < (datalen - 4); i++) {
-		DHD_ERROR(("%02X ", dump_data[i]));
-		if ((i & 15) == 15)
-			printk("\n");
-	}
-	DHD_ERROR(("\n"));
-
-#endif /* DHD_TX_FULL_DUMP */
 	if (protocol == ETHER_TYPE_802_1X) {
-		DHD_ERROR(("ETHER_TYPE_802_1X: ver %d, type %d, replay %d\n",
+		DHD_ERROR(("ETHER_TYPE_802_1X [TX]: ver %d, type %d, replay %d\n",
 			dump_data[14], dump_data[15], dump_data[30]));
 	}
-#endif /* DHD_TX_DUMP */
+#endif /* DHD_TX_DUMP || DHD_8021X_DUMP */
+
+#if defined(DHD_TX_DUMP) && defined(DHD_TX_FULL_DUMP)
+	{
+		int i;
+		DHD_ERROR(("TX DUMP\n"));
+
+		for (i = 0; i < (datalen - 4); i++) {
+			DHD_ERROR(("%02X ", dump_data[i]));
+			if ((i & 15) == 15)
+				printk("\n");
+		}
+		DHD_ERROR(("\n"));
+	}
+#endif /* DHD_TX_DUMP && DHD_TX_FULL_DUMP */
 
 	/* Add space for the header */
 	PKTPUSH(osh, pkt, SDPCM_HDRLEN);
@@ -2270,7 +2257,7 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 	uint cnt = 0;
 	uint datalen;
 	uint8 tx_prec_map;
-	uint8 txpktqlen = 0;
+	uint16 txpktqlen = 0;
 #ifdef BCMSDIOH_TXGLOM
 	uint i;
 	uint8 glom_cnt;
@@ -2565,6 +2552,7 @@ dhd_bus_txctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 	}
 
 	bus->dhd->txcnt_timeout = 0;
+	bus->ctrl_frame_stat = TRUE;
 
 	if (ret == -1) {
 #ifdef DHD_DEBUG
@@ -2610,6 +2598,7 @@ dhd_bus_txctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 			}
 		} while ((ret < 0) && retries++ < TXRETRIES);
 	}
+	bus->ctrl_frame_stat = FALSE;
 
 done:
 	if ((bus->idletime == DHD_IDLE_IMMEDIATE) && !bus->dpc_sched) {
@@ -3440,6 +3429,7 @@ dhd_serialconsole(dhd_bus_t *bus, bool set, bool enable, int *bcmerror)
 		uart_enab = CC_PLL_CHIPCTRL_SERIAL_ENAB;
 	}
 	else if (bus->sih->chip == BCM4334_CHIP_ID ||
+		bus->sih->chip == BCM43340_CHIP_ID ||
 		bus->sih->chip == BCM43341_CHIP_ID ||
 		0) {
 		if (enable) {
@@ -3478,7 +3468,7 @@ dhd_serialconsole(dhd_bus_t *bus, bool set, bool enable, int *bcmerror)
 
 	return (int_val & uart_enab);
 }
-#endif
+#endif 
 
 static int
 dhdsdio_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, const char *name,
@@ -4461,7 +4451,7 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 {
 	osl_t *osh;
 	uint32 local_hostintmask;
-	uint8 saveclk, dat;
+	uint8 saveclk;
 	uint retries;
 	int err;
 	if (!bus->dhd)
@@ -4483,13 +4473,6 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 	} else {
 
 		BUS_WAKE(bus);
-
-		if (KSO_ENAB(bus)) {
-			/* Mask the interrupt */
-			dat = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_0, SDIOD_CCCR_INTEN, NULL);
-			dat &= ~(INTR_CTL_FUNC1_EN | INTR_CTL_FUNC2_EN);
-			bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_0, SDIOD_CCCR_INTEN, dat, NULL);
-		}
 
 		/* Change our idea of bus state */
 		bus->dhd->busstate = DHD_BUS_DOWN;
@@ -4700,15 +4683,13 @@ dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
 
 	if (dhdsdio_sr_cap(bus)) {
 		dhdsdio_sr_init(bus);
-#ifdef DISABLE_CHIPACTIVE
-		if (((uint16)bus->sih->chip == BCM4324_CHIP_ID) && (bus->sih->chiprev < 3)) {
-			bus->hostintmask &= ~I_CHIPACTIVE;
-			W_SDREG(bus->hostintmask, &bus->regs->hostintmask, retries);
-			DHD_INFO(("%s: disable I_CHIPACTIVE in hostintmask[0x%08x]\n",
-					__FUNCTION__, bus->hostintmask));
-		}
-#endif
-	} else
+		/* Masking the chip active interrupt  permanantly */
+		bus->hostintmask &= ~I_CHIPACTIVE;
+		W_SDREG(bus->hostintmask, &bus->regs->hostintmask, retries);
+		DHD_INFO(("%s: disable I_CHIPACTIVE in hostintmask[0x%08x]\n",
+			__FUNCTION__, bus->hostintmask));
+	}
+	else
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1,
 			SBSDIO_FUNC1_CHIPCLKCSR, saveclk, &err);
 
@@ -5613,9 +5594,9 @@ dhdsdio_readframes(dhd_bus_t *bus, uint maxframes, bool *finished)
 
 			/* Check window for sanity */
 			if ((uint8)(txmax - bus->tx_seq) > 0x40) {
-				DHD_ERROR(("%s: got unlikely tx max %d with tx_seq %d\n",
-					__FUNCTION__, txmax, bus->tx_seq));
-				txmax = bus->tx_max;
+					DHD_ERROR(("%s: got unlikely tx max %d with tx_seq %d\n",
+						__FUNCTION__, txmax, bus->tx_seq));
+					txmax = bus->tx_max;
 			}
 			bus->tx_max = txmax;
 
@@ -6055,19 +6036,20 @@ dhdsdio_dpc(dhd_bus_t *bus)
 	uint framecnt = 0;		  /* Temporary counter of tx/rx frames */
 	bool rxdone = TRUE;		  /* Flag for no more read data */
 	bool resched = FALSE;	  /* Flag indicating resched wanted */
-
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
+
+	dhd_os_sdlock(bus->dhd);
 
 	if (bus->dhd->busstate == DHD_BUS_DOWN) {
 		DHD_ERROR(("%s: Bus down, ret\n", __FUNCTION__));
 		bus->intstatus = 0;
+	        dhd_os_sdunlock(bus->dhd);
+
 		return 0;
 	}
 
 	/* Start with leftover status bits */
 	intstatus = bus->intstatus;
-
-	dhd_os_sdlock(bus->dhd);
 
 	if (!SLPAUTO_ENAB(bus) && !KSO_ENAB(bus)) {
 		DHD_ERROR(("%s: Device asleep\n", __FUNCTION__));
@@ -6294,8 +6276,9 @@ clkwait:
 exit:
 
 	if (!resched && dhd_dpcpoll) {
-		if (dhdsdio_readframes(bus, dhd_rxbound, &rxdone) != 0)
+		if (dhdsdio_readframes(bus, dhd_rxbound, &rxdone) != 0) {
 			resched = TRUE;
+		}
 	}
 
 	dhd_os_sdunlock(bus->dhd);
@@ -6369,7 +6352,7 @@ dhdsdio_isr(void *arg)
 	bus->dpc_sched = TRUE;
 	dhd_sched_dpc(bus->dhd);
 
-#endif
+#endif 
 
 }
 
@@ -6774,7 +6757,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 	else {
 		bus->idlecount++;
 
-		if (bus->idlecount >= bus->idletime) {
+		if ((bus->idletime > 0) && (bus->idlecount >= bus->idletime)) {
 			DHD_TIMER(("%s: DHD Idle state!!\n", __FUNCTION__));
 			if (SLPAUTO_ENAB(bus)) {
 				if (dhdsdio_bussleep(bus, TRUE) != BCME_BUSY)
@@ -6787,7 +6770,7 @@ dhd_bus_watchdog(dhd_pub_t *dhdp)
 	}
 #else
 	if ((bus->idletime > 0) && (bus->clkstate == CLK_AVAIL)) {
-		if (++bus->idlecount > bus->idletime) {
+		if (++bus->idlecount >= bus->idletime) {
 			bus->idlecount = 0;
 			if (bus->activity) {
 				bus->activity = FALSE;
@@ -6921,6 +6904,8 @@ dhdsdio_chipmatch(uint16 chipid)
 	if (chipid == BCM4314_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM43242_CHIP_ID)
+		return TRUE;
+	if (chipid == BCM43340_CHIP_ID)
 		return TRUE;
 	if (chipid == BCM43341_CHIP_ID)
 		return TRUE;
@@ -8226,7 +8211,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 #if defined(OOB_INTR_ONLY)
 			/* Clean up any pending IRQ */
 			bcmsdh_set_irq(FALSE);
-#endif
+#endif 
 
 			/* Clean tx/rx buffer pointers, detach from the dongle */
 			dhdsdio_release_dongle(bus, bus->dhd->osh, TRUE, TRUE);
@@ -8267,9 +8252,16 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					bcmerror = dhd_bus_init((dhd_pub_t *) bus->dhd, FALSE);
 					if (bcmerror == BCME_OK) {
 #if defined(OOB_INTR_ONLY)
+						/* make sure oob intr get registered */
+						if (!bcmsdh_is_oob_intr_registered()) {
+							sdioh_start(NULL, 1);
+							bcmsdh_register_oob_intr(dhdp);
+							dhdp->iswl = TRUE;
+						}
+
 						bcmsdh_set_irq(TRUE);
 						dhd_enable_oob_intr(bus, TRUE);
-#endif
+#endif 
 
 						bus->dhd->dongle_reset = FALSE;
 						bus->dhd->up = TRUE;
@@ -8277,7 +8269,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 #if !defined(IGNORE_ETH0_DOWN)
 						/* Restore flow control  */
 						dhd_txflowcontrol(bus->dhd, ALL_INTERFACES, OFF);
-#endif
+#endif 
 						dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
 
 						DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
@@ -8292,7 +8284,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 				bcmerror = BCME_SDIO_ERROR;
 
 #ifdef DHDTHREAD
-			dhd_os_sdunlock(dhdp);
+				dhd_os_sdunlock(dhdp);
 #endif /* DHDTHREAD */
 		} else {
 			bcmerror = BCME_SDIO_ERROR;

@@ -15,7 +15,7 @@ config BCM43241
 	depends on BCMDHD
 
 config BCM43341
-	bool "Broadcom 43341 wireless card support"
+	bool "Broadcom 43341/43340 wireless card support"
 	depends on BCMDHD
 
 config BCM4335
@@ -24,6 +24,10 @@ config BCM4335
 
 config BCM4339
 	bool "Broadcom 4339 wireless card support"
+	depends on BCMDHD
+
+config BCM4350
+	bool "Broadcom 4350 wireless card support"
 	depends on BCMDHD
 
 config BCMDHD_FW_PATH

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.h 367305 2012-11-07 13:49:55Z $
+ * $Id: wl_android.h 431563 2013-10-24 01:50:16Z $
  */
 
 #include <linux/module.h>
@@ -31,6 +31,9 @@
 /* If any feature uses the Generic Netlink Interface, put it here to enable WL_GENL
  * automatically
  */
+#if defined(BCMCCX_S69)
+#define WL_GENL
+#endif
 
 
 
