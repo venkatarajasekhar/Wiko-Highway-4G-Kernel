@@ -109,10 +109,10 @@ static int tegra_gpio_compose(int bank, int port, int bit)
 	return (bank << 5) | ((port & 0x3) << 3) | (bit & 0x7);
 }
 
-void tegra_gpio_set_tristate(int gpio_nr, enum tegra_tristate ts)
+int tegra_gpio_set_tristate(int gpio_nr, enum tegra_tristate ts)
 {
 	int pin_group  =  tegra_pinmux_get_pingroup(gpio_nr);
-	tegra_pinmux_set_tristate(pin_group, ts);
+	return tegra_pinmux_set_tristate(pin_group, ts);
 }
 
 static void tegra_gpio_mask_write(u32 reg, int gpio, int value)
@@ -208,7 +208,10 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	tegra_gpio_set(chip, offset, value);
 	tegra_gpio_mask_write(GPIO_MSK_OE(offset), offset, 1);
 	tegra_gpio_enable(offset);
-	return 0;
+	if (!(tegra_gpio_set_tristate(offset, TEGRA_TRI_NORMAL)))
+		return 0;
+	else
+		return -EINVAL;
 }
 
 static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
