@@ -486,6 +486,9 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 		},
 };
 
+/* dummy estate values under 930/750/480/0mA, 3.5V input */
+static unsigned lm3565_estates[] = { 3255, 2625, 1680, 0 };
+
 static struct lm3565_platform_data atlantis_lm3565_pdata = {
 	.config		= {
 		.max_peak_current_mA	= 930,
@@ -500,6 +503,12 @@ static struct lm3565_platform_data atlantis_lm3565_pdata = {
 		.active_high		= true,
 		},
 	.dev_name	= "torch",
+	.edpc_config	= {
+		.states		= lm3565_estates,
+		.num_states	= ARRAY_SIZE(lm3565_estates),
+		.e0_index	= 0,
+		.priority	= EDP_MAX_PRIO + 2,
+		},
 };
 
 static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
