@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -190,7 +190,7 @@ static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 	SET_DRIVE(SDIO1, ENABLE, DISABLE, DIV_1, 54, 70, FASTEST, FASTEST),
 
 	/* SDMMC3 */
-	SET_DRIVE(SDIO3, ENABLE, DISABLE, DIV_1, 54, 70, FASTEST, FASTEST),
+	SET_DRIVE(SDIO3, ENABLE, DISABLE, DIV_1, 23, 41, FASTEST, FASTEST),
 
 	/* SDMMC4 */
 	SET_DRIVE_WITH_TYPE(GMA, ENABLE, DISABLE, DIV_1, 1, 2, FASTEST,
