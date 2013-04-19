@@ -206,8 +206,8 @@ struct xhci_op_regs {
 /* bits 12:31 are reserved (and should be preserved on writes). */
 
 /* IMAN - Interrupt Management Register */
-#define IMAN_IP		(1 << 1)
-#define IMAN_IE		(1 << 0)
+#define IMAN_IE		(1 << 1)
+#define IMAN_IP		(1 << 0)
 
 /* USBSTS - USB status - status bitmasks */
 /* HC not running - set to 1 when run/stop bit is cleared. */
@@ -968,6 +968,10 @@ struct xhci_transfer_event {
 	__le32	flags;
 };
 
+/* Transfer event TRB length bit mask */
+/* bits 0:23 */
+#define	EVENT_TRB_LEN(p)		((p) & 0xffffff)
+
 /** Transfer Event bit fields **/
 #define	TRB_TO_EP_ID(p)	(((p) >> 16) & 0x1f)
 
@@ -1503,6 +1507,8 @@ struct xhci_hcd {
 #define XHCI_AMD_0x96_HOST	(1 << 9)
 #define XHCI_TRUST_TX_LENGTH	(1 << 10)
 #define XHCI_SPURIOUS_REBOOT	(1 << 13)
+#define XHCI_COMP_MODE_QUIRK	(1 << 14)
+#define XHCI_AVOID_BEI		(1 << 15)
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
 	/* There are two roothubs to keep track of bus suspend info for */
@@ -1519,6 +1525,11 @@ struct xhci_hcd {
 	unsigned		sw_lpm_support:1;
 	/* support xHCI 1.0 spec USB2 hardware LPM */
 	unsigned		hw_lpm_support:1;
+	/* Compliance Mode Recovery Data */
+	struct timer_list	comp_mode_recovery_timer;
+	u32			port_status_u0;
+/* Compliance Mode Timer Triggered every 2 seconds */
+#define COMP_MODE_RCVRY_MSECS 2000
 };
 
 /* convert between an HCD pointer and the corresponding EHCI_HCD */
