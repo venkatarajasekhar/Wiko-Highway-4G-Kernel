@@ -108,6 +108,24 @@ static const struct resource wdt_resource[] = {
 	},
 };
 
+static const struct resource battery_resource[] = {
+	{
+		.name = "palmas-battery-gauge",
+		.start = PALMAS_BAT_TEMP_FAULT_IRQ,
+		.end = PALMAS_BAT_TEMP_FAULT_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static const struct resource charger_resource[] = {
+	{
+		.name = "palmas-charger",
+		.start = PALMAS_CHARGER_IRQ,
+		.end = PALMAS_CHARGER_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 enum palmas_ids {
 	PALMAS_PIN_MUX_ID,
 	PALMAS_PMIC_ID,
@@ -122,6 +140,8 @@ enum palmas_ids {
 	PALMAS_PWM_ID,
 	PALMAS_USB_ID,
 	PALMAS_EXTCON_ID,
+	PALMAS_BATTERY_GAUGE_ID,
+	PALMAS_CHARGER_ID
 };
 
 static const struct mfd_cell palmas_children[] = {
@@ -188,7 +208,19 @@ static const struct mfd_cell palmas_children[] = {
 		.num_resources = ARRAY_SIZE(palma_extcon_resource),
 		.resources = palma_extcon_resource,
 		.id = PALMAS_EXTCON_ID,
-	}
+	},
+	{
+		.name = "palmas-battery-gauge",
+		.num_resources = ARRAY_SIZE(battery_resource),
+		.resources = battery_resource,
+		.id = PALMAS_BATTERY_GAUGE_ID,
+	},
+	{
+		.name = "palmas-charger",
+		.num_resources = ARRAY_SIZE(charger_resource),
+		.resources = charger_resource,
+		.id = PALMAS_CHARGER_ID,
+	},
 };
 
 static bool is_volatile_palma_func_reg(struct device *dev, unsigned int reg)
@@ -220,6 +252,19 @@ static const struct regmap_config palmas_regmap_config[PALMAS_NUM_CLIENTS] = {
 		.max_register = PALMAS_BASE_TO_REG(PALMAS_TRIM_GPADC_BASE,
 					PALMAS_GPADC_TRIM16),
 	},
+	{
+		.reg_bits = 8,
+		.val_bits = 8,
+		.max_register =	PALMAS_BASE_TO_REG(PALMAS_CHARGER_BASE,
+					PALMAS_REG10),
+	},
+};
+
+static const int palmas_i2c_ids[PALMAS_NUM_CLIENTS] = {
+	0x58,
+	0x59,
+	0x5a,
+	0x6a,
 };
 
 struct palmas_regs {
@@ -1033,7 +1078,7 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 		else {
 			palmas->i2c_clients[i] =
 					i2c_new_dummy(i2c->adapter,
-							i2c->addr + i);
+						palmas_i2c_ids[i]);
 			if (!palmas->i2c_clients[i]) {
 				dev_err(palmas->dev,
 					"can't attach client %d\n", i);
@@ -1110,8 +1155,8 @@ static int __devinit palmas_i2c_probe(struct i2c_client *i2c,
 	children[PALMAS_PMIC_ID].pdata_size = sizeof(*pdata->pmic_pdata);
 
 	ret = mfd_add_devices(palmas->dev, -1,
-			      children, ARRAY_SIZE(palmas_children),
-			      NULL, palmas->irq_chip_data->irq_base);
+				children, ARRAY_SIZE(palmas_children),
+				NULL, palmas->irq_chip_data->irq_base);
 	kfree(children);
 
 	if (ret < 0)

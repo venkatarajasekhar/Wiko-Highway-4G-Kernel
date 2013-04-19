@@ -21,7 +21,7 @@
 #include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 
-#define PALMAS_NUM_CLIENTS		3
+#define PALMAS_NUM_CLIENTS		4
 
 struct palmas_pmic;
 struct palmas_rtc;
@@ -317,6 +317,10 @@ enum palmas_irqs {
 	PALMAS_GPIO_13_IRQ,
 	PALMAS_GPIO_14_IRQ,
 	PALMAS_GPIO_15_IRQ,
+	/* INT6 interrupts */
+	PALMAS_CHARGER_IRQ,
+	/* INT7 interrupts */
+	PALMAS_BAT_TEMP_FAULT_IRQ,
 	/* Total Number IRQs */
 	PALMAS_NUM_IRQ,
 };
@@ -379,6 +383,7 @@ struct palmas_pmic {
 #define PALMAS_PU_PD_OD_BASE					0x1F0
 #define PALMAS_LED_BASE						0x200
 #define PALMAS_INTERRUPT_BASE					0x210
+#define PALMAS_FUEL_GAUGE_BASE					0x230
 #define PALMAS_USB_OTG_BASE					0x250
 #define PALMAS_VIBRATOR_BASE					0x270
 #define PALMAS_GPIO_BASE					0x280
@@ -386,6 +391,7 @@ struct palmas_pmic {
 #define PALMAS_GPADC_BASE					0x2C0
 #define PALMAS_TRIM_GPADC_BASE					0x3CD
 #define PALMAS_PAGE3_BASE					0x300
+#define PALMAS_CHARGER_BASE					0x400
 
 #define PALMAS_CHARGE_PUMP_CTRL					0x7C
 /* Bit definitions for CHARGE_PUMP_CTRL */
@@ -3244,6 +3250,10 @@ struct palmas_pmic {
 #define PALMAS_GPADC_TRIM15					0xE
 #define PALMAS_GPADC_TRIM16					0xF
 #define PALMAS_GPADC_TRIMINVALID				-1
+
+#define PALMAS_FG_REG_22					0x16
+
+#define PALMAS_REG10                                            0xA
 
 enum {
 	PALMAS_EXT_CONTROL_ENABLE1	= 0x1,
