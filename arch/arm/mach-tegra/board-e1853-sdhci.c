@@ -113,6 +113,10 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.wp_gpio = TEGRA_GPIO_PD4,
 	.power_gpio = TEGRA_GPIO_PN7,
 	.is_8bit = false,
+	/* WAR: Operating SDR104 cards at upto 104 MHz, as signal errors are
+	 * seen when they are operated at any higher frequency.
+	 */
+	.max_clk_limit = 104000000,
 	.ddr_clk_limit = 30000000,
 	.mmc_data = {
 		.ocr_mask = MMC_OCR_2V8_MASK,
