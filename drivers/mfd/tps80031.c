@@ -792,8 +792,8 @@ static irqreturn_t tps80031_charge_control_irq(int irq, void *data)
 	 * for charge control interrupt */
 	cont_sts = org_sts ^ tps80031->prev_cont_stat1;
 	tps80031->prev_cont_stat1 = org_sts;
-	/* Clear watchdog timer state */
-	tps80031->prev_cont_stat1 &= ~(1 << 4);
+	/* Clear watchdog timer and LINCH_GATED states */
+	tps80031->prev_cont_stat1 &= ~(BIT(4) | BIT(6));
 	cont_sts &= 0x5F;
 
 	for (i = 0; i < 8; ++i) {
