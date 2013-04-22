@@ -550,6 +550,11 @@ struct palmas_clk32k_init_data atlantis_palmas_clk32k_idata[] = {
 	},
 };
 
+struct palmas_gpadc_platform_data gpadc_pdata = {
+	.channel0_current_uA = 0,
+	.channel3_current_uA = 0,
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
@@ -561,6 +566,7 @@ static struct palmas_platform_data palmas_pdata = {
 	.watchdog_timer_initial_period = 128,
 	.pinctrl_pdata = &palmas_pinctrl_pdata,
 	.extcon_pdata = &palmas_extcon_pdata,
+	.adc_pdata = &gpadc_pdata,
 };
 
 static struct i2c_board_info palma_device[] = {
