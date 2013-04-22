@@ -345,7 +345,7 @@ static struct nvmap_platform_data ceres_nvmap_data = {
 	.nr_carveouts	= ARRAY_SIZE(ceres_carveouts),
 };
 
-static struct platform_device ceres_nvmap_device __initdata = {
+static struct platform_device ceres_nvmap_device = {
 	.name	= "tegra-nvmap",
 	.id	= -1,
 	.dev	= {
