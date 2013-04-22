@@ -550,6 +550,121 @@ struct palmas_clk32k_init_data atlantis_palmas_clk32k_idata[] = {
 	},
 };
 
+/* based on an old table for 10bit GPADC hence the *4 for 12bit GPADC */
+static int palmas_batt_temperature_table[] = {
+	/* adc code for temperature in degree C */
+	929*4, 925*4, /* -2 ,-1 */
+	920*4, 917*4, 912*4, 908*4, 904*4, 899*4, 895*4, 890*4, 885*4, 880*4, /* 00 - 09 */
+	875*4, 869*4, 864*4, 858*4, 853*4, 847*4, 841*4, 835*4, 829*4, 823*4, /* 10 - 19 */
+	816*4, 810*4, 804*4, 797*4, 790*4, 783*4, 776*4, 769*4, 762*4, 755*4, /* 20 - 29 */
+	748*4, 740*4, 732*4, 725*4, 718*4, 710*4, 703*4, 695*4, 687*4, 679*4, /* 30 - 39 */
+	671*4, 663*4, 655*4, 647*4, 639*4, 631*4, 623*4, 615*4, 607*4, 599*4, /* 40 - 49 */
+	591*4, 583*4, 575*4, 567*4, 559*4, 551*4, 543*4, 535*4, 527*4, 519*4, /* 50 - 59 */
+	511*4, 504*4, 496*4 /* 60 - 62 */
+};
+
+/* OCV Configuration */
+static struct ocv_config ocv_cfg = {
+	.voltage_diff = 75,
+	.current_diff = 30,
+
+	.sleep_enter_current = 60,
+	.sleep_enter_samples = 3,
+
+	.sleep_exit_current = 100,
+	.sleep_exit_samples = 3,
+
+	.long_sleep_current = 500,
+	.ocv_period = 300,
+	.relax_period = 600,
+
+	.flat_zone_low = 35,
+	.flat_zone_high = 65,
+
+	.max_ocv_discharge = 1300,
+
+	.table = {
+		3300, 3603, 3650, 3662, 3700,
+		3723, 3734, 3746, 3756, 3769,
+		3786, 3807, 3850, 3884, 3916,
+		3949, 3990, 4033, 4077, 4129,
+		4193
+	},
+};
+
+/* EDV Configuration */
+static struct edv_config edv_cfg = {
+	.averaging = true,
+	.seq_edv = 5,
+	.filter_light = 155,
+	.filter_heavy = 199,
+	.overload_current = 1000,
+	.edv = {
+		{3150, 0},
+		{3450, 4},
+		{3600, 10},
+	},
+};
+
+/* General Battery Cell Configuration */
+static struct cell_config cell_cfg =  {
+	.cc_voltage = 4175,
+	.cc_current = 250,
+	.cc_capacity = 15,
+	.seq_cc = 5,
+
+	.cc_polarity = true,
+	.cc_out = true,
+	.ocv_below_edv1 = false,
+
+	.design_capacity = 4000,
+	.design_qmax = 4100,
+	.r_sense = 10,
+
+	.qmax_adjust = 1,
+	.fcc_adjust = 2,
+
+	.max_overcharge = 100,
+	.electronics_load = 200, /* *10 uAh */
+
+	.max_increment = 150,
+	.max_decrement = 150,
+	.low_temp = 119,
+	.deep_dsg_voltage = 30,
+	.max_dsg_estimate = 300,
+	.light_load = 100,
+	.near_full = 500,
+	.cycle_threshold = 3500,
+	.recharge = 300,
+
+	.mode_switch_capacity = 5,
+
+	.call_period = 2,
+
+	.ocv = &ocv_cfg,
+	.edv = &edv_cfg,
+};
+
+static struct palmas_battery_platform_data battery_pdata = {
+	 /* time in seconds for current average readings */
+	.current_avg_interval = 10,
+
+	/* Battery is soldered in with no detection resistor */
+	.battery_soldered = 0,
+
+	/* How often we should update the info about charge status */
+	.battery_status_interval = 10000,
+
+	/* temperature conversion for this battery */
+	.battery_temperature_chart = palmas_batt_temperature_table,
+	.battery_temperature_chart_size =
+			ARRAY_SIZE(palmas_batt_temperature_table),
+
+	/* Battery Configuration for Fuel Guage */
+	.cell_cfg = &cell_cfg,
+	.gpadc_retry_count = 5,
+};
+
 struct palmas_gpadc_platform_data gpadc_pdata = {
 	.channel0_current_uA = 0,
 	.channel3_current_uA = 0,
@@ -567,6 +682,7 @@ static struct palmas_platform_data palmas_pdata = {
 	.pinctrl_pdata = &palmas_pinctrl_pdata,
 	.extcon_pdata = &palmas_extcon_pdata,
 	.adc_pdata = &gpadc_pdata,
+	.battery_pdata = &battery_pdata,
 };
 
 static struct i2c_board_info palma_device[] = {
