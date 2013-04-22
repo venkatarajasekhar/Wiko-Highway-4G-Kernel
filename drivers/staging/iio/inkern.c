@@ -251,6 +251,25 @@ err_unlock:
 }
 EXPORT_SYMBOL_GPL(iio_st_read_channel_raw);
 
+int iio_st_read_channel_calibrated(struct iio_channel *chan, int *val)
+{
+	int val2, ret;
+
+	mutex_lock(&chan->indio_dev->info_exist_lock);
+	if (chan->indio_dev->info == NULL) {
+		ret = -ENODEV;
+		goto err_unlock;
+	}
+
+	ret = chan->indio_dev->info->read_raw(chan->indio_dev, chan->channel,
+					      val, &val2, IIO_CHAN_INFO_CALIBSCALE);
+err_unlock:
+	mutex_unlock(&chan->indio_dev->info_exist_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(iio_st_read_channel_calibrated);
+
 int iio_st_read_channel_scale(struct iio_channel *chan, int *val, int *val2)
 {
 	int ret;

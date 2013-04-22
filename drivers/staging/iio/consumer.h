@@ -10,6 +10,7 @@
 #ifndef _IIO_INKERN_CONSUMER_H_
 #define _IIO_INKERN_CONSUMER_H
 #include "types.h"
+#include "iio.h"
 
 struct iio_dev;
 struct iio_chan_spec;
@@ -69,6 +70,20 @@ void iio_st_channel_release_all(struct iio_channel *chan);
  */
 int iio_st_read_channel_raw(struct iio_channel *chan,
 			    int *val);
+
+/**
+ * iio_st_read_channel_calibrated() - read calibrated data
+			from a given channel
+ * @channel:		The channel being queried.
+ * @val:		Value read back.
+ *
+ * Note raw reads from iio channels are in adc counts and hence
+ * scale will need to be applied if standard units required.
+ */
+
+
+int iio_st_read_channel_calibrated(struct iio_channel *chan,
+				int *val);
 
 /**
  * iio_st_get_channel_type() - get the type of a channel
