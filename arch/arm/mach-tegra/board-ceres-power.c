@@ -929,6 +929,17 @@ static int __init ceres_fixed_regulator_init(void)
 }
 subsys_initcall_sync(ceres_fixed_regulator_init);
 
+static void ceres_board_suspend(int lp_state, enum suspend_stage stg)
+{
+	if ((lp_state == TEGRA_SUSPEND_LP0) &&
+		(stg == TEGRA_SUSPEND_BEFORE_PERIPHERAL))
+		ceres_pinmux_suspend();
+}
+
+static void ceres_board_resume(int lp_state, enum resume_stage stg)
+{
+}
+
 static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.cpu_timer	= 300,
 	.cpu_off_timer	= 300,
@@ -938,6 +949,8 @@ static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.corereq_high	= true,
 	.sysclkreq_high	= true,
 	.cpu_lp2_min_residency = 1000,
+	.board_suspend = ceres_board_suspend,
+	.board_resume = ceres_board_resume,
 };
 
 

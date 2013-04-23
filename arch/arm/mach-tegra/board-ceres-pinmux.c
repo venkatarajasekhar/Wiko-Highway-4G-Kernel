@@ -278,3 +278,21 @@ int __init ceres_pinmux_init(void)
 
 	return 0;
 }
+
+static struct gpio_init_pin_info ceres_suspend_pin_state[] = {
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
+};
+
+int ceres_pinmux_suspend(void)
+{
+	int len = ARRAY_SIZE(ceres_suspend_pin_state);
+	struct gpio_init_pin_info *pins_info = ceres_suspend_pin_state;
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		tegra_gpio_init_configure(pins_info->gpio_nr,
+			pins_info->is_input, pins_info->value);
+		pins_info++;
+	}
+	return 0;
+}

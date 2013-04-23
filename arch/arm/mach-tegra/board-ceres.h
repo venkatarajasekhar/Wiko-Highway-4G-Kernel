@@ -107,4 +107,5 @@ int ceres_soctherm_init(void);
 int ceres_emc_init(void);
 int ceres_pmon_init(void);
 int ceres_edp_init(void);
+int ceres_pinmux_suspend(void);
 #endif
