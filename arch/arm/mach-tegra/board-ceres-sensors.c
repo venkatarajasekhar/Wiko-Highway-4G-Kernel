@@ -134,17 +134,8 @@ static struct nct1008_platform_data ceres_nct1008_pdata = {
 
 	.passive_delay = 2000,
 
-	.num_trips = 2,
+	.num_trips = 1,
 	.trips = {
-		/* Thermal Throttling */
-		{
-			.cdev_type = "tegra-balanced",
-			.trip_temp = 85000,
-			.trip_type = THERMAL_TRIP_PASSIVE,
-			.upper = THERMAL_NO_LIMIT,
-			.lower = THERMAL_NO_LIMIT,
-			.hysteresis = 0,
-		},
 		{
 			.cdev_type = "suspend_soctherm",
 			.trip_temp = 50000,
@@ -226,11 +217,6 @@ static int ceres_nct1008_init(void)
 		pr_err("%s: set gpio to input failed\n", __func__);
 		gpio_free(CERES_TEMP_ALERT_GPIO);
 	}
-
-	tegra_add_tj_trips(ceres_nct1008_pdata.trips,
-				&ceres_nct1008_pdata.num_trips);
-	tegra_platform_edp_init(ceres_nct1008_pdata.trips,
-				&ceres_nct1008_pdata.num_trips, 0);
 
 	return ret;
 }
