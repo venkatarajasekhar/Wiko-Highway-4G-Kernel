@@ -758,15 +758,20 @@ int __init ceres_regulator_init(void)
 		atlantis_regulator_init();
 		atlantis_pwm_init();
 		atlantis_vibrator_init();
-	} else {
-		/* configure the power management controller to trigger PMU
-		 * interrupts when low */
-		pmc_ctrl = readl(pmc + PMC_CTRL);
-		writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+		goto reg_populate_done;
+	}
 
-		for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
-			max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
+	/* configure the power management controller to trigger PMU
+	 * interrupts when low */
+	pmc_ctrl = readl(pmc + PMC_CTRL);
+	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 
+	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
+		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
+
+	switch (board_info.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
 					MAX77660_PIN_PULL_UP;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
@@ -774,12 +779,18 @@ int __init ceres_regulator_init(void)
 					MAX77660_PIN_PULL_NORMAL;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
-		if ((board_info.sku == 1000) &&
-		    (board_info.board_id != BOARD_E1690)) {
+		if (board_info.sku == 1001) {
+			max77660_regulator_pdata_buck1.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
+			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
+			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
+			max77660_pdata.en_buck2_ext_ctrl = true;
+		} else {
 			max77660_pdata.en_buck2_ext_ctrl = true;
 			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
 			max77660_regulator_idata_buck1.num_consumer_supplies =
-				ARRAY_SIZE(max77660_unused_supply);
+					ARRAY_SIZE(max77660_unused_supply);
 			max77660_regulator_idata_buck2.consumer_supplies = max77660_buck1_supply;
 			max77660_regulator_idata_buck2.num_consumer_supplies =
 							ARRAY_SIZE(max77660_buck1_supply);
@@ -792,19 +803,27 @@ int __init ceres_regulator_init(void)
 			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
 
 			lp8755_regulator_init();
-		} else {
-			max77660_regulator_pdata_buck1.fps_src = FPS_SRC_3;
-			max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
-			max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
-			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
-			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
-			max77660_pdata.en_buck2_ext_ctrl = true;
 		}
+		break;
 
-		i2c_register_board_info(4, max77660_regulators,
-				ARRAY_SIZE(max77660_regulators));
+	case BOARD_E1690:
+		max77660_regulator_pdata_buck1.fps_src = FPS_SRC_3;
+		max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
+		max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
+		max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
+		max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
+		max77660_pdata.en_buck2_ext_ctrl = true;
+		break;
+
+	default:
+		pr_info("UNSUPPORTED BOARD\n");
+		return -1;
 	}
 
+	i2c_register_board_info(4, max77660_regulators,
+				ARRAY_SIZE(max77660_regulators));
+
+reg_populate_done:
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
 	ceres_cl_dvfs_init();
 #endif
