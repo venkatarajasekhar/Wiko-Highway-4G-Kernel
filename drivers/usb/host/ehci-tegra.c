@@ -588,7 +588,7 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	}
 #endif
 
-	tegra_pd_add_device(&tegra_mc_chain_b, &pdev->dev);
+	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
 	return err;

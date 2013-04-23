@@ -39,10 +39,10 @@
 #include <linux/cpu_pm.h>
 #include <linux/module.h>
 #include <linux/hrtimer.h>
+#include <linux/pm_domain.h>
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
-#include <mach/pm_domains.h>
 
 #include <trace/events/nvpower.h>
 
@@ -235,7 +235,7 @@ static int tegra_cpuidle_register_device(unsigned int cpu)
 
 #ifdef CONFIG_TEGRA_MC_DOMAINS
 	if (cpu == 0)
-		pm_genpd_attach_cpuidle(&tegra_mc_clk.gpd, 2, dev);
+		pm_genpd_name_attach_cpuidle("tegra_mc_clk", 2, dev);
 #endif
 
 	return 0;
