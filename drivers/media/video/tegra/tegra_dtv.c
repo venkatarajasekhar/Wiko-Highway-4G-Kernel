@@ -622,7 +622,6 @@ static int tegra_dtv_open(struct inode *inode, struct file *file)
 	 * bias in board files.
 	 */
 	pdev = dtv_ctx->pdev;
-
 	if (clk_enable(dtv_ctx->sclk) < 0) {
 		dev_err(&pdev->dev, "cannot enable SBus clock.\n");
 		return -ENOSYS;
