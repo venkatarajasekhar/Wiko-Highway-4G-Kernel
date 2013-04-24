@@ -912,12 +912,13 @@ static void __init tegra_ceres_init(void)
 	ceres_suspend_init();
 	ceres_touch_init();
 	ceres_sdhci_init();
-	isomgr_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_ram_console_debug_init();
 	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_CPU, NULL, -1, -1);
-	ceres_panel_init();
+	ceres_emc_init();
 	ceres_edp_init();
+	isomgr_init();
+	ceres_panel_init();
 	ceres_sensors_init();
 	ceres_modem_init();
 #if defined(CONFIG_TEGRA_BASEBAND)
@@ -925,7 +926,6 @@ static void __init tegra_ceres_init(void)
 #endif
 	tegra_register_fuse();
 	ceres_soctherm_init();
-	ceres_emc_init();
 #ifdef CONFIG_BT_BLUESLEEP
 	ceres_setup_bluesleep();
 	ceres_setup_bt_rfkill();
