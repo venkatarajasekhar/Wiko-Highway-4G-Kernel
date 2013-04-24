@@ -268,9 +268,9 @@ static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
 		.supply_regulator = _supply_reg,			\
 	}
 
-PALMAS_PDATA_INIT(smps12, 900,  1300, NULL, 0, 0, 0);
+PALMAS_PDATA_INIT(smps12, 650,  1300, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps3, 1100,  1100, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps6, 900,  1400, NULL, 0, 0, 0);
+PALMAS_PDATA_INIT(smps6, 650,  1400, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps7, 2840,  2860, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps8, 1200,  1200, NULL, 0, 0, 1);
 PALMAS_PDATA_INIT(smps9, 1800,  1800, NULL, 1, 1, 1);
