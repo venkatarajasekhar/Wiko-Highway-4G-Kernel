@@ -200,8 +200,28 @@ static struct max98090_pdata ceres_max98090_pdata = {
 	.digmic_right_mode = 1,
 };
 
+static struct aic325x_gpio_setup aic3256_gpio[] = {
+	/* MISO: Clock o/p for DMIC */
+	{
+		.reg    = AIC3XXX_MAKE_REG(0, 0, 55),
+		.value  = 0x0E,
+	},
+	/* SCLK: DMIC DATA*/
+	{
+		.reg    = AIC3XXX_MAKE_REG(0, 0, 56),
+		.value  = 0x02,
+	},
+	{
+		.reg    = AIC3XXX_MAKE_REG(0, 0, 81),
+		.value  = 0x10,
+	}
+};
+
 static struct aic325x_pdata aic3256_codec_pdata = {
-/* TODO */
+	.gpio_irq	= 0,
+	.num_gpios	= ARRAY_SIZE(aic3256_gpio),
+	.gpio_defaults  = aic3256_gpio,
+	.naudint_irq    = 0,
 };
 
 static struct i2c_board_info __initdata max98090_board_info = {
