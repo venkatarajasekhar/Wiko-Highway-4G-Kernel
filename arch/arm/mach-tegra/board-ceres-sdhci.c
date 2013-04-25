@@ -153,6 +153,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.tap_delay = 0x3,
 	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
+	.max_clk_limit = 156000000,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
@@ -172,6 +173,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.is_8bit = 1,
 	.tap_delay = 0x3,
 	.trim_delay = 0xA,
+	.max_clk_limit = 156000000,
 	.mmc_data = {
 		.built_in = 1,
 		.ocr_mask = MMC_OCR_1V8_MASK,
@@ -290,9 +292,14 @@ int __init ceres_sdhci_init(void)
 	int nominal_core_mv;
 	nominal_core_mv =
 		tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
-	if (nominal_core_mv > 0)
+	if (nominal_core_mv > 0) {
+		tegra_sdhci_platform_data3.nominal_vcore_uV =
+			nominal_core_mv * 1000;
 		tegra_sdhci_platform_data2.nominal_vcore_uV =
 			nominal_core_mv * 1000;
+		tegra_sdhci_platform_data0.nominal_vcore_uV =
+			nominal_core_mv * 1000;
+	}
 	tegra_get_board_info(&board_info);
 	if (board_info.board_id == BOARD_E1670)
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
