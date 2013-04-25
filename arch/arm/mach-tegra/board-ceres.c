@@ -403,8 +403,16 @@ static struct platform_device tegra_bbc_proxy_device = {
 	},
 };
 
+static struct platform_device *ceres_only_audio_devices[] __initdata = {
+	&ceres_audio_max98090_device,
+	&ceres_audio_max97236_device,
+};
 
-static struct platform_device *ceres_audio_devices[] __initdata = {
+static struct platform_device *atlantis_only_audio_devices[] __initdata = {
+	&ceres_audio_aic325x_device,
+};
+
+static struct platform_device *ceres_common_audio_devices[] __initdata = {
 	&tegra_ahub_device,
 	&tegra_pcm_device,
 	&tegra_dam_device0,
@@ -428,9 +436,6 @@ static struct platform_device *ceres_audio_devices[] __initdata = {
 #endif
 	&dmic_codec_device,
 	&ceres_dmic_device,
-	&ceres_audio_max98090_device,
-	&ceres_audio_max97236_device,
-	&ceres_audio_aic325x_device,
 };
 
 static struct platform_device *ceres_devices[] __initdata = {
@@ -462,16 +467,20 @@ static void ceres_audio_init(void)
 	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671) {
 		ceres_codec_aic325x_info.irq = gpio_to_irq(TEGRA_GPIO_CDC_IRQ);
 		i2c_register_board_info(5, &ceres_codec_aic325x_info, 1);
+		platform_add_devices(atlantis_only_audio_devices,
+			ARRAY_SIZE(atlantis_only_audio_devices));
 	}
 
 	if ((bi.board_id == BOARD_E1680) ||
 		 (bi.board_id == BOARD_E1681) || (bi.board_id == BOARD_E1690)) {
 		i2c_register_board_info(5, &max97236_board_info, 1);
 		i2c_register_board_info(5, &max98090_board_info, 1);
+		platform_add_devices(ceres_only_audio_devices,
+			ARRAY_SIZE(ceres_only_audio_devices));
 	}
 
-	platform_add_devices(ceres_audio_devices,
-			ARRAY_SIZE(ceres_audio_devices));
+	platform_add_devices(ceres_common_audio_devices,
+			ARRAY_SIZE(ceres_common_audio_devices));
 }
 
 #ifdef CONFIG_USB_SUPPORT
