@@ -772,7 +772,7 @@ static void ceres_i2c_init(void)
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
 
-static __initdata struct tegra_clk_init_table touch_clk_init_table[] = {
+static __initdata struct tegra_clk_init_table raydium_touch_clk_init_table[] = {
 	/* name		parent		rate		enabled */
 	{ "vi_sensor",	"pll_p",	41000000,	true},
 	{ "csus",	NULL,		00000000,	true},
@@ -842,9 +842,9 @@ static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
 
 static int __init ceres_touch_init(void)
 {
-	tegra_clk_init_from_table(touch_clk_init_table);
 	if (tegra_get_touch_id() == RAYDIUM_TOUCH) {
 		pr_info("%s: initializing raydium\n", __func__);
+		tegra_clk_init_from_table(raydium_touch_clk_init_table);
 		rm31080a_ceres_spi_board[0].irq =
 			gpio_to_irq(TOUCH_GPIO_IRQ_RAYDIUM_SPI);
 		touch_init_raydium(TOUCH_GPIO_IRQ_RAYDIUM_SPI,
