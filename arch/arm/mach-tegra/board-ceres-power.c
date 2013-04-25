@@ -60,6 +60,8 @@ static struct regulator_consumer_supply max77660_buck1_supply[] = {
 	REGULATOR_SUPPLY("vdd_core", NULL),
 	REGULATOR_SUPPLY("vdd_core", "sdhci-tegra.2"),
 	REGULATOR_SUPPLY("vdd_core_dbg", NULL),
+	REGULATOR_SUPPLY("vdd_core", "sdhci-tegra.0"),
+	REGULATOR_SUPPLY("vdd_core", "sdhci-tegra.3"),
 };
 
 static struct regulator_consumer_supply max77660_buck2_supply[] = {
