@@ -3,7 +3,7 @@
  *
  * Author: Stephen Warren <swarren@nvidia.com>
  * Copyright (C) 2011 - NVIDIA, Inc.
- * Copyright (c) 2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -236,6 +236,28 @@ static inline void tegra30_ahub_debug_remove(struct tegra30_ahub *ahub)
 }
 #endif
 
+static int tegra30_ahub_soft_reset_rx_channel(int channel)
+{
+	u32 reg, val;
+
+	reg = TEGRA30_AHUB_CHANNEL_CLEAR +
+	      (channel * TEGRA30_AHUB_CIF_RX_CTRL_STRIDE);
+	val = TEGRA30_AHUB_CHANNEL_CLEAR_RX_SOFT_RESET;
+	tegra30_apbif_write(reg, val);
+	return 0;
+}
+
+static int tegra30_ahub_soft_reset_tx_channel(int channel)
+{
+	u32 reg, val;
+
+	reg = TEGRA30_AHUB_CHANNEL_CLEAR +
+	      (channel * TEGRA30_AHUB_CIF_TX_CTRL_STRIDE);
+	val = TEGRA30_AHUB_CHANNEL_CLEAR_TX_SOFT_RESET;
+	tegra30_apbif_write(reg, val);
+	return 0;
+}
+
 int tegra30_ahub_allocate_rx_fifo(enum tegra30_ahub_rxcif *rxcif,
 				  unsigned long *fiforeg,
 				  unsigned long *reqsel)
@@ -256,6 +278,8 @@ int tegra30_ahub_allocate_rx_fifo(enum tegra30_ahub_rxcif *rxcif,
 	*reqsel = TEGRA_DMA_REQ_SEL_APBIF_CH0 + channel;
 
 	tegra30_ahub_enable_clocks();
+
+	tegra30_ahub_soft_reset_rx_channel(channel);
 
 	reg = TEGRA30_AHUB_CHANNEL_CTRL +
 	      (channel * TEGRA30_AHUB_CHANNEL_CTRL_STRIDE);
@@ -504,6 +528,8 @@ int tegra30_ahub_allocate_tx_fifo(enum tegra30_ahub_txcif *txcif,
 	*reqsel = TEGRA_DMA_REQ_SEL_APBIF_CH0 + channel;
 
 	tegra30_ahub_enable_clocks();
+
+	tegra30_ahub_soft_reset_tx_channel(channel);
 
 	reg = TEGRA30_AHUB_CHANNEL_CTRL +
 	      (channel * TEGRA30_AHUB_CHANNEL_CTRL_STRIDE);
