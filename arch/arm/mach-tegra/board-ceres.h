@@ -90,9 +90,18 @@
 #define PCA954x_I2C_BUS2        (PCA954x_I2C_BUS_BASE + 2)
 #define PCA954x_I2C_BUS3        (PCA954x_I2C_BUS_BASE + 3)
 
+/* Secondary modem related GPIOs */
+#define MDM2_EN			TEGRA_GPIO_PG5
+#define MDM2_RST		TEGRA_GPIO_PH0
+#define MDM2_COLDBOOT		TEGRA_GPIO_PG6
+#define MDM2AP_ACK2		TEGRA_GPIO_PG7
+
 /* Baseband IDs */
 enum tegra_bb_type {
+	TEGRA_BB_INTEGRATED = 1,
+	TEGRA_BB_I500SWD = 2,
 	TEGRA_BB_HSIC_HUB = 6,
+	TEGRA_BB_OEM4 = 7,
 };
 
 

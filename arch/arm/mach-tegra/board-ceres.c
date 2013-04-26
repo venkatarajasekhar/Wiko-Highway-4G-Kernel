@@ -25,6 +25,7 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/platform_data/tegra_usb.h>
+#include <linux/platform_data/tegra_usb_modem_power.h>
 #include <linux/memblock.h>
 #include <linux/of_platform.h>
 #include <linux/serial_8250.h>
@@ -557,6 +558,65 @@ static struct tegra_usb_platform_data tegra_ehci2_hsic_smsc_hub_pdata = {
 	},
 };
 
+static struct gpio modem2_gpios[] = {
+	{MDM2_EN, GPIOF_OUT_INIT_LOW, "MDM2_EN"},
+	{MDM2_RST, GPIOF_OUT_INIT_LOW, "MDM2_RST"},
+};
+
+static void baseband2_start(void)
+{
+	pr_info("%s\n", __func__);
+	gpio_set_value(MDM2_EN, 1);
+}
+
+static void baseband2_reset(void)
+{
+	/* Initiate power cycle on baseband sub system */
+	pr_info("%s\n", __func__);
+	gpio_set_value(MDM2_RST, 0);
+	mdelay(200);
+	gpio_set_value(MDM2_RST, 1);
+}
+
+static int baseband2_init(void)
+{
+	int ret;
+
+	ret = gpio_request_array(modem2_gpios, ARRAY_SIZE(modem2_gpios));
+	if (ret)
+		return ret;
+
+	/* export GPIO for user space access through sysfs */
+	gpio_export(MDM2_RST, false);
+
+	return 0;
+}
+
+static const struct tegra_modem_operations baseband2_operations = {
+	.init = baseband2_init,
+	.start = baseband2_start,
+	.reset = baseband2_reset,
+};
+
+static struct tegra_usb_modem_power_platform_data baseband2_pdata = {
+	.ops = &baseband2_operations,
+	.wake_gpio = -1,
+	.boot_gpio = MDM2_COLDBOOT,
+	.boot_irq_flags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+	.autosuspend_delay = 2000,
+	.short_autosuspend_delay = 50,
+	.tegra_ehci_device = &tegra_ehci2_device,
+	.tegra_ehci_pdata = &tegra_ehci2_hsic_smsc_hub_pdata,
+};
+
+static struct platform_device icera_baseband2_device = {
+	.name = "tegra_usb_modem_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &baseband2_pdata,
+	},
+};
+
 static void ceres_usb_init(void)
 {
 	struct board_info bi;
@@ -605,17 +665,26 @@ static void ceres_usb_init(void)
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
 }
 
+/* Secondary modem init according to modem_id */
 static void ceres_modem_init(void)
 {
 	int modem_id = tegra_get_modem_id();
 
-	if (TEGRA_BB_HSIC_HUB == modem_id) {
+	pr_info("%s: modem_id = %d\n", __func__, modem_id);
+
+	switch (modem_id) {
+	case TEGRA_BB_I500SWD: /* i500 SWD/Nemo */
+		platform_device_register(&icera_baseband2_device);
+		break;
+	case TEGRA_BB_HSIC_HUB: /* HSIC hub */
 		tegra_ehci2_device.dev.platform_data =
 			&tegra_ehci2_hsic_smsc_hub_pdata;
 		platform_device_register(&tegra_ehci2_device);
+		break;
+	default:
+		return;
 	}
 }
-
 #else
 static void ceres_usb_init(void) { }
 static void ceres_modem_init(void) { }
@@ -862,6 +931,7 @@ static int __init ceres_touch_init(void)
 }
 
 #if defined(CONFIG_TEGRA_BASEBAND)
+/* main (integrated) modem init */
 static void ceres_tegra_bb_init(void)
 {
 	pr_info("%s: registering tegra bb\n", __func__);
