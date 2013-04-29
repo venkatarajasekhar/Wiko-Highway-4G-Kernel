@@ -39,6 +39,7 @@
 #include "board-ceres.h"
 #include "board-atlantis.h"
 #include "tegra-board-id.h"
+#include "dvfs.h"
 
 #define CERES_WLAN_PWR  TEGRA_GPIO_PL7
 #define CERES_WLAN_WOW  TEGRA_GPIO_PO2
@@ -161,6 +162,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.tap_delay = 0x3,
 	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
+	.max_clk_limit = 156000000,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
@@ -285,6 +287,12 @@ int __init ceres_sdhci_init(void)
 {
 	struct board_info board_info;
 
+	int nominal_core_mv;
+	nominal_core_mv =
+		tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
+	if (nominal_core_mv > 0)
+		tegra_sdhci_platform_data2.nominal_vcore_uV =
+			nominal_core_mv * 1000;
 	tegra_get_board_info(&board_info);
 	if (board_info.board_id == BOARD_E1670)
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
