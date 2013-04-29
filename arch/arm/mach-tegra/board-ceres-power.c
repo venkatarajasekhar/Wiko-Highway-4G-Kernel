@@ -42,6 +42,7 @@
 #include "board-common.h"
 #include "board-ceres.h"
 #include "tegra11_soctherm.h"
+#include "tegra3_tsensor.h"
 #include "tegra-board-id.h"
 #include "tegra_cl_dvfs.h"
 #include "devices.h"
@@ -963,17 +964,25 @@ int __init ceres_suspend_init(void)
 	return 0;
 }
 
-/* enable this after verifying ceres uses max77660 regulator
-static struct tegra_tsensor_pmu_data tpdata_max77663 = {
+static struct tegra_tsensor_pmu_data tpdata_palmas = {
 	.reset_tegra = 1,
 	.pmu_16bit_ops = 0,
 	.controller_type = 0,
-	.pmu_i2c_addr = 0x3c,
+	.pmu_i2c_addr = 0x58,
 	.i2c_controller_id = 4,
-	.poweroff_reg_addr = 0x41,
-	.poweroff_reg_data = 0x80,
+	.poweroff_reg_addr = 0xa0,
+	.poweroff_reg_data = 0x0,
 };
-*/
+
+static struct tegra_tsensor_pmu_data tpdata_max77660 = {
+	.reset_tegra = 1,
+	.pmu_16bit_ops = 0,
+	.controller_type = 0,
+	.pmu_i2c_addr = 0x23,
+	.i2c_controller_id = 4,
+	.poweroff_reg_addr = 0x1c,
+	.poweroff_reg_data = 0x4,
+};
 
 int __init ceres_edp_init(void)
 {
@@ -1069,12 +1078,17 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 			},
 		},
 	},
-	/* enable this after verifying ceres uses max77660 regulator
-	.tshut_pmu_trip_data = &tpdata_max77663, */
+	.tshut_pmu_trip_data = &tpdata_max77660,
 };
 
 int __init ceres_soctherm_init(void)
 {
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1670)
+		ceres_soctherm_data.tshut_pmu_trip_data = &tpdata_palmas;
+
 	tegra_platform_edp_init(ceres_soctherm_data.therm[THERM_CPU].trips,
 				&ceres_soctherm_data.therm[THERM_CPU].num_trips,
 				8000); /* edp temperature margin */
