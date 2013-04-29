@@ -216,7 +216,7 @@ struct ahub_bbc1_config ahub_bbc1_pdata = {
 	.sample_size	= 16,
 	.rate		= 16000,
 	.channels	= 1,
-	.bit_clk	= 3072000,
+	.bit_clk	= 1536000,
 };
 
 static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
@@ -232,6 +232,7 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
 		.sample_size	= 16,
 		.channels       = 2,
+		.bit_clk	= 1536000,
 	},
 	.i2s_param[BT_SCO]	= {
 		.audio_port_id	= 1,
@@ -275,6 +276,7 @@ static struct tegra_asoc_platform_data ceres_audio_aic325x_pdata = {
 		.is_i2s_master	= 1,
 		.i2s_mode	= TEGRA_DAIFMT_I2S,
 		.sample_size	= 16,
+		.bit_clk	= 1536000,
 	},
 	.i2s_param[BT_SCO]	= {
 		.audio_port_id	= 1,
