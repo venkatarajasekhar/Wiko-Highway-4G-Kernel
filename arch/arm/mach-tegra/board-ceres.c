@@ -467,7 +467,8 @@ static void ceres_audio_init(void)
 
 	tegra_get_board_info(&bi);
 
-	if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671) {
+	if ((bi.board_id == BOARD_E1670) ||
+		 (bi.board_id == BOARD_E1671) || (bi.board_id == BOARD_E1740)) {
 		ceres_codec_aic325x_info.irq = gpio_to_irq(TEGRA_GPIO_CDC_IRQ);
 		i2c_register_board_info(5, &ceres_codec_aic325x_info, 1);
 		platform_add_devices(atlantis_only_audio_devices,
@@ -637,6 +638,7 @@ static void ceres_usb_init(void)
 		break;
 	case BOARD_E1670:
 	case BOARD_E1671:
+	case BOARD_E1740:
 		/* Device cable is detected through PMU Interrupt */
 		tegra_otg_pdata.vbus_extcon_dev_name = "palmas-extcon";
 

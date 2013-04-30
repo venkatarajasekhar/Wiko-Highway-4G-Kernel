@@ -525,7 +525,8 @@ int __init ceres_pmon_init(void)
 			ceres_i2c2_0_ina219_board_info,
 			ARRAY_SIZE(ceres_i2c2_0_ina219_board_info));
 
-		if (bi.board_id == BOARD_E1670 || bi.board_id == BOARD_E1671) {
+		if ((bi.board_id == BOARD_E1670) || (bi.board_id == BOARD_E1671) ||
+			 (bi.board_id == BOARD_E1740)) {
 			i2c_register_board_info(PCA954x_I2C_BUS1,
 				atlantis_i2c2_1_ina230_board_info,
 				ARRAY_SIZE(atlantis_i2c2_1_ina230_board_info));

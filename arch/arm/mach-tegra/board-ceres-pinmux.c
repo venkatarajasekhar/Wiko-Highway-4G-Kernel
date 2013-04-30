@@ -249,6 +249,7 @@ int __init ceres_pinmux_init(void)
 		break;
 	case BOARD_E1670:
 	case BOARD_E1671:
+	case BOARD_E1740:
 		atlantis_gpio_init_configure();
 		tegra_pinmux_config_table(atlantis_pinmux_common,
 			ARRAY_SIZE(atlantis_pinmux_common));
@@ -267,6 +268,7 @@ int __init ceres_pinmux_init(void)
 		break;
 	case BOARD_E1670:
 	case BOARD_E1671:
+	case BOARD_E1740:
 		tegra_pinmux_config_table(atlantis_unused_pins_lowpower,
 			ARRAY_SIZE(atlantis_unused_pins_lowpower));
 		break;

@@ -302,7 +302,8 @@ int __init ceres_sdhci_init(void)
 			nominal_core_mv * 1000;
 	}
 	tegra_get_board_info(&board_info);
-	if (board_info.board_id == BOARD_E1670)
+	if ((board_info.board_id == BOARD_E1670) ||
+		 (board_info.board_id == BOARD_E1740))
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
 
 	platform_device_register(&tegra_sdhci_device3);

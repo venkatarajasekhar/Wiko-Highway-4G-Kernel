@@ -496,7 +496,8 @@ int __init atlantis_fixed_regulator_init(void)
 	int num_fixed_regulators = ARRAY_SIZE(fixed_reg_devs_e1670);
 
 	tegra_get_board_info(&board_info);
-	if (board_info.fab == BOARD_FAB_A00)
+	if ((board_info.fab == BOARD_FAB_A00) &&
+		 (board_info.board_id != BOARD_E1740))
 		num_fixed_regulators--;
 	return platform_add_devices(fixed_reg_devs_e1670,
 					num_fixed_regulators);
@@ -847,7 +848,8 @@ int __init atlantis_regulator_init(void)
 		pmic_platform.reg_data[i] = atlantis_reg_data[i];
 		pmic_platform.reg_init[i] = atlantis_reg_init[i];
 	}
-	if (board_info.fab != BOARD_FAB_A00) {
+	if ((board_info.fab != BOARD_FAB_A00) ||
+		 (board_info.board_id == BOARD_E1740)) {
 		pmic_platform.reg_data[PALMAS_REG_REGEN7] = NULL;
 		pmic_platform.reg_init[PALMAS_REG_REGEN7] = NULL;
 	}
@@ -856,7 +858,8 @@ int __init atlantis_regulator_init(void)
 		pmic_platform.reg_init[PALMAS_REG_SMPS12] = NULL;
 
 		lp8755_regulator_init();
-	} else if (board_info.sku == BOARD_SKU_100) {
+	} else if (board_info.sku == BOARD_SKU_100 ||
+		 board_info.board_id == BOARD_E1740) {
 		reg_init_data_smps12.roof_floor = PALMAS_EXT_CONTROL_ENABLE1;
 	} else if (board_info.sku == BOARD_SKU_120) {
 		pmic_platform.reg_data[PALMAS_REG_SMPS12] =

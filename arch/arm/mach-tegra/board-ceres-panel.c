@@ -417,6 +417,7 @@ static void ceres_panel_select(void)
 		dsi_instance = DSI_INSTANCE_0;
 		break;
 	case BOARD_E1690:
+	case BOARD_E1740:
 		panel = &dsi_s_1080p_5;
 		dsi_instance = DSI_INSTANCE_0;
 		break;
@@ -476,7 +477,8 @@ void ceres_set_hotplug_gpio(void)
 	pdata = ceres_disp2_device.dev.platform_data;
 	tegra_get_board_info(&board_info);
 
-	if (board_info.board_id == BOARD_E1670) {
+	if ((board_info.board_id == BOARD_E1670) ||
+		 (board_info.board_id == BOARD_E1740)) {
 		hdmi_hpd_gpio = (PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO14);
 	} else if (board_info.fab > BOARD_FAB_A00)
 		hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);

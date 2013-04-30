@@ -2601,6 +2601,7 @@ int __init ceres_emc_init(void)
 	switch (bi.board_id) {
 	case BOARD_E1670:
 	case BOARD_E1671:
+	case BOARD_E1740:
 		pr_info("Loading Atlantis EMC tables.\n");
 		tegra_emc_device.dev.platform_data = &atlantis_emc_pdata;
 		break;

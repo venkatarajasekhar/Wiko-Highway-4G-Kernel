@@ -768,7 +768,7 @@ int __init ceres_regulator_init(void)
 		board_info.fab, board_info.major_revision,
 		board_info.minor_revision);
 
-	if (board_info.board_id == BOARD_E1670) {
+	if (board_info.board_id == BOARD_E1670 || board_info.board_id == BOARD_E1740) {
 		atlantis_regulator_init();
 		atlantis_pwm_init();
 		atlantis_vibrator_init();
@@ -944,7 +944,7 @@ static int __init ceres_fixed_regulator_init(void)
 		return 0;
 
 	tegra_get_board_info(&board_info);
-	if (board_info.board_id == BOARD_E1670)
+	if (board_info.board_id == BOARD_E1670 || board_info.board_id == BOARD_E1740)
 		return atlantis_fixed_regulator_init();
 
 	if(get_display_config() == 0)
