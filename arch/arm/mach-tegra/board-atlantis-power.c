@@ -25,6 +25,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/palmas.h>
+#include <linux/power/bq2419x-charger.h>
 #include <linux/platform_data/lp8755.h>
 #include <linux/irq.h>
 #include <linux/input/drv2603-vibrator.h>
@@ -670,6 +671,37 @@ struct palmas_gpadc_platform_data gpadc_pdata = {
 	.channel3_current_uA = 0,
 };
 
+/* BQ2419X VBUS regulator */
+static struct regulator_consumer_supply bq2419x_vbus_supply[] = {
+	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
+};
+
+static struct regulator_consumer_supply bq2419x_batt_supply[] = {
+	REGULATOR_SUPPLY("usb_bat_chg", "tegra-udc.0"),
+};
+
+static struct bq2419x_vbus_platform_data bq2419x_vbus_pdata = {
+	.num_consumer_supplies = ARRAY_SIZE(bq2419x_vbus_supply),
+	.consumer_supplies = bq2419x_vbus_supply,
+};
+
+struct bq2419x_charger_platform_data bq2419x_charger_pdata = {
+	.use_usb = 1,
+	.use_mains = 1,
+	.max_charge_current_mA = 3000,
+	.charging_term_current_mA = 100,
+	.consumer_supplies = bq2419x_batt_supply,
+	.num_consumer_supplies = ARRAY_SIZE(bq2419x_batt_supply),
+	.wdt_timeout    = 40,
+	.rtc_alarm_time = 3600,
+	.chg_restart_time = 1800,
+};
+
+struct bq2419x_platform_data bq2419x_pdata = {
+	.vbus_pdata = &bq2419x_vbus_pdata,
+	.bcharger_pdata = &bq2419x_charger_pdata,
+};
+
 static struct palmas_platform_data palmas_pdata = {
 	.gpio_base = PALMAS_TEGRA_GPIO_BASE,
 	.irq_base = PALMAS_TEGRA_IRQ_BASE,
@@ -681,6 +713,7 @@ static struct palmas_platform_data palmas_pdata = {
 	.watchdog_timer_initial_period = 128,
 	.pinctrl_pdata = &palmas_pinctrl_pdata,
 	.extcon_pdata = &palmas_extcon_pdata,
+	.charger_pdata = &bq2419x_pdata,
 	.adc_pdata = &gpadc_pdata,
 	.battery_pdata = &battery_pdata,
 };
