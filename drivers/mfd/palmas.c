@@ -117,15 +117,6 @@ static const struct resource battery_resource[] = {
 	},
 };
 
-static const struct resource charger_resource[] = {
-	{
-		.name = "palmas-charger",
-		.start = PALMAS_CHARGER_IRQ,
-		.end = PALMAS_CHARGER_IRQ,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
 enum palmas_ids {
 	PALMAS_PIN_MUX_ID,
 	PALMAS_PMIC_ID,
@@ -217,8 +208,6 @@ static const struct mfd_cell palmas_children[] = {
 	},
 	{
 		.name = "palmas-charger",
-		.num_resources = ARRAY_SIZE(charger_resource),
-		.resources = charger_resource,
 		.id = PALMAS_CHARGER_ID,
 	},
 };
