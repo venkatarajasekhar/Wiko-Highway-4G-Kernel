@@ -23,6 +23,9 @@
 #define PMC_WAKE_STATUS		0x14
 #define PMC_WAKE2_STATUS	0x168
 
+#define MPU_GYRO_ORIENTATION_E1670      { -1, 0, 0, 0, -1, 0, 0, 0, 1 }
+#define MPU_COMPASS_ORIENTATION_E1670   { 0, -1, 0, -1, 0, 0, 0, 0, -1 }
+
 int atlantis_regulator_init(void);
 int atlantis_fixed_regulator_init(void);
 int atlantis_vibrator_init(void);
