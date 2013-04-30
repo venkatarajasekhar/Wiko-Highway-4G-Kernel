@@ -74,13 +74,13 @@
 
 #define MPU_GYRO_ADDR			0x69
 #define MPU_GYRO_BUS_NUM		0
-#define MPU_GYRO_ORIENTATION		{ -1, 0, 0, 0, 1, 0, 0, 0, -1 }
+#define MPU_GYRO_ORIENTATION		{ 0, 1, 0, -1, 0, 0, 0, 0, 1 }
 #define MPU_GYRO_ORIENTATION_E1680	{ -1, 0, 0, 0, -1, 0, 0, 0, 1 }
 #define MPU_COMPASS_NAME		"ak8975"
 #define MPU_COMPASS_IRQ_GPIO		0
 #define MPU_COMPASS_ADDR		0x0D
 #define MPU_COMPASS_BUS_NUM		0
-#define MPU_COMPASS_ORIENTATION		{ 0, -1, 0, 1, 0, 0, 0, 0, 1 }
+#define MPU_COMPASS_ORIENTATION		{ 1, 0, 0, 0, -1, 0, 0, 0, -1 }
 #define MPU_COMPASS_ORIENTATION_E1680	{ 0, -1, 0, -1, 0, 0, 0, 0, -1 }
 
 /* PCA954x I2C bus expander bus addresses */
