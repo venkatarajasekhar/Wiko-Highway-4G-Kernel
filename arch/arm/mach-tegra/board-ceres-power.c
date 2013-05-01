@@ -1028,6 +1028,10 @@ int __init ceres_edp_init(void)
 	return 0;
 }
 
+static struct thermal_zone_params soctherm_tzp = {
+	.governor_name = "pid_thermal_gov",
+};
+
 static struct soctherm_platform_data ceres_soctherm_data = {
 	.therm = {
 		[THERM_CPU] = {
@@ -1058,6 +1062,7 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 					.lower = THERMAL_NO_LIMIT,
 				},
 			},
+			.tzp = &soctherm_tzp,
 		},
 		[THERM_GPU] = {
 			.zone_enable = true,
@@ -1087,6 +1092,7 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 					.lower = THERMAL_NO_LIMIT,
 				},
 			},
+			.tzp = &soctherm_tzp,
 		},
 		[THERM_PLL] = {
 			.zone_enable = true,
