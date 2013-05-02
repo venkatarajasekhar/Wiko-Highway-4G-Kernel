@@ -761,6 +761,7 @@ int __init ceres_regulator_init(void)
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
 	int id;
+	bool wdt_disable;
 
 	tegra_get_board_info(&board_info);
 	pr_info("board_info: id:sku:fab:major:minor = 0x%04x:0x%04x:0x%02x:0x%02x:0x%02x\n",
@@ -838,6 +839,11 @@ int __init ceres_regulator_init(void)
 		max77660_reg_pdata[MAX77660_REGULATOR_ID_LDO4] =
 			&max77660_regulator_pdata_ldo4_display_config0;
 
+	wdt_disable = is_pmic_wdt_disabled_at_boot();
+	if (wdt_disable) {
+		max77660_pdata.system_watchdog_timeout = 0;
+		max77660_charger_pdata.wdt_timeout = 0;
+	}
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
 
