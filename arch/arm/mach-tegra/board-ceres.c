@@ -686,7 +686,7 @@ static void ceres_usb_init(void)
 		/* Device cable is detected through PMU Interrupt */
 		tegra_otg_pdata.vbus_extcon_dev_name = "max77660-extcon";
 
-		/* Host cable is detected through GPIO from PMU */
+		/* Host cable is detected through PMU GPIO Interrupt */
 		tegra_udc_pdata.id_det_type = TEGRA_USB_GPIO_ID;
 		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_GPIO_ID;
 		tegra_otg_pdata.id_det_gpio =
@@ -707,9 +707,17 @@ static void ceres_usb_init(void)
 		/* Device cable is detected through PMU Interrupt */
 		tegra_otg_pdata.vbus_extcon_dev_name = "max77660-extcon";
 
-		/* Host cable is detected through GPIO from PMU */
-		tegra_udc_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
-		tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
+		if (board_info.fab < BOARD_FAB_A02) {
+			tegra_udc_pdata.id_det_type = TEGRA_USB_VIRTUAL_ID;
+			tegra_ehci1_utmi_pdata.id_det_type =
+					TEGRA_USB_VIRTUAL_ID;
+		} else {
+			/* Host cable is detected through PMU GPIO Interrupt */
+			tegra_udc_pdata.id_det_type = TEGRA_USB_GPIO_ID;
+			tegra_ehci1_utmi_pdata.id_det_type = TEGRA_USB_GPIO_ID;
+			tegra_otg_pdata.id_det_gpio =
+					MAX77660_GPIO_BASE + MAX77660_GPIO8;
+		}
 		break;
 	default:
 		pr_err("%s: board_id=%#x unknown tegra14x board.\n", __func__,
