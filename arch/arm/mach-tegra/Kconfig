@@ -98,6 +98,7 @@ config ARCH_TEGRA_3x_SOC
 	select TEGRA_LATENCY_ALLOWANCE_SCALING
 	select SOC_BUS
 	select PM_GENERIC_DOMAINS if PM
+	select TEGRA_ERRATA_1053704
 	help
 	  Support for NVIDIA Tegra T30 processor family, based on the
 	  ARM CortexA9MP CPU and the ARM PL310 L2 cache controller
@@ -134,6 +135,7 @@ config ARCH_TEGRA_11x_SOC
 	select TEGRA_ISOMGR_SYSFS
 	select TEGRA_ERRATA_1157520
 	select TEGRA_ERRATA_977223
+	select TEGRA_ERRATA_1053704
 	select TEGRA_CORE_EDP_LIMITS
 	select TEGRA_VDD_CORE_OVERRIDE if TEGRA_EMC_SCALING_ENABLE
 	select TEGRA_THERMAL_THROTTLE_EXACT_FREQ
@@ -183,6 +185,7 @@ config ARCH_TEGRA_14x_SOC
 	select TEGRA_ERRATA_1213083
 	select TEGRA_ERRATA_977223
 	select TEGRA_ERRATA_1252872
+	select TEGRA_ERRATA_1053704
 	select ARCH_HAS_PASR
 	help
 	  Support for NVIDIA Tegra 14x family of SoCs, based upon the
