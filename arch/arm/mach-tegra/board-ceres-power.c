@@ -30,6 +30,7 @@
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/platform_data/lp8755.h>
 #include <linux/max17048_battery.h>
+#include <linux/pid_thermal_gov.h>
 
 #include <asm/mach-types.h>
 
@@ -1034,8 +1035,20 @@ int __init ceres_edp_init(void)
 	return 0;
 }
 
+static struct pid_thermal_gov_params soctherm_pid_params = {
+	.max_err_temp = 9000,
+	.max_err_gain = 1000,
+
+	.gain_p = 1000,
+	.gain_d = 0,
+
+	.up_compensation = 20,
+	.down_compensation = 20,
+};
+
 static struct thermal_zone_params soctherm_tzp = {
 	.governor_name = "pid_thermal_gov",
+	.governor_params = &soctherm_pid_params,
 };
 
 static struct soctherm_platform_data ceres_soctherm_data = {
