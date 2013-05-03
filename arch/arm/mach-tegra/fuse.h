@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2010-2013 NVIDIA Corp.
+ * Copyright (c) 2010-2013 NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@android.com>
