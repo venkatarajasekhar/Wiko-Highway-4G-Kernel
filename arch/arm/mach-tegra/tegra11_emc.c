@@ -295,10 +295,8 @@ static struct {
 static DEFINE_SPINLOCK(emc_access_lock);
 
 static void __iomem *emc_base = IO_ADDRESS(TEGRA_EMC_BASE);
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 static void __iomem *emc0_base = IO_ADDRESS(TEGRA_EMC0_BASE);
 static void __iomem *emc1_base = IO_ADDRESS(TEGRA_EMC1_BASE);
-#endif
 static void __iomem *mc_base = IO_ADDRESS(TEGRA_MC_BASE);
 static void __iomem *clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 
@@ -306,7 +304,6 @@ static inline void emc_writel(u32 val, unsigned long addr)
 {
 	writel(val, (u32)emc_base + addr);
 }
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 static inline void emc0_writel(u32 val, unsigned long addr)
 {
 	writel(val, (u32)emc0_base + addr);
@@ -315,7 +312,6 @@ static inline void emc1_writel(u32 val, unsigned long addr)
 {
 	writel(val, (u32)emc1_base + addr);
 }
-#endif
 static inline u32 emc_readl(unsigned long addr)
 {
 	return readl((u32)emc_base + addr);
@@ -575,14 +571,12 @@ static noinline void emc_set_clock(const struct tegra11_emc_table *next_timing,
 			continue;
 		__raw_writel(next_timing->burst_regs[i], burst_reg_addr[i]);
 	}
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	for (i = 0; i < next_timing->emc_trimmers_num; i++) {
 		__raw_writel(next_timing->emc_trimmers_0[i],
 			(u32)emc0_base + emc_trimmer_offs[i]);
 		__raw_writel(next_timing->emc_trimmers_1[i],
 			(u32)emc1_base + emc_trimmer_offs[i]);
 	}
-#endif
 	emc_cfg_reg &= ~EMC_CFG_UPDATE_MASK;
 	emc_cfg_reg |= next_timing->emc_cfg & EMC_CFG_UPDATE_MASK;
 	emc_writel(emc_cfg_reg, EMC_CFG);
@@ -685,14 +679,12 @@ static inline void emc_get_timing(struct tegra11_emc_table *timing)
 		else
 			timing->burst_regs[i] = 0;
 	}
-#ifdef CONFIG_ARCH_TEGRA_11x_SOC
 	for (i = 0; i < timing->emc_trimmers_num; i++) {
 		timing->emc_trimmers_0[i] =
 			__raw_readl((u32)emc0_base + emc_trimmer_offs[i]);
 		timing->emc_trimmers_1[i] =
 			__raw_readl((u32)emc1_base + emc_trimmer_offs[i]);
 	}
-#endif
 	timing->emc_acal_interval = 0;
 	timing->emc_zcal_cnt_long = 0;
 	timing->emc_mode_reset = 0;
