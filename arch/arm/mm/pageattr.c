@@ -1124,9 +1124,7 @@ EXPORT_SYMBOL(set_pages_array_wb);
 
 int set_pages_array_iwb(struct page **pages, int addrinarray)
 {
-#ifdef CONFIG_OUTER_CACHE
 	flush_cache(pages, addrinarray);
-#endif
 	return 0;
 }
 EXPORT_SYMBOL(set_pages_array_iwb);
