@@ -97,7 +97,7 @@ static struct regulator_consumer_supply tps6591x_ldo2_supply_0[] = {
 	REGULATOR_SUPPLY("avdd_pllm", NULL),
 	REGULATOR_SUPPLY("avdd_pllu_d", NULL),
 	REGULATOR_SUPPLY("avdd_pllu_d2", NULL),
-	REGULATOR_SUPPLY("avdd_dsi_csi", "tegra_camera"),
+	REGULATOR_SUPPLY("avdd_dsi_csi", "vi"),
 };
 
 static struct regulator_consumer_supply tps6591x_ldo3_supply_0[] = {

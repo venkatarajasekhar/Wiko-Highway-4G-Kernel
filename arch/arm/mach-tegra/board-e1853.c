@@ -428,10 +428,6 @@ static void e1853_spi_init(void)
 	e1853_register_spidev();
 }
 
-static struct platform_device tegra_camera = {
-	.name = "tegra_camera",
-	.id = -1,
-};
 
 static struct platform_device *e1853_devices[] __initdata = {
 #if defined(CONFIG_TEGRA_AVP)
@@ -440,7 +436,6 @@ static struct platform_device *e1853_devices[] __initdata = {
 #if defined(CONFIG_RTC_DRV_TEGRA)
 	&tegra_rtc_device,
 #endif
-	&tegra_camera,
 #if defined(CONFIG_BCM4329_RFKILL)
 	&e1853_bcm4329_rfkill_device,
 #endif
