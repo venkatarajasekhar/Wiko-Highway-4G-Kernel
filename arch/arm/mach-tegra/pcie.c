@@ -41,6 +41,7 @@
 #include <linux/gpio.h>
 #include <linux/clk.h>
 #include <linux/async.h>
+#include <linux/vmalloc.h>
 
 #include <asm/sizes.h>
 #include <asm/mach/pci.h>
@@ -282,14 +283,6 @@
 #define PREFETCH_MEM_SIZE_0			(SZ_512M + SZ_256M)
 #endif
 
-#define  PCIE_CONF_BUS(b)					((b) << 16)
-#define  PCIE_CONF_DEV(d)					((d) << 11)
-#define  PCIE_CONF_FUNC(f)					((f) << 8)
-/* bits 0:7 + bits 24:27 is used to address extended config space */
-#define  PCIE_CONF_REG(r)	\
-	(((((r) & 0xf00) << 16) | (((r) & 0xff) & ~3)) +	\
-		(((r) < 256) ? PCIE_CFG_OFF : PCIE_EXT_CFG_OFF))
-
 struct tegra_pcie_port {
 	int			index;
 	u8			root_bus_nr;
@@ -322,6 +315,7 @@ struct tegra_pcie_info {
 	struct clk		*pll_e;
 	struct device		*dev;
 	struct tegra_pci_platform_data *plat_data;
+	struct list_head busses;
 }tegra_pcie;
 
 struct resource tegra_pcie_res_mmio = {
@@ -329,6 +323,12 @@ struct resource tegra_pcie_res_mmio = {
 	.start = MMIO_BASE,
 	.end = MMIO_BASE + MMIO_SIZE - 1,
 	.flags = IORESOURCE_MEM,
+};
+
+struct tegra_pcie_bus {
+	struct vm_struct *area;
+	struct list_head list;
+	unsigned int nr;
 };
 
 static struct resource pcie_io_space;
@@ -393,6 +393,105 @@ static struct tegra_pcie_port *bus_to_port(int bus)
 	return i >= 0 ? tegra_pcie.port + i : NULL;
 }
 
+/*
+ * The configuration space mapping on Tegra is somewhat similar to the ECAM
+ * defined by PCIe. However it deviates a bit in how the 4 bits for extended
+ * register accesses are mapped:
+ *
+ *    [27:24] extended register number
+ *    [23:16] bus number
+ *    [15:11] device number
+ *    [10: 8] function number
+ *    [ 7: 0] register number
+ *
+ * Mapping the whole extended configuration space would required 256 MiB of
+ * virtual address space, only a small part of which will actually be used.
+ * To work around this, a 1 MiB of virtual addresses are allocated per bus
+ * when the bus is first accessed. When the physical range is mapped, the
+ * the bus number bits are hidden so that the extended register number bits
+ * appear as bits [19:16]. Therefore the virtual mapping looks like this:
+ *
+ *    [19:16] extended register number
+ *    [15:11] device number
+ *    [10: 8] function number
+ *    [ 7: 0] register number
+ *
+ * This is achieved by stitching together 16 chunks of 64 KiB of physical
+ * address space via the MMU.
+ */
+static unsigned long tegra_pcie_conf_offset(unsigned int devfn, int where)
+{
+
+	return ((where & 0xf00) << 8) | (PCI_SLOT(devfn) << 11) |
+	       (PCI_FUNC(devfn) << 8) | (where & 0xfc);
+}
+
+static struct tegra_pcie_bus *tegra_pcie_bus_alloc(unsigned int busnr)
+{
+	pgprot_t prot = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY | L_PTE_XN |
+			L_PTE_MT_DEV_SHARED | L_PTE_SHARED;
+	phys_addr_t cs = (phys_addr_t)PCIE_CFG_OFF;
+	struct tegra_pcie_bus *bus;
+	unsigned int i;
+	int err;
+
+	bus = kzalloc(sizeof(*bus), GFP_KERNEL);
+	if (!bus)
+		return ERR_PTR(-ENOMEM);
+
+	INIT_LIST_HEAD(&bus->list);
+	bus->nr = busnr;
+
+	/* allocate 1 MiB of virtual addresses */
+	bus->area = get_vm_area(SZ_1M, VM_IOREMAP);
+	if (!bus->area) {
+		err = -ENOMEM;
+		goto free;
+	}
+
+	/* map each of the 16 chunks of 64 KiB each */
+	for (i = 0; i < 16; i++) {
+		unsigned long virt = (unsigned long)bus->area->addr +
+				     i * SZ_64K;
+		phys_addr_t phys = cs + i * SZ_1M + busnr * SZ_64K;
+
+		err = ioremap_page_range(virt, virt + SZ_64K, phys, prot);
+		if (err < 0) {
+			dev_err(tegra_pcie.dev, "ioremap_page_range() failed: %d\n",
+				err);
+			goto unmap;
+		}
+	}
+
+	return bus;
+unmap:
+	vunmap(bus->area->addr);
+free:
+	kfree(bus);
+	return ERR_PTR(err);
+}
+
+/*
+ * Look up a virtual address mapping for the specified bus number.
+ * If no such mapping existis, try to create one.
+ */
+static void __iomem *tegra_pcie_bus_map(unsigned int busnr)
+{
+	struct tegra_pcie_bus *bus;
+
+	list_for_each_entry(bus, &tegra_pcie.busses, list)
+		if (bus->nr == busnr)
+			return bus->area->addr;
+
+	bus = tegra_pcie_bus_alloc(busnr);
+	if (IS_ERR(bus))
+		return NULL;
+
+	list_add_tail(&bus->list, &tegra_pcie.busses);
+
+	return bus->area->addr;
+}
+
 static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 				int where, int size, u32 *val)
 {
@@ -411,13 +510,15 @@ static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 
 		addr = pp->base + (where & ~0x3);
 	} else {
-		/* Extended config space access not supported */
-		if (where >= 0x100)
-			return PCIBIOS_BAD_REGISTER_NUMBER;
-		addr = tegra_pcie.regs + (PCIE_CONF_BUS(bus->number) +
-					  PCIE_CONF_DEV(PCI_SLOT(devfn)) +
-					  PCIE_CONF_FUNC(PCI_FUNC(devfn)) +
-					  PCIE_CONF_REG(where));
+		addr = tegra_pcie_bus_map(bus->number);
+		if (!addr) {
+			dev_err(tegra_pcie.dev,
+				"failed to map cfg. space for bus %u\n",
+				bus->number);
+			*val = 0xffffffff;
+			return PCIBIOS_DEVICE_NOT_FOUND;
+		}
+		addr += tegra_pcie_conf_offset(devfn, where);
 	}
 
 	*val = readl(addr);
@@ -462,13 +563,14 @@ static int tegra_pcie_write_conf(struct pci_bus *bus, unsigned int devfn,
 
 		addr = pp->base + (where & ~0x3);
 	} else {
-		/* Extended config space access not supported */
-		if (where >= 0x100)
-			return PCIBIOS_BAD_REGISTER_NUMBER;
-		addr = tegra_pcie.regs + (PCIE_CONF_BUS(bus->number) +
-					  PCIE_CONF_DEV(PCI_SLOT(devfn)) +
-					  PCIE_CONF_FUNC(PCI_FUNC(devfn)) +
-					  PCIE_CONF_REG(where));
+		addr = tegra_pcie_bus_map(bus->number);
+		if (!addr) {
+			dev_err(tegra_pcie.dev,
+				"failed to map cfg. space for bus %u\n",
+				bus->number);
+			return PCIBIOS_DEVICE_NOT_FOUND;
+		}
+		addr += tegra_pcie_conf_offset(devfn, where);
 	}
 
 	if (size == 4) {
@@ -1019,7 +1121,7 @@ static int tegra_pcie_map_resources(void)
 	int err;
 
 	/* Allocate config space virtual memory */
-	tegra_pcie.regs = ioremap_nocache(TEGRA_PCIE_BASE, PCIE_IOMAP_SZ);
+	tegra_pcie.regs = ioremap_nocache(TEGRA_PCIE_BASE, PCIE_REGS_SZ);
 	if (tegra_pcie.regs == NULL) {
 		pr_err("PCIE: Failed to map PCI/AFI registers\n");
 		return -ENOMEM;
@@ -1307,6 +1409,7 @@ static int __init tegra_pcie_init(void)
 	pcibios_min_io = 0x10000000ul;
 #endif
 
+	INIT_LIST_HEAD(&tegra_pcie.busses);
 	INIT_WORK(&tegra_pcie.hotplug_detect, work_hotplug_handler);
 	err = tegra_pcie_get_resources();
 	if (err)
@@ -1457,6 +1560,13 @@ exit:
 
 static int tegra_pcie_remove(struct platform_device *pdev)
 {
+	struct tegra_pcie_bus *bus;
+
+	list_for_each_entry(bus, &tegra_pcie.busses, list) {
+		vunmap(bus->area->addr);
+		kfree(bus);
+	}
+	tegra_pcie_detach();
 	return 0;
 }
 
