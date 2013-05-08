@@ -950,6 +950,20 @@ static void __init tegra_ceres_early_init(void)
 	tegra_clk_verify_parents();
 }
 
+static void __init sysedp_psydepl_init(void)
+{
+	struct board_info bi;
+
+	tegra_get_board_info(&bi);
+
+	switch (bi.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
+		ceres_sysedp_psydepl_init();
+		break;
+	}
+}
+
 static void __init tegra_ceres_late_init(void)
 {
 	platform_device_register(&tegra_pinmux_device);
@@ -986,6 +1000,7 @@ static void __init tegra_ceres_late_init(void)
 #endif
 	ceres_audio_init();
 	ceres_pmon_init();
+	sysedp_psydepl_init();
 }
 
 static void __init tegra_ceres_dt_init(void)

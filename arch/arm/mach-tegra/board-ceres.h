@@ -118,5 +118,6 @@ int ceres_pmon_init(void);
 int ceres_edp_init(void);
 int ceres_pinmux_suspend(void);
 void ceres_sysedp_init(void);
+void ceres_sysedp_psydepl_init(void);
 
 #endif
