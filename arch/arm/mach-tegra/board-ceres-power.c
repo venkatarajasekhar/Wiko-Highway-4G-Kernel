@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/edp.h>
 #include <linux/i2c.h>
 #include <linux/pda_power.h>
 #include <linux/platform_device.h>
@@ -1117,4 +1118,32 @@ int __init ceres_soctherm_init(void)
 			   &ceres_soctherm_data.therm[THERM_CPU].num_trips);
 
 	return tegra11_soctherm_init(&ceres_soctherm_data);
+}
+
+static struct edp_manager ceres_sysedp_manager = {
+	.name = "battery",
+	.max = 50000
+};
+
+void __init ceres_sysedp_init(void)
+{
+	struct edp_governor *g;
+	int r;
+
+	if (!IS_ENABLED(CONFIG_EDP_FRAMEWORK))
+		return;
+
+	r = edp_register_manager(&ceres_sysedp_manager);
+	WARN_ON(r);
+	if (r)
+		return;
+
+	/* start with priority governor */
+	g = edp_get_governor("priority");
+	WARN_ON(!g);
+	if (!g)
+		return;
+
+	r = edp_set_governor(&ceres_sysedp_manager, g);
+	WARN_ON(r);
 }
