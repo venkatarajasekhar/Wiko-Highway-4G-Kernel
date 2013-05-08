@@ -1000,6 +1000,7 @@ static void __init tegra_ceres_late_init(void)
 #endif
 	ceres_audio_init();
 	ceres_pmon_init();
+	ceres_sysedp_core_init();
 	sysedp_psydepl_init();
 }
 
