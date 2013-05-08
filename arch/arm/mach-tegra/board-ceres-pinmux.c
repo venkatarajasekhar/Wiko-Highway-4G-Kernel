@@ -281,6 +281,7 @@ int __init ceres_pinmux_init(void)
 
 static struct gpio_init_pin_info ceres_suspend_pin_state[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PL3, false, 0),
 };
 
 int ceres_pinmux_suspend(void)
