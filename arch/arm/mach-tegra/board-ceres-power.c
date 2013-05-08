@@ -787,6 +787,7 @@ int __init ceres_regulator_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1671:
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
 					MAX77660_PIN_PULL_UP;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].open_drain = 1;
