@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (C) 2010-2013 NVIDIA Corporation
+ * Copyright (C) 2010-2013 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -691,6 +691,12 @@ struct tegra_dc_platform_data {
 	bool			cmu_enable;
 	struct tegra_dc_cmu	*cmu;
 #endif
+};
+
+struct tegra_dc_bw_data {
+	u32	total_bw;
+	u32	avail_bw;
+	u32	resvd_bw;
 };
 
 #define TEGRA_DC_FLAG_ENABLED		(1 << 0)
