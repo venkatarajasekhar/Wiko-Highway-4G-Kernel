@@ -1115,7 +1115,37 @@ static int palmas_ldo_init(struct palmas *palmas, int id,
 			return ret;
 		}
 	}
+	return 0;
+}
 
+static int palmas_ldo5_tracking_init(struct palmas *palmas,
+		struct palmas_reg_init *reg_init,
+		struct regulator_dev *rdev)
+{
+	unsigned int reg;
+	int ret;
+
+	ret = palmas_ldo_read(palmas, PALMAS_LDO_CTRL, &reg);
+	if (ret < 0)
+		return ret;
+	reg = reg & ~PALMAS_LDO_CTRL_LDO5_BYPASS_SRC_SEL_MASK;
+	if (reg_init->enable_tracking) {
+		if (reg_init->tracking_regulator == PALMAS_REG_SMPS12)
+			reg |= PALMAS_LDO_CTRL_LDO5_BYPASS_SRC_SEL_SMPS12;
+		else if (reg_init->tracking_regulator == PALMAS_REG_SMPS3)
+			reg |= PALMAS_LDO_CTRL_LDO5_BYPASS_SRC_SEL_SMPS3;
+		else if (reg_init->tracking_regulator == PALMAS_REG_SMPS6)
+			reg |= PALMAS_LDO_CTRL_LDO5_BYPASS_SRC_SEL_SMPS6;
+	}
+	ret = palmas_ldo_write(palmas, PALMAS_LDO_CTRL, reg);
+	if (ret < 0)
+		return ret;
+
+	if (reg_init->enable_tracking) {
+		ret = palmas_disable_ldo(rdev);
+		if (ret < 0)
+		return ret;
+	}
 	return 0;
 }
 
@@ -1618,6 +1648,13 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 								reg_init);
 				if (ret)
 					goto err_unregister_regulator;
+			
+				if (id == PALMAS_REG_LDO5) {
+					ret = palmas_ldo5_tracking_init(
+							palmas, reg_init, rdev);
+					if (ret)
+						goto err_unregister_regulator;
+				}
 			}
 		}
 	}
