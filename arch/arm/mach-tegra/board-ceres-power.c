@@ -304,10 +304,10 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 
 
 MAX77660_PDATA_INIT(BUCK1, buck1,  650, 1400, NULL,
-		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+		1, 1, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN1);
 
 MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL,
-		1, 1, 0, FPS_SRC_DEF, 0, 0, 0);
+		1, 1, 0, FPS_SRC_DEF, 0, 0, ENABLE_EN2);
 
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
@@ -801,9 +801,9 @@ int __init ceres_regulator_init(void)
 			max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
 			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
 			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
-			max77660_pdata.en_buck2_ext_ctrl = true;
 		} else {
-			max77660_pdata.en_buck2_ext_ctrl = true;
+			max77660_regulator_pdata_buck2.flags = ENABLE_EN1;
+			max77660_regulator_pdata_buck1.flags = 0;
 			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
 			max77660_regulator_idata_buck1.num_consumer_supplies =
 					ARRAY_SIZE(max77660_unused_supply);
@@ -828,7 +828,6 @@ int __init ceres_regulator_init(void)
 		max77660_regulator_pdata_buck7.fps_src = FPS_SRC_3;
 		max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
 		max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
-		max77660_pdata.en_buck2_ext_ctrl = true;
 		break;
 
 	default:
