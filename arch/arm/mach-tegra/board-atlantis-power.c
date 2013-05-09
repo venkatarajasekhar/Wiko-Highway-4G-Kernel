@@ -362,7 +362,7 @@ PALMAS_REG_INIT(ldo1, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(ldo2, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(ldo3, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(ldo4, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldo5, 0, 0, 0, 0, 0);
+PALMAS_REG_INIT(ldo5, 0, PALMAS_EXT_CONTROL_NSLEEP, 1, 0, 0);
 PALMAS_REG_INIT(ldo6, 0, 0, 0, 0, 0);
 PALMAS_REG_INIT(ldo7, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
 PALMAS_REG_INIT(ldo8, 0, 0, 0, 0, 0);
@@ -852,6 +852,8 @@ int __init atlantis_regulator_init(void)
 				atlantis_reg_init[PALMAS_REG_SMPS6];
 		pmic_platform.reg_data[PALMAS_REG_SMPS6] = NULL;
 		pmic_platform.reg_init[PALMAS_REG_SMPS6] = NULL;
+		reg_init_data_ldo5.enable_tracking = true;
+		reg_init_data_ldo5.tracking_regulator = PALMAS_REG_SMPS12;
 
 		lp8755_regulator_init();
 	}
