@@ -664,6 +664,7 @@ static struct palmas_battery_platform_data battery_pdata = {
 	/* Battery Configuration for Fuel Guage */
 	.cell_cfg = &cell_cfg,
 	.gpadc_retry_count = 5,
+	.is_battery_present = false,
 };
 
 struct palmas_gpadc_platform_data gpadc_pdata = {
@@ -857,6 +858,10 @@ int __init atlantis_regulator_init(void)
 
 		lp8755_regulator_init();
 	}
+
+	if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY)
+		((struct palmas_platform_data *)palma_device[0].platform_data)
+				->battery_pdata->is_battery_present = true;
 
 	i2c_register_board_info(4, palma_device,
 			ARRAY_SIZE(palma_device));
