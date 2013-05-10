@@ -238,7 +238,7 @@ static struct regulator_consumer_supply palmas_regen5_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_regen7_supply[] = {
-	REGULATOR_SUPPLY("avdd_lcd_ext", NULL),
+	REGULATOR_SUPPLY("avdd_lcd", NULL),
 	REGULATOR_SUPPLY("avdd", "spi2.0"),
 	REGULATOR_SUPPLY("vin", "2-004a"),
 };
@@ -417,7 +417,7 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 };
 
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
-	REGULATOR_SUPPLY("avdd_lcd_ext", NULL),
+	REGULATOR_SUPPLY("avdd_lcd", NULL),
 	REGULATOR_SUPPLY("avdd", "spi2.0"),
 	REGULATOR_SUPPLY("vin", "2-004a"),
 };
