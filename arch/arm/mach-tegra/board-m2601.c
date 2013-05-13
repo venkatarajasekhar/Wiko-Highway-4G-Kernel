@@ -63,8 +63,7 @@
 
 /* B00 boards shared GMI address space */
 #define GMI_SRAM_BASE_OFFSET	0x0000000
-#define GMI_SRAM_PCA9665_BASE_OFFSET	0x2000000
-#define GMI_PCA9663_BASE_OFFSET	0x2000100
+#define GMI_SRAM_PCA9665_BASE_OFFSET	0x1000000
 
 static __initdata struct tegra_clk_init_table m2601_clk_init_table[] = {
 	/* name		parent		rate		enabled */
@@ -266,9 +265,37 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 		.xcvr_use_lsb = 1,
 	},
 };
+
+static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_HOST,
+	.u_data.host = {
+		.vbus_gpio = -1,
+		.hot_plug = false,
+		.remote_wakeup_supported = true,
+		.power_off_on_suspend = true,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.idle_wait_delay = 17,
+		.elastic_limit = 16,
+		.term_range_adj = 6,
+		.xcvr_setup = 63,
+		.xcvr_setup_offset = 6,
+		.xcvr_use_fuses = 1,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_use_lsb = 1,
+	},
+};
+
 static void m2601_usb_init(void)
 {
+	tegra_ehci1_device.dev.platform_data = &tegra_ehci1_utmi_pdata;
 	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
+	platform_device_register(&tegra_ehci1_device);
 	platform_device_register(&tegra_ehci2_device);
 }
 
@@ -541,7 +568,8 @@ static void m2601_gmi_pca_init(void)
 		m2601_gmi_pca_data.csinfo.cs = CS_7;
 		m2601_gmi_pca_data.csinfo.virt =
 				IO_ADDRESS(TEGRA_NOR_FLASH_BASE +
-						GMI_SRAM_PCA9665_BASE_OFFSET);
+					(m2601_gmi_pca_data.BusWidth *
+						GMI_SRAM_PCA9665_BASE_OFFSET));
 		m2601_gmi_pca_data.csinfo.phys =
 			TEGRA_NOR_FLASH_BASE + GMI_SRAM_PCA9665_BASE_OFFSET;
 		m2601_gmi_pca_data.csinfo.size = 4;
@@ -555,6 +583,7 @@ static void m2601_gmi_pca_init(void)
 	platform_device_register(&tegra_gmi_pca_device);
 
 }
+
 static void __init tegra_m2601_init(void)
 {
 	tegra_init_board_info();
