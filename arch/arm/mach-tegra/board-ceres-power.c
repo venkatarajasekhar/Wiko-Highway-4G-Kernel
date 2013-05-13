@@ -1135,6 +1135,31 @@ static void ceres_board_resume(int lp_state, enum resume_stage stg)
 {
 }
 
+#ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
+static struct lpx_corev_reg_lookup ceres_reg_lookup[] = {
+	{   0, 0x20}, /* No voltage is no lp1bb, set lowest voltage 0.8V */
+	{ 800, 0x20},
+	{ 850, 0x28},
+	{ 900, 0x30},
+	{ 950, 0x38},
+	{1000, 0x40},
+	{1050, 0x48},
+	{1100, 0x50},
+	{1150, 0x58},
+	{1230, 0x65},
+	{INT_MAX, 0x68},
+};
+
+static int ceres_lp1_reg_lookup(int voltage)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(ceres_reg_lookup); i++)
+		if (voltage == ceres_reg_lookup[i].core_voltage)
+			return ceres_reg_lookup[i].reg_value;
+	return 0x50; /* Default Voltage: 1.1V */
+}
+#endif
+
 static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.cpu_timer	= 200,
 	.cpu_off_timer	= 100,
@@ -1146,6 +1171,17 @@ static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.cpu_lp2_min_residency = 1000,
 	.board_suspend = ceres_board_suspend,
 	.board_resume = ceres_board_resume,
+#ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
+	/* Settings for Ceres */
+	.lp1_lowvolt_support = true,
+	.i2c_base_addr = TEGRA_I2C5_BASE,
+	.pmuslave_addr = 0x46,
+	.core_reg_addr = 0x46,
+	.lp1_core_volt_low_cold = 0x20,
+	.lp1_core_volt_low = 0x20,
+	.lp1_core_volt_high = 0x58,
+	.lp1_lookup_reg = ceres_lp1_reg_lookup,
+#endif
 };
 
 
@@ -1162,6 +1198,16 @@ int __init ceres_suspend_init(void)
 	}
 
 	tegra_init_suspend(&ceres_suspend_data);
+
+	tegra_get_board_info(&board_info);
+#ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
+	if (board_info.board_id == BOARD_E1680) {
+		if (board_info.sku == 1000)
+			ceres_suspend_data.core_reg_addr = 0x47;
+	} else {
+		ceres_suspend_data.lp1_lowvolt_support = false;
+	}
+#endif
 	return 0;
 }
 
