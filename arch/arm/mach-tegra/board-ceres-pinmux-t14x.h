@@ -52,10 +52,10 @@ static __initdata struct tegra_pingroup_config ceres_pinmux_common[] = {
 	DEFAULT_PINMUX(DAP5_FS,       I2S4,        NORMAL,    NORMAL,   OUTPUT),
 
 	/* SPI2 pinmux */
-	DEFAULT_PINMUX(SPI2_SCK,      SPI2,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(SPI2_MISO,     SPI2,        NORMAL,    NORMAL,   INPUT),
-	DEFAULT_PINMUX(SPI2_MOSI,     SPI2,        NORMAL,    NORMAL,   OUTPUT),
-	DEFAULT_PINMUX(SPI2_CS0_N,    SPI2,        NORMAL,    NORMAL,   OUTPUT),
+	DEFAULT_PINMUX(SPI2_SCK,      DTV,        NORMAL,    NORMAL,   INPUT),
+	DEFAULT_PINMUX(SPI2_MISO,     DTV,        NORMAL,    NORMAL,   INPUT),
+	DEFAULT_PINMUX(SPI2_MOSI,     DTV,        NORMAL,    NORMAL,   INPUT),
+	DEFAULT_PINMUX(SPI2_CS0_N,    DTV,        NORMAL,    NORMAL,   INPUT),
 	DEFAULT_PINMUX(SPI2_CS1_N,    SPI2,        PULL_UP,    NORMAL,   OUTPUT),
 
 	/* I2C1 pinmux */
