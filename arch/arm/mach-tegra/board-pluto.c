@@ -75,6 +75,7 @@
 #include <mach/tegra_wakeup_monitor.h>
 #include <linux/platform_data/tegra_usb_modem_power.h>
 #include <mach/hardware.h>
+#include <mach/xusb.h>
 
 #include "board.h"
 #include "board-common.h"
@@ -1153,6 +1154,13 @@ static struct tegra_xusb_pad_data xusb_padctl_data = {
 	.hsic_pad0_ctl1 = (0x00 << 8),
 };
 
+static struct tegra_xusb_board_data xusb_bdata = {
+	.padctl_data = &xusb_padctl_data,
+	.portmap = TEGRA_XUSB_SS_P0 | TEGRA_XUSB_USB2_P0,
+	/* ss_portmap[0:3] = SS0 map, ss_portmap[4:7] = SS1 map */
+	.ss_portmap = (TEGRA_XUSB_SS_PORT_MAP_USB2_P0 << 0),
+};
+
 static void pluto_xusb_init(void)
 {
 	int usb_port_owner_info = tegra_get_usb_port_owner_info();
@@ -1176,8 +1184,7 @@ static void pluto_xusb_init(void)
 		xusb_padctl_data.hs_iref_cap = (usb_calib0 >> 13) & 0x3;
 		xusb_padctl_data.hs_curr_level_pad1 = (usb_calib0 >> 15) & 0x3f;
 
-		tegra_xhci_device.dev.platform_data = &xusb_padctl_data;
-		platform_device_register(&tegra_xhci_device);
+		tegra_xusb_init(&xusb_bdata);
 	}
 }
 #else
