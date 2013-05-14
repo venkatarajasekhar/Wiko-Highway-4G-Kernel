@@ -696,6 +696,7 @@ struct bq2419x_charger_platform_data bq2419x_charger_pdata = {
 	.wdt_timeout    = 40,
 	.rtc_alarm_time = 3600,
 	.chg_restart_time = 1800,
+	.is_battery_present = false,
 };
 
 struct bq2419x_platform_data bq2419x_pdata = {
@@ -859,9 +860,13 @@ int __init atlantis_regulator_init(void)
 		lp8755_regulator_init();
 	}
 
-	if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY)
+	if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY) {
 		((struct palmas_platform_data *)palma_device[0].platform_data)
 				->battery_pdata->is_battery_present = true;
+		((struct palmas_platform_data *)palma_device[0].platform_data)
+				->charger_pdata->bcharger_pdata
+				->is_battery_present = true;
+	}
 
 	i2c_register_board_info(4, palma_device,
 			ARRAY_SIZE(palma_device));
