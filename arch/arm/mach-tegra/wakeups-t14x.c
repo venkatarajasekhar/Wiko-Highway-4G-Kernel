@@ -25,7 +25,7 @@
 #include "board.h"
 #include "tegra-board-id.h"
 #include "gpio-names.h"
-
+#include "pm-irq.h"
 static int tegra_gpio_wakes[] = {
 	TEGRA_GPIO_PL0,				/* wake0 */
 	TEGRA_GPIO_PL2,				/* wake1 */
@@ -161,6 +161,18 @@ static int tegra_wake_event_irq[] = {
 };
 
 static int last_gpio = -1;
+
+inline void tegra_get_internal_any_wake_list(u8 *wake_count,
+	u8 **any_wake, u8 *remote_usb_index)
+{
+	*wake_count = 0;
+}
+
+inline int get_vbus_id_cable_connect_state(bool *is_vbus_connected,
+	bool *is_id_connected)
+{
+	return -EIO;
+}
 
 int tegra_gpio_to_wake(int gpio)
 {

@@ -25,7 +25,7 @@ obj-y                                   += common-t2.o
 obj-y                                   += pm-t2.o
 obj-y                                   += sleep-t2.o
 obj-y                                   += timer-t2.o
-obj-y                                   += wakeups-t2.o
+obj-$(CONFIG_PM_SLEEP)                  += wakeups-t2.o
 ifeq ($(CONFIG_CPU_IDLE),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t2.o
 endif
@@ -37,12 +37,12 @@ obj-$(CONFIG_DEBUG_FS)                  += clocks_stats.o
 obj-y                                   += timer-t3.o
 obj-y                                   += tegra_core_volt_cap.o
 ifeq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
-obj-y                                   += wakeups-t3.o
+obj-$(CONFIG_PM_SLEEP)                  += wakeups-t3.o
 else
 ifeq ($(CONFIG_ARCH_TEGRA_14x_SOC),y)
-obj-y                                   += wakeups-t14x.o
+obj-$(CONFIG_PM_SLEEP)                  += wakeups-t14x.o
 else
-obj-y                                   += wakeups-t11x.o
+obj-$(CONFIG_PM_SLEEP)                  += wakeups-t11x.o
 endif
 endif
 ifeq ($(CONFIG_CPU_IDLE),y)
