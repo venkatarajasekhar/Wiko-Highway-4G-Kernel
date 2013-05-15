@@ -25,6 +25,7 @@
 #include <media/imx091.h>
 #include <media/imx132.h>
 #include <media/ad5816.h>
+#include <media/imx135.h>
 #include <media/max77387.h>
 #include <media/lm3565.h>
 #include <linux/nct1008.h>
@@ -320,6 +321,78 @@ static int ceres_imx091_power_off(struct nvc_regulator *vreg)
 	return 0;
 }
 
+static int ceres_imx135_power_on(struct imx135_power_rail *pw)
+{
+	int err;
+
+	if (unlikely(WARN_ON(!pw || !pw->iovdd || !pw->dvdd || !pw->avdd)))
+		return -EFAULT;
+
+	gpio_set_value(CAM_RSTN, 0);
+	gpio_set_value(CAM_AF_PWDN, 1);
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+	usleep_range(10, 20);
+
+	err = regulator_enable(pw->avdd);
+	if (err)
+		goto imx135_avdd_fail;
+
+	err = regulator_enable(pw->dvdd);
+	if (err)
+		goto imx135_dvdd_fail;
+
+	err = regulator_enable(pw->iovdd);
+	if (err)
+		goto imx135_iovdd_fail;
+
+	udelay(2);
+	gpio_set_value(CAM_RSTN, 1);
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 1);
+
+	usleep_range(300, 310);
+
+	return 1;
+
+imx135_iovdd_fail:
+	regulator_disable(pw->dvdd);
+
+imx135_dvdd_fail:
+	regulator_disable(pw->avdd);
+
+imx135_avdd_fail:
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+
+	return -ENODEV;
+}
+
+static int ceres_imx135_power_off(struct imx135_power_rail *pw)
+{
+	if (unlikely(WARN_ON(!pw || !pw->iovdd || !pw->dvdd || !pw->avdd)))
+		return -EFAULT;
+
+	udelay(2);
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+	udelay(2);
+
+	regulator_disable(pw->iovdd);
+	regulator_disable(pw->dvdd);
+	regulator_disable(pw->avdd);
+	return 0;
+}
+
+struct imx135_platform_data ceres_imx135_data = {
+	.flash_cap = {
+		.enable = 1,
+		.edge_trig_en = 1,
+		.start_edge = 0,
+		.repeat = 1,
+		.delay_frm = 0,
+	},
+	.power_on = ceres_imx135_power_on,
+	.power_off = ceres_imx135_power_off,
+};
+
+
 static int ceres_imx132_power_on(struct imx132_power_rail *pw)
 {
 	int err;
@@ -535,6 +608,25 @@ static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
 	},
 };
 
+static struct i2c_board_info ceres_i2c_board_info_e1690[] = {
+	{
+		I2C_BOARD_INFO("imx135", 0x10),
+		.platform_data = &ceres_imx135_data,
+	},
+	{
+		I2C_BOARD_INFO("imx132", 0x36),
+		.platform_data = &ceres_imx132_data,
+	},
+	{
+		I2C_BOARD_INFO("ad5816", 0x0E),
+		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("max77387", 0x4A),
+		.platform_data = &ceres_max77387_pdata,
+	},
+};
+
 static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
 	{
 		I2C_BOARD_INFO("max44005", 0x44),
@@ -553,9 +645,12 @@ static int ceres_camera_init(void)
 		 (board_info.board_id == BOARD_E1740))
 		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
 			ARRAY_SIZE(ceres_i2c_board_info_e1697));
-	else
+	else if (board_info.board_id == BOARD_E1680)
 		i2c_register_board_info(2, ceres_i2c_board_info_e1707,
 			ARRAY_SIZE(ceres_i2c_board_info_e1707));
+	else
+		i2c_register_board_info(2, ceres_i2c_board_info_e1690,
+			ARRAY_SIZE(ceres_i2c_board_info_e1690));
 	return 0;
 }
 
