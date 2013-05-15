@@ -505,19 +505,47 @@ static const struct i2c_board_info ceres_i2c2_board_info[] = {
 	},
 };
 
+static void __init register_devices_E1690(void)
+{
+	i2c_register_board_info(1, ceres_i2c2_ina230_board_info_ffd,
+		ARRAY_SIZE(ceres_i2c2_ina230_board_info_ffd));
+}
+
+static void __init register_devices_E1670(void)
+{
+	i2c_register_board_info(PCA954x_I2C_BUS1,
+		atlantis_i2c2_1_ina230_board_info,
+		ARRAY_SIZE(atlantis_i2c2_1_ina230_board_info));
+
+	i2c_register_board_info(PCA954x_I2C_BUS2,
+		atlantis_i2c2_2_ina230_board_info,
+		ARRAY_SIZE(atlantis_i2c2_2_ina230_board_info));
+}
+
+static void __init register_devices_E1680(void)
+{
+	i2c_register_board_info(PCA954x_I2C_BUS1,
+		ceres_i2c2_1_ina230_board_info,
+		ARRAY_SIZE(ceres_i2c2_1_ina230_board_info));
+
+	i2c_register_board_info(PCA954x_I2C_BUS2,
+		ceres_i2c2_2_ina230_board_info,
+		ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
+}
+
 int __init ceres_pmon_init(void)
 {
 	struct board_info bi;
 
 	tegra_get_board_info(&bi);
 
-	/* There are only 3 devices on Ceres-FFD
-	 * so register only those if board is E1690
-	 */
 	if (bi.board_id == BOARD_E1690) {
-		i2c_register_board_info(1, ceres_i2c2_ina230_board_info_ffd,
-			ARRAY_SIZE(ceres_i2c2_ina230_board_info_ffd));
+		/* There are only 3 devices on Ceres-FFD
+		 * so register only those if board is E1690
+		 */
+		register_devices_E1690();
 	} else {
+		/* register devices common to ceres/atlantis ERS */
 		i2c_register_board_info(1, ceres_i2c2_board_info,
 			ARRAY_SIZE(ceres_i2c2_board_info));
 
@@ -527,21 +555,11 @@ int __init ceres_pmon_init(void)
 
 		if ((bi.board_id == BOARD_E1670) || (bi.board_id == BOARD_E1671) ||
 			 (bi.board_id == BOARD_E1740)) {
-			i2c_register_board_info(PCA954x_I2C_BUS1,
-				atlantis_i2c2_1_ina230_board_info,
-				ARRAY_SIZE(atlantis_i2c2_1_ina230_board_info));
-
-			i2c_register_board_info(PCA954x_I2C_BUS2,
-				atlantis_i2c2_2_ina230_board_info,
-				ARRAY_SIZE(atlantis_i2c2_2_ina230_board_info));
+			/* register devices specific to Atlantis */
+			register_devices_E1670();
 		} else {
-			i2c_register_board_info(PCA954x_I2C_BUS1,
-				ceres_i2c2_1_ina230_board_info,
-				ARRAY_SIZE(ceres_i2c2_1_ina230_board_info));
-
-			i2c_register_board_info(PCA954x_I2C_BUS2,
-				ceres_i2c2_2_ina230_board_info,
-				ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
+			/* register devices specific to Ceres-ERS */
+			register_devices_E1680();
 		}
 	}
 
