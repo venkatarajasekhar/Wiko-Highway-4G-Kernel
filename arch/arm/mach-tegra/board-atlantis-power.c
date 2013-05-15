@@ -185,7 +185,6 @@ static struct regulator_consumer_supply palmas_ldo13_supply[] = {
 	REGULATOR_SUPPLY("vif", "2-0010"),
 	REGULATOR_SUPPLY("vif", "2-0036"),
 	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
-	REGULATOR_SUPPLY("vdd", "2-004a"),
 	REGULATOR_SUPPLY("vi2c", "2-0030"),
 };
 
@@ -243,7 +242,6 @@ static struct regulator_consumer_supply palmas_regen5_supply[] = {
 static struct regulator_consumer_supply palmas_regen7_supply[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
 	REGULATOR_SUPPLY("avdd", "spi2.0"),
-	REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
 static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
@@ -417,12 +415,12 @@ static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
 	REGULATOR_SUPPLY("vdd_sys_cdc", NULL),
 	REGULATOR_SUPPLY("vdd_sys_spkr", NULL),
 	REGULATOR_SUPPLY("vin", "1-0036"),
+	REGULATOR_SUPPLY("vin", "2-0030"),
 };
 
 static struct regulator_consumer_supply fixed_reg_avdd_lcd_supply[] = {
 	REGULATOR_SUPPLY("avdd_lcd", NULL),
 	REGULATOR_SUPPLY("avdd", "spi2.0"),
-	REGULATOR_SUPPLY("vin", "2-004a"),
 };
 
 static struct regulator_consumer_supply fixed_reg_vdd_hdmi_5v0_supply[] = {
