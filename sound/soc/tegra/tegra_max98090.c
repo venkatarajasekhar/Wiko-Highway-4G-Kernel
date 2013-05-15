@@ -462,7 +462,6 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(cpu_dai);
 	struct tegra_max98090 *machine = snd_soc_card_get_drvdata(rtd->card);
 	struct codec_config *codec_info;
-	struct codec_config *bb_info;
 	int codec_index;
 
 	tegra_asoc_utils_tristate_dap(i2s->id, false);
@@ -509,8 +508,8 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 			codec_index = HIFI_CODEC;
 
 		codec_info = &machine->codec_info[codec_index];
-		bb_info = &machine->codec_info[BASEBAND];
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		/* allocate a dam for voice call recording */
 
 		i2s->call_record_dam_ifc = tegra30_dam_allocate_controller();
@@ -525,7 +524,7 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 
 		/* setup the connections for voice call record */
 		tegra30_ahub_unset_rx_cif_source(i2s->rxcif);
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+
 		/* configure the dam */
 		tegra_max98090_set_dam_cif(i2s->call_record_dam_ifc,
 			codec_info->rate, codec_info->channels,
@@ -537,31 +536,40 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 		tegra30_ahub_set_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0 +
 			(i2s->call_record_dam_ifc*2),
 			TEGRA30_AHUB_TXCIF_BBC1_TX0);
-#else
-		/* configure the dam */
-		tegra_max98090_set_dam_cif(i2s->call_record_dam_ifc,
-			codec_info->rate, codec_info->channels,
-			codec_info->bitsize, 1, bb_info->rate,
-			bb_info->channels, bb_info->bitsize);
 
-		tegra30_ahub_set_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0 +
-			(i2s->call_record_dam_ifc*2),
-			TEGRA30_AHUB_TXCIF_I2S0_TX0 + bb_info->i2s_id);
-#endif
-		tegra30_ahub_set_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX1 +
+		tegra30_ahub_set_rx_cif_source(
+			TEGRA30_AHUB_RXCIF_DAM0_RX1 +
 			(i2s->call_record_dam_ifc*2),
 			TEGRA30_AHUB_TXCIF_I2S0_TX0 + codec_info->i2s_id);
+
 		tegra30_ahub_set_rx_cif_source(i2s->rxcif,
 			TEGRA30_AHUB_TXCIF_DAM0_TX0 +
 			i2s->call_record_dam_ifc);
 
-		/* enable the dam*/
+		/* Configure DAM0 for SRC */
+		if (codec_info->rate != machine->ahub_bbc1_info.rate) {
+			tegra30_dam_write_coeff_ram(
+				i2s->call_record_dam_ifc,
+				machine->ahub_bbc1_info.rate, codec_info->rate);
+			tegra30_dam_set_farrow_param(
+				i2s->call_record_dam_ifc,
+				machine->ahub_bbc1_info.rate, codec_info->rate);
+			tegra30_dam_set_biquad_fixed_coef(
+				i2s->call_record_dam_ifc);
+			tegra30_dam_enable_coeff_ram(
+				i2s->call_record_dam_ifc);
+			tegra30_dam_set_filter_stages(
+				i2s->call_record_dam_ifc,
+				machine->ahub_bbc1_info.rate, codec_info->rate);
+		}
+
 		tegra30_dam_enable(i2s->call_record_dam_ifc,
 				TEGRA30_DAM_ENABLE,
 				TEGRA30_DAM_CHIN1);
 		tegra30_dam_enable(i2s->call_record_dam_ifc,
 				TEGRA30_DAM_ENABLE,
 				TEGRA30_DAM_CHIN0_SRC);
+#endif
 	}
 
 	return 0;
@@ -571,7 +579,10 @@ static void tegra_max98090_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct tegra_max98090 *machine = snd_soc_card_get_drvdata(rtd->card);
 	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(cpu_dai);
+	struct snd_soc_codec *codec = rtd->codec;
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	tegra_asoc_utils_tristate_dap(i2s->id, true);
 
@@ -599,7 +610,7 @@ static void tegra_max98090_shutdown(struct snd_pcm_substream *substream)
 			return;
 
 		i2s->is_call_mode_rec = 0;
-
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		/* disable the dam*/
 		tegra30_dam_enable(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_DISABLE, TEGRA30_DAM_CHIN1);
@@ -620,7 +631,18 @@ static void tegra_max98090_shutdown(struct snd_pcm_substream *substream)
 		tegra30_dam_free_channel(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_CHIN0_SRC);
 		tegra30_dam_free_controller(i2s->call_record_dam_ifc);
+#endif
 	 }
+
+	if (!machine->is_device_bt) {
+		/* force enable the capture dapm path,
+		 * if capture stream still open */
+		if (i2s->capture_ref_count)
+			snd_soc_dapm_force_enable_pin(dapm, "HiFi Capture");
+		else
+			snd_soc_dapm_disable_pin(dapm, "HiFi Capture");
+		snd_soc_dapm_sync(dapm);
+	}
 
 	return;
 }
