@@ -186,6 +186,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.is_8bit = 1,
 	.tap_delay = 0x0F,
 	.ddr_clk_limit = 41000000,
+	.ddr_trim_delay = -1,
 	.mmc_data = {
 		.built_in = 1,
 		.ocr_mask = MMC_OCR_1V8_MASK,
