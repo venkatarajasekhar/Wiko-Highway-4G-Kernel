@@ -91,6 +91,24 @@ enum {
 	ATL_AVDD_DIS_LDO1,
 };
 
+/* following rails are present on Atlantis A02 on i2c2_1 */
+enum {
+	ATL_A02_VDD_SYS_CELL,
+	ATL_A02_VDD_RTC_LDO5,
+	ATL_A02_VDD_SYS_SMPS1_2,
+	ATL_A02_VDD_SOC,
+	ATL_A02_VDD_SYS_REG,
+	ATL_A02_VDD_CPU,
+	ATL_A02_VDD_SYS_SMPS9,
+	ATL_A02_VDD_1V8_SMPS9,
+	ATL_A02_VDD_1V8_AP,
+	ATL_A02_VDD_SYS_SMPS8,
+	ATL_A02_VDD_1V2_SMPS8,
+	ATL_A02_VDD_SW_1V2_MUX,
+	ATL_A02_VDD_SW_1V2_DSI_AP,
+	ATL_A02_AVDD_1V05_LDO4
+};
+
 static struct ina219_platform_data power_mon_info_0[] = {
 	/* All unused INA219 devices use below data*/
 	[UNUSED_RAIL] = {
@@ -418,6 +436,125 @@ static struct ina230_platform_data atl_power_mon_info_2[] = {
 	},
 };
 
+/* following are power monitor parameters for Atlantis A02 on i2c2_1 */
+static struct ina230_platform_data atl_A02_power_mon_info_1[] = {
+	[ATL_A02_VDD_SYS_CELL] = {
+		.calibration_data  = 0x0AEC,
+		.power_lsb = 4.577968526 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_CELL",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_RTC_LDO5] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.078127384 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_RTC_LDO5",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SYS_SMPS1_2] = {
+		.calibration_data  = 0x176B,
+		.power_lsb = 2.135112594 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_SMPS1_2",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SOC] = {
+		.calibration_data  = 0x51EA,
+		.power_lsb = 6.103958035 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SOC",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SYS_REG] = {
+		.calibration_data  = 0x1F3A,
+		.power_lsb = 3.202401801 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_REG",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_CPU] = {
+		.calibration_data  = 0x369C,
+		.power_lsb = 9.155937053 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_CPU",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SYS_SMPS9] = {
+		.calibration_data  = 0x1127,
+		.power_lsb = 0.291505352 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_SMPS9",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_1V8_SMPS9] = {
+		.calibration_data  = 0x6240,
+		.power_lsb = 0.508905852 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V8_SMPS9",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_1V8_AP] = {
+		.calibration_data  = 0x74D0,
+		.power_lsb = 0.142678794 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V8_AP",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SYS_SMPS8] = {
+		.calibration_data  = 0x0B42,
+		.power_lsb = 0.444136017 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_SMPS8",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_1V2_SMPS8] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 3.906369213 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V2_SMPS8",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_VDD_SW_1V2_MUX] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 3.906369213 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SW_1V2_MUX",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	/*
+	 * mark following rails as unused until i2c address conflict
+	 * is resolved
+	 */
+	[ATL_A02_VDD_SW_1V2_DSI_AP] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.019531846 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "unused_rail", /* VDD_SW_1V2_DSI_CSI_AP */
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[ATL_A02_AVDD_1V05_LDO4] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.130212307 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "unused_rail", /* AVDD_1V05_LDO4 */
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+};
+
 /* i2c addresses of rails present on Ceres-ERS */
 enum {
 	INA_I2C_2_0_ADDR_40,
@@ -466,6 +603,24 @@ enum {
 enum {
 	ATL_INA_I2C_2_2_ADDR_49,
 	ATL_INA_I2C_2_2_ADDR_4C,
+};
+
+/* i2c2_1 addresses of rails present on Atlantis A02 */
+enum {
+	ATL_A02_INA_I2C_2_1_ADDR_40,
+	ATL_A02_INA_I2C_2_1_ADDR_41,
+	ATL_A02_INA_I2C_2_1_ADDR_42,
+	ATL_A02_INA_I2C_2_1_ADDR_43,
+	ATL_A02_INA_I2C_2_1_ADDR_44,
+	ATL_A02_INA_I2C_2_1_ADDR_45,
+	ATL_A02_INA_I2C_2_1_ADDR_46,
+	ATL_A02_INA_I2C_2_1_ADDR_47,
+	ATL_A02_INA_I2C_2_1_ADDR_48,
+	ATL_A02_INA_I2C_2_1_ADDR_49,
+	ATL_A02_INA_I2C_2_1_ADDR_4B,
+	ATL_A02_INA_I2C_2_1_ADDR_4C,
+	ATL_A02_INA_I2C_2_1_ADDR_4E,
+	ATL_A02_INA_I2C_2_1_ADDR_4F,
 };
 
 /* i2c addresses of rails present on Ceres-FFD */
@@ -737,6 +892,103 @@ static struct i2c_board_info atlantis_i2c2_2_ina230_board_info[] = {
 	},
 };
 
+/* following are the i2c2_1 board info for Atlantis A02 */
+static struct i2c_board_info atlantis_A02_i2c2_1_ina230_board_info[] = {
+	[ATL_A02_INA_I2C_2_1_ADDR_40] = {
+		I2C_BOARD_INFO("ina230", 0x40),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SYS_CELL],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_41] = {
+		I2C_BOARD_INFO("ina230", 0x41),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_RTC_LDO5],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_42] = {
+		I2C_BOARD_INFO("ina230", 0x42),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SYS_SMPS1_2],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_43] = {
+		I2C_BOARD_INFO("ina230", 0x43),
+		.platform_data = &atl_A02_power_mon_info_1[ATL_A02_VDD_SOC],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_44] = {
+		I2C_BOARD_INFO("ina230", 0x44),
+		.platform_data = &atl_A02_power_mon_info_1[ATL_A02_VDD_SYS_REG],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_45] = {
+		I2C_BOARD_INFO("ina230", 0x45),
+		.platform_data = &atl_A02_power_mon_info_1[ATL_A02_VDD_CPU],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_46] = {
+		I2C_BOARD_INFO("ina230", 0x46),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SYS_SMPS9],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_47] = {
+		I2C_BOARD_INFO("ina230", 0x47),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_1V8_SMPS9],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_48] = {
+		I2C_BOARD_INFO("ina230", 0x48),
+		.platform_data = &atl_A02_power_mon_info_1[ATL_A02_VDD_1V8_AP],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_49] = {
+		I2C_BOARD_INFO("ina230", 0x49),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SYS_SMPS8],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_4B] = {
+		I2C_BOARD_INFO("ina230", 0x4B),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_1V2_SMPS8],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_4C] = {
+		I2C_BOARD_INFO("ina230", 0x4C),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SW_1V2_MUX],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_4E] = {
+		I2C_BOARD_INFO("ina230", 0x4E),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_VDD_SW_1V2_DSI_AP],
+		.irq = -1,
+	},
+
+	[ATL_A02_INA_I2C_2_1_ADDR_4F] = {
+		I2C_BOARD_INFO("ina230", 0x4F),
+		.platform_data =
+			&atl_A02_power_mon_info_1[ATL_A02_AVDD_1V05_LDO4],
+		.irq = -1,
+	},
+};
+
 static struct pca954x_platform_mode ceres_pca954x_modes[] = {
 	{ .adap_id = PCA954x_I2C_BUS0, .deselect_on_exit = true, },
 	{ .adap_id = PCA954x_I2C_BUS1, .deselect_on_exit = true, },
@@ -768,6 +1020,18 @@ static void __init register_devices_E1670(void)
 		atlantis_i2c2_1_ina230_board_info,
 		ARRAY_SIZE(atlantis_i2c2_1_ina230_board_info));
 
+	i2c_register_board_info(PCA954x_I2C_BUS2,
+		atlantis_i2c2_2_ina230_board_info,
+		ARRAY_SIZE(atlantis_i2c2_2_ina230_board_info));
+}
+
+static void __init register_devices_E1670_A02(void)
+{
+	i2c_register_board_info(PCA954x_I2C_BUS1,
+		atlantis_A02_i2c2_1_ina230_board_info,
+		ARRAY_SIZE(atlantis_A02_i2c2_1_ina230_board_info));
+
+	/* i2c2_2 on A02 is same as previous versions */
 	i2c_register_board_info(PCA954x_I2C_BUS2,
 		atlantis_i2c2_2_ina230_board_info,
 		ARRAY_SIZE(atlantis_i2c2_2_ina230_board_info));
@@ -819,7 +1083,10 @@ int __init ceres_pmon_init(void)
 		if ((bi.board_id == BOARD_E1670) || (bi.board_id == BOARD_E1671) ||
 			 (bi.board_id == BOARD_E1740)) {
 			/* register devices specific to Atlantis */
-			register_devices_E1670();
+			if (bi.fab >= BOARD_FAB_A02)
+				register_devices_E1670_A02();
+			else
+				register_devices_E1670();
 		} else {
 			/* register devices specific to Ceres-ERS */
 			if (bi.fab >= BOARD_FAB_A03)
