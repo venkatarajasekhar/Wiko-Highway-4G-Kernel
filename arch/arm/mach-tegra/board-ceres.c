@@ -291,7 +291,7 @@ struct ahub_bbc1_config ahub_bbc1_pdata = {
 	.port_id	= 0,
 	.sample_size	= 16,
 	.rate		= 16000,
-	.channels	= 1,
+	.channels	= 2,
 	.bit_clk	= 1536000,
 };
 
