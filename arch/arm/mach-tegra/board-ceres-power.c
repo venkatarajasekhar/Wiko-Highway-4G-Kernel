@@ -651,8 +651,9 @@ static void lp8755_regulator_init(void)
  * used as below:
  *  E1690(CERES FFD): CPU_VDD is from Buck2 of Max 77660
  *  E1680(CERES)    : For SKU 1001 CPU_VDD is from Buck2 of Max 77660
- *		      For SKU 1000 CPU_VDD is from LP8755LME	     */
-
+ *		      For SKU 1000 CPU_VDD is from LP8755LME
+ *  E1670(ATLANTIS) : For SKU 100 CPU_VDD is from SMPS12 of TPS80036
+ *		      For SKU 120 CPU_VDD is from LP8755LME	     */
 
 /* LP8755LME: fixed 10mV steps from 500mV to 1670mV, with offset 0x80 */
 #define LP8755_CPU_VDD_MAP_SIZE ((1670000 - 500000) / 10000 + 1)
@@ -720,6 +721,33 @@ static struct tegra_cl_dvfs_platform_data \
 	.cfg_param = &ceres_cl_dvfs_param,
 };
 
+/* TPS80036 SMPS12 fixed 10mV steps from 500mV to 1650mV, with offset 6 */
+#define TPS80036_CPU_VDD_MAP_SIZE ((1650000 - 500000) / 10000 + 1)
+static struct voltage_reg_map tps80036_cpu_vdd_map[TPS80036_CPU_VDD_MAP_SIZE];
+static inline void tps80036_vdd_cpu_fill_reg_map(void)
+{
+	int i;
+	for (i = 0; i < TPS80036_CPU_VDD_MAP_SIZE; i++) {
+		tps80036_cpu_vdd_map[i].reg_value = i + 0x6;
+		tps80036_cpu_vdd_map[i].reg_uV = 500000 + 10000 * i;
+	}
+}
+
+static struct tegra_cl_dvfs_platform_data \
+				atlantis_cl_dvfs_tps80036_vdd_cpu_data = {
+	.dfll_clk_name = "dfll_cpu",
+	.pmu_if = TEGRA_CL_DVFS_PMU_I2C,
+	.u.pmu_i2c = {
+		.fs_rate = 400000,
+		.slave_addr = 0xb0,
+		.reg = 0x23,
+	},
+	.vdd_map = tps80036_cpu_vdd_map,
+	.vdd_map_size = TPS80036_CPU_VDD_MAP_SIZE,
+
+	.cfg_param = &ceres_cl_dvfs_param,
+};
+
 int tegra_get_cvb_alignment_uV(void)
 {
 	struct board_info board_info;
@@ -744,6 +772,11 @@ static int __init ceres_cl_dvfs_init(void)
 		max77660_vdd_cpu_fill_reg_map();
 		tegra_cl_dvfs_device.dev.platform_data =
 					&ceres_cl_dvfs_max77660_vdd_cpu_data;
+	} else if ((board_info.board_id == BOARD_E1670) &&
+			(board_info.sku == 100)) {
+		tps80036_vdd_cpu_fill_reg_map();
+		tegra_cl_dvfs_device.dev.platform_data =
+					&atlantis_cl_dvfs_tps80036_vdd_cpu_data;
 	} else {
 		lp8755_vdd_cpu_fill_reg_map();
 		tegra_cl_dvfs_device.dev.platform_data =
