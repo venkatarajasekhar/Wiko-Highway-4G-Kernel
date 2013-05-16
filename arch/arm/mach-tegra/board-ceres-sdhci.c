@@ -174,7 +174,6 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.tap_delay = 0x3,
 	.trim_delay = 0xA,
 	.max_clk_limit = 136000000,
-	.uhs_mask = MMC_MASK_HS200,
 	.ddr_trim_delay = 0,
 	.mmc_data = {
 		.built_in = 1,
