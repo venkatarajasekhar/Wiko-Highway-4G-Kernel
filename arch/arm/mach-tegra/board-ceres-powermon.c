@@ -32,6 +32,7 @@ enum {
 	UNUSED_RAIL,
 };
 
+/* following rails are present on Ceres-ERS */
 enum {
 	VDD_SYS_CELL,
 	VDD_SYS_BUCK1,
@@ -46,6 +47,24 @@ enum {
 enum {
 	VDD_SYS_BL,
 	AVDD_DIS_LDO4,
+};
+
+/* following rails are present on Ceres-ERS A03 on i2c2_1 */
+enum {
+	VDD_SYS_CELL_A03,
+	VDD_RTC_AP_A03,
+	VDD_SYS_BUCK2_A03,
+	VDD_SOC_A03,
+	VDD_SYS_REG_A03,
+	VDD_CPU_AP_A03,
+	VDD_SYS_BUCK5_A03,
+	VDD_1V8_BUCK5_A03,
+	VDD_1V8_AP_A03,
+	VDD_SYS_BUCK3_A03,
+	VDD_1V2_BUCK3_A03,
+	VDD_SW_1V2_MUX_A03,
+	VDD_SW_1V2_DSI_CSI_AP_A03,
+	AVDD_1V05_LDO7_A03,
 };
 
 /* following rails are present on Ceres-FFD */
@@ -83,6 +102,7 @@ static struct ina219_platform_data power_mon_info_0[] = {
 	},
 };
 
+/* following are power monitor parameters for Ceres-ERS */
 static struct ina230_platform_data power_mon_info_1[] = {
 	[VDD_SYS_CELL] = {
 		.calibration_data  = 0x1062,
@@ -167,6 +187,126 @@ static struct ina230_platform_data power_mon_info_2[] = {
 	},
 };
 
+/* following are power monitor parameters for Ceres-ERS A03 on i2c2_1 */
+static struct ina230_platform_data ceres_A03_power_mon_info_1[] = {
+	[VDD_SYS_CELL_A03] = {
+		.calibration_data  = 0xAEC,
+		.power_lsb = 4.577968526 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_CELL",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_RTC_AP_A03] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.195318461 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_RTC_AP",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SYS_BUCK2_A03] = {
+		.calibration_data  = 0x3A90,
+		.power_lsb = 1.707577375 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_BUCK2",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SOC_A03] = {
+		.calibration_data  = 0x6665,
+		.power_lsb = 4.883073284 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SOC",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SYS_REG_A03] = {
+		.calibration_data  = 0x1F3A,
+		.power_lsb = 3.202401801 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_REG",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_CPU_AP_A03] = {
+		.calibration_data  = 0x369C,
+		.power_lsb = 9.155937053 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_CPU_AP",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SYS_BUCK5_A03] = {
+		.calibration_data  = 0xF22,
+		.power_lsb = 0.330407847 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_BUCK5",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_1V8_BUCK5_A03] = {
+		.calibration_data  = 0x5692,
+		.power_lsb = 0.577565202 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V8_BUCK5",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_1V8_AP_A03] = {
+		.calibration_data  = 0x74D0,
+		.power_lsb = 0.142678794 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V8_AP",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SYS_BUCK3_A03] = {
+		.calibration_data  = 0xE90,
+		.power_lsb = 0.343347639 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SYS_BUCK3",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_1V2_BUCK3_A03] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 3.906369213 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_1V2_BUCK3",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[VDD_SW_1V2_MUX_A03] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 3.906369213 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "VDD_SW_1V2_MUX",
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	/*
+	 * mark following rails as unused until i2c address conflict
+	 * is resolved
+	 */
+	[VDD_SW_1V2_DSI_CSI_AP_A03] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.019531846 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "unused_rail", /* VDD_SW_1V2_DSI_CSI_AP */
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+
+	[AVDD_1V05_LDO7_A03] = {
+		.calibration_data  = 0x7FFF,
+		.power_lsb = 0.130212307 * PRECISION_MULTIPLIER_CERES,
+		.rail_name = "unused_rail", /* AVDD_1V05_LDO7 */
+		.divisor = 25,
+		.precision_multiplier = PRECISION_MULTIPLIER_CERES,
+	},
+};
+
+/* following are power monitor parameters for Ceres-FFD */
 static struct ina230_platform_data power_mon_info_ffd[] = {
 	[VDD_CELL] = {
 		.calibration_data  = 0x20C4,
@@ -278,6 +418,7 @@ static struct ina230_platform_data atl_power_mon_info_2[] = {
 	},
 };
 
+/* i2c addresses of rails present on Ceres-ERS */
 enum {
 	INA_I2C_2_0_ADDR_40,
 	INA_I2C_2_0_ADDR_41,
@@ -300,6 +441,24 @@ enum {
 	INA_I2C_2_2_ADDR_44,
 };
 
+/* i2c2_1 addresses of rails present on Ceres-ERS A03 */
+enum {
+	CERES_A03_INA_I2C_2_1_ADDR_40,
+	CERES_A03_INA_I2C_2_1_ADDR_41,
+	CERES_A03_INA_I2C_2_1_ADDR_42,
+	CERES_A03_INA_I2C_2_1_ADDR_43,
+	CERES_A03_INA_I2C_2_1_ADDR_44,
+	CERES_A03_INA_I2C_2_1_ADDR_45,
+	CERES_A03_INA_I2C_2_1_ADDR_46,
+	CERES_A03_INA_I2C_2_1_ADDR_47,
+	CERES_A03_INA_I2C_2_1_ADDR_48,
+	CERES_A03_INA_I2C_2_1_ADDR_49,
+	CERES_A03_INA_I2C_2_1_ADDR_4B,
+	CERES_A03_INA_I2C_2_1_ADDR_4C,
+	CERES_A03_INA_I2C_2_1_ADDR_4E,
+	CERES_A03_INA_I2C_2_1_ADDR_4F,
+};
+
 /*
  * the I2C device addresses on branch 2 are different between
  * Ceres and Atlantis
@@ -316,6 +475,7 @@ enum {
 	INA_I2C_2_ADDR_42,
 };
 
+/* following are the i2c board info for Ceres-ERS */
 static struct i2c_board_info ceres_i2c2_0_ina219_board_info[] = {
 	[INA_I2C_2_0_ADDR_40] = {
 		I2C_BOARD_INFO("ina219", 0x40),
@@ -400,6 +560,97 @@ static struct i2c_board_info ceres_i2c2_2_ina230_board_info[] = {
 	},
 };
 
+/* following are the i2c2_1 board info for Ceres-ERS A03 */
+static struct i2c_board_info ceres_A03_i2c2_1_ina230_board_info[] = {
+	[CERES_A03_INA_I2C_2_1_ADDR_40] = {
+		I2C_BOARD_INFO("ina230", 0x40),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SYS_CELL_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_41] = {
+		I2C_BOARD_INFO("ina230", 0x41),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_RTC_AP_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_42] = {
+		I2C_BOARD_INFO("ina230", 0x42),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SYS_BUCK2_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_43] = {
+		I2C_BOARD_INFO("ina230", 0x43),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SOC_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_44] = {
+		I2C_BOARD_INFO("ina230", 0x44),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SYS_REG_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_45] = {
+		I2C_BOARD_INFO("ina230", 0x45),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_CPU_AP_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_46] = {
+		I2C_BOARD_INFO("ina230", 0x46),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SYS_BUCK5_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_47] = {
+		I2C_BOARD_INFO("ina230", 0x47),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_1V8_BUCK5_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_48] = {
+		I2C_BOARD_INFO("ina230", 0x48),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_1V8_AP_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_49] = {
+		I2C_BOARD_INFO("ina230", 0x49),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_SYS_BUCK3_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_4B] = {
+		I2C_BOARD_INFO("ina230", 0x4B),
+		.platform_data = &ceres_A03_power_mon_info_1[VDD_1V2_BUCK3_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_4C] = {
+		I2C_BOARD_INFO("ina230", 0x4C),
+		.platform_data =
+			&ceres_A03_power_mon_info_1[VDD_SW_1V2_MUX_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_4E] = {
+		I2C_BOARD_INFO("ina230", 0x4E),
+		.platform_data =
+			&ceres_A03_power_mon_info_1[VDD_SW_1V2_DSI_CSI_AP_A03],
+		.irq = -1,
+	},
+
+	[CERES_A03_INA_I2C_2_1_ADDR_4F] = {
+		I2C_BOARD_INFO("ina230", 0x4F),
+		.platform_data =
+			&ceres_A03_power_mon_info_1[AVDD_1V05_LDO7_A03],
+		.irq = -1,
+	},
+};
+
+/* following are the i2c board info for Ceres-FFD */
 static struct i2c_board_info ceres_i2c2_ina230_board_info_ffd[] = {
 	[INA_I2C_2_ADDR_40] = {
 		I2C_BOARD_INFO("ina230", 0x40),
@@ -533,6 +784,18 @@ static void __init register_devices_E1680(void)
 		ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
 }
 
+static void __init register_devices_E1680_A03(void)
+{
+	i2c_register_board_info(PCA954x_I2C_BUS1,
+		ceres_A03_i2c2_1_ina230_board_info,
+		ARRAY_SIZE(ceres_A03_i2c2_1_ina230_board_info));
+
+	/* i2c2_2 on A03 is same as previous versions */
+	i2c_register_board_info(PCA954x_I2C_BUS2,
+		ceres_i2c2_2_ina230_board_info,
+		ARRAY_SIZE(ceres_i2c2_2_ina230_board_info));
+}
+
 int __init ceres_pmon_init(void)
 {
 	struct board_info bi;
@@ -559,7 +822,10 @@ int __init ceres_pmon_init(void)
 			register_devices_E1670();
 		} else {
 			/* register devices specific to Ceres-ERS */
-			register_devices_E1680();
+			if (bi.fab >= BOARD_FAB_A03)
+				register_devices_E1680_A03();
+			else
+				register_devices_E1680();
 		}
 	}
 
