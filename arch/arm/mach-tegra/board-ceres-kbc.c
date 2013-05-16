@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/board-ceres-kbc.c
  * Keys configuration for Nvidia tegra3 ceres platform.
  *
- * Copyright (C) 2012 NVIDIA, Inc.
+ * Copyright (C) 2013 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -69,7 +69,7 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[3] = GPIO_IKEY(KEY_POWER, CERES_POWER_ON_INT, 1, 100),
 	[4] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 0),
 	[5] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 0),
-	[6] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1000),
+	[6] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1500),
 };
 
 static int atlantis_wakeup_key(void)
