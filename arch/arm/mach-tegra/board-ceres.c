@@ -1033,6 +1033,11 @@ static void ceres_tegra_bb_init(void)
 }
 #endif
 
+static void __init ceres_dtv_init(void)
+{
+	platform_device_register(&tegra_dtv_device);
+}
+
 static void __init tegra_ceres_early_init(void)
 {
 	ceres_sysedp_init();
@@ -1064,6 +1069,7 @@ static void __init tegra_ceres_late_init(void)
 	tegra_soc_device_init("ceres");
 	ceres_keys_init();
 	ceres_regulator_init();
+	ceres_dtv_init();
 	ceres_suspend_init();
 	ceres_touch_init();
 	ceres_sdhci_init();
