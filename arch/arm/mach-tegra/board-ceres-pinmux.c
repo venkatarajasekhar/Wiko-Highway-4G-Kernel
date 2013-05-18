@@ -283,15 +283,39 @@ int __init ceres_pinmux_init(void)
 
 static struct gpio_init_pin_info ceres_suspend_pin_state[] = {
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
+};
+
+static struct gpio_init_pin_info atlantis_suspend_pin_state[] = {
+	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PH6, false, 1),
 	GPIO_INIT_PIN_MODE(TEGRA_GPIO_PL3, false, 0),
 };
 
 int ceres_pinmux_suspend(void)
 {
-	int len = ARRAY_SIZE(ceres_suspend_pin_state);
-	struct gpio_init_pin_info *pins_info = ceres_suspend_pin_state;
+	struct board_info board_info;
+	int len;
+	struct gpio_init_pin_info *pins_info;
 	int i;
 
+	tegra_get_board_info(&board_info);
+	switch (board_info.board_id) {
+	case BOARD_E1680:
+	case BOARD_E1681:
+	case BOARD_E1690:
+		pins_info = ceres_suspend_pin_state;
+		len = ARRAY_SIZE(ceres_suspend_pin_state);
+		break;
+	case BOARD_E1670:
+	case BOARD_E1671:
+	case BOARD_E1740:
+		pins_info = atlantis_suspend_pin_state;
+		len = ARRAY_SIZE(atlantis_suspend_pin_state);
+		break;
+	default:
+		pr_err("%s: board_id=%#x unknown. Tegra14x board detect failed.\n",
+			__func__, board_info.board_id);
+		return -EINVAL;
+	}
 	for (i = 0; i < len; ++i) {
 		tegra_gpio_init_configure(pins_info->gpio_nr,
 			pins_info->is_input, pins_info->value);
