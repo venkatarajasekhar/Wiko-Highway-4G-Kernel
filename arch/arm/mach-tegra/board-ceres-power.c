@@ -1291,6 +1291,13 @@ static struct platform_device ceres_sysedp_device = {
 void __init ceres_sysedp_core_init(void)
 {
 	int r;
+	struct board_info bi;
+
+	tegra_get_board_info(&bi);
+
+	/* FIXME: Ceres only */
+	if (bi.board_id != BOARD_E1680 && bi.board_id != BOARD_E1681)
+		return;
 
 	ceres_sysedp_platdata.cpufreq_lim = tegra_get_system_edp_entries(
 			&ceres_sysedp_platdata.cpufreq_lim_size);
