@@ -925,7 +925,7 @@ static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
 
 static int __init ceres_touch_init(void)
 {
-	if (tegra_get_touch_id() == RAYDIUM_TOUCH) {
+	if (tegra_get_touch_vendor_id() == RAYDIUM_TOUCH) {
 		pr_info("%s: initializing raydium\n", __func__);
 		tegra_clk_init_from_table(raydium_touch_clk_init_table);
 		rm31080a_ceres_spi_board[0].irq =
