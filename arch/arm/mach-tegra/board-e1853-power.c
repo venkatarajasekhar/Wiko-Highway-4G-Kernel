@@ -126,7 +126,6 @@ static struct regulator_consumer_supply tps6591x_ldo7_supply_0[] = {
 static struct regulator_consumer_supply tps6591x_ldo8_supply_0[] = {
 	REGULATOR_SUPPLY("vddio_sd_slot", "sdhci-tegra.2"),
 	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.2"),
-	REGULATOR_SUPPLY("vmmc", "sdhci-tegra.2"),
 };
 
 #define TPS_PDATA_INIT(_name, _sname, _minmv, _maxmv, _supply_reg, _always_on, \
