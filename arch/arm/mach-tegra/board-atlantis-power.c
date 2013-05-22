@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/edp.h>
+#include <linux/edpdev.h>
 #include <linux/i2c.h>
 #include <linux/pda_power.h>
 #include <linux/platform_device.h>
@@ -911,4 +913,73 @@ int __init atlantis_regulator_init(void)
 	i2c_register_board_info(4, palma_device,
 			ARRAY_SIZE(palma_device));
 	return 0;
+}
+
+static unsigned int atlantis_psydepl_states[] = {
+	9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
+	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600,
+	5400, 5200, 5000, 4800, 4600, 4400, 4200, 4000,
+	3800, 3600, 3400, 3200, 3000, 2800, 2600, 2400,
+	2200, 2000, 1900, 1800, 1700, 1600, 1500, 1400,
+	1300, 1200, 1100, 1000,  900,  800,  700,  600,
+	 500,  400,  300,  200,  100,    0
+};
+
+/* Temperature in deci-celcius */
+static struct psy_depletion_ibat_lut atlantis_ibat_lut[] = {
+	{  900, 3000 },
+	{  400, 3000 },
+	{    0, 3000 },
+	{ -300,    0 }
+};
+
+static struct psy_depletion_rbat_lut atlantis_rbat_lut[] = {
+	{ 100,  43600 },
+	{  80, 104000 },
+	{  60, 102000 },
+	{  40, 113600 },
+	{  20, 124000 },
+	{   0, 150000 }
+};
+
+static struct psy_depletion_ocv_lut atlantis_ocv_lut[] = {
+	{ 100, 4200000 },
+	{  90, 4151388 },
+	{  80, 4064953 },
+	{  70, 3990914 },
+	{  60, 3916230 },
+	{  50, 3863778 },
+	{  40, 3807535 },
+	{  30, 3781554 },
+	{  20, 3761117 },
+	{  10, 3663381 },
+	{   0, 3514236 }
+};
+
+static struct psy_depletion_platform_data atlantis_psydepl_pdata = {
+	.power_supply = "palmas-battery",
+	.states = atlantis_psydepl_states,
+	.num_states = ARRAY_SIZE(atlantis_psydepl_states),
+	.e0_index = 16,
+	.r_const = 80000,
+	.vsys_min = 3250000,
+	.vcharge = 4200000,
+	.ibat_nom = 3000,
+	.ibat_lut = atlantis_ibat_lut,
+	.rbat_lut = atlantis_rbat_lut,
+	.ocv_lut = atlantis_ocv_lut
+};
+
+static struct platform_device atlantis_psydepl_device = {
+	.name = "psy_depletion",
+	.id = -1,
+	.dev = { .platform_data = &atlantis_psydepl_pdata }
+};
+
+void __init atlantis_sysedp_psydepl_init(void)
+{
+	int r;
+
+	r = platform_device_register(&atlantis_psydepl_device);
+	WARN_ON(r);
 }

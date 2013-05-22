@@ -963,6 +963,9 @@ static void __init sysedp_psydepl_init(void)
 	case BOARD_E1681:
 		ceres_sysedp_psydepl_init();
 		break;
+	case BOARD_E1670:
+		atlantis_sysedp_psydepl_init();
+		break;
 	}
 }
 

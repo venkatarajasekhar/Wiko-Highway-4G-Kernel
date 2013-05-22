@@ -30,3 +30,4 @@ int atlantis_regulator_init(void);
 int atlantis_fixed_regulator_init(void);
 int atlantis_vibrator_init(void);
 int atlantis_pwm_init(void);
+void atlantis_sysedp_psydepl_init(void);
