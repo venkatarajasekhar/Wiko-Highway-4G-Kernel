@@ -171,6 +171,7 @@ config ARCH_TEGRA_14x_SOC
 	select REPORT_PRESENT_CPUS if TEGRA_AUTO_HOTPLUG
 	select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_754322
+	select TEGRA_DISABLE_BBC_LATENCY_ALLOWANCE
 	select SOC_BUS
 	select CPA
 	select NVMAP_CACHE_MAINT_BY_SET_WAYS
@@ -876,6 +877,14 @@ config TEGRA_LATENCY_ALLOWANCE_SCALING
 	  Enables latency allowance scaling, which enables scaling
 	  programmed latency allowance values based on fifo threshold levels
 	  set for for display and vi hardware.
+
+config TEGRA_DISABLE_BBC_LATENCY_ALLOWANCE
+	bool "Disable BBCRW latency allowance"
+	depends on TEGRA_LATENCY_ALLOWANCE
+	help
+	  Disables BBCRW latency allowance configuration by
+	  clients. The BBCRW latency allowance would remain
+	  same as boot time configured value.
 
 config TEGRA_BASEBAND
 	bool "Enable integrated tegra baseband support"
