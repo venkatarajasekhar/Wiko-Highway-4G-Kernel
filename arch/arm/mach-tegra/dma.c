@@ -456,7 +456,6 @@ int tegra_dma_dequeue_req(struct tegra_dma_channel *ch,
 	list_for_each_entry(req, &ch->list, node) {
 		if (req == _req) {
 			list_del(&req->node);
-			tegra_dma_clk_disable(&tegra_dma_device.dev);
 			found = 1;
 			break;
 		}
@@ -483,6 +482,8 @@ int tegra_dma_dequeue_req(struct tegra_dma_channel *ch,
 
 skip_stop_dma:
 	req->status = -TEGRA_DMA_REQ_ERROR_ABORTED;
+
+	tegra_dma_clk_disable(&tegra_dma_device.dev);
 
 	spin_unlock_irqrestore(&ch->lock, irq_flags);
 
@@ -519,6 +520,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 		return 0;
 	}
 
+	tegra_dma_clk_enable(&tegra_dma_device.dev);
 	/* Pause dma before checking the queue status */
 	pause_dma(true);
 	ch->dma_is_paused = true;
@@ -548,6 +550,7 @@ int tegra_dma_cancel(struct tegra_dma_channel *ch)
 
 	resume_dma();
 	ch->dma_is_paused = false;
+	tegra_dma_clk_disable(&tegra_dma_device.dev);
 
 	spin_unlock_irqrestore(&ch->lock, irq_flags);
 
