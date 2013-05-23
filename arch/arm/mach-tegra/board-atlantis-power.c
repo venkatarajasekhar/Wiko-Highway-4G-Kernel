@@ -855,6 +855,7 @@ int __init atlantis_regulator_init(void)
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
 	int i;
+	bool wdt_disable;
 
 	/* configure the power management controller to trigger PMU
 	 * interrupts when high */
@@ -902,6 +903,10 @@ int __init atlantis_regulator_init(void)
 				->charger_pdata->bcharger_pdata
 				->is_battery_present = true;
 	}
+
+	wdt_disable = is_pmic_wdt_disabled_at_boot();
+	if (wdt_disable)
+		palmas_pdata.watchdog_timer_initial_period = 0;
 
 	i2c_register_board_info(4, palma_device,
 			ARRAY_SIZE(palma_device));
