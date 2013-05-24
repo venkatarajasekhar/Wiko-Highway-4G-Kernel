@@ -1739,7 +1739,6 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 			(id != PALMAS_REG_CHARGER_PUMP)) {
 			reg_init = pdata->reg_init[id];
 			if (reg_init) {
-				pmic->roof_floor[id] = reg_init->roof_floor;
 				if (id < PALMAS_REG_REGEN1)
 					ret = palmas_ldo_init(palmas, id,
 								reg_init);
@@ -1755,6 +1754,7 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 					if (ret)
 						goto err_unregister_regulator;
 				}
+				pmic->roof_floor[id] = reg_init->roof_floor;
 			}
 		}
 	}
