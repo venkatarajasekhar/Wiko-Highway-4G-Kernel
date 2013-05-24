@@ -274,6 +274,7 @@ static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
 		.supply_regulator = _supply_reg,			\
 	}
 
+
 PALMAS_PDATA_INIT(smps12, 650,  1300, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps3, 1100,  1100, NULL, 0, 0, 0);
 PALMAS_PDATA_INIT(smps6, 650,  1400, NULL, 0, 0, 0);
@@ -864,6 +865,8 @@ int __init atlantis_regulator_init(void)
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl & ~PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 
+	/* Set SMPS3 ramp time to 10mV/us */
+	reg_idata_smps3.constraints.ramp_delay = 10000;
 
 	tegra_get_board_info(&board_info);
 	for (i = 0; i < PALMAS_NUM_REGS ; i++) {
