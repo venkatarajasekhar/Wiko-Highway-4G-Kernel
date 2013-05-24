@@ -1735,7 +1735,8 @@ static __devinit int palmas_probe(struct platform_device *pdev)
 		pmic->rdev[id] = rdev;
 
 		/* Initialise sleep/init values from platform data */
-		if (reg_data && pdata->reg_init) {
+		if (reg_data && pdata->reg_init &&
+			(id != PALMAS_REG_CHARGER_PUMP)) {
 			reg_init = pdata->reg_init[id];
 			if (reg_init) {
 				pmic->roof_floor[id] = reg_init->roof_floor;
