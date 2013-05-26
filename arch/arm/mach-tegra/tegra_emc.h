@@ -38,6 +38,7 @@ enum emc_user_id {
 	EMC_USER_2D,
 	EMC_USER_3D,
 	EMC_USER_BB,
+	EMC_USER_VDE,
 
 	EMC_USER_NUM,
 };
