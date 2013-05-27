@@ -633,11 +633,8 @@ int mmc_gen_cmd(struct mmc_card *card, void *buf, u8 index, u8 arg1, u8 arg2, u8
 	struct mmc_request mrq;
 	struct mmc_command cmd;
 	struct mmc_data data;
-	struct mmc_command stop;
 	struct scatterlist sg;
 	void *data_buf;
-
-	mmc_set_blocklen(card, 512);
 
 	data_buf = kmalloc(512, GFP_KERNEL);
 	if (data_buf == NULL)
@@ -646,11 +643,9 @@ int mmc_gen_cmd(struct mmc_card *card, void *buf, u8 index, u8 arg1, u8 arg2, u8
 	memset(&mrq, 0, sizeof(struct mmc_request));
 	memset(&cmd, 0, sizeof(struct mmc_command));
 	memset(&data, 0, sizeof(struct mmc_data));
-	memset(&stop, 0, sizeof(struct mmc_command));
 
 	mrq.cmd = &cmd;
 	mrq.data = &data;
-	mrq.stop = &stop;
 
 	cmd.opcode = MMC_GEN_CMD;
 	cmd.arg = (arg2 << 16) |
@@ -666,15 +661,12 @@ int mmc_gen_cmd(struct mmc_card *card, void *buf, u8 index, u8 arg1, u8 arg2, u8
 	data.sg = &sg;
 	data.sg_len = 1;
 
-	stop.opcode = MMC_STOP_TRANSMISSION;
-	stop.arg = 0;
-	stop.flags = MMC_RSP_SPI_R1B | MMC_RSP_R1B | MMC_CMD_AC;
-
 	sg_init_one(&sg, data_buf, 512);
 
 	mmc_set_data_timeout(&data, card);
 
 	mmc_claim_host(card->host);
+	mmc_set_blocklen(card, 512);
 	mmc_wait_for_req(card->host, &mrq);
 	mmc_release_host(card->host);
 
@@ -685,8 +677,6 @@ int mmc_gen_cmd(struct mmc_card *card, void *buf, u8 index, u8 arg1, u8 arg2, u8
 		return cmd.error;
 	if (data.error)
 		return data.error;
-	if (stop.error)
-		return stop.error;
 
 	return 0;
 }
