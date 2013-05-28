@@ -536,7 +536,7 @@ static struct max77660_haptic_platform_data max77660_haptic_pdata = {
 	.cont_mode = MAX77660_CONT_MODE,
 	.motor_startup_val = 0,
 	.scf_val = 7,
-	/* FIXME: edp_states */
+	.edp_states = { 180, 0 }
 };
 
 static struct max77660_haptic_platform_data_encl max77660_haptic_pdata_encl = {
