@@ -479,6 +479,8 @@ static struct nvc_imager_cap imx091_cap = {
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
+static unsigned imx091_estates[] = { 802, 600, 202, 0 };
+
 static struct imx091_platform_data ceres_imx091_data = {
 	.num			= 0,
 	.sync			= 0,
@@ -490,6 +492,12 @@ static struct imx091_platform_data ceres_imx091_data = {
 		.adjustable_flash_timing = 1,
 	},
 	.cap			= &imx091_cap,
+	.edpc_config		= {
+		.states = imx091_estates,
+		.num_states = ARRAY_SIZE(imx091_estates),
+		.e0_index = ARRAY_SIZE(imx091_estates) - 1,
+		.priority = EDP_MAX_PRIO + 1,
+	},
 	.power_on		= ceres_imx091_power_on,
 	.power_off		= ceres_imx091_power_off,
 };
