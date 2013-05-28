@@ -516,7 +516,7 @@ static struct ad5816_platform_data ceres_ad5816_pdata = {
 	.power_off	= ceres_focuser_power_off,
 };
 
-static unsigned max77387_estates[] = {1000, 800, 600, 400, 200, 100, 0};
+static unsigned max77387_estates[] = { 3500, 710, 0 };
 
 static struct max77387_platform_data ceres_max77387_pdata = {
 	.config		= {
@@ -548,7 +548,7 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 	.edpc_config	= {
 		.states		= max77387_estates,
 		.num_states	= ARRAY_SIZE(max77387_estates),
-		.e0_index	= 3,
+		.e0_index	= 2,
 		.priority	= EDP_MAX_PRIO + 2,
 		},
 };
