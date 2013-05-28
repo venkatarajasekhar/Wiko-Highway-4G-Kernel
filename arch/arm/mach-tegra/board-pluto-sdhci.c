@@ -182,7 +182,8 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.mmc_data = {
 		.built_in = 1,
 		.ocr_mask = MMC_OCR_1V8_MASK,
-	}
+	},
+	.en_freq_scaling = true,
 };
 
 static struct platform_device tegra_sdhci_device0 = {
