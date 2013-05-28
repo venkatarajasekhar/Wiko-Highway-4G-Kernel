@@ -60,6 +60,10 @@
 #include "gpio-names.h"
 #include "fuse.h"
 #include "common.h"
+#ifdef CONFIG_SENSORS_TMON_TMP411
+#include <linux/platform_data/tmon_tmp411.h>
+#include "therm-monitor.h"
+#endif
 
 /* B00 boards shared GMI address space */
 #define GMI_SRAM_BASE_OFFSET	0x0000000
@@ -116,6 +120,21 @@ static __initdata struct tegra_clk_init_table m2601_clk_init_table[] = {
 	{"wake.sclk",		NULL,		334000000,	true },
 	{ NULL,			NULL,		0,		0},
 };
+
+#ifdef CONFIG_SENSORS_TMON_TMP411
+struct therm_monitor_data m2601_therm_monitor_data = {
+	.brd_ltemp_reg_data = NULL,
+	.delta_temp = 4000,
+	.delta_time = 2000,
+	.remote_offset = 8000,
+	.local_temp_update = false,
+	.utmip_reg_update = false, /* USB registers update is not
+						required for now */
+	.i2c_bus_num = I2C_BUS_TMP411,
+	.i2c_dev_addrs = I2C_ADDR_TMP411,
+	.i2c_dev_name = "tmon-tmp411-sensor",
+};
+#endif
 
 static struct tegra_i2c_platform_data m2601_i2c1_platform_data = {
 	.bus_clk_rate	= 100000,
@@ -604,6 +623,9 @@ static void __init tegra_m2601_init(void)
 	m2601_gmi_sram_init();
 	m2601_gmi_pca_init();
 	m2601_gpio_init();
+#ifdef CONFIG_SENSORS_TMON_TMP411
+	register_therm_monitor(&m2601_therm_monitor_data);
+#endif
 }
 
 MACHINE_START(M2601, "m2601")

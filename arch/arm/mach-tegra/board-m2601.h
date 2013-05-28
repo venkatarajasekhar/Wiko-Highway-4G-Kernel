@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/m2601/board-m2601.h
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,5 +30,14 @@ int m2601_sdhci_init(void);
 int m2601_pinmux_init(void);
 int m2601_gpio_init(void);
 int m2601_pins_state_init(void);
+
+#ifdef CONFIG_SENSORS_TMON_TMP411
+	/* Thermal monitor data */
+	#define DELTA_TEMP 4000
+	#define DELTA_TIME 2000
+	#define REMT_OFFSET 8000
+	#define I2C_ADDR_TMP411 0x4c
+	#define I2C_BUS_TMP411 4
+#endif
 
 #endif

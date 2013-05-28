@@ -291,6 +291,7 @@ obj-${CONFIG_MACH_E1853}               += therm-monitor.o
 obj-${CONFIG_MACH_M2601}               += board-m2601.o
 obj-${CONFIG_MACH_M2601}               += board-m2601-pinmux.o
 obj-${CONFIG_MACH_M2601}               += board-m2601-sdhci.o
+obj-${CONFIG_MACH_M2601}               += therm-monitor.o
 
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise.o
 obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise-panel.o
