@@ -251,58 +251,62 @@ static struct regulator_consumer_supply palmas_regen7_supply[] = {
 static struct regulator_consumer_supply palmas_chargerpump_supply[] = {
 };
 
-#undef PALMAS_PDATA_INIT
-#define PALMAS_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
-	_boot_on, _apply_uv)						\
-	static struct regulator_init_data reg_idata_##_name = {		\
-		.constraints = {					\
-			.name = palmas_rails(_name),			\
-			.min_uV = (_minmv)*1000,			\
-			.max_uV = (_maxmv)*1000,			\
-			.valid_modes_mask = (REGULATOR_MODE_NORMAL |	\
-					REGULATOR_MODE_STANDBY),	\
-			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
-					REGULATOR_CHANGE_STATUS |	\
-					REGULATOR_CHANGE_VOLTAGE),	\
-			.always_on = _always_on,			\
-			.boot_on = _boot_on,				\
-			.apply_uV = _apply_uv,				\
-		},							\
-		.num_consumer_supplies =				\
-			ARRAY_SIZE(palmas_##_name##_supply),		\
-		.consumer_supplies = palmas_##_name##_supply,		\
-		.supply_regulator = _supply_reg,			\
-	}
-
-
-PALMAS_PDATA_INIT(smps12, 650,  1300, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps3, 1100,  1100, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps6, 650,  1400, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps7, 2840,  2860, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(smps8, 1200,  1200, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(smps9, 1800,  1800, NULL, 1, 1, 1);
-PALMAS_PDATA_INIT(ldo1, 3200,  3200, NULL, 1, 1, 1);
-PALMAS_PDATA_INIT(ldo2, 2850,  2850, palmas_rails(smps7), 0, 0, 1);
-PALMAS_PDATA_INIT(ldo3, 1800,  3000, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo4, 1050,  1050, palmas_rails(smps8), 1, 0, 1);
-PALMAS_PDATA_INIT(ldo5, 1100,  1100, palmas_rails(smps8), 1, 0, 1);
-PALMAS_PDATA_INIT(ldo6, 2700,  2700, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo7, 1800,  3000, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo8, 1800,  1800, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo9, 1100,  1100, palmas_rails(smps8), 0, 0, 1);
-PALMAS_PDATA_INIT(ldo10, 1800,  3300, palmas_rails(smps7), 0, 0, 0);
-PALMAS_PDATA_INIT(ldo11, 2800,  2800, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldo12, 1800,  1800, palmas_rails(smps9), 0, 0, 1);
-PALMAS_PDATA_INIT(ldo13, 1800,  1800, palmas_rails(smps9), 0, 0, 1);
-PALMAS_PDATA_INIT(ldo14, 2800,  2800, NULL, 0, 0, 1);
-PALMAS_PDATA_INIT(ldoln, 2800,  2800, NULL, 1, 1, 0);
-PALMAS_PDATA_INIT(ldousb, 3300,  3300, NULL, 0, 0, 0);
-PALMAS_PDATA_INIT(regen1, 4300,  4300, NULL, 1, 1, 0);
-PALMAS_PDATA_INIT(regen2, 1200,  1200, palmas_rails(smps8), 0, 0, 0);
-PALMAS_PDATA_INIT(regen4, 1200,  1200, palmas_rails(smps9), 1, 1, 0);
-PALMAS_PDATA_INIT(regen5, 1800,  1800, palmas_rails(smps8), 1, 1, 0);
-PALMAS_PDATA_INIT(regen7, 2800,  2800, NULL, 1, 0, 1);
-PALMAS_PDATA_INIT(chargerpump, 5000,  5000, NULL, 0, 0, 0);
+PALMAS_REGS_PDATA(smps12, 650,  1300, NULL, 0, 0, 0, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(smps3, 1100,  1100, NULL, 0, 0, 0, 0,
+	0, PALMAS_EXT_CONTROL_ENABLE2, 0, 0, 0);
+PALMAS_REGS_PDATA(smps6, 650,  1400, NULL, 0, 0, 0, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(smps7, 2840,  2860, NULL, 0, 0, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(smps8, 1200,  1200, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(smps9, 1800,  1800, NULL, 1, 1, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo1, 3200,  3200, NULL, 1, 1, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo2, 2850,  2850, palmas_rails(smps7), 0, 0, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo3, 1800,  3000, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo4, 1050,  1050, palmas_rails(smps8), 1, 0, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo5, 1100,  1100, palmas_rails(smps8), 1, 0, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 1, 0, 0);
+PALMAS_REGS_PDATA(ldo6, 2700,  2700, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo7, 1800,  3000, NULL, 0, 0, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo8, 1800,  1800, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo9, 1100,  1100, palmas_rails(smps8), 0, 0, 1, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo10, 1800,  3300, palmas_rails(smps7), 0, 0, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo11, 2800,  2800, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo12, 1800,  1800, palmas_rails(smps9), 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo13, 1800,  1800, palmas_rails(smps9), 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo14, 2800,  2800, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(ldoln, 2800,  2800, NULL, 1, 1, 0, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldousb, 3300,  3300, NULL, 0, 0, 0, 0,
+	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(regen1, 4300,  4300, NULL, 1, 1, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(regen2, 1200,  1200, palmas_rails(smps8), 0, 0, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(regen4, 1200,  1200, palmas_rails(smps9), 1, 1, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(regen5, 1800,  1800, palmas_rails(smps8), 1, 1, 0, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(regen7, 2800,  2800, NULL, 1, 0, 1, 0,
+	0, 0, 0, 0, 0);
+PALMAS_REGS_PDATA(chargerpump, 5000,  5000, NULL, 0, 0, 0, 0,
+	0, 0, 0, 0, 0);
 
 #define PALMAS_REG_PDATA(_sname) &reg_idata_##_sname
 
@@ -344,51 +348,19 @@ static struct regulator_init_data *atlantis_reg_data[PALMAS_NUM_REGS] = {
 	PALMAS_REG_PDATA(chargerpump),
 };
 
-#define PALMAS_REG_INIT(_name, _warm_reset, _roof_floor, _mode_sleep,	\
-		_tstep, _vsel)						\
-	static struct palmas_reg_init reg_init_data_##_name = {		\
-		.warm_reset = _warm_reset,				\
-		.roof_floor =	_roof_floor,				\
-		.mode_sleep = _mode_sleep,		\
-		.tstep = _tstep,			\
-		.vsel = _vsel,		\
-	}
-
-PALMAS_REG_INIT(smps12, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(smps123, 0, PALMAS_EXT_CONTROL_ENABLE1, 0, 0, 0);
-PALMAS_REG_INIT(smps3, 0, PALMAS_EXT_CONTROL_ENABLE2, 0, 0, 0);
-PALMAS_REG_INIT(smps45, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps457, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps6, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(smps7, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps8, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps9, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(smps10, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(ldo1, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldo2, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldo3, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(ldo4, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldo5, 0, PALMAS_EXT_CONTROL_NSLEEP, 1, 0, 0);
-PALMAS_REG_INIT(ldo6, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(ldo7, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldo8, 0, 0, 0, 0, 0);
-PALMAS_REG_INIT(ldo9, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldoln, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-PALMAS_REG_INIT(ldousb, 0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
-
 #define PALMAS_REG_INIT_DATA(_sname) &reg_init_data_##_sname
 
 static struct palmas_reg_init *atlantis_reg_init[PALMAS_NUM_REGS] = {
 	PALMAS_REG_INIT_DATA(smps12),
-	PALMAS_REG_INIT_DATA(smps123),
+	NULL,
 	PALMAS_REG_INIT_DATA(smps3),
-	PALMAS_REG_INIT_DATA(smps45),
-	PALMAS_REG_INIT_DATA(smps457),
+	NULL,
+	NULL,
 	PALMAS_REG_INIT_DATA(smps6),
 	PALMAS_REG_INIT_DATA(smps7),
 	PALMAS_REG_INIT_DATA(smps8),
 	PALMAS_REG_INIT_DATA(smps9),
-	PALMAS_REG_INIT_DATA(smps10),
+	NULL,
 	PALMAS_REG_INIT_DATA(ldo1),
 	PALMAS_REG_INIT_DATA(ldo2),
 	PALMAS_REG_INIT_DATA(ldo3),
@@ -398,13 +370,22 @@ static struct palmas_reg_init *atlantis_reg_init[PALMAS_NUM_REGS] = {
 	PALMAS_REG_INIT_DATA(ldo7),
 	PALMAS_REG_INIT_DATA(ldo8),
 	PALMAS_REG_INIT_DATA(ldo9),
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	PALMAS_REG_INIT_DATA(ldo10),
+	PALMAS_REG_INIT_DATA(ldo11),
+	PALMAS_REG_INIT_DATA(ldo12),
+	PALMAS_REG_INIT_DATA(ldo13),
+	PALMAS_REG_INIT_DATA(ldo14),
 	PALMAS_REG_INIT_DATA(ldoln),
 	PALMAS_REG_INIT_DATA(ldousb),
+	PALMAS_REG_INIT_DATA(regen1),
+	PALMAS_REG_INIT_DATA(regen2),
+	NULL,
+	PALMAS_REG_INIT_DATA(regen4),
+	PALMAS_REG_INIT_DATA(regen5),
+	PALMAS_REG_INIT_DATA(regen7),
+	NULL,
+	NULL,
+	PALMAS_REG_INIT_DATA(chargerpump),
 };
 
 static struct regulator_consumer_supply fixed_reg_battery_supply[] = {
