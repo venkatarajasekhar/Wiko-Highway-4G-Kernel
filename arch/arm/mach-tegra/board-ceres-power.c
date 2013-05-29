@@ -509,6 +509,7 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 			.det_debouncecnt = 0x10,
 			.auto_pwrdn_en = 1,
 			.inst_pol = 1,
+			.sim_puen = 1,
 			.pwrdn_debouncecnt = 0x10,
 		},
 		{
@@ -517,6 +518,7 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 			.det_debouncecnt = 0x10,
 			.auto_pwrdn_en = 1,
 			.inst_pol = 1,
+			.sim_puen = 1,
 			.pwrdn_debouncecnt = 0x10,
 		},
 	},
