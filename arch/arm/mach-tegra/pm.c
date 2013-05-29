@@ -887,12 +887,18 @@ static int tegra_common_suspend(void)
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
 	if (pdata && pdata->lp1_lowvolt_support) {
-		u32 lp1_core_lowvolt =
-			(tegra_is_voice_call_active() ||
-			tegra_dvfs_rail_get_thermal_floor(tegra_core_rail)) ?
+		u32 lp1_core_lowvolt;
+		if (pdata->lp1_lookup_reg) {
+			lp1_core_lowvolt = pdata->lp1_lookup_reg(
+				pdata->lp1bb_core_volt_min);
+			lp1_core_lowvolt <<= 8;
+		} else {
+			lp1_core_lowvolt = (tegra_is_voice_call_active() ||
+				 tegra_dvfs_rail_get_thermal_floor(
+							tegra_core_rail)) ?
 			pdata->lp1_core_volt_low_cold << 8 :
 			pdata->lp1_core_volt_low << 8;
-
+		}
 		lp1_core_lowvolt |= pdata->core_reg_addr;
 		memcpy(tegra_lp1_register_core_lowvolt(), &lp1_core_lowvolt, 4);
 	}
@@ -1556,18 +1562,25 @@ out:
 	}
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
-	if (pdata->lp1_lowvolt_support) {
-		u32 lp1_core_lowvolt, lp1_core_highvolt;
+	if (pdata && pdata->lp1_lowvolt_support) {
+		u32 lp1_core_voltdata, lp1_core_hv;
 		memcpy(tegra_lp1_register_pmuslave_addr(), &pdata->pmuslave_addr, 4);
 		memcpy(tegra_lp1_register_i2c_base_addr(), &pdata->i2c_base_addr, 4);
 
-		lp1_core_lowvolt = 0;
-		lp1_core_lowvolt = (pdata->lp1_core_volt_low << 8) | pdata->core_reg_addr;
-		memcpy(tegra_lp1_register_core_lowvolt(), &lp1_core_lowvolt, 4);
+		if (pdata->lp1_lookup_reg)
+			lp1_core_hv =
+				 pdata->lp1_lookup_reg(tegra_core_speedo_mv());
+		else
+			lp1_core_hv = pdata->lp1_core_volt_high;
 
-		lp1_core_highvolt = 0;
-		lp1_core_highvolt = (pdata->lp1_core_volt_high << 8) | pdata->core_reg_addr;
-		memcpy(tegra_lp1_register_core_highvolt(), &lp1_core_highvolt, 4);
+		lp1_core_voltdata = (pdata->lp1_core_volt_low << 8) |
+							pdata->core_reg_addr;
+		memcpy(tegra_lp1_register_core_lowvolt(),
+							&lp1_core_voltdata, 4);
+
+		lp1_core_voltdata = (lp1_core_hv << 8) | pdata->core_reg_addr;
+		memcpy(tegra_lp1_register_core_highvolt(),
+							&lp1_core_voltdata, 4);
 	}
 #endif
 	/* !!!FIXME!!! THIS IS TEGRA2 ONLY */

@@ -54,6 +54,13 @@ enum resume_stage {
 	TEGRA_RESUME_AFTER_CPU,
 };
 
+#if defined(CONFIG_TEGRA_LP1_LOW_COREVOLTAGE)
+struct lpx_corev_reg_lookup {
+	int core_voltage;
+	int reg_value;
+};
+#endif
+
 struct tegra_suspend_platform_data {
 	unsigned long cpu_timer;   /* CPU power good time in us,  LP2/LP1 */
 	unsigned long cpu_off_timer;	/* CPU power off time us, LP2/LP1 */
@@ -77,6 +84,7 @@ struct tegra_suspend_platform_data {
 	unsigned int lp1_core_volt_low_cold;
 	unsigned int lp1_core_volt_low;
 	unsigned int lp1_core_volt_high;
+	int (*lp1_lookup_reg)(int voltage);
 #endif
 	unsigned int lp1bb_core_volt_min;
 	unsigned long lp1bb_emc_rate_min;
