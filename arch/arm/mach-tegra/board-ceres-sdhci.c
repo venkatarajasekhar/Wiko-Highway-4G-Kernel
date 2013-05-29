@@ -154,6 +154,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
 	.max_clk_limit = 136000000,
+	.edp_support = false,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
@@ -164,6 +165,8 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.trim_delay = 0xA,
 	.ddr_clk_limit = 41000000,
 	.max_clk_limit = 136000000,
+	.edp_support = true,
+	.edp_states = {1283, 0},
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
@@ -178,7 +181,9 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.mmc_data = {
 		.built_in = 1,
 		.ocr_mask = MMC_OCR_1V8_MASK,
-	}
+	},
+	.edp_support = true,
+	.edp_states = {855, 0},
 };
 
 static struct platform_device tegra_sdhci_device0 = {
