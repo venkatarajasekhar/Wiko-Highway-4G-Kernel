@@ -1136,8 +1136,8 @@ static void ceres_board_resume(int lp_state, enum resume_stage stg)
 }
 
 static struct tegra_suspend_platform_data ceres_suspend_data = {
-	.cpu_timer	= 300,
-	.cpu_off_timer	= 300,
+	.cpu_timer	= 200,
+	.cpu_off_timer	= 100,
 	.suspend_mode	= TEGRA_SUSPEND_LP0,
 	.core_timer	= 0x157e,
 	.core_off_timer = 2000,
@@ -1151,6 +1151,16 @@ static struct tegra_suspend_platform_data ceres_suspend_data = {
 
 int __init ceres_suspend_init(void)
 {
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if ((board_info.board_id == BOARD_E1690) ||
+	    (board_info.board_id == BOARD_E1680) ||
+	    (board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
+		ceres_suspend_data.cpu_timer = 100;
+		ceres_suspend_data.core_timer = 0x1510;
+	}
+
 	tegra_init_suspend(&ceres_suspend_data);
 	return 0;
 }
