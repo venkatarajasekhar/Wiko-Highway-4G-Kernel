@@ -1192,7 +1192,7 @@ int __init ceres_soctherm_init(void)
 
 static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
-	.max = 50000
+	.max = 15000
 };
 
 void __init ceres_sysedp_init(void)
@@ -1202,6 +1202,9 @@ void __init ceres_sysedp_init(void)
 
 	if (!IS_ENABLED(CONFIG_EDP_FRAMEWORK))
 		return;
+
+	if (get_power_supply_type() != POWER_SUPPLY_TYPE_BATTERY)
+		ceres_sysedp_manager.max = INT_MAX;
 
 	r = edp_register_manager(&ceres_sysedp_manager);
 	WARN_ON(r);
