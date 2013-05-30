@@ -275,19 +275,6 @@ struct palmas_reg_init {
 	 */
 	int mode_sleep;
 
-	/* tstep is the timestep loaded to the TSTEP register
-	 *
-	 * For SMPS
-	 *
-	 * 0: Jump (no slope control)
-	 * 1: 10mV/us
-	 * 2: 5mV/us
-	 * 3: 2.5mV/us
-	 *
-	 * For LDO unused
-	 */
-	int tstep;
-
 	/* voltage_sel is the bitfield loaded onto the SMPSX_VOLTAGE
 	 * register. Set this is the default voltage set in OTP needs
 	 * to be overridden.
