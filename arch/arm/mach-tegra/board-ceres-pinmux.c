@@ -195,6 +195,11 @@ static __initdata struct tegra_drive_pingroup_config ceres_drive_pinmux[] = {
 	/* SDMMC4 */
 	SET_DRIVE_WITH_TYPE(GMA, ENABLE, DISABLE, DIV_1, 1, 2, FASTEST,
 								FASTEST, 1),
+	/* SPI2 */
+	SET_DRIVE(SPI2, ENABLE, ENABLE, DIV_1, 16, 16, SLOWEST, SLOWEST),
+
+	/* SPI3 */
+	SET_DRIVE(SPI3, ENABLE, ENABLE, DIV_1, 16, 16, SLOWEST, SLOWEST),
 };
 
 
