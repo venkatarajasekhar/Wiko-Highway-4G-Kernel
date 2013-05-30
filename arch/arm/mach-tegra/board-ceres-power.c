@@ -31,6 +31,7 @@
 #include <linux/platform_data/lp8755.h>
 #include <linux/max17048_battery.h>
 #include <linux/pid_thermal_gov.h>
+#include <linux/power/power_supply_extcon.h>
 
 #include <asm/mach-types.h>
 
@@ -488,6 +489,18 @@ static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.wdt_timeout    = 32,
 };
 
+static struct power_supply_extcon_plat_data extcon_pdata = {
+	.extcon_name = "tegra-udc",
+};
+
+static struct platform_device power_supply_extcon_device = {
+	.name           = "power-supply-extcon",
+	.id             = -1,
+	.dev		= {
+		.platform_data = &extcon_pdata,
+	},
+};
+
 struct max77660_adc_platform_data max77660_adc_pdata = {
 	.adc_current_uA = 10,
 	.adc_avg_sample = 2,
@@ -882,6 +895,8 @@ int __init ceres_regulator_init(void)
 	}
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
+
+	platform_device_register(&power_supply_extcon_device);
 
 reg_populate_done:
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
