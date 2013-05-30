@@ -181,8 +181,6 @@ struct max17048_battery_model max17048_mdata = {
 };
 
 struct max17048_platform_data max17048_pdata = {
-	.use_ac = 0,
-	.use_usb = 0,
 	.model_data = &max17048_mdata,
 };
 
