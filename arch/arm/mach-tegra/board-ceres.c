@@ -46,6 +46,7 @@
 
 #include <mach/iomap.h>
 #include <mach/irqs.h>
+#include <mach/pinmux-t14.h>
 #include <mach/isomgr.h>
 #include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
@@ -568,6 +569,7 @@ static void baseband2_start(void)
 {
 	pr_info("%s\n", __func__);
 	gpio_set_value(MDM2_EN, 1);
+	gpio_set_value(MDM2_RST, 1);
 }
 
 static void baseband2_reset(void)
@@ -586,6 +588,10 @@ static int baseband2_init(void)
 	ret = gpio_request_array(modem2_gpios, ARRAY_SIZE(modem2_gpios));
 	if (ret)
 		return ret;
+
+	/* enable pull-down for MDM2_COLD_BOOT */
+	tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_DAP5_DIN,
+				    TEGRA_PUPD_PULL_DOWN);
 
 	/* export GPIO for user space access through sysfs */
 	gpio_export(MDM2_RST, false);
