@@ -1187,8 +1187,8 @@ halted:
 tegra3_save_config:
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	adr	r2, tegra3_sdram_pad_address
-	adr	r8, tegra3_sdram_pad_save
+	adrl	r2, tegra3_sdram_pad_address
+	adrl	r8, tegra3_sdram_pad_save
 #endif
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	adr	r2, tegra11_sdram_pad_address
