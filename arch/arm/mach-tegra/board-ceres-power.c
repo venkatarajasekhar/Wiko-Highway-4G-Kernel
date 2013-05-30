@@ -1309,7 +1309,7 @@ static struct tegra_sysedp_corecap ceres_sysedp_corecap[] = {
 static struct tegra_sysedp_platform_data ceres_sysedp_platdata = {
 	.corecap = ceres_sysedp_corecap,
 	.corecap_size = ARRAY_SIZE(ceres_sysedp_corecap),
-	.core_gain = 100,
+	.core_gain = 130,
 	.init_req_watts = 11000
 };
 
