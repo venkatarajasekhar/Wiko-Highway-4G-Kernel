@@ -465,10 +465,10 @@ ENTRY(tegra3_lp1_reset)
 	add	r5, pc, #tegra11_sdram_pad_save-(.+8)	@ r5 --> saved data
 #endif
 
-	ldr	r4, [r5, #0x18]
+	ldr	r4, [r5, #0x1c]
 	str	r4, [r0, #CLK_RESET_CLK_SOURCE_MSELECT]
 
-	ldr	r4, [r5, #0x1C]
+	ldr	r4, [r5, #0x20]
 	str	r4, [r0, #CLK_RESET_SCLK_BURST]
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	mov32	r4, ((1<<28) | (8))	@ burst policy is PLLX
@@ -574,7 +574,7 @@ emc_exit_selfrefresh:
 	add	r5, pc, #tegra11_sdram_pad_save-(.+8)	@ r5 --> saved data
 #endif
 
-	ldr	r1, [r5, #0x14]	@ PMC_IO_DPD_STATUS
+	ldr	r1, [r5, #0x18]	@ PMC_IO_DPD_STATUS
 	mvn	r1, r1
 	bic	r1, r1, #(0x1<<31)
 	orr	r1, r1, #(0x1<<30)
@@ -621,6 +621,7 @@ emc_wait_audo_cal_onetime:
 	str	r1, [r0, #EMC_NOP]
 	str	r1, [r0, #EMC_NOP]
 #endif
+	ldr	r1, [r5, #0x14]
 	str	r1, [r0, #EMC_REFRESH]
 
 	emc_device_mask r1, r0
@@ -691,7 +692,7 @@ zcal_done:
 	mov32	r1, TEGRA_EMC1_BASE
 	cmp	r0, r1
 	movne	r0, r1
-	addne	r5, r5, #0x20
+	addne	r5, r5, #0x24
 	bne	exit_self_refresh
 #endif
 
@@ -722,6 +723,7 @@ tegra3_sdram_pad_save:
 	.word	0
 	.word	0
 	.word	0
+	.word	0
 
 tegra3_sdram_pad_address:
 	.word	TEGRA_EMC_BASE + EMC_CFG				@0x0
@@ -729,14 +731,17 @@ tegra3_sdram_pad_address:
 	.word	TEGRA_EMC_BASE + EMC_AUTO_CAL_INTERVAL			@0x8
 	.word	TEGRA_EMC_BASE + EMC_XM2VTTGENPADCTRL			@0xc
 	.word	TEGRA_EMC_BASE + EMC_XM2VTTGENPADCTRL2			@0x10
-	.word	TEGRA_PMC_BASE + PMC_IO_DPD_STATUS			@0x14
-	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_CLK_SOURCE_MSELECT	@0x18
-	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_SCLK_BURST		@0x1c
+	.word	TEGRA_EMC_BASE + EMC_REFRESH				@0x14
+	.word	TEGRA_PMC_BASE + PMC_IO_DPD_STATUS			@0x18
+	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_CLK_SOURCE_MSELECT	@0x1c
+	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_SCLK_BURST		@0x20
 #endif
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	.align	L1_CACHE_SHIFT
 	.type	tegra11_sdram_pad_save, %object
 tegra11_sdram_pad_save:
+	.word	0
+	.word	0
 	.word	0
 	.word	0
 	.word	0
@@ -757,14 +762,16 @@ tegra11_sdram_pad_address:
 	.word	TEGRA_EMC0_BASE + EMC_AUTO_CAL_INTERVAL			@0x8
 	.word	TEGRA_EMC0_BASE + EMC_XM2VTTGENPADCTRL			@0xc
 	.word	TEGRA_EMC0_BASE + EMC_XM2VTTGENPADCTRL2			@0x10
-	.word	TEGRA_PMC_BASE + PMC_IO_DPD_STATUS			@0x14
-	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_CLK_SOURCE_MSELECT	@0x18
-	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_SCLK_BURST		@0x1c
-	.word	TEGRA_EMC1_BASE + EMC_CFG				@0x20
-	.word	TEGRA_EMC1_BASE + EMC_ZCAL_INTERVAL			@0x24
-	.word	TEGRA_EMC1_BASE + EMC_AUTO_CAL_INTERVAL			@0x28
-	.word	TEGRA_EMC1_BASE + EMC_XM2VTTGENPADCTRL			@0x2c
-	.word	TEGRA_EMC1_BASE + EMC_XM2VTTGENPADCTRL2			@0x30
+	.word	TEGRA_EMC0_BASE + EMC_REFRESH				@0x14
+	.word	TEGRA_PMC_BASE + PMC_IO_DPD_STATUS			@0x18
+	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_CLK_SOURCE_MSELECT	@0x1c
+	.word	TEGRA_CLK_RESET_BASE + CLK_RESET_SCLK_BURST		@0x20
+	.word	TEGRA_EMC1_BASE + EMC_CFG				@0x24
+	.word	TEGRA_EMC1_BASE + EMC_ZCAL_INTERVAL			@0x28
+	.word	TEGRA_EMC1_BASE + EMC_AUTO_CAL_INTERVAL			@0x2c
+	.word	TEGRA_EMC1_BASE + EMC_XM2VTTGENPADCTRL			@0x30
+	.word	TEGRA_EMC1_BASE + EMC_XM2VTTGENPADCTRL2			@0x34
+	.word	TEGRA_EMC1_BASE + EMC_REFRESH				@0x38
 #endif
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
