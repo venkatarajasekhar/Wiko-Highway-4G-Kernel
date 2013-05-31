@@ -509,11 +509,11 @@ int mmc_bkops_start(struct mmc_card *card, bool is_synchronous)
 	 * to doing bk ops to ensure that HPI is issued before
 	 * handling any new request in the queue.
 	 */
-		spin_lock_irqsave(&card->host->lock, flags);
-		mmc_card_clr_need_bkops(card);
-		if (!is_synchronous)
-			mmc_card_set_doing_bkops(card);
-		spin_unlock_irqrestore(&card->host->lock, flags);
+	spin_lock_irqsave(&card->host->lock, flags);
+	mmc_card_clr_need_bkops(card);
+	if (!is_synchronous)
+		mmc_card_set_doing_bkops(card);
+	spin_unlock_irqrestore(&card->host->lock, flags);
 
 	mmc_release_host(card->host);
 
