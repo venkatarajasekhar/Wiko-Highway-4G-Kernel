@@ -505,8 +505,6 @@ static struct palmas_dvfs_init_data palmas_dvfs_idata[] = {
 };
 
 static struct palmas_pmic_platform_data pmic_platform = {
-	.enable_ldo8_tracking = true,
-	.disabe_ldo8_tracking_suspend = true,
 	.dvfs_init_data = palmas_dvfs_idata,
 	.dvfs_init_data_size = ARRAY_SIZE(palmas_dvfs_idata),
 };
@@ -873,7 +871,8 @@ int __init atlantis_regulator_init(void)
 				atlantis_reg_init[PALMAS_REG_SMPS6];
 		pmic_platform.reg_data[PALMAS_REG_SMPS6] = NULL;
 		pmic_platform.reg_init[PALMAS_REG_SMPS6] = NULL;
-		reg_init_data_ldo5.enable_tracking = true;
+		reg_init_data_ldo5.config_flags =
+				PALMAS_REGULATOR_CONFIG_TRACKING_ENABLE;
 		reg_init_data_ldo5.tracking_regulator = PALMAS_REG_SMPS12;
 
 		lp8755_regulator_init();
