@@ -1382,7 +1382,7 @@ static const struct file_operations debug_drive_fops = {
 
 static int __init tegra_pinmux_debuginit(void)
 {
-	(void) debugfs_create_file("tegra_pinmux", S_IRUGO | S_IWUGO,
+	(void) debugfs_create_file("tegra_pinmux", S_IRUGO | S_IWUSR,
 					NULL, NULL, &debug_fops);
 	(void) debugfs_create_file("tegra_pinmux_drive", S_IRUGO,
 					NULL, NULL, &debug_drive_fops);
