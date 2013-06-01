@@ -263,10 +263,10 @@ PALMAS_REGS_PDATA(smps8, 1200,  1200, NULL, 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(smps9, 1800,  1800, NULL, 1, 1, 1, 0,
 	0, 0, 0, 0, 0);
-PALMAS_REGS_PDATA(ldo1, 3200,  3200, NULL, 1, 1, 1, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldo1, 3200,  3200, NULL, 0, 0, 1, 0,
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo2, 2850,  2850, palmas_rails(smps7), 0, 0, 1, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo3, 1800,  3000, NULL, 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo4, 1050,  1050, palmas_rails(smps8), 1, 0, 1, 0,
@@ -276,11 +276,11 @@ PALMAS_REGS_PDATA(ldo5, 1100,  1100, palmas_rails(smps8), 1, 0, 1, 0,
 PALMAS_REGS_PDATA(ldo6, 2700,  2700, NULL, 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo7, 1800,  3000, NULL, 0, 0, 1, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo8, 1800,  1800, NULL, 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo9, 1100,  1100, palmas_rails(smps8), 0, 0, 1, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo10, 1800,  3300, palmas_rails(smps7), 0, 0, 0, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo11, 2800,  2800, NULL, 0, 0, 1, 0,
@@ -291,10 +291,10 @@ PALMAS_REGS_PDATA(ldo13, 1800,  1800, palmas_rails(smps9), 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldo14, 2800,  2800, NULL, 0, 0, 1, 0,
 	0, 0, 0, 0, 0);
-PALMAS_REGS_PDATA(ldoln, 2800,  2800, NULL, 1, 1, 0, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+PALMAS_REGS_PDATA(ldoln, 2800,  2800, NULL, 0, 0, 0, 0,
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(ldousb, 3300,  3300, NULL, 0, 0, 0, 0,
-	0, PALMAS_EXT_CONTROL_NSLEEP, 0, 0, 0);
+	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(regen1, 4300,  4300, NULL, 1, 1, 0, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(regen2, 1200,  1200, palmas_rails(smps8), 0, 0, 0, 0,
@@ -303,10 +303,11 @@ PALMAS_REGS_PDATA(regen4, 1200,  1200, palmas_rails(smps9), 1, 1, 0, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(regen5, 1800,  1800, palmas_rails(smps8), 1, 1, 0, 0,
 	0, 0, 0, 0, 0);
-PALMAS_REGS_PDATA(regen7, 2800,  2800, NULL, 1, 0, 1, 0,
+PALMAS_REGS_PDATA(regen7, 2800,  2800, NULL, 1, 1, 0, 0,
 	0, 0, 0, 0, 0);
 PALMAS_REGS_PDATA(chargerpump, 5000,  5000, NULL, 0, 0, 0, 0,
 	0, 0, 0, 0, 0);
+
 
 #define PALMAS_REG_PDATA(_sname) &reg_idata_##_sname
 
@@ -849,11 +850,13 @@ int __init atlantis_regulator_init(void)
 		pmic_platform.reg_data[i] = atlantis_reg_data[i];
 		pmic_platform.reg_init[i] = atlantis_reg_init[i];
 	}
-	if ((board_info.fab != BOARD_FAB_A00) ||
-		 (board_info.board_id == BOARD_E1740)) {
-		pmic_platform.reg_data[PALMAS_REG_REGEN7] = NULL;
-		pmic_platform.reg_init[PALMAS_REG_REGEN7] = NULL;
-	}
+
+	/* Enable full constraints to disable unused rails */
+	regulator_has_full_constraints();
+	if (((board_info.fab != BOARD_FAB_A00) ||
+		 (board_info.board_id == BOARD_E1740)))
+			reg_idata_regen7.num_consumer_supplies = 0;
+
 	if (board_info.sku == BOARD_SKU_110) {
 		pmic_platform.reg_data[PALMAS_REG_SMPS12] = NULL;
 		pmic_platform.reg_init[PALMAS_REG_SMPS12] = NULL;
