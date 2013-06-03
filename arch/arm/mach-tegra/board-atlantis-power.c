@@ -674,36 +674,33 @@ struct palmas_gpadc_platform_data gpadc_pdata = {
 	.channel3_current_uA = 0,
 };
 
-/* BQ2419X VBUS regulator */
-static struct regulator_consumer_supply bq2419x_vbus_supply[] = {
+static struct regulator_consumer_supply palmas_vbus_supply[] = {
 	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 };
 
-static struct regulator_consumer_supply bq2419x_batt_supply[] = {
+static struct regulator_consumer_supply palmas_batt_supply[] = {
 	REGULATOR_SUPPLY("usb_bat_chg", "tegra-udc.0"),
 };
 
-static struct bq2419x_vbus_platform_data bq2419x_vbus_pdata = {
-	.num_consumer_supplies = ARRAY_SIZE(bq2419x_vbus_supply),
-	.consumer_supplies = bq2419x_vbus_supply,
+static struct palmas_vbus_platform_data palmas_vbus_pdata = {
+	.num_consumer_supplies = ARRAY_SIZE(palmas_vbus_supply),
+	.consumer_supplies = palmas_vbus_supply,
 };
 
-struct bq2419x_charger_platform_data bq2419x_charger_pdata = {
-	.use_usb = 1,
-	.use_mains = 1,
+struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
 	.max_charge_current_mA = 3000,
 	.charging_term_current_mA = 100,
-	.consumer_supplies = bq2419x_batt_supply,
-	.num_consumer_supplies = ARRAY_SIZE(bq2419x_batt_supply),
+	.consumer_supplies = palmas_batt_supply,
+	.num_consumer_supplies = ARRAY_SIZE(palmas_batt_supply),
 	.wdt_timeout    = 40,
 	.rtc_alarm_time = 3600,
 	.chg_restart_time = 1800,
 	.is_battery_present = false,
 };
 
-struct bq2419x_platform_data bq2419x_pdata = {
-	.vbus_pdata = &bq2419x_vbus_pdata,
-	.bcharger_pdata = &bq2419x_charger_pdata,
+struct palmas_charger_platform_data palmas_charger_pdata = {
+	.vbus_pdata = &palmas_vbus_pdata,
+	.bcharger_pdata = &palmas_bcharger_pdata,
 };
 
 static struct palmas_sim_platform_data sim_platform = {
@@ -730,7 +727,7 @@ static struct palmas_platform_data palmas_pdata = {
 	.watchdog_timer_initial_period = 128,
 	.pinctrl_pdata = &palmas_pinctrl_pdata,
 	.extcon_pdata = &palmas_extcon_pdata,
-	.charger_pdata = &bq2419x_pdata,
+	.charger_pdata = &palmas_charger_pdata,
 	.adc_pdata = &gpadc_pdata,
 	.battery_pdata = &battery_pdata,
 };
