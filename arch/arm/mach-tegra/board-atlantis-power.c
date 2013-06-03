@@ -31,6 +31,7 @@
 #include <linux/platform_data/lp8755.h>
 #include <linux/irq.h>
 #include <linux/input/drv2603-vibrator.h>
+#include <linux/power/power_supply_extcon.h>
 
 #include <asm/mach-types.h>
 
@@ -698,6 +699,18 @@ struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
 	.is_battery_present = false,
 };
 
+static struct power_supply_extcon_plat_data extcon_pdata = {
+	.extcon_name = "tegra-udc",
+};
+
+static struct platform_device power_supply_extcon_device = {
+	.name           = "power-supply-extcon",
+	.id             = -1,
+	.dev            = {
+		.platform_data = &extcon_pdata,
+	},
+};
+
 struct palmas_charger_platform_data palmas_charger_pdata = {
 	.vbus_pdata = &palmas_vbus_pdata,
 	.bcharger_pdata = &palmas_bcharger_pdata,
@@ -876,6 +889,8 @@ int __init atlantis_regulator_init(void)
 
 		lp8755_regulator_init();
 	}
+
+	platform_device_register(&power_supply_extcon_device);
 
 	if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY) {
 		((struct palmas_platform_data *)palma_device[0].platform_data)
