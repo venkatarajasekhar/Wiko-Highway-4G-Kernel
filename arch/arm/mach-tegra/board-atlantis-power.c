@@ -105,7 +105,6 @@ static struct regulator_consumer_supply palmas_smps9_supply[] = {
 	REGULATOR_SUPPLY("vdd_1v8_audio_mb", NULL),
 	REGULATOR_SUPPLY("vdd_1v8_uart_mb", NULL),
 	REGULATOR_SUPPLY("vdd_1v8_com", NULL),
-	REGULATOR_SUPPLY("vdd_gps", NULL),
 	REGULATOR_SUPPLY("dvdd", "1-0077"),
 	REGULATOR_SUPPLY("vdd_dtv", NULL),
 	REGULATOR_SUPPLY("vdd_1v8_bb_mb", NULL),
