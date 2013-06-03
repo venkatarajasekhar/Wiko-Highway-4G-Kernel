@@ -124,7 +124,7 @@ static struct regulator_consumer_supply palmas_ldo2_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_ldo3_supply[] = {
-	REGULATOR_SUPPLY("vddio_sim0", NULL),
+	REGULATOR_SUPPLY("vddio_sim0", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply palmas_ldo4_supply[] = {
@@ -146,7 +146,7 @@ static struct regulator_consumer_supply palmas_ldo6_supply[] = {
 };
 
 static struct regulator_consumer_supply palmas_ldo7_supply[] = {
-	REGULATOR_SUPPLY("vddio_sim1", NULL),
+	REGULATOR_SUPPLY("vddio_sim1", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply palmas_ldo8_supply[] = {

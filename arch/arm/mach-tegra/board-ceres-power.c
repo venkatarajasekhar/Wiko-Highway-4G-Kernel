@@ -113,11 +113,11 @@ static struct regulator_consumer_supply max77660_buck5_supply[] = {
 };
 
 static struct regulator_consumer_supply max77660_buck6_supply[] = {
-	REGULATOR_SUPPLY("vdd_1v7_rf", NULL),
+	REGULATOR_SUPPLY("vdd_1v7_rf", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply max77660_buck7_supply[] = {
-	REGULATOR_SUPPLY("vdd_2v65_rf", NULL),
+	REGULATOR_SUPPLY("vdd_2v65_rf", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply max77660_ldo1_supply[] = {
@@ -211,11 +211,11 @@ static struct regulator_consumer_supply max77660_ldo14_supply[] = {
 };
 
 static struct regulator_consumer_supply max77660_ldo15_supply[] = {
-	REGULATOR_SUPPLY("vddio_sim0", NULL),
+	REGULATOR_SUPPLY("vddio_sim0", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply max77660_ldo16_supply[] = {
-	REGULATOR_SUPPLY("vddio_sim1", NULL),
+	REGULATOR_SUPPLY("vddio_sim1", "tegra_bbc_proxy"),
 };
 
 static struct regulator_consumer_supply max77660_ldo17_supply[] = {
