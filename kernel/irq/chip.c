@@ -36,6 +36,8 @@ int irq_set_chip(unsigned int irq, struct irq_chip *chip)
 	if (!chip)
 		chip = &no_irq_chip;
 
+	BUG_ON(!chip->irq_enable && !chip->irq_unmask);
+	BUG_ON(!chip->irq_disable && !chip->irq_mask);
 	desc->irq_data.chip = chip;
 	irq_put_desc_unlock(desc, flags);
 	/*
@@ -202,10 +204,12 @@ void irq_enable(struct irq_desc *desc)
 void irq_disable(struct irq_desc *desc)
 {
 	irq_state_set_disabled(desc);
-	if (desc->irq_data.chip->irq_disable) {
+	if (desc->irq_data.chip->irq_disable)
 		desc->irq_data.chip->irq_disable(&desc->irq_data);
-		irq_state_set_masked(desc);
-	}
+	else
+		desc->irq_data.chip->irq_mask(&desc->irq_data);
+	irq_state_set_masked(desc);
+
 }
 
 void irq_percpu_enable(struct irq_desc *desc, unsigned int cpu)
