@@ -106,7 +106,7 @@ static struct regulator_consumer_supply max77660_buck5_supply[] = {
 	REGULATOR_SUPPLY("vdd_1v8_hdmi", "tegradc.1"),
 	REGULATOR_SUPPLY("vdd_1v8_com", NULL),
 	REGULATOR_SUPPLY("vddio_sim_bb", NULL),
-	REGULATOR_SUPPLY("vdd_nfc", NULL),
+	REGULATOR_SUPPLY("dvdd", "1-0077"),
 	REGULATOR_SUPPLY("vdd_dtv", NULL),
 	REGULATOR_SUPPLY("vdd_modem2", NULL),
 	REGULATOR_SUPPLY("vdd_dbg", NULL),
@@ -174,7 +174,7 @@ static struct regulator_consumer_supply max77660_ldo8_supply[] = {
 static struct regulator_consumer_supply max77660_ldo9_supply[] = {
 	REGULATOR_SUPPLY("vdd_mb", NULL),
 	REGULATOR_SUPPLY("vdd_temp", NULL),
-	REGULATOR_SUPPLY("vdd_nfc_2v8", NULL),
+	REGULATOR_SUPPLY("avdd", "1-0077"),
 	REGULATOR_SUPPLY("vdd_irled", NULL),
 	REGULATOR_SUPPLY("vdd_sensor_2v8", NULL),
 	REGULATOR_SUPPLY("vdd_pm_2v8", NULL),
