@@ -697,6 +697,7 @@ struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
 	.rtc_alarm_time = 3600,
 	.chg_restart_time = 1800,
 	.is_battery_present = false,
+	.update_status = palmas_battery_status,
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
