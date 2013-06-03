@@ -38,6 +38,7 @@
 #include <mach/iomap.h>
 #include <mach/irqs.h>
 #include <mach/gpio-tegra.h>
+#include <mach/hardware.h>
 
 #include "pm.h"
 #include "board.h"
@@ -45,12 +46,15 @@
 #include "board-atlantis.h"
 #include "board-pmu-defines.h"
 #include "devices.h"
+#include "fuse.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
 #define BOARD_SKU_100		100
 #define BOARD_SKU_110		110
 #define BOARD_SKU_120		120
+
+#define FUSE_SPARE_BIT_12_0     0x2d0
 
 /* TPS80036 consumer rails */
 static struct regulator_consumer_supply palmas_smps12_supply[] = {
@@ -496,7 +500,7 @@ static struct palmas_dvfs_init_data palmas_dvfs_idata[] = {
 		.ext_ctrl = PALMAS_EXT_CONTROL_ENABLE2,
 		.reg_id = PALMAS_REG_SMPS3,
 		.step_20mV = true,
-		.base_voltage_uV = 900000,
+		.base_voltage_uV = 700000,
 		.max_voltage_uV = 1200000,
 		.smps3_ctrl = true,
 	}, {
@@ -900,6 +904,11 @@ int __init atlantis_regulator_init(void)
 	wdt_disable = is_pmic_wdt_disabled_at_boot();
 	if (wdt_disable)
 		palmas_pdata.watchdog_timer_initial_period = 0;
+
+	/* screened A01 parts with lower bbc vmin have this fuse set */
+	if ((tegra_revision == TEGRA_REVISION_A01) &&
+		(!tegra_fuse_readl(FUSE_SPARE_BIT_12_0)))
+		pmic_platform.dvfs_init_data[0].base_voltage_uV = 900000;
 
 	i2c_register_board_info(4, palma_device,
 			ARRAY_SIZE(palma_device));
