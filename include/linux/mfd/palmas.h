@@ -4114,4 +4114,10 @@ static inline int palmas_is_es_version_or_less(struct palmas *palmas,
 	return false;
 }
 
+#ifdef CONFIG_BATTERY_PALMAS
+extern void palmas_battery_status(int status);
+#else
+static inline void palmas_battery_status(int status) {}
+#endif
+
 #endif /*  __LINUX_MFD_PALMAS_H */

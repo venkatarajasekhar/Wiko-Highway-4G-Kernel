@@ -110,6 +110,7 @@ struct palmas_battery_info {
 	int *battery_temperature_chart;
 	int battery_temperature_chart_size;
 	int battery_termperature_tenthC;
+	int status;
 
 	/* Fuelgauge */
 	int fuelgauge_mode;
@@ -124,6 +125,7 @@ int cc_offset;
 int current_max_scale;
 int accumulated_charge;
 struct cell_state cell;
+struct palmas_battery_info *palmas_data;
 
 /* IIR Filter */
 short filter(short y, short x, short a)
@@ -651,10 +653,7 @@ static int palmas_battery_get_props(struct power_supply *psy,
 		val->intval = di->cell.config->technology;
 		break;
 	case POWER_SUPPLY_PROP_STATUS:
-		if (di->battery_current_uA > 0)
-			val->intval = POWER_SUPPLY_STATUS_CHARGING;
-		else
-			val->intval = POWER_SUPPLY_STATUS_DISCHARGING;
+			val->intval = di->status;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		palmas_battery_voltage_now(di);
@@ -685,6 +684,23 @@ static int palmas_battery_get_props(struct power_supply *psy,
 	}
 	return 0;
 }
+
+void palmas_battery_status(int status)
+{
+	if (!palmas_data)
+		return;
+
+	if (status == 1) {
+		palmas_data->status = POWER_SUPPLY_STATUS_CHARGING;
+		palmas_data->battery_online = 1;
+	} else {
+		palmas_data->status = POWER_SUPPLY_STATUS_DISCHARGING;
+		palmas_data->battery_online = 0;
+	}
+
+	power_supply_changed(&palmas_data->battery);
+}
+EXPORT_SYMBOL_GPL(palmas_battery_status);
 
 unsigned short interpolate(unsigned short value,
 				unsigned short *table,
@@ -1566,6 +1582,8 @@ static __devinit int palmas_battery_probe(struct platform_device *pdev)
 
 	/* calculate current max scale from sense */
 	di->current_max_scale = (62000) / di->cell.config->r_sense;
+
+	palmas_data = di;
 
 	retry_count = 0;
 	/* Initial boot voltage */
