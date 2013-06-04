@@ -2785,8 +2785,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->out && dc->out->n_modes)
 		tegra_dc_add_modes(dc);
 
-	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init(&ndev->dev);
+	tegra_dc_hotplug_init(dc);
 
 	if (dc->out_ops && dc->out_ops->detect)
 		dc->out_ops->detect(dc);
@@ -2905,14 +2904,8 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 		dc->suspended = true;
 	}
 
-	if (dc->out && dc->out->postsuspend) {
+	if (dc->out && dc->out->postsuspend)
 		dc->out->postsuspend();
-		if (dc->out->type && dc->out->type == TEGRA_DC_OUT_HDMI)
-			/*
-			 * avoid resume event due to voltage falling
-			 */
-			msleep(100);
-	}
 
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dc->lock);
@@ -2939,9 +2932,6 @@ static int tegra_dc_resume(struct platform_device *ndev)
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 	}
-
-	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init(&ndev->dev);
 
 	if (dc->out_ops && dc->out_ops->resume)
 		dc->out_ops->resume(dc);
