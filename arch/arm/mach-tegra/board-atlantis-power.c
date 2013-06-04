@@ -819,7 +819,7 @@ static struct drv2603_platform_data atlantis_vibrator_pdata = {
 	.vibrator_mode = ERM_MODE,
 	.gpio = PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO6,
 	.duty_cycle = 80,
-	.edp_states = {64, 0},
+	.edp_states = {198, 0},
 };
 
 static struct platform_device atlantis_vibrator_device = {
