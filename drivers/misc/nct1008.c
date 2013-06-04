@@ -889,42 +889,27 @@ static irqreturn_t nct1008_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
+static int nct1008_power_control(struct nct1008_data *data, bool enable)
 {
 	int ret;
+
+	if (!data->nct_reg)
+		return 0;
+
 	mutex_lock(&data->mutex);
-	if (!data->nct_reg) {
-		data->nct_reg = regulator_get(&data->client->dev, "vdd");
-		if (IS_ERR_OR_NULL(data->nct_reg)) {
-			if (PTR_ERR(data->nct_reg) == -ENODEV)
-				dev_info(&data->client->dev,
-					"no regulator found for vdd."
-					" Assuming vdd is always powered");
-			else
-				dev_warn(&data->client->dev, "Error [%ld] in "
-					"getting the regulator handle for"
-					" vdd\n", PTR_ERR(data->nct_reg));
-			data->nct_reg = NULL;
-			mutex_unlock(&data->mutex);
-			return;
-		}
-	}
-	if (is_enable)
+	if (enable)
 		ret = regulator_enable(data->nct_reg);
 	else
 		ret = regulator_disable(data->nct_reg);
 
 	if (ret < 0)
-		dev_err(&data->client->dev, "Error in %s rail vdd_nct%s, "
-			"error %d\n", (is_enable) ? "enabling" : "disabling",
-			(data->chip == NCT72) ? "72" : "1008",
-			ret);
-	else
-		dev_info(&data->client->dev, "success in %s rail vdd_nct%s\n",
-			(is_enable) ? "enabling" : "disabling",
-			(data->chip == NCT72) ? "72" : "1008");
-	data->nct_disabled = !is_enable;
+		dev_err(&data->client->dev,
+			"%s: Failed to %s regulator vdd, %d\n",
+			__func__, (enable) ? "enable" : "disable", ret);
+
+	data->nct_disabled = !enable;
 	mutex_unlock(&data->mutex);
+	return ret;
 }
 
 static int nct1008_configure_sensor(struct nct1008_data *data)
@@ -1106,12 +1091,17 @@ static int __devinit nct1008_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->mutex);
 
-	nct1008_power_control(data, true);
-	if (!data->nct_reg) {
-		/* power up failure */
-		err = -EIO;
-		goto cleanup;
+	data->nct_reg = devm_regulator_get(&client->dev, "vdd");
+	if (IS_ERR(data->nct_reg)) {
+		dev_warn(&client->dev, "%s: Failed to get regulator vdd, %ld\n",
+			 __func__, PTR_ERR(data->nct_reg));
+		data->nct_reg = NULL;
 	}
+
+	err = nct1008_power_control(data, true);
+	if (err < 0)
+		goto cleanup;
+
 	/* extended range recommended steps 1 through 4 taken care
 	 * in nct1008_configure_sensor function */
 	err = nct1008_configure_sensor(data);	/* sensor is in standby */
@@ -1198,8 +1188,6 @@ error:
 	nct1008_power_control(data, false);
 cleanup:
 	mutex_destroy(&data->mutex);
-	if (data->nct_reg)
-		regulator_put(data->nct_reg);
 	kfree(data);
 	return err;
 }
@@ -1218,8 +1206,6 @@ static int __devexit nct1008_remove(struct i2c_client *client)
 	free_irq(data->client->irq, data);
 	sysfs_remove_group(&client->dev.kobj, &nct1008_attr_group);
 	nct1008_power_control(data, false);
-	if (data->nct_reg)
-		regulator_put(data->nct_reg);
 	mutex_destroy(&data->mutex);
 	kfree(data);
 
@@ -1254,8 +1240,16 @@ static int nct1008_suspend_powerdown(struct device *dev)
 	mutex_unlock(&data->mutex);
 	cancel_work_sync(&data->work);
 	disable_irq(client->irq);
+
 	err = nct1008_disable(client);
+	if (err < 0) {
+		dev_err(&client->dev, "%s: Failed to disable %s, %d\n",
+			__func__, client->name, err);
+		return err;
+	}
+
 	nct1008_power_control(data, false);
+
 	return err;
 }
 
@@ -1337,14 +1331,24 @@ static int nct1008_resume_powerdown(struct device *dev)
 	int err = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
-	nct1008_power_control(data, true);
-	nct1008_configure_sensor(data);
-	err = nct1008_enable(client);
+	err = nct1008_power_control(data, true);
 	if (err < 0) {
-		dev_err(&client->dev, "Error: %s, error=%d\n",
+		dev_err(&client->dev, "%s: Failed to enable power, %d\n",
 			__func__, err);
 		return err;
 	}
+
+	err = nct1008_configure_sensor(data);
+	if (err < 0) {
+		dev_err(&client->dev, "%s: Failed to configure sensor, %d\n",
+			__func__, err);
+		return err;
+	}
+
+	err = nct1008_enable(client);
+	if (err < 0)
+		dev_err(&client->dev, "%s: Failed to enable %s, %d\n",
+			__func__, client->name, err);
 
 	return err;
 }
