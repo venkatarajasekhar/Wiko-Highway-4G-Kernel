@@ -46,6 +46,12 @@
 
 #define MAXIM77660_SD_CD	(MAX77660_GPIO_BASE + MAX77660_GPIO9)
 #define PALMAS_SD_CD	(PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO10)
+#if defined(CONFIG_BCMDHD_EDP_SUPPORT)
+/* Wifi power levels */
+#define ON  1080 /* 1080 mW */
+#define OFF 0
+static unsigned int wifi_states[] = {ON, OFF};
+#endif
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
@@ -59,6 +65,16 @@ static struct wifi_platform_data ceres_wifi_control = {
 	.set_power	= ceres_wifi_power,
 	.set_reset	= ceres_wifi_reset,
 	.set_carddetect	= ceres_wifi_set_carddetect,
+#if defined(CONFIG_BCMDHD_EDP_SUPPORT)
+	/* set the wifi edp client information here */
+	.client_info    = {
+		.name       = "wifi_edp_client",
+		.states     = wifi_states,
+		.num_states = ARRAY_SIZE(wifi_states),
+		.e0_index   = 0,
+		.priority   = EDP_MAX_PRIO,
+	},
+#endif
 };
 
 static struct resource wifi_resource[] = {
