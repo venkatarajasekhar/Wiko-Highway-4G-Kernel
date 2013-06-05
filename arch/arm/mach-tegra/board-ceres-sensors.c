@@ -452,7 +452,7 @@ static struct nvc_imager_cap imx091_cap = {
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
-static unsigned imx091_estates[] = { 802, 600, 202, 0 };
+static unsigned imx091_estates[] = {600, 0};
 
 static struct imx091_platform_data ceres_imx091_data = {
 	.num			= 0,
@@ -475,7 +475,15 @@ static struct imx091_platform_data ceres_imx091_data = {
 	.power_off		= ceres_imx091_power_off,
 };
 
+static unsigned imx132_estates[] = {202, 0};
+
 struct imx132_platform_data ceres_imx132_data = {
+	.edpc_config	= {
+		.states = imx132_estates,
+		.num_states = ARRAY_SIZE(imx132_estates),
+		.e0_index = ARRAY_SIZE(imx132_estates) - 1,
+		.priority = EDP_MAX_PRIO + 1,
+		},
 	.power_on = ceres_imx132_power_on,
 	.power_off = ceres_imx132_power_off,
 };
@@ -489,7 +497,8 @@ static struct ad5816_platform_data ceres_ad5816_pdata = {
 	.power_off	= ceres_focuser_power_off,
 };
 
-static unsigned max77387_estates[] = { 3500, 710, 0 };
+/* estate values under 1000/200/0/0mA, 3.5V input */
+static unsigned max77387_estates[] = {3500, 710, 0};
 
 static struct max77387_platform_data ceres_max77387_pdata = {
 	.config		= {
@@ -521,13 +530,13 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 	.edpc_config	= {
 		.states		= max77387_estates,
 		.num_states	= ARRAY_SIZE(max77387_estates),
-		.e0_index	= 2,
+		.e0_index	= ARRAY_SIZE(max77387_estates) - 1,
 		.priority	= EDP_MAX_PRIO + 2,
 		},
 };
 
-/* dummy estate values under 930/750/480/0mA, 3.5V input */
-static unsigned lm3565_estates[] = { 3255, 2625, 1680, 0 };
+/* estate values under 1000/200/0/0mA, 3.5V input */
+static unsigned lm3565_estates[] = {3500, 710, 0};
 
 static struct lm3565_platform_data atlantis_lm3565_pdata = {
 	.config		= {
@@ -546,7 +555,7 @@ static struct lm3565_platform_data atlantis_lm3565_pdata = {
 	.edpc_config	= {
 		.states		= lm3565_estates,
 		.num_states	= ARRAY_SIZE(lm3565_estates),
-		.e0_index	= 0,
+		.e0_index	= ARRAY_SIZE(lm3565_estates) - 1,
 		.priority	= EDP_MAX_PRIO + 2,
 		},
 };
