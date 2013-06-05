@@ -56,6 +56,10 @@ else
 DHDCFLAGS += -DSDIO_ISR_THREAD
 endif
 
+ifeq ($(CONFIG_BCMDHD_EDP_SUPPORT),y)
+DHDCFLAGS += -DWIFIEDP
+endif
+
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
