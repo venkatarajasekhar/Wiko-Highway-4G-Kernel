@@ -229,7 +229,7 @@ struct ov5650_platform_data cardhu_left_ov5650_data = {
 };
 
 #ifdef CONFIG_VIDEO_OV14810
-static int cardhu_ov14810_power_on(void)
+static int cardhu_ov14810_power_on(struct device *dev)
 {
 	if (board_info.board_id == BOARD_E1198) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
@@ -242,7 +242,7 @@ static int cardhu_ov14810_power_on(void)
 	return 0;
 }
 
-static int cardhu_ov14810_power_off(void)
+static int cardhu_ov14810_power_off(struct device *dev)
 {
 	if (board_info.board_id == BOARD_E1198) {
 		gpio_direction_output(CAM1_POWER_DWN_GPIO, 1);
