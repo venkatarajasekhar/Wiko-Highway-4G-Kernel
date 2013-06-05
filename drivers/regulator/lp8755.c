@@ -310,6 +310,7 @@ static struct regulator_ops lp8755_buck_ops = {
 	.enable_time = lp8755_buck_enable_time,
 	.set_mode = lp8755_buck_set_mode,
 	.get_mode = lp8755_buck_get_mode,
+	.set_ramp_delay = lp8755_buck_set_ramp,
 };
 
 #define lp8755_rail(_id) "lp8755_buck"#_id
