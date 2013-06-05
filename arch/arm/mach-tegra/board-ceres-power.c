@@ -984,6 +984,32 @@ int __init ceres_regulator_init(void)
 
 			lp8755_regulator_init();
 		}
+
+		if (board_info.board_id == BOARD_E1680 &&
+			(tegra_get_modem_config() & BIT(0))) {
+			/*
+			 * When bit0 is set it indicates that BB_PWR_REQ is
+			 * connected to EN5 and that LDO17/18 should be
+			 * part of FPS6. This allows LDO17/18 to turn on/off
+			 * as the modem exits/enters hibernate
+			 */
+			max77660_regulator_pdata_ldo17.flags =
+						MAX77660_EXT_ENABLE_EN5;
+			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_6;
+			max77660_regulator_pdata_ldo17.fps_pu_period =
+						FPS_POWER_PERIOD_0;
+			max77660_regulator_pdata_ldo17.fps_pd_period =
+						FPS_POWER_PERIOD_0;
+
+			max77660_regulator_pdata_ldo18.flags =
+						MAX77660_EXT_ENABLE_EN5;
+			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_6;
+			max77660_regulator_pdata_ldo18.fps_pu_period =
+						FPS_POWER_PERIOD_0;
+			max77660_regulator_pdata_ldo18.fps_pd_period =
+						FPS_POWER_PERIOD_0;
+		}
+
 		break;
 
 	case BOARD_E1690:
