@@ -480,6 +480,38 @@ static struct regulator_init_data vbus_reg_init_data = {
 	.consumer_supplies = max77660_vbus_sypply,
 };
 
+uint32_t max77660_adc_temperature_lookup_table[] = {
+	118, 121, 125, 128, 131, 135, 139, 142,
+	146, 150, 155, 159, 163, 168, 172, 177,
+	182, 188, 193, 198, 204, 210, 216, 222,
+	229, 235, 242, 249, 257, 264, 272, 280,
+	288, 297, 306, 315, 324, 334, 344, 355,
+	365, 376, 388, 400, 412, 425, 438, 451,
+	465, 479, 494, 509, 525, 541, 558, 575,
+	593, 611, 630, 650, 670, 690, 712, 734,
+	756, 779, 803, 828, 853, 879, 906, 933,
+	962, 991, 1020, 1051, 1082, 1114, 1147,
+	1181, 1215, 1250, 1286, 1323, 1360, 1398,
+	1437, 1477, 1517, 1558, 1600, 1642, 1685,
+	1729, 1773, 1818, 1863, 1909, 1955, 2001,
+	2048, 2095, 2142, 2190, 2238, 2285, 2333,
+	2381, 2429, 2476, 2524, 2571, 2618, 2664,
+	2711, 2756, 2801, 2846, 2890, 2934, 2977,
+	3019, 3060, 3100, 3140, 3179, 3217, 3254,
+	3290, 3325, 3360, 3393, 3425, 3456, 3487,
+	3516, 3544, 3572, 3598, 3624, 3648, 3671,
+	3694, 3716, 3736, 3756, 3775, 3793, 3811,
+	3827, 3843, 3858, 3872, 3886, 3899, 3911,
+	3922, 3933, 3944, 3954, 3963, 3972, 3980,
+	3988, 3995, 4002,
+};
+
+/*
+* Values calculated using formula to calculate Resistance given Vthm values
+* and temperature resistance correspondence obatined from thermistor
+* datasheet
+*/
+
 static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.ext_conn_name = "max77660-extcon",
 	.vbus_reg_init_data = &vbus_reg_init_data,
@@ -488,6 +520,8 @@ static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.num_consumer_supplies = ARRAY_SIZE(max77660_batt_supply),
 	.update_status	= max17048_battery_status,
 	.wdt_timeout    = 32,
+	.temp_table = max77660_adc_temperature_lookup_table,
+	.temp_table_size = ARRAY_SIZE(max77660_adc_temperature_lookup_table),
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
