@@ -583,6 +583,7 @@ static const struct soctherm_sensor default_t14x_sensor_params = {
 	.pdiv_ATE  = 8,
 };
 
+static const unsigned long base_soctherm_clk_rate = 136000000;
 static const unsigned long default_t11x_soctherm_clk_rate = 51000000;
 static const unsigned long default_t11x_tsensor_clk_rate = 500000;
 static const unsigned long default_t14x_soctherm_clk_rate = 51000000;
@@ -1487,6 +1488,17 @@ static irqreturn_t soctherm_edp_isr(int irq, void *arg)
 	return IRQ_WAKE_THREAD;
 }
 
+static inline unsigned int soctherm_get_throttle_timing(unsigned int us)
+{
+	/*
+	 * throttle period timing register is based on the soctherm device
+	 * running at original designed frequency; we need scale it
+	 * accordingly if we use new frequency.
+	 */
+	return (plat_data.soctherm_clk_rate / 1000000) * us /
+	       (base_soctherm_clk_rate / 1000000);
+}
+
 static void tegra11_soctherm_throttle_program(enum soctherm_throttle_id throt)
 {
 	u32 r;
@@ -1550,7 +1562,8 @@ static void tegra11_soctherm_throttle_program(enum soctherm_throttle_id throt)
 
 	soctherm_oc_intr_enable(throt, data->intr);
 
-	soctherm_writel(data->period, ALARM_THRESHOLD_PERIOD(throt)); /* usec */
+	soctherm_writel(soctherm_get_throttle_timing(data->period),
+			ALARM_THRESHOLD_PERIOD(throt));
 	soctherm_writel(0xffffffff, ALARM_FILTER(throt));
 }
 
