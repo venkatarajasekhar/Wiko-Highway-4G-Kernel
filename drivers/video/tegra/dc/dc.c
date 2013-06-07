@@ -2589,7 +2589,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->win_syncpt[4] = NVSYNCPT_DISP0_H;
 		dc->valid_windows |= 0x18;
 #endif
-		dc->powergate_id = TEGRA_POWERGATE_DISA;
+		/* This code assumes DISB depends on DISA. DC's powergate
+		 * code will have to change if dependency is removed */
+		if (dc->out && dc->out->type == TEGRA_DC_OUT_HDMI)
+			dc->powergate_id = TEGRA_POWERGATE_DISB;
+		else
+			dc->powergate_id = TEGRA_POWERGATE_DISA;
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
