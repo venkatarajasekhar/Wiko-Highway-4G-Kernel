@@ -808,6 +808,11 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	restore_cpu_complex(flags);
 	cpu_cluster_pm_exit();
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	if (!is_lp_cluster())
+		tegra_set_vdd_cpu_ramp_rate();
+#endif
+
 	remain = tegra_pd_timer_remain();
 	if (sleep_time)
 		tegra_pd_set_trigger(0);

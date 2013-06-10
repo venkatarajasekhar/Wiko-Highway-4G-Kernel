@@ -603,6 +603,11 @@ static struct regulator_consumer_supply lp8755_buck0_supply[] = {
 	REGULATOR_SUPPLY("vdd_cpu", NULL),
 };
 
+static struct regulator *s_lp8755_regulator;
+static struct work_struct lp8755_work;
+static struct workqueue_struct *workqueue;
+
+
 #define lp8755_rail(_id) "lp8755_"#_id
 
 #define LP8755_PDATA_INIT(_name, _minmv, _maxmv, _supply_reg, _always_on, \
@@ -775,6 +780,26 @@ int tegra_get_cvb_alignment_uV(void)
 		return 10000;
 }
 
+static void lp8755_slew_rate_work(struct work_struct *work)
+{
+	if (s_lp8755_regulator == NULL)
+		s_lp8755_regulator = regulator_get(NULL, "vdd_cpu");
+
+	if (!IS_ERR(s_lp8755_regulator))
+		regulator_set_ramp_delay(s_lp8755_regulator, 230);
+}
+
+void tegra_set_vdd_cpu_ramp_rate(void)
+{
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if ((board_info.board_id == BOARD_E1680 && board_info.sku == 1000) ||
+		(board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
+		if (workqueue != NULL)
+			queue_work(workqueue, &lp8755_work);
+	}
+}
 
 
 static int __init ceres_cl_dvfs_init(void)
@@ -817,6 +842,14 @@ int __init ceres_regulator_init(void)
 		board_info.board_id, board_info.sku,
 		board_info.fab, board_info.major_revision,
 		board_info.minor_revision);
+
+	if ((board_info.board_id == BOARD_E1680 && board_info.sku == 1000) ||
+		(board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
+		workqueue = create_singlethread_workqueue("lp8755_wq");
+		if (!workqueue)
+			pr_err("cannot create workqueue\n");
+		INIT_WORK(&lp8755_work, lp8755_slew_rate_work);
+	}
 
 	if (board_info.board_id == BOARD_E1670 || board_info.board_id == BOARD_E1740) {
 		atlantis_regulator_init();
