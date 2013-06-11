@@ -2,8 +2,7 @@
  * tegra_dtv.c - Tegra DTV interface driver
  *
  * Author: Adam Jiang <chaoj@nvidia.com>
- * Copyright (c) 2011, NVIDIA Corporation.
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2011-2013, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -409,6 +408,7 @@ static long tegra_dtv_ioctl(struct file *file, unsigned int cmd,
 
 	/* process may sleep on this */
 	mutex_lock(&s->mtx);
+	clk_prepare_enable(dtv_ctx->clk);
 
 	switch (cmd) {
 	case TEGRA_DTV_IOCTL_START:
@@ -458,7 +458,7 @@ static long tegra_dtv_ioctl(struct file *file, unsigned int cmd,
 	default:
 		ret = -EINVAL;
 	}
-
+	clk_disable_unprepare(dtv_ctx->clk);
 	mutex_unlock(&s->mtx);
 
 	return ret;
@@ -529,11 +529,13 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 	dtv_ctx = (struct tegra_dtv_context *) file->private_data;
 
 	mutex_lock(&dtv_ctx->stream.mtx);
+	clk_prepare_enable(dtv_ctx->clk);
 
 	if (!IS_ALIGNED(size, 4) || size < 4 ||
 	    size > dtv_ctx->stream.buf_size) {
 		pr_err("%s: invalid user size %d\n", __func__, size);
 		ret = -EINVAL;
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	}
@@ -544,6 +546,7 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 		pr_debug("%s: tegra dtv transferring is stopped.\n",
 			 __func__);
 		ret = 0;
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	}
@@ -552,6 +555,7 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 	ret = try_start_fill_buf(&dtv_ctx->stream, size);
 	if (ret < 0 && ret != -EALREADY) {
 		pr_err("%s: could not start recording.\n", __func__);
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	}
@@ -571,10 +575,12 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 	if (!ret) {
 		pr_err("%s: timeout", __func__);
 		ret = -ETIMEDOUT;
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	} else if (ret < 0) {
 		pr_err("%s: wait error %d", __func__, ret);
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	}
@@ -591,6 +597,7 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 	ret = copy_to_user(buf, dtv_ctx->stream.buffer[buf_no], xfer_size);
 	if (ret) {
 		ret = -EFAULT;
+		clk_disable_unprepare(dtv_ctx->clk);
 		mutex_unlock(&dtv_ctx->stream.mtx);
 		return ret;
 	}
@@ -606,7 +613,7 @@ static ssize_t tegra_dtv_read(struct file *file, char __user *buf,
 
 	ret = xfer_size;
 	*off += xfer_size;
-
+	clk_disable_unprepare(dtv_ctx->clk);
 	mutex_unlock(&dtv_ctx->stream.mtx);
 
 	pr_debug("%s : done with ret = %d\n", __func__, ret);
@@ -634,6 +641,7 @@ static int tegra_dtv_open(struct inode *inode, struct file *file)
 	}
 
 	mutex_lock(&dtv_ctx->stream.mtx);
+	clk_prepare_enable(dtv_ctx->clk);
 
 	dtv_ctx->stream.stopped = false;
 
@@ -644,6 +652,7 @@ static int tegra_dtv_open(struct inode *inode, struct file *file)
 		complete(&dtv_ctx->stream.comp[i]);
 	}
 
+	clk_disable_unprepare(dtv_ctx->clk);
 	mutex_unlock(&dtv_ctx->stream.mtx);
 
 	return 0;
@@ -659,6 +668,7 @@ static int tegra_dtv_release(struct inode *inode, struct file *file)
 	atomic_inc(&tegra_dtv_instance_nr);
 
 	mutex_lock(&dtv_ctx->stream.mtx);
+	clk_prepare_enable(dtv_ctx->clk);
 	if (dtv_ctx->stream.xferring) {
 		stop_xfer_unsafe(&dtv_ctx->stream);
 		/* clean up stop condition */
@@ -667,6 +677,7 @@ static int tegra_dtv_release(struct inode *inode, struct file *file)
 	}
 	/* wakeup any pending process */
 	wakeup_suspend(&dtv_ctx->stream);
+	clk_disable_unprepare(dtv_ctx->clk);
 	mutex_unlock(&dtv_ctx->stream.mtx);
 
 	pr_debug("%s : done\n", __func__);
@@ -939,6 +950,7 @@ static int tegra_dtv_probe(struct platform_device *pdev)
 	if (!devm_request_mem_region(&pdev->dev, res->start,
 			resource_size(res), dev_name(&pdev->dev))) {
 		ret = -EBUSY;
+		clk_disable_unprepare(dtv_ctx->clk);
 		return ret;
 	}
 	dtv_ctx->phys = res->start;
@@ -947,6 +959,7 @@ static int tegra_dtv_probe(struct platform_device *pdev)
 	if (!dtv_ctx->base) {
 		dev_err(&pdev->dev, "cannot ioremap iomem.\n");
 		ret = -ENOMEM;
+		clk_disable_unprepare(dtv_ctx->clk);
 		return ret;
 	}
 
@@ -977,6 +990,7 @@ static int tegra_dtv_probe(struct platform_device *pdev)
 		goto fail_debugfs_reg;
 	}
 
+	clk_disable_unprepare(dtv_ctx->clk);
 	return 0;
 
 fail_debugfs_reg:
@@ -987,6 +1001,7 @@ fail_setup_stream:
 fail_setup_dma:
 	tear_down_dma(dtv_ctx);
 fail_no_res:
+	clk_disable_unprepare(dtv_ctx->clk);
 fail_clk_enable:
 fail_no_clk:
 	if (clk)
@@ -1025,6 +1040,7 @@ static int tegra_dtv_suspend(struct platform_device *pdev, pm_message_t state)
 
 	/* stop xferring */
 	mutex_lock(&dtv_ctx->stream.mtx);
+	clk_prepare_enable(dtv_ctx->clk);
 	if (dtv_ctx->stream.xferring) {
 		stop_xfer_unsafe(&dtv_ctx->stream);
 		/* clean up stop condition */
@@ -1033,22 +1049,15 @@ static int tegra_dtv_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 	/* wakeup any pending process */
 	wakeup_suspend(&dtv_ctx->stream);
-	mutex_unlock(&dtv_ctx->stream.mtx);
-
 	clk_disable_unprepare(dtv_ctx->clk);
+	mutex_unlock(&dtv_ctx->stream.mtx);
 
 	return 0;
 }
 
 static int tegra_dtv_resume(struct platform_device *pdev)
 {
-	struct tegra_dtv_context *dtv_ctx;
-
 	pr_info("%s: resume dtv.\n", __func__);
-
-	dtv_ctx = platform_get_drvdata(pdev);
-	clk_prepare_enable(dtv_ctx->clk);
-
 	return 0;
 }
 #endif /* CONFIG_PM */
