@@ -610,6 +610,7 @@ static struct edv_config edv_cfg = {
 
 /* General Battery Cell Configuration */
 static struct cell_config cell_cfg =  {
+	.technology = POWER_SUPPLY_TECHNOLOGY_LION,
 	.cc_voltage = 4175,
 	.cc_current = 250,
 	.cc_capacity = 15,
