@@ -7,13 +7,13 @@
  *
  * Based on code copyright/by:
  *
- * (c) 2010, 2011, 2012 Nvidia Graphics Pvt. Ltd.
+ * (c) 2010, 2011, 2012, 2013 Nvidia Graphics Pvt. Ltd.
  *
  * Copyright 2007 Wolfson Microelectronics PLC.
  * Author: Graeme Gregory
  *         graeme.gregory@wolfsonmicro.com or linux@wolfsonmicro.com
  *
- * Copyright (c) 2012, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION. All rights reserved.
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 as published by the Free Software Foundation.
@@ -148,6 +148,8 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 			machine->pcard->dai_link[i].ignore_suspend = 1;
 
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	tegra_asoc_utils_tristate_dap(
+		machine->codec_info[codec_index].i2s_id, false);
 	if (machine->is_device_bt) {
 		t14x_make_bt_voice_call_connections(
 			&machine->codec_info[codec_index],
@@ -163,7 +165,7 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 			&machine->codec_info[BASEBAND], 0);
 #endif
 	} else {
- #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		if (machine->is_device_bt) {
 			t14x_break_bt_voice_call_connections(
 				&machine->codec_info[codec_index],
@@ -173,6 +175,8 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 			&machine->codec_info[codec_index],
 			&machine->ahub_bbc1_info, 0);
 		}
+		tegra_asoc_utils_tristate_dap(
+			machine->codec_info[codec_index].i2s_id, true);
 #else
 		tegra30_break_voice_call_connections(
 			&machine->codec_info[codec_index],
