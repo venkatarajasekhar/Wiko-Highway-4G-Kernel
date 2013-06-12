@@ -677,6 +677,7 @@ struct palmas_gpadc_platform_data gpadc_pdata = {
 
 static struct regulator_consumer_supply palmas_vbus_supply[] = {
 	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-otg"),
 };
 
 static struct regulator_consumer_supply palmas_batt_supply[] = {

@@ -458,6 +458,7 @@ static struct max77660_pinctrl_platform_data max77660_pinctrl_pdata[] = {
 
 static struct regulator_consumer_supply max77660_vbus_sypply[] = {
 	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
+	REGULATOR_SUPPLY("usb_vbus", "tegra-otg"),
 };
 
 static struct regulator_consumer_supply max77660_batt_supply[] = {
