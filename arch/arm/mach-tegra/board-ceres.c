@@ -75,6 +75,8 @@
 #define CERES_NFC_EN		TEGRA_GPIO_PI0
 #define CERES_NFC_WAKE		TEGRA_GPIO_PM0
 
+static struct board_info board_info;
+
 #ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
 	.name           = "bt_rfkill",
@@ -360,9 +362,8 @@ static void __init ceres_spi_init(void)
 {
 	int i;
 	struct clk *c;
-	struct board_info board_info, display_board_info;
+	struct board_info display_board_info;
 
-	tegra_get_board_info(&board_info);
 	tegra_get_display_board_info(&display_board_info);
 
 	for (i = 0; i < ARRAY_SIZE(spi_parent_clk_ceres); ++i) {
@@ -466,20 +467,18 @@ static struct i2c_board_info __initdata max97236_board_info = {
 
 static void ceres_audio_init(void)
 {
-	struct board_info bi;
-
-	tegra_get_board_info(&bi);
-
-	if ((bi.board_id == BOARD_E1670) ||
-		 (bi.board_id == BOARD_E1671) || (bi.board_id == BOARD_E1740)) {
+	if ((board_info.board_id == BOARD_E1670) ||
+		(board_info.board_id == BOARD_E1671) ||
+		(board_info.board_id == BOARD_E1740)) {
 		ceres_codec_aic325x_info.irq = gpio_to_irq(TEGRA_GPIO_CDC_IRQ);
 		i2c_register_board_info(5, &ceres_codec_aic325x_info, 1);
 		platform_add_devices(atlantis_only_audio_devices,
 			ARRAY_SIZE(atlantis_only_audio_devices));
 	}
 
-	if ((bi.board_id == BOARD_E1680) ||
-		 (bi.board_id == BOARD_E1681) || (bi.board_id == BOARD_E1690)) {
+	if ((board_info.board_id == BOARD_E1680) ||
+		(board_info.board_id == BOARD_E1681) ||
+		(board_info.board_id == BOARD_E1690)) {
 		i2c_register_board_info(5, &max97236_board_info, 1);
 		i2c_register_board_info(5, &max98090_board_info, 1);
 		platform_add_devices(ceres_only_audio_devices,
@@ -628,11 +627,7 @@ static struct platform_device icera_baseband2_device = {
 
 static void ceres_usb_init(void)
 {
-	struct board_info bi;
-
-	tegra_get_board_info(&bi);
-
-	switch (bi.board_id) {
+	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
 		/* Device cable is detected through PMU Interrupt */
@@ -665,7 +660,7 @@ static void ceres_usb_init(void)
 		break;
 	default:
 		pr_err("%s: board_id=%#x unknown tegra14x board.\n", __func__,
-					bi.board_id);
+					board_info.board_id);
 	}
 
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
@@ -963,11 +958,7 @@ static void __init tegra_ceres_early_init(void)
 
 static void __init sysedp_psydepl_init(void)
 {
-	struct board_info bi;
-
-	tegra_get_board_info(&bi);
-
-	switch (bi.board_id) {
+	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
 		ceres_sysedp_psydepl_init();
@@ -1020,6 +1011,8 @@ static void __init tegra_ceres_late_init(void)
 
 static void __init tegra_ceres_dt_init(void)
 {
+	tegra_get_board_info(&board_info);
+
 	tegra_ceres_early_init();
 
 	of_platform_populate(NULL,
