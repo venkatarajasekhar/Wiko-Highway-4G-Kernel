@@ -908,6 +908,35 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 	},
 };
 
+int synaptics_touch_enable(void)
+{
+	if (board_info.board_id == BOARD_E1670)
+		gpio_free(TEGRA_GPIO_PL3);
+
+	return 0;
+}
+
+int synaptics_touch_disable(void)
+{
+	int ret = 0;
+
+	if (board_info.board_id == BOARD_E1670) {
+		ret = gpio_request(TEGRA_GPIO_PL3, "touch_spi_cs");
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed\n", __func__);
+			return ret;
+		}
+
+		ret = gpio_direction_output(TEGRA_GPIO_PL3, 0);
+		if (ret < 0) {
+			pr_err("%s: set gpio to output failed\n", __func__);
+			gpio_free(TEGRA_GPIO_PL3);
+		}
+	}
+
+	return ret;
+}
+
 static struct synaptics_gpio_data synaptics_gpio_ceres_data = {
 	.attn_gpio = SYNAPTICS_ATTN_GPIO,
 	.attn_polarity = RMI_ATTN_ACTIVE_LOW,
@@ -930,6 +959,9 @@ static struct rmi_device_platform_data synaptics_ceres_platformdata = {
 	},
 	.f19_button_map = &synaptics_button_map,
 	.f54_direct_touch_report_size = 944,
+
+	.rmi_device_enable = synaptics_touch_enable,
+	.rmi_device_disable = synaptics_touch_disable,
 };
 
 static struct spi_board_info synaptics_9999_spi_board_ceres[] = {
