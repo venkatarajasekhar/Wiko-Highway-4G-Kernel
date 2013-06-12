@@ -50,6 +50,7 @@
 #include <mach/isomgr.h>
 #include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
+#include <mach/hardware.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -67,6 +68,9 @@
 #include "devices.h"
 #include "common.h"
 #include "board-touch.h"
+#include "fuse.h"
+
+#define FUSE_SPARE_BIT_12_0     0x2d0
 
 #define CERES_BT_EN		TEGRA_GPIO_PM3
 #define CERES_BT_HOST_WAKE	TEGRA_GPIO_PM2
@@ -966,6 +970,13 @@ static void ceres_tegra_bb_init(void)
 	pr_info("%s: registering tegra bb\n", __func__);
 	ceres_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
 	ceres_tegra_bb_data.mem_req_soon = INT_BB2AP_MEM_REQ_SOON_INT;
+
+	if ((tegra_revision == TEGRA_REVISION_A01) &&
+		(!tegra_fuse_readl(FUSE_SPARE_BIT_12_0)))
+		ceres_tegra_bb_data.pll_voltage = 1100000;
+	else
+		ceres_tegra_bb_data.pll_voltage = 900000;
+
 	platform_device_register(&ceres_tegra_bb_device);
 }
 #endif

@@ -128,6 +128,7 @@ struct tegra_bb {
 	enum bbc_pm_state state, prev_state;
 	struct regulator *vdd_bb_core;
 	struct regulator *vdd_bb_pll;
+	unsigned int pll_voltage;
 	void (*ipc_cb)(void *data);
 	void  *ipc_cb_data;
 	struct miscdevice dev_priv;
@@ -605,8 +606,8 @@ static ssize_t store_tegra_bb_reset(struct device *dev,
 							1100000);
 			regulator_enable(bb->vdd_bb_core);
 
-			regulator_set_voltage(bb->vdd_bb_pll, 1100000,
-							1100000);
+			regulator_set_voltage(bb->vdd_bb_pll, bb->pll_voltage,
+							bb->pll_voltage);
 			regulator_enable(bb->vdd_bb_pll);
 			regulator_status = true;
 
@@ -1190,6 +1191,8 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		pr_err("avdd_bb_pll regulator get failed\n");
 		bb->vdd_bb_pll = NULL;
 	}
+
+	bb->pll_voltage = pdata->pll_voltage;
 
 	/* clk enable for mc_bbc / pll_p_bbc */
 	c = tegra_get_clock_by_name("mc_bbc");
