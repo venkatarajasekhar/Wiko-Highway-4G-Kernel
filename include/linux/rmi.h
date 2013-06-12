@@ -330,6 +330,8 @@ struct rmi_device_platform_data {
 	struct rmi_button_map *f41_button_map;
 	int f54_direct_touch_report_size;
 
+	int (*rmi_device_enable) (void);
+	int (*rmi_device_disable) (void);
 #ifdef CONFIG_RMI4_FWLIB
 	char *firmware_name;
 #endif

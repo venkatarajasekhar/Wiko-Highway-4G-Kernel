@@ -2449,6 +2449,30 @@ static void register_virtual_buttons(struct rmi_function_dev *fn_dev,
 	}
 }
 
+static int rmi_f11_enable(struct input_dev *in_dev)
+{
+	struct device *dev = in_dev->dev.parent;
+	struct rmi_device *rmi_dev = to_rmi_device(dev);
+	struct rmi_device_platform_data *pdata = to_rmi_platform_data(rmi_dev);
+
+	if (pdata->rmi_device_enable)
+		return pdata->rmi_device_enable();
+
+	return 0;
+}
+
+static int rmi_f11_disable(struct input_dev *in_dev)
+{
+	struct device *dev = in_dev->dev.parent;
+	struct rmi_device *rmi_dev = to_rmi_device(dev);
+	struct rmi_device_platform_data *pdata = to_rmi_platform_data(rmi_dev);
+
+	if (pdata->rmi_device_disable)
+		return pdata->rmi_device_disable();
+
+	return 0;
+}
+
 static int rmi_f11_register_devices(struct rmi_function_dev *fn_dev)
 {
 	struct rmi_device *rmi_dev = fn_dev->rmi_dev;
@@ -2488,6 +2512,8 @@ static int rmi_f11_register_devices(struct rmi_function_dev *fn_dev)
 			dev_name(&fn_dev->dev), i);
 		input_dev->phys = sensor->input_phys;
 		input_dev->dev.parent = &rmi_dev->dev;
+		input_dev->enable = rmi_f11_enable;
+		input_dev->disable = rmi_f11_disable;
 		input_set_drvdata(input_dev, f11);
 
 		set_bit(EV_SYN, input_dev->evbit);
