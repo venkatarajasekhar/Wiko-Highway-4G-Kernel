@@ -1068,6 +1068,12 @@ static void __init tegra_ceres_late_init(void)
 {
 	platform_device_register(&tegra_pinmux_device);
 	ceres_pinmux_init();
+#if defined(CONFIG_TEGRA_BASEBAND)
+	/* make bb early in list of devices, this helps it to be the
+	 * last to suspend.
+	 */
+	ceres_tegra_bb_init();
+#endif
 	ceres_i2c_init();
 	ceres_spi_init();
 	ceres_uart_init();
@@ -1088,9 +1094,6 @@ static void __init tegra_ceres_late_init(void)
 	ceres_panel_init();
 	ceres_sensors_init();
 	ceres_modem_init();
-#if defined(CONFIG_TEGRA_BASEBAND)
-	ceres_tegra_bb_init();
-#endif
 	tegra_register_fuse();
 	ceres_soctherm_init();
 #ifdef CONFIG_BT_BLUESLEEP
