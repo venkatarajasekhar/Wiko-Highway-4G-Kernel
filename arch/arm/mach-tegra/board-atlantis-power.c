@@ -45,6 +45,7 @@
 #include "board-atlantis.h"
 #include "board-pmu-defines.h"
 #include "devices.h"
+#include "gpio-names.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -686,6 +687,7 @@ static struct regulator_consumer_supply palmas_batt_supply[] = {
 static struct palmas_vbus_platform_data palmas_vbus_pdata = {
 	.num_consumer_supplies = ARRAY_SIZE(palmas_vbus_supply),
 	.consumer_supplies = palmas_vbus_supply,
+	.gpio_otg_iusb = TEGRA_GPIO_INVALID,
 };
 
 struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
