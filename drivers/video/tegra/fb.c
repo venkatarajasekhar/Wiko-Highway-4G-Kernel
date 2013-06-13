@@ -318,7 +318,8 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	/*
 	 * Do nothing if display parameters are same as current values.
 	 */
-	if ((var->xoffset == tegra_fb->curr_xoffset) &&
+	if (!(var->activate & FB_ACTIVATE_FORCE) &&
+	    (var->xoffset == tegra_fb->curr_xoffset) &&
 	    (var->yoffset == tegra_fb->curr_yoffset))
 		return 0;
 
