@@ -353,6 +353,8 @@ static int ceres_imx135_power_off(struct imx135_power_rail *pw)
 	return 0;
 }
 
+static unsigned imx135_estates[] = { 656, 0 };
+
 struct imx135_platform_data ceres_imx135_data = {
 	.flash_cap = {
 		.enable = 1,
@@ -360,6 +362,12 @@ struct imx135_platform_data ceres_imx135_data = {
 		.start_edge = 0,
 		.repeat = 1,
 		.delay_frm = 0,
+	},
+	.edpc_config = {
+		.states = imx135_estates,
+		.num_states = ARRAY_SIZE(imx135_estates),
+		.e0_index = ARRAY_SIZE(imx135_estates) - 1,
+		.priority = EDP_MAX_PRIO + 1,
 	},
 	.power_on = ceres_imx135_power_on,
 	.power_off = ceres_imx135_power_off,
