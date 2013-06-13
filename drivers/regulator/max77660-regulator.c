@@ -3,7 +3,7 @@
  * Maxim LDO and Buck regulators driver
  *
  * Copyright 2011-2012 Maxim Integrated Products, Inc.
- * Copyright (C) 2011-2012 NVIDIA Corporation
+ * Copyright (C) 2011-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -732,11 +732,13 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 	}
 
 	/*
-	* ES 1.0 errata suggest to keep BUCK3 and BUCK5 in FPWM mode
+	* ES 1.0 errata suggest to keep BUCK3/5/6/7 in FPWM mode
 	*/
 	if (max77660_is_es_1_0(reg->dev))
 		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
-			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5)
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK6 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK7)
 			pdata->flags |= SD_FORCED_PWM_MODE;
 
 	if (rinfo->type == REGULATOR_TYPE_BUCK) {
