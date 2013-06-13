@@ -919,28 +919,17 @@ static struct platform_driver palmas_platform_driver = {
 	},
 };
 
-static inline int palmas_charger_platform_init(void)
+static int __init palmas_charger_module_init(void)
 {
 	return platform_driver_register(&palmas_platform_driver);
 }
+subsys_initcall_sync(palmas_charger_module_init);
 
-static inline void palmas_charger_platform_exit(void)
+static void __exit palmas_charger_module_cleanup(void)
 {
 	return platform_driver_unregister(&palmas_platform_driver);
 }
-
-static int __init palmas_module_init(void)
-{
-	palmas_charger_platform_init();
-	return 0;
-}
-subsys_initcall(palmas_module_init);
-
-static void __exit palmas_cleanup(void)
-{
-	palmas_charger_platform_exit();
-}
-module_exit(palmas_cleanup);
+module_exit(palmas_charger_module_cleanup);
 
 MODULE_DESCRIPTION("palmas battery charger driver");
 MODULE_AUTHOR("Darbha Sriharsha <dsriharsha@nvidia.com>");
