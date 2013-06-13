@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/board-pluto-kbc.c
  * Keys configuration for Nvidia tegra3 pluto platform.
  *
- * Copyright (C) 2012 NVIDIA, Inc.
+ * Copyright (C) 2013 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -70,8 +70,8 @@ static struct tegra_kbc_wake_key pluto_wake_cfg[] = {
 };
 
 static struct tegra_kbc_platform_data pluto_kbc_platform_data = {
-	.debounce_cnt = 20 * 32, /* 20 ms debaunce time */
-	.repeat_cnt = 1,
+	.debounce_cnt = 30 * 32, /* 20 ms debounce time */
+	.repeat_cnt = 32 * 32,
 	.scan_count = 30,
 	.wakeup = true,
 	.keymap_data = &keymap_data,

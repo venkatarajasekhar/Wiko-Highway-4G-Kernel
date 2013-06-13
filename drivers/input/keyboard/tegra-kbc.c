@@ -2,7 +2,7 @@
  * Keyboard class input driver for the NVIDIA Tegra SoC internal matrix
  * keyboard controller
  *
- * Copyright (c) 2009-2011, NVIDIA Corporation.
+ * Copyright (c) 2009-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,8 +35,8 @@
 #define KBC_MAX_DEBOUNCE_CNT	0x3ffu
 
 /* KBC row scan time and delay for beginning the row scan. */
-#define KBC_ROW_SCAN_TIME	16
-#define KBC_ROW_SCAN_DLY	5
+#define KBC_ROW_SCAN_TIME	(16 * 32)
+#define KBC_ROW_SCAN_DLY	(5 * 32)
 
 /* KBC uses a 32KHz clock so a cycle = 1/32Khz */
 #define KBC_CYCLE_MS	32
@@ -68,7 +68,7 @@
 
 #define KBC_ROW_SHIFT	3
 #define DEFAULT_SCAN_COUNT 2
-#define DEFAULT_INIT_DLY   5
+#define DEFAULT_INIT_DLY   (32 * 32)
 
 struct tegra_kbc {
 	void __iomem *mmio;
