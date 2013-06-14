@@ -57,6 +57,8 @@ struct tegra_bbc_proxy {
 			    switches */
 	struct mutex iso_lock; /* lock for iso operations */
 
+	atomic_t mode; /* rsm modem mode reported by bbc */
+
 	struct regulator *sim0;
 	struct regulator *sim1;
 	struct regulator *rf1v7;
@@ -215,6 +217,9 @@ static int bbc_edp_request_unlocked(struct device *dev, u32 mode, u32 state,
 	if (!bbc->edp_client_registered)
 		return -EINVAL;
 
+	if (mode)
+		atomic_set(&bbc->mode, mode);
+
 	if (state != bbc->state) {
 		c = &bbc->modem_edp_client;
 		if (state >= c->num_states)
@@ -347,6 +352,9 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 
 	if (margin > MAX_ISO_BW_REQ)
 		return -EINVAL;
+
+	if (mode)
+		atomic_set(&bbc->mode, mode);
 
 	if (margin != bbc->margin) {
 		ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
@@ -552,6 +560,17 @@ static struct device_attribute *mc_attributes[] = {
 	NULL
 };
 
+static ssize_t mode_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
+
+	if (!bbc)
+		return -EAGAIN;
+
+	return sprintf(buf, "%d\n", atomic_read(&bbc->mode));
+}
+static struct device_attribute mode_attr = __ATTR_RO(mode);
 
 #define REG_ATTR(field)							\
 static ssize_t								\
@@ -843,9 +862,21 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		}
 	}
 
+	atomic_set(&bbc->mode, 0);
+	ret = device_create_file(&pdev->dev, &mode_attr);
+	if (ret) {
+		dev_err(&pdev->dev, "can't create sysfs file\n");
+		goto mode_error;
+	}
+
 	dev_set_drvdata(&pdev->dev, bbc);
 
 	return 0;
+
+mode_error:
+	attrs = rf_attributes;
+	while ((attr = *attrs++))
+		device_remove_file(&pdev->dev, attr);
 
 rf_error:
 	regulator_put(bbc->rf1v7);
@@ -884,6 +915,7 @@ static int __exit tegra_bbc_proxy_remove(struct platform_device *pdev)
 	struct device_attribute **attrs;
 	struct device_attribute *attr;
 
+	device_remove_file(&pdev->dev, &mode_attr);
 
 	if (bbc->rf1v7 && bbc->rf2v65) {
 		attrs = rf_attributes;
