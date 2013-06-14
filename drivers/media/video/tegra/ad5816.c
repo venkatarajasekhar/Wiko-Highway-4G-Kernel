@@ -1077,6 +1077,7 @@ static int ad5816_probe(
 
 	if (info->pdata->cfg & (NVC_CFG_NODEV | NVC_CFG_BOOT_INIT)) {
 		err = ad5816_dev_id(info);
+		ad5816_pm_wr(info, NVC_PWR_OFF);
 		if (err < 0) {
 			dev_err(&client->dev, "%s device not found\n",
 				__func__);
