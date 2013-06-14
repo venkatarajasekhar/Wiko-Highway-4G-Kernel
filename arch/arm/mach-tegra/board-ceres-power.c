@@ -52,6 +52,7 @@
 #include "devices.h"
 #include "board-ceres.h"
 #include "board-atlantis.h"
+#include "../../../drivers/staging/iio/machine.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
@@ -501,10 +502,18 @@ static struct platform_device power_supply_extcon_device = {
 	},
 };
 
+static struct iio_map max77660_iio_map[] = {
+	MAX77660_GPADC_IIO_MAP(VTHM, "max77660-charger-extcon",
+							"vthm_channel"),
+	MAX77660_GPADC_IIO_MAP(DUMMY, NULL, NULL),
+};
+
+
 struct max77660_adc_platform_data max77660_adc_pdata = {
 	.adc_current_uA = 10,
 	.adc_avg_sample = 2,
 	.adc_ref_enabled = 1,
+	.channel_mapping = max77660_iio_map,
 };
 
 struct max77660_clk32k_platform_data clk32_pdata = {
