@@ -522,6 +522,8 @@ static struct max77660_charger_platform_data max77660_charger_pdata = {
 	.wdt_timeout    = 32,
 	.temp_table = max77660_adc_temperature_lookup_table,
 	.temp_table_size = ARRAY_SIZE(max77660_adc_temperature_lookup_table),
+	.temperature_sensing_enable = 1,
+	.temperature_poll_period_secs = 5,
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
