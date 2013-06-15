@@ -70,6 +70,7 @@
 #define TEGRA_SNOR_DMA_CFG_INT_STA              BIT(27)
 #define TEGRA_SNOR_DMA_CFG_BRST_SZ(val)         REG_FIELD((val), 24, 3)
 #define TEGRA_SNOR_DMA_CFG_WRD_CNT(val)         REG_FIELD((val), 2, 14)
+#define MAX_DMA_BURST_SIZE			32
 
 /* timing 0 register */
 #define TEGRA_SNOR_TIMING0_PG_RDY(val)          REG_FIELD((val), 28, 4)

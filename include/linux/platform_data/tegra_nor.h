@@ -119,6 +119,8 @@ struct tegra_nor_platform_data {
 	struct flash_platform_data flash;
 	struct flash_info info;
 	struct gpio_addr_info addr;
+	int gmi_rst_n_gpio;
+	int gmi_oe_n_gpio;
 };
 
 #endif /* __MACH_TEGRA_NOR_PDATA_H */

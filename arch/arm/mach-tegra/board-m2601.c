@@ -338,7 +338,9 @@ static struct tegra_nor_platform_data m2601_nor_data = {
 			.timing0 = 0xB040C310,
 			.timing1 = 0x000a0a04,
 		},
-	}
+	},
+	.gmi_rst_n_gpio = TEGRA_GPIO_PI4,
+	.gmi_oe_n_gpio = TEGRA_GPIO_PI1,
 };
 
 #define M2601_NUM_CS	8

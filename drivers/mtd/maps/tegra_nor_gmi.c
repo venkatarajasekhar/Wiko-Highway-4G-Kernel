@@ -37,6 +37,10 @@
 #include <linux/mtd/concat.h>
 #include <linux/gpio.h>
 #include <linux/tegra_snor.h>
+#include <linux/delay.h>
+#include <mach/clk.h>
+#include <mach/pinmux.h>
+#include <mach/pinmux-tegra30.h>
 
 #ifdef CONFIG_TEGRA_GMI_ACCESS_CONTROL
 #include <linux/tegra_gmi_access.h>
@@ -70,6 +74,8 @@ struct tegra_nor_info {
 	int (*request_gmi_access)(u32 gmiLockHandle);
 	void (*release_gmi_access)(void);
 };
+
+static void tegra_snor_reset_controller(struct tegra_nor_info *info);
 
 /* Master structure of all tegra NOR private data*/
 struct tegra_nor_private {
@@ -139,8 +145,10 @@ static void flash_bank_cs(struct map_info *map)
 	c->init_config = snor_config;
 
 	snor_config = tegra_snor_readl(c, TEGRA_SNOR_CONFIG_REG);
-	for (i = 0; i < csinfo->num_cs_gpio; i++)
-		gpio_set_value(state->gpio_num, state->value);
+	for (i = 0; i < csinfo->num_cs_gpio; i++) {
+		if (gpio_get_value(state->gpio_num) != state->value)
+			gpio_set_value(state->gpio_num, state->value);
+	}
 }
 
 static void flash_bank_addr(struct map_info *map, unsigned int offset)
@@ -155,7 +163,8 @@ static void flash_bank_addr(struct map_info *map, unsigned int offset)
 	for (i = 0; i < adinfo->num_gpios; i++) {
 		state.gpio_num = addr[i].gpio_num;
 		state.value = (BIT(addr[i].line_num) & offset) ? HIGH : LOW;
-		gpio_set_value(state.gpio_num, state.value);
+		if (gpio_get_value(state.gpio_num) != state.value)
+			gpio_set_value(state.gpio_num, state.value);
 	}
 }
 
@@ -171,15 +180,22 @@ static void tegra_flash_dma(struct map_info *map,
 	struct tegra_nor_info *c = priv->info;
 	struct tegra_nor_chip_parms *chip_parm = &c->plat->chip_parms;
 	unsigned int bytes_remaining = len;
+	unsigned int page_length = 0, pio_length = 0;
+	int pinmux_func = 0;
+	struct tegra_pingroup_config pin_config;
 
 	snor_config = c->init_config;
 
 	tegra_snor_writel(c, c->timing0_read, TEGRA_SNOR_TIMING0_REG);
 	tegra_snor_writel(c, c->timing1_read, TEGRA_SNOR_TIMING1_REG);
 
+	if ((chip_parm->MuxMode == NorMuxMode_ADNonMux) &&
+					(c->plat->flash.width == 4))
+		/* keep OE low for read 0perations */
+		if (gpio_get_value(c->plat->gmi_oe_n_gpio) == HIGH)
+			gpio_set_value(c->plat->gmi_oe_n_gpio, LOW);
+
 	if (len > 32) {
-		word32_count = len >> 2;
-		bytes_remaining = len & 0x00000003;
 		/*
 		 * The parameters can be setup in any order since we write to
 		 * controller register only after all parameters are set.
@@ -200,16 +216,19 @@ static void tegra_flash_dma(struct map_info *map,
 			case NorPageLength_4Word:
 				snor_config |= TEGRA_SNOR_CONFIG_DEVICE_MODE(1);
 				snor_config |= TEGRA_SNOR_CONFIG_PAGE_SZ(1);
+				page_length = 16;
 				break;
 
 			case NorPageLength_8Word:
 				snor_config |= TEGRA_SNOR_CONFIG_DEVICE_MODE(1);
 				snor_config |= TEGRA_SNOR_CONFIG_PAGE_SZ(2);
+				page_length = 32;
 				break;
 
 			case NorPageLength_16Word:
 				snor_config |= TEGRA_SNOR_CONFIG_DEVICE_MODE(1);
 				snor_config |= TEGRA_SNOR_CONFIG_PAGE_SZ(3);
+				page_length = 64;
 				break;
 			}
 			break;
@@ -234,6 +253,32 @@ static void tegra_flash_dma(struct map_info *map,
 			}
 			break;
 		}
+
+		if (chip_parm->ReadMode == NorReadMode_Page
+			&& chip_parm->PageLength != 0) {
+
+			if (from & (page_length - 1)) {
+				pio_length = page_length -
+					(from & (page_length - 1));
+
+				/* Do Pio if remaining bytes are less than 32 */
+				if (pio_length + 32 >= len)
+					pio_length = len;
+
+				memcpy_fromio((char *)to,
+					((char *)(map->virt + from)),
+					pio_length);
+
+				to = ((u32)to + pio_length);
+				len -= pio_length;
+				from += pio_length;
+				copy_to = (u32)to;
+			}
+		}
+
+		word32_count = len >> 2;
+		bytes_remaining = len & 0x00000003;
+
 		snor_config |= TEGRA_SNOR_CONFIG_MST_ENB;
 		/* SNOR DMA CONFIGURATION SETUP */
 		/* NOR -> AHB */
@@ -242,6 +287,14 @@ static void tegra_flash_dma(struct map_info *map,
 		/* Fix this to have max burst as in commented code*/
 		/*dma_config |= TEGRA_SNOR_DMA_CFG_BRST_SZ(6);*/
 		dma_config |= TEGRA_SNOR_DMA_CFG_BRST_SZ(4);
+
+		tegra_snor_writel(c, snor_config, TEGRA_SNOR_CONFIG_REG);
+		tegra_snor_writel(c, dma_config, TEGRA_SNOR_DMA_CFG_REG);
+
+		/* Configure GMI_WAIT pinmux to RSVD1 */
+		pin_config.pingroup = TEGRA_PINGROUP_GMI_WAIT;
+		pin_config.func = TEGRA_MUX_RSVD1;
+		tegra_pinmux_set_func(&pin_config);
 
 		for (nor_address = (unsigned int)(map->phys + from);
 		     word32_count > 0;
@@ -253,9 +306,11 @@ static void tegra_flash_dma(struct map_info *map,
 			current_transfer =
 			    (word32_count > TEGRA_SNOR_DMA_LIMIT_WORDS)
 			    ? (TEGRA_SNOR_DMA_LIMIT_WORDS) : word32_count;
-			/* Start NOR operation */
-			snor_config |= TEGRA_SNOR_CONFIG_GO;
-			dma_config |= TEGRA_SNOR_DMA_CFG_GO;
+
+			/* Reset the SNOR controler */
+			tegra_snor_reset_controller(c);
+
+
 			/* Enable interrupt before every transaction since the
 			 * interrupt handler disables it */
 			dma_config |= TEGRA_SNOR_DMA_CFG_INT_ENB;
@@ -266,10 +321,19 @@ static void tegra_flash_dma(struct map_info *map,
 					  TEGRA_SNOR_AHB_ADDR_PTR_REG);
 			tegra_snor_writel(c, nor_address,
 					  TEGRA_SNOR_NOR_ADDR_PTR_REG);
-			tegra_snor_writel(c, snor_config,
-					  TEGRA_SNOR_CONFIG_REG);
 			tegra_snor_writel(c, dma_config,
 					  TEGRA_SNOR_DMA_CFG_REG);
+
+			/* Start NOR operation */
+			snor_config |= TEGRA_SNOR_CONFIG_GO;
+			tegra_snor_writel(c, snor_config,
+					  TEGRA_SNOR_CONFIG_REG);
+
+			/* Start DMA operation */
+			dma_config |= TEGRA_SNOR_DMA_CFG_GO;
+			tegra_snor_writel(c, dma_config,
+					  TEGRA_SNOR_DMA_CFG_REG);
+
 			if (wait_for_dma_completion(c)) {
 				dev_err(c->dev, "timout waiting for DMA\n");
 				/* Transfer the remaining words by memcpy */
@@ -284,9 +348,17 @@ static void tegra_flash_dma(struct map_info *map,
 
 		}
 	}
+
+	/* Restore GMI_WAIT pinmux back to original */
+	pin_config.pingroup = TEGRA_PINGROUP_GMI_WAIT;
+	pin_config.func = TEGRA_MUX_GMI;
+	tegra_pinmux_set_func(&pin_config);
+
 	/* Put the controller back into slave mode. */
 	snor_config = tegra_snor_readl(c, TEGRA_SNOR_CONFIG_REG);
 	snor_config &= ~TEGRA_SNOR_CONFIG_MST_ENB;
+	snor_config &= ~TEGRA_SNOR_CONFIG_DEVICE_MODE(3);
+	snor_config &= ~TEGRA_SNOR_CONFIG_PAGE_SZ(7);
 	snor_config |= TEGRA_SNOR_CONFIG_DEVICE_MODE(0);
 	tegra_snor_writel(c, snor_config, TEGRA_SNOR_CONFIG_REG);
 
@@ -341,6 +413,7 @@ map_word tegra_nor_read(struct map_info *map,
 	struct tegra_nor_private *priv =
 			(struct tegra_nor_private *)map->map_priv_1;
 	struct tegra_nor_info *c = priv->info;
+	struct tegra_nor_chip_parms *chip_parm = &c->plat->chip_parms;
 
 	gmi_lock(c);
 
@@ -350,6 +423,13 @@ map_word tegra_nor_read(struct map_info *map,
 
 	flash_bank_cs(map);
 	flash_bank_addr(map, ofs);
+
+	if ((chip_parm->MuxMode == NorMuxMode_ADNonMux) &&
+					(c->plat->flash.width == 4))
+		/* keep OE low for read operations */
+		if (gpio_get_value(c->plat->gmi_oe_n_gpio) == HIGH)
+			gpio_set_value(c->plat->gmi_oe_n_gpio, LOW);
+
 	ret = inline_map_read(map, ofs & SNOR_WINDOW_SIZE);
 
 	gmi_unlock(c);
@@ -363,6 +443,7 @@ void tegra_nor_write(struct map_info *map,
 	struct tegra_nor_private *priv =
 				(struct tegra_nor_private *)map->map_priv_1;
 	struct tegra_nor_info *c = priv->info;
+	struct tegra_nor_chip_parms *chip_parm = &c->plat->chip_parms;
 
 	gmi_lock(c);
 	tegra_snor_writel(c, c->init_config, TEGRA_SNOR_CONFIG_REG);
@@ -371,6 +452,13 @@ void tegra_nor_write(struct map_info *map,
 
 	flash_bank_cs(map);
 	flash_bank_addr(map, ofs);
+
+	if ((chip_parm->MuxMode == NorMuxMode_ADNonMux) &&
+					(c->plat->flash.width == 4))
+		/* keep OE high for write operations */
+		if (gpio_get_value(c->plat->gmi_oe_n_gpio) == LOW)
+			gpio_set_value(c->plat->gmi_oe_n_gpio, HIGH);
+
 	inline_map_write(map, datum, ofs & SNOR_WINDOW_SIZE);
 
 	gmi_unlock(c);
@@ -391,6 +479,37 @@ static irqreturn_t tegra_nor_isr(int flag, void *dev_id)
 		pr_err("%s: Spurious interrupt\n", __func__);
 	}
 	return IRQ_HANDLED;
+}
+
+static void tegra_snor_reset_controller(struct tegra_nor_info *info)
+{
+	u32 snor_config, dma_config, timing0, timing1 = 0;
+
+	snor_config = tegra_snor_readl(info, TEGRA_SNOR_CONFIG_REG);
+	dma_config = tegra_snor_readl(info, TEGRA_SNOR_DMA_CFG_REG);
+	timing0 = tegra_snor_readl(info, TEGRA_SNOR_TIMING0_REG);
+	timing1 = tegra_snor_readl(info, TEGRA_SNOR_TIMING1_REG);
+
+	/*
+	 * writes to CAR and AHB can go out of order resulting in
+	 * cases where AHB writes are flushed after the controller
+	 * is in reset. A read before writing to CAR will force all
+	 * pending writes on AHB to be flushed. The above snor register
+	 * reads take care of this situation
+	 */
+
+	tegra_periph_reset_assert(info->clk);
+	udelay(2);
+	tegra_periph_reset_deassert(info->clk);
+	udelay(2);
+
+	snor_config &= ~TEGRA_SNOR_CONFIG_GO;
+	dma_config &= ~TEGRA_SNOR_DMA_CFG_GO;
+
+	tegra_snor_writel(info, snor_config, TEGRA_SNOR_CONFIG_REG);
+	tegra_snor_writel(info, dma_config, TEGRA_SNOR_DMA_CFG_REG);
+	tegra_snor_writel(info, timing0, TEGRA_SNOR_TIMING0_REG);
+	tegra_snor_writel(info, timing1, TEGRA_SNOR_TIMING1_REG);
 }
 
 static int tegra_snor_controller_init(struct tegra_nor_info *info)
@@ -473,6 +592,7 @@ static int flash_probe(struct tegra_nor_info *info)
 	struct device *dev = info->dev;
 	int present_banks = 0;
 	unsigned long long size = 0;
+	struct tegra_nor_chip_parms *chip_parm = &info->plat->chip_parms;
 
 
 	mtd = devm_kzalloc(dev, sizeof(struct mtd_info *) *
@@ -518,6 +638,23 @@ static int flash_probe(struct tegra_nor_info *info)
 	nor_gmi_map_list.totalflashsize = size;
 #endif
 
+	/* Configure GMI_RST_N as gpio always HIGH */
+	if (gpio_request(info->plat->gmi_rst_n_gpio, "GMI_RST_N"))
+		return -EIO;
+	gpio_direction_output(info->plat->gmi_rst_n_gpio, HIGH);
+
+	/*
+	 * Sometimes OE goes low after controller reset. Configuring
+	 * as gpio to control correct behavior only for 32 bit Non Mux Mode
+	 */
+	if ((chip_parm->MuxMode == NorMuxMode_ADNonMux) &&
+			(info->plat->flash.width == 4))	{
+		/* Configure OE as gpio and drive it low for read operations
+		and high otherwise */
+		if (gpio_request(info->plat->gmi_oe_n_gpio, "GMI_OE_N"))
+			return -EIO;
+		gpio_direction_output(info->plat->gmi_oe_n_gpio, HIGH);
+	}
 	return 0;
 }
 
@@ -682,7 +819,8 @@ static int __devinit tegra_nor_probe(struct platform_device *pdev)
 		goto out_clk_disable;
 	}
 	info->dma_virt_buffer = dma_alloc_coherent(dev,
-							TEGRA_SNOR_DMA_LIMIT,
+							TEGRA_SNOR_DMA_LIMIT
+							+ MAX_DMA_BURST_SIZE,
 							&info->dma_phys_buffer,
 							GFP_KERNEL);
 	if (!info->dma_virt_buffer) {
