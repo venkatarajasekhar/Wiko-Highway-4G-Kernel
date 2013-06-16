@@ -111,6 +111,10 @@
 #define CLK_RESET_CLK_ENB_H_CLR		0x32c
 #define CLK_RESET_CLK_RST_DEV_H_SET		0x308
 #define CLK_RESET_CLK_RST_DEV_H_CLR		0x30c
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#define CLK_RESET_CLK_ENB_W_SET		0x448
+#define CLK_RESET_CLK_ENB_W_CLR		0x44c
+#endif
 
 #define I2C_CNFG	0x0
 #define I2C_ADDR0	0x4
@@ -474,6 +478,10 @@ resume_lp1:
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	mov32	r4, ((1<<28) | (8))	@ burst policy is PLLX
 	str	r4, [r0, #CLK_RESET_CCLK_BURST]
+#else
+	/* re-enable cl_dvfs logic clock (if dfll running, it's in open loop) */
+	mov	r4, #(1 << 27)
+	str	r4, [r0, #CLK_RESET_CLK_ENB_W_SET]
 #endif
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
@@ -1056,6 +1064,11 @@ lp1_volt_skip:
 	orr	r0, r0, #MSELECT_CLKM
 	str	r0, [r5, #CLK_RESET_CLK_SOURCE_MSELECT]
 
+#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	/* disable cl_dvfs logic clock (if dfll running, it's in open loop) */
+	mov	r0, #(1 << 27)
+	str	r0, [r5, #CLK_RESET_CLK_ENB_W_CLR]
+#endif
 	/* 2 us delay between changing sclk and disabling PLLs */
 	wait_for_us r1, r7, r9
 	add	r1, r1, #2
