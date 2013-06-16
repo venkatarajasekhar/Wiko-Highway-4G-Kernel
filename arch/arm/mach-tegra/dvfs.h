@@ -71,6 +71,7 @@ struct dvfs_rail {
 	int therm_mv_caps_num;
 
 	int step;
+	int step_up;
 	bool jmp_to_zero;
 	bool disabled;
 	bool updating;
