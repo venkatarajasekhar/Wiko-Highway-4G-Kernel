@@ -605,6 +605,7 @@
 
 #define MAX77660_CHARGER_BATREGCTRL		0x67
 #define MAX77660_MBATREG_4200MV			0x16
+#define MAX77660_MBATREG_4050MV			0x10
 
 #define MAX77660_CHARGER_DCCRNT			0x68
 #define MAX77660_DCLIMIT_1A			0x20
@@ -1016,6 +1017,10 @@ struct max77660_charger_platform_data {
 	struct regulator_consumer_supply *consumer_supplies;
 	int max_charge_current_mA;
 	void (*update_status)(int);
+	uint32_t *temp_table;
+	int temp_table_size;
+	int temperature_sensing_enable;
+	int temperature_poll_period_secs;
 };
 
 /*

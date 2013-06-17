@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2013, NVIDIA Corporation.
  *
+ * Author: Darbha Sriharsha <dsriharsha@nvidia.com>
  * Author: Syed Rafiuddin <srafiuddin@nvidia.com>
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -42,6 +43,30 @@
 #include <linux/timer.h>
 #include <linux/power_supply.h>
 #include <linux/power/battery-charger-gauge-comm.h>
+#include "../../drivers/staging/iio/consumer.h"
+
+#define MODULE_NAME	"max77660-charger-extcon"
+#define VTHM_CHANNEL	"vthm_channel"
+
+#define CHARGER_USB_EXTCON_REGISTRATION_DELAY	5000
+#define CHARGER_TYPE_DETECTION_DEBOUNCE_TIME_MS	500
+
+#define BATT_TEMP_HOT				56
+#define BATT_TEMP_WARM				45
+#define BATT_TEMP_COOL				10
+#define BATT_TEMP_COLD				3
+
+enum charging_states {
+	ENABLED_HALF_IBAT = 1,
+	ENABLED_FULL_IBAT,
+	DISABLED,
+};
+
+enum change_to_charging_state {
+	CURRENT_DISABLE,
+	CURRENT_ENABLE,
+	HALF_CURRENT_ENABLE,
+};
 
 static int max77660_chrg_wdt[] = {16, 32, 64, 128};
 
@@ -63,9 +88,14 @@ struct max77660_chg_extcon {
 	struct max77660_charger		*charger;
 	int				chg_irq;
 	int				chg_wdt_irq;
+	int				cable_connected;
 	struct regulator_desc		chg_reg_desc;
 	struct regulator_init_data	chg_reg_init_data;
+	struct delayed_work		temp_work;
 	struct battery_charger_dev	*bc_dev;
+	int				charging_state;
+	int				cable_connected_state;
+	
 };
 
 struct max77660_chg_extcon *max77660_ext;
@@ -110,6 +140,25 @@ static int max77660_battery_detect(struct max77660_chg_extcon *chip)
 	if ((status & MAX77660_BATDET_DTLS) == MAX77660_BATDET_DTLS_NO_BAT)
 		return -EPERM;
 	return 0;
+}
+
+static int max77660_gpadc_conversion(struct max77660_chg_extcon *chip,
+							char *channel_name)
+{
+	struct iio_channel *iio_channel;
+	int channel_value = 0;
+	int ret;
+
+	iio_channel = iio_st_channel_get(MODULE_NAME, channel_name);
+
+	ret = iio_st_read_channel_raw(iio_channel, &channel_value);
+
+	if (ret < 0) {
+		dev_err(chip->dev, "%s(): Gpadc conversion failed\n", __func__);
+		return ret;
+	}
+
+	return channel_value;
 }
 
 static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
@@ -227,18 +276,25 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 			return ret;
 
 	} else {
-		/* disable charge */
-		/* Clear top level charge */
-		ret = max77660_reg_clr_bits(chip->parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_GLOBAL_CFG1, MAX77660_GLBLCNFG1_ENCHGTL);
+		ret = max77660_reg_write(chip->parent,
+				MAX77660_CHG_SLAVE,
+				MAX77660_CHARGER_DCCRNT,
+				0);
 		if (ret < 0)
 			return ret;
+		/* disable charge */
 		/* Clear CEN */
 		ret = max77660_reg_clr_bits(chip->parent,
 			MAX77660_CHG_SLAVE, MAX77660_CHARGER_CHGCTRL2,
 			MAX77660_CEN_MASK);
 		if (ret < 0)
 			return ret;
+		/* Clear top level charge */
+		ret = max77660_reg_clr_bits(chip->parent, MAX77660_PWR_SLAVE,
+			MAX77660_REG_GLOBAL_CFG1, MAX77660_GLBLCNFG1_ENCHGTL);
+		if (ret < 0)
+			return ret;
+
 	}
 	dev_info(chip->dev, "%s\n", (enable) ? "Enable charger" :
 			"Disable charger");
@@ -274,12 +330,14 @@ static int max77660_set_charging_current(struct regulator_dev *rdev,
 		return 0;
 
 	if (charger->in_current_lim == 0) {
+		chip->cable_connected = 0;
 		ret = max77660_charger_init(chip, false);
 		if (ret < 0)
 			goto error;
 		battery_charging_status_update(chip->bc_dev,
 					BATTERY_DISCHARGING);
 	} else {
+		chip->cable_connected = 1;
 		charger->status = BATTERY_CHARGING;
 		ret = max77660_charger_init(chip, true);
 		if (ret < 0)
@@ -342,6 +400,125 @@ static int max77660_init_charger_regulator(struct max77660_chg_extcon *chip,
 			"vbus-charger regulator register failed %d\n", ret);
 	}
 	return ret;
+}
+
+int max77660_full_current_enable(struct max77660_chg_extcon *chip)
+{
+	int ret;
+
+	ret = max77660_charger_init(chip, true);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"Failed to initialise full current charging\n");
+		return ret;
+	}
+
+	chip->charging_state = ENABLED_FULL_IBAT;
+
+	return 0;
+}
+
+int max77660_half_current_enable(struct max77660_chg_extcon *chip)
+{
+	int ret;
+	int temp;
+
+	temp = chip->charger->in_current_lim;
+	chip->charger->in_current_lim = chip->charger->in_current_lim/2;
+	ret = max77660_charger_init(chip, true);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"Failed to initialise full current charging\n");
+		return ret;
+	}
+	chip->charger->in_current_lim = temp;
+	chip->charging_state = ENABLED_HALF_IBAT;
+
+	return 0;
+}
+
+int max77660_charging_disable(struct max77660_chg_extcon *chip)
+{
+	int ret;
+
+	ret = max77660_charger_init(chip, false);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"Failed to disable charging\n");
+		return ret;
+	}
+	chip->charging_state = DISABLED;
+
+	return 0;
+}
+
+static void max77660_check_temperature(struct work_struct *work)
+{
+	struct max77660_chg_extcon *chip;
+	int adc_code, temp;
+	int temperature, charger_en;
+	int ret;
+	struct max77660_charger_platform_data *charger_pdata;
+
+	chip = container_of(work, struct max77660_chg_extcon, temp_work.work);
+	charger_pdata = chip->charger->pdata;
+
+	adc_code = max77660_gpadc_conversion(chip, VTHM_CHANNEL);
+	if (adc_code < 0) {
+		dev_err(chip->dev, "Could not obtain adc code\n");
+		return;
+	}
+
+	if (!charger_pdata->temp_table) {
+		dev_err(chip->dev, "Temperature table unavailable...\n");
+		goto err;
+	}
+
+	for (temp = 0; temp < charger_pdata->temp_table_size; temp++) {
+		if (adc_code <= charger_pdata->temp_table[temp])
+			break;
+	}
+
+	temperature = charger_pdata->temp_table_size - temp - 40;
+
+	if (temperature >= BATT_TEMP_HOT || temperature <= BATT_TEMP_COLD)
+	       charger_en = CURRENT_DISABLE;
+	else if (temperature >= BATT_TEMP_COOL && temperature <= BATT_TEMP_WARM)
+	       charger_en = CURRENT_ENABLE;
+	else
+	       charger_en = HALF_CURRENT_ENABLE;
+
+
+	if (chip->cable_connected == 1) {
+		if (charger_en == CURRENT_ENABLE
+		       && chip->charging_state != ENABLED_FULL_IBAT) {
+		       max77660_full_current_enable(chip);
+			battery_charging_status_update(chip->bc_dev,
+						BATTERY_CHARGING);
+		} else if (charger_en == HALF_CURRENT_ENABLE
+			       && chip->charging_state != ENABLED_HALF_IBAT) {
+		       max77660_half_current_enable(chip);
+			/* MBATREGMAX to 4.05V */
+			ret = max77660_reg_write(chip->parent,
+					MAX77660_CHG_SLAVE,
+					MAX77660_CHARGER_MBATREGMAX,
+					MAX77660_MBATREG_4050MV);
+			if (ret < 0)
+				goto err;
+			battery_charging_status_update(chip->bc_dev,
+						BATTERY_CHARGING);
+		} else if (charger_en == CURRENT_DISABLE
+			       && chip->charging_state != DISABLED) {
+		       max77660_charging_disable(chip);
+			battery_charging_status_update(chip->bc_dev,
+						BATTERY_DISCHARGING);
+		}
+	}
+	schedule_delayed_work(&chip->temp_work,
+		msecs_to_jiffies(charger_pdata
+				->temperature_poll_period_secs*HZ));
+err:
+	return;
 }
 
 static int max77660_chg_extcon_cable_update(
@@ -710,6 +887,7 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 
 	charger = chg_extcon->charger;
 	charger->status = BATTERY_DISCHARGING;
+	charger->pdata = chg_pdata;
 
 	chg_extcon->edev = edev;
 	chg_extcon->edev->name = (chg_pdata->ext_conn_name) ?
@@ -800,6 +978,13 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 		goto chg_reg_err;
 	}
 	battery_charger_set_drvdata(chg_extcon->bc_dev, chg_extcon);
+
+	if (chg_pdata->temperature_sensing_enable == 1) {
+		INIT_DELAYED_WORK_DEFERRABLE(&chg_extcon->temp_work,
+						max77660_check_temperature);
+		schedule_delayed_work(&chg_extcon->temp_work,
+				chg_pdata->temperature_poll_period_secs*HZ);
+	}
 
 	device_set_wakeup_capable(&pdev->dev, 1);
 	return 0;
@@ -907,6 +1092,7 @@ static void __exit max77660_chg_extcon_driver_exit(void)
 module_exit(max77660_chg_extcon_driver_exit);
 
 MODULE_DESCRIPTION("max77660 charger-extcon driver");
+MODULE_AUTHOR("Darbha Sriharsha<dsriharsha@nvidia.com>");
 MODULE_AUTHOR("Syed Rafiuddin<srafiuddin@nvidia.com>");
 MODULE_AUTHOR("Laxman Dewangan<ldewangan@nvidia.com>");
 MODULE_ALIAS("platform:max77660-charger-extcon");
