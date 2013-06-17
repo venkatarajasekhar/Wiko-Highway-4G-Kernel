@@ -694,8 +694,7 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_TEGRA_EHCI_BOOST_CPU_FREQ
 	cancel_delayed_work(&tegra->boost_cpu_freq_work);
-	pm_qos_update_request(&tegra->boost_cpu_freq_req,
-				PM_QOS_DEFAULT_VALUE);
+	pm_qos_remove_request(&tegra->boost_cpu_freq_req);
 	tegra->cpu_boost_in_work = false;
 #endif
 	rhdev = hcd->self.root_hub;
