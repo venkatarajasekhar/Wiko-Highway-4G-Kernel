@@ -696,8 +696,6 @@ struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
 	.wdt_timeout    = 40,
 	.rtc_alarm_time = 3600,
 	.chg_restart_time = 1800,
-	.is_battery_present = false,
-	.update_status = palmas_battery_status,
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
@@ -714,7 +712,6 @@ static struct platform_device power_supply_extcon_device = {
 
 struct palmas_charger_platform_data palmas_charger_pdata = {
 	.vbus_pdata = &palmas_vbus_pdata,
-	.bcharger_pdata = &palmas_bcharger_pdata,
 };
 
 static struct palmas_sim_platform_data sim_platform = {
@@ -894,11 +891,9 @@ int __init atlantis_regulator_init(void)
 	platform_device_register(&power_supply_extcon_device);
 
 	if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY) {
-		((struct palmas_platform_data *)palma_device[0].platform_data)
-				->battery_pdata->is_battery_present = true;
-		((struct palmas_platform_data *)palma_device[0].platform_data)
-				->charger_pdata->bcharger_pdata
-				->is_battery_present = true;
+		palmas_pdata.battery_pdata->is_battery_present = true;
+		palmas_pdata.charger_pdata->bcharger_pdata =
+						&palmas_bcharger_pdata;
 	}
 
 	wdt_disable = is_pmic_wdt_disabled_at_boot();
