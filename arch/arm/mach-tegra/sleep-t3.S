@@ -831,6 +831,7 @@ lp1bb_entry:
 	str	r0, lp_enter_state
 	bl	tegra148_set_lp_state
 	bl	tegra148_set_mem_req_interrupt
+	bl	tegra3_save_config
 	bl	tegra3_cpu_clk32k
 	b	tegra3_enter_sleep
 
@@ -924,11 +925,13 @@ tegra3_lp0_tear_down_core:
 	bleq	tegra148_set_mem_req_interrupt
 	bl	tegra148_set_lp_state
 #endif
+	bl	tegra3_save_config
 	bl	tegra3_sdram_self_refresh
 	bl	tegra3_cpu_clk32k
 	b	tegra3_enter_sleep
 
 tegra3_stop_mc_clk:
+	bl	tegra3_save_config
 	bl	tegra3_sdram_self_refresh
 	mov	r1, #(1 << 25)
 	str	r1, [r5, #CLK_RESET_CLK_ENB_H_CLR]
@@ -1173,7 +1176,7 @@ halted:
  * r7 = TEGRA_TMRUS_BASE
  */
 
-tegra3_sdram_self_refresh:
+tegra3_save_config:
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	adr	r2, tegra3_sdram_pad_address
@@ -1196,6 +1199,9 @@ padsave:
 padsave_done:
 
 	dsb
+	mov	pc, lr
+
+tegra3_sdram_self_refresh:
 
 #if defined(CONFIG_ARCH_TEGRA_3x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	mov32	r0, TEGRA_EMC_BASE		@ r0 reserved for emc base
