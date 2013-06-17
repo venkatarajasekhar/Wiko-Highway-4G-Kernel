@@ -81,6 +81,15 @@ static const struct resource palma_extcon_resource[] = {
 	},
 };
 
+static const struct resource charger_resource[] = {
+	{
+		.name = "PALMAS-CHARGER",
+		.start = PALMAS_CHARGER_IRQ,
+		.end = PALMAS_CHARGER_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 static const struct resource rtc_resource[] = {
 	{
 		.name = "RTC_ALARM",
@@ -225,6 +234,8 @@ static const struct mfd_cell palmas_children[] = {
 	{
 		.name = "palmas-charger",
 		.id = PALMAS_CHARGER_ID,
+		.num_resources = ARRAY_SIZE(charger_resource),
+		.resources = charger_resource,
 	},
 	{
 		.name = "palmas-sim",
