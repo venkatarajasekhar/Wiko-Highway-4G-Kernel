@@ -3,7 +3,7 @@
  *
  * functions and macros to control the flowcontroller
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 #include <linux/io.h>
 
 #include <mach/iomap.h>
+#include <asm/barrier.h>
 
 #include "flowctrl.h"
 
