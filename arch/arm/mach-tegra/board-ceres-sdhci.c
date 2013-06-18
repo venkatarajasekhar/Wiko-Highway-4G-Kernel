@@ -332,10 +332,8 @@ int __init ceres_sdhci_init(void)
 	}
 	tegra_get_board_info(&board_info);
 	if ((board_info.board_id == BOARD_E1670) ||
-		 (board_info.board_id == BOARD_E1740)) {
+		 (board_info.board_id == BOARD_E1740))
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
-		tegra_sdhci_platform_data3.uhs_mask = MMC_MASK_HS200;
-	}
 
 	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device2);
