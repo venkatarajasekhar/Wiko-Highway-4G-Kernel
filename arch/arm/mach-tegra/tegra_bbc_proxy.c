@@ -179,6 +179,14 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 
 	bbc->edp_boot_client_registered = 0;
 
+	ret = edp_update_client_request(&bbc->modem_edp_client, 0, NULL);
+	if (ret) {
+		dev_err(dev, "initial state update failed\n");
+		goto done;
+	}
+
+	bbc->state = 0;
+
 	ap = edp_get_client(bbc->ap_name);
 	if (!ap) {
 		dev_err(dev, "can't get ap client\n");
