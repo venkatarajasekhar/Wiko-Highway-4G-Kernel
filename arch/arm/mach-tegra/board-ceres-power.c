@@ -29,7 +29,6 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/platform_data/lp8755.h>
-#include <linux/max17048_battery.h>
 #include <linux/pid_thermal_gov.h>
 #include <linux/power/power_supply_extcon.h>
 
@@ -465,17 +464,7 @@ static struct regulator_consumer_supply max77660_batt_supply[] = {
 	REGULATOR_SUPPLY("usb_bat_chg", "tegra-udc.0"),
 };
 
-static struct regulator_init_data vbus_reg_init_data = {
-	.constraints = {
-		.name = "max77660-vbus",
-		.min_uV = 0,
-		.max_uV = 5000000,
-		.valid_modes_mask = (REGULATOR_MODE_NORMAL |
-					REGULATOR_MODE_STANDBY),
-		.valid_ops_mask = (REGULATOR_CHANGE_MODE |
-					REGULATOR_CHANGE_STATUS |
-					REGULATOR_CHANGE_VOLTAGE),
-	},
+struct max77660_vbus_platform_data max77660_vbus_pdata = {
 	.num_consumer_supplies = 1,
 	.consumer_supplies = max77660_vbus_sypply,
 };
@@ -512,18 +501,21 @@ uint32_t max77660_adc_temperature_lookup_table[] = {
 * datasheet
 */
 
-static struct max77660_charger_platform_data max77660_charger_pdata = {
-	.ext_conn_name = "max77660-extcon",
-	.vbus_reg_init_data = &vbus_reg_init_data,
+static struct max77660_bcharger_platform_data max77660_bcharger_pdata = {
 	.max_charge_current_mA = 3000,
 	.consumer_supplies = max77660_batt_supply,
 	.num_consumer_supplies = ARRAY_SIZE(max77660_batt_supply),
-	.update_status	= max17048_battery_status,
 	.wdt_timeout    = 32,
 	.temp_table = max77660_adc_temperature_lookup_table,
 	.temp_table_size = ARRAY_SIZE(max77660_adc_temperature_lookup_table),
 	.temperature_sensing_enable = 1,
 	.temperature_poll_period_secs = 5,
+};
+
+static struct max77660_charger_platform_data max77660_charger_pdata = {
+	.ext_conn_name = "max77660-extcon",
+	.bcharger_pdata = &max77660_bcharger_pdata,
+	.vbus_pdata = &max77660_vbus_pdata,
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
@@ -969,8 +961,14 @@ int __init ceres_regulator_init(void)
 	wdt_disable = is_pmic_wdt_disabled_at_boot();
 	if (wdt_disable) {
 		max77660_pdata.system_watchdog_timeout = 0;
-		max77660_charger_pdata.wdt_timeout = 0;
+		max77660_bcharger_pdata.wdt_timeout = 0;
 	}
+
+	/* Pass NULL bcharger platform data for Adapter source */
+	if (get_power_supply_type() == POWER_SUPPLY_TYPE_MAINS) {
+		max77660_charger_pdata.bcharger_pdata = NULL;
+	}
+
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
 
