@@ -3,7 +3,7 @@
  *
  * MC error code common to T3x and T11x. T20 has been left alone.
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -190,6 +190,10 @@ static irqreturn_t tegra_mc_error_isr(int irq, void *data)
 		err = readl(err_mc + MC_ERR_SEC_STATUS);
 		addr = readl(err_mc + MC_ERR_SEC_ADR);
 		mc_type = "SEC SECERR";
+	} else if (stat & MC_INT_DECERR_BBC) {
+		err = readl(err_mc + MC_ERR_BBC_STATUS);
+		addr = readl(err_mc + MC_ERR_BBC_ADR);
+		mc_type = "BBC DECERR";
 	} else {
 		err = readl(err_mc + MC_ERROR_STATUS);
 		addr = readl(err_mc + MC_ERROR_ADDRESS);

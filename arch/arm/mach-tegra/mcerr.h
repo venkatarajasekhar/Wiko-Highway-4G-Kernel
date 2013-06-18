@@ -4,7 +4,7 @@
  * MC error interrupt handling header file. Various defines and declarations
  * across T20, T30, and T11x.
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,8 @@
 #define MC_INT_MASK			0x4
 #define MC_ERROR_STATUS			0x8
 #define MC_ERROR_ADDRESS		0xC
+#define MC_ERR_BBC_STATUS		0x84
+#define MC_ERR_BBC_ADR			0x88
 #define MC_ERR_VPR_STATUS		0x654
 #define MC_ERR_VPR_ADR			0x658
 #define MC_ERR_SEC_STATUS		0x67c
