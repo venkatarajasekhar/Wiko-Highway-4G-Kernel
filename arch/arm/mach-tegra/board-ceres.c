@@ -51,6 +51,7 @@
 #include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
 #include <mach/hardware.h>
+#include <mach/tegra_wakeup_monitor.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -435,6 +436,22 @@ static struct platform_device tegra_bbc_proxy_device = {
 	},
 };
 
+#if defined(CONFIG_TEGRA_WAKEUP_MONITOR)
+static struct tegra_wakeup_monitor_platform_data
+			ceres_tegra_wakeup_monitor_pdata = {
+	.wifi_wakeup_source	= 9,
+	.rtc_wakeup_source	= 18,
+};
+
+static struct platform_device ceres_tegra_wakeup_monitor_device = {
+	.name = "tegra_wakeup_monitor",
+	.id   = -1,
+	.dev  = {
+		.platform_data = &ceres_tegra_wakeup_monitor_pdata,
+	},
+};
+#endif
+
 static struct platform_device *ceres_only_audio_devices[] __initdata = {
 	&ceres_audio_max98090_device,
 	&ceres_audio_max97236_device,
@@ -482,6 +499,9 @@ static struct platform_device *ceres_devices[] __initdata = {
 	&tegra_bbc_proxy_device,
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	&tegra_mipi_bif_device,
+#endif
+#if defined(CONFIG_TEGRA_WAKEUP_MONITOR)
+	&ceres_tegra_wakeup_monitor_device,
 #endif
 };
 
