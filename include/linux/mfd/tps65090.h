@@ -27,7 +27,6 @@
 
 struct tps65090_charger_data {
 	int irq_base;
-	void (*update_status)(void);
 };
 
 struct tps65090 {
