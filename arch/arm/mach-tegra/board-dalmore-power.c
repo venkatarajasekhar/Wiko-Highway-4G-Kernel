@@ -184,7 +184,6 @@ static struct tps65090_regulator_platform_data *tps65090_reg_pdata[] = {
 
 static struct tps65090_charger_data bcharger_pdata = {
 	.irq_base = TPS65090_TEGRA_IRQ_BASE,
-	.update_status = sbs_update,
 };
 
 static struct tps65090_platform_data tps65090_pdata = {
