@@ -37,6 +37,10 @@
 #include <linux/seq_file.h>
 #include <linux/reboot.h>
 #include <linux/devfreq.h>
+#ifdef CONFIG_THERMAL
+#include <linux/thermal.h>
+#include <linux/platform_data/thermal_sensors.h>
+#endif
 
 #include <mach/hardware.h>
 #include <mach/gpio-tegra.h>
@@ -44,6 +48,9 @@
 #include <mach/pinmux.h>
 #include <mach/pm_domains.h>
 #include <mach/clk.h>
+#ifdef CONFIG_THERMAL
+#include <mach/thermal.h>
+#endif
 
 #include "sdhci-pltfm.h"
 
@@ -156,6 +163,55 @@ static unsigned int uhs_max_freq_MHz[] = {
  */
 #define NVQUIRK_BROKEN_SDR50_CONTROLLER_CLOCK	BIT(19)
 
+#ifdef CONFIG_THERMAL
+static int sdhci_mmc_temperature[] = {40, 60};
+static int sdhci_sd_temperature[] = {40, 60};
+static int sdhci_sdio_temperature[] = {40, 60};
+static int sdhci_max_state[] = {1, 1, 1};
+
+struct tegra_cooling_device sdhci_cdev[] = {
+	 {
+		.cdev_type = "sdhci_sdio",
+		.trip_temperatures = sdhci_sdio_temperature,
+		.trip_temperatures_num = ARRAY_SIZE(sdhci_sdio_temperature),
+	},
+	{
+		.cdev_type = "sdhci_sd",
+		.trip_temperatures = sdhci_sd_temperature,
+		.trip_temperatures_num = ARRAY_SIZE(sdhci_sd_temperature),
+	},
+	{
+		.cdev_type = "sdhci_mmc",
+		.trip_temperatures = sdhci_mmc_temperature,
+		.trip_temperatures_num = ARRAY_SIZE(sdhci_mmc_temperature),
+	},
+};
+
+struct sdhci_thermal {
+	struct tegra_cooling_device *sdhcicd;
+	int thermal_index;
+	int instance;
+};
+
+struct sdhci_thermal sdhci_td[] = {
+	{
+		.sdhcicd = &sdhci_cdev[0],
+		.thermal_index = 0,
+		.instance = 0,
+	},
+	{
+		.sdhcicd = &sdhci_cdev[1],
+		.thermal_index = 0,
+		.instance = 1,
+	},
+	{
+		.sdhcicd = &sdhci_cdev[2],
+		.thermal_index = 0,
+		.instance = 2,
+	},
+};
+#endif
+
 struct sdhci_tegra_soc_data {
 	struct sdhci_pltfm_data *pdata;
 	u32 nvquirks;
@@ -257,6 +313,9 @@ struct tegra_freq_gov_data {
 };
 
 struct sdhci_tegra {
+#ifdef CONFIG_THERMAL
+	struct thermal_cooling_device *cdev;
+#endif
 	const struct tegra_sdhci_platform_data *plat;
 	const struct sdhci_tegra_soc_data *soc_data;
 	bool	clk_enabled;
@@ -300,6 +359,62 @@ struct sdhci_tegra {
 	unsigned int best_tap_values[TUNING_FREQ_COUNT];
 	struct tegra_freq_gov_data *gov_data;
 };
+
+#ifdef CONFIG_THERMAL
+struct tegra_cooling_device *tegra_sdhci_edp_get_dev(int instance)
+{
+	return &sdhci_cdev[instance];
+}
+
+static int sdhci_tegra_get_max_state(struct thermal_cooling_device *cdev,
+			unsigned long *max_state)
+{
+	struct sdhci_thermal *sdhci_data = cdev->devdata;
+
+	if (!sdhci_data)
+		return -EINVAL;
+
+	*max_state = sdhci_max_state[sdhci_data->instance];
+
+	return 0;
+
+}
+
+static int sdhci_tegra_get_cur_state(struct thermal_cooling_device *cdev,
+			unsigned long *cur_state)
+{
+	struct sdhci_thermal *sdhci_data = cdev->devdata;
+
+	if (!sdhci_data)
+		return -EINVAL;
+
+	*cur_state = sdhci_data->thermal_index;
+
+	return 0;
+}
+
+static int
+sdhci_tegra_set_cur_state(struct thermal_cooling_device *cdev,
+			unsigned long cur_state)
+{
+	struct sdhci_thermal *sdhci_data = cdev->devdata;
+
+	if (!sdhci_data)
+		return -EINVAL;
+
+	if (sdhci_data->thermal_index != cur_state)
+		sdhci_data->thermal_index = cur_state;
+
+	return 0;
+}
+
+static const struct thermal_cooling_device_ops sdhci_tegra_cooling_ops = {
+	.get_max_state = sdhci_tegra_get_max_state,
+	.get_cur_state = sdhci_tegra_get_cur_state,
+	.set_cur_state = sdhci_tegra_set_cur_state,
+};
+#endif
+
 
 static struct clk *pll_c;
 static struct clk *pll_p;
@@ -487,14 +602,23 @@ static unsigned long calculate_mmc_target_freq(
 {
 	unsigned long desired_freq = gov_data->curr_freq;
 	unsigned int type = MMC_TYPE_MMC;
+	unsigned long cur_state = 0;
+	struct sdhci_tegra *tegra_host =
+		container_of(&gov_data, struct sdhci_tegra, gov_data);
 
-	if (gov_data->curr_active_load >= gov_data->act_load_high_threshold) {
+	sdhci_tegra_get_cur_state(tegra_host->cdev, &cur_state);
+
+	if (!cur_state && gov_data->curr_active_load >=
+		gov_data->act_load_high_threshold) {
+
 		desired_freq = gov_data->freqs[TUNING_HIGH_FREQ];
 		gov_data->monitor_idle_load = false;
 		gov_data->max_idle_monitor_cycles =
 			gov_params[type].idle_mon_cycles;
 	} else {
-		if (gov_data->monitor_idle_load) {
+		if (( cur_state && desired_freq == gov_data->freqs[TUNING_HIGH_FREQ])
+			|| gov_data->monitor_idle_load) {
+
 			if (!gov_data->max_idle_monitor_cycles) {
 				desired_freq = gov_data->freqs[TUNING_LOW_FREQ];
 				gov_data->max_idle_monitor_cycles =
@@ -518,14 +642,23 @@ static unsigned long calculate_sdio_target_freq(
 {
 	unsigned long desired_freq = gov_data->curr_freq;
 	unsigned int type = MMC_TYPE_SDIO;
+	unsigned long cur_state = 0;
+	struct sdhci_tegra *tegra_host =
+		container_of(&gov_data, struct sdhci_tegra, gov_data);
 
-	if (gov_data->curr_active_load >= gov_data->act_load_high_threshold) {
+	sdhci_tegra_get_cur_state(tegra_host->cdev, &cur_state);
+
+	if (!cur_state && gov_data->curr_active_load >=
+		gov_data->act_load_high_threshold) {
+
 		desired_freq = gov_data->freqs[TUNING_HIGH_FREQ];
 		gov_data->monitor_idle_load = false;
 		gov_data->max_idle_monitor_cycles =
 			gov_params[type].idle_mon_cycles;
 	} else {
-		if (gov_data->monitor_idle_load) {
+		if (( cur_state && desired_freq == gov_data->freqs[TUNING_HIGH_FREQ])
+			|| gov_data->monitor_idle_load) {
+
 			if (!gov_data->max_idle_monitor_cycles) {
 				desired_freq = gov_data->freqs[TUNING_LOW_FREQ];
 				gov_data->max_idle_monitor_cycles =
@@ -2733,6 +2866,33 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 			tegra_sdhci_reboot_notify;
 		register_reboot_notifier(&tegra_host->reboot_notify);
 	}
+
+#ifdef CONFIG_THERMAL
+	if (tegra_host->instance == 0) {
+		tegra_host->cdev = thermal_cooling_device_register(
+		sdhci_cdev[tegra_host->instance].cdev_type,
+		&sdhci_td[tegra_host->instance], &sdhci_tegra_cooling_ops);
+
+		if (IS_ERR(tegra_host->cdev)) {
+			if (plat->power_off_rail)
+				unregister_reboot_notifier(
+					&tegra_host->reboot_notify);
+			goto err_cd_irq_req;
+		}
+	} else if (tegra_host->instance >= 2) {
+		tegra_host->cdev = thermal_cooling_device_register(
+		sdhci_cdev[tegra_host->instance - 1].cdev_type,
+		&sdhci_td[tegra_host->instance - 1], &sdhci_tegra_cooling_ops);
+
+		if (IS_ERR(tegra_host->cdev)) {
+			if (plat->power_off_rail)
+				unregister_reboot_notifier(
+					&tegra_host->reboot_notify);
+			goto err_cd_irq_req;
+		}
+	}
+#endif
+
 	return 0;
 
 err_cd_irq_req:
@@ -2769,6 +2929,10 @@ static int __devexit sdhci_tegra_remove(struct platform_device *pdev)
 	sdhci_remove_host(host, dead);
 
 	disable_irq_wake(gpio_to_irq(plat->cd_gpio));
+
+#ifdef CONFIG_THERMAL
+	thermal_cooling_device_unregister(tegra_host->cdev);
+#endif
 
 	if (tegra_host->vdd_slot_reg) {
 		regulator_disable(tegra_host->vdd_slot_reg);

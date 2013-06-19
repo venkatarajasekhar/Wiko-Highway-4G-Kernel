@@ -24,6 +24,9 @@
 
 #include <mach/clk.h>
 #include <mach/edp.h>
+#ifdef CONFIG_THERMAL
+#include <mach/sdhci.h>
+#endif
 
 #include "board.h"
 #include "board-common.h"
@@ -169,6 +172,12 @@ void tegra_add_cdev_trips(struct thermal_trip_info *trips, int *num_trips)
 	tegra_add_trip_points(trips, num_trips, tegra_dvfs_get_cpu_vmin_cdev());
 	tegra_add_trip_points(trips, num_trips,
 			      tegra_dvfs_get_core_vmin_cdev());
+
+#ifdef CONFIG_THERMAL
+	tegra_add_trip_points(trips, num_trips, tegra_sdhci_edp_get_dev(0));
+	tegra_add_trip_points(trips, num_trips, tegra_sdhci_edp_get_dev(1));
+	tegra_add_trip_points(trips, num_trips, tegra_sdhci_edp_get_dev(2));
+#endif
 }
 
 void tegra_add_tj_trips(struct thermal_trip_info *trips, int *num_trips)
