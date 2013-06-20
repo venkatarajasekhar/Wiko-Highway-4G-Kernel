@@ -732,10 +732,11 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 	}
 
 	/*
-	* ES 1.0 errata suggest to keep BUCK3/5/6/7 in FPWM mode
+	* ES 1.0 errata suggest to keep BUCK3/4/5/6/7 in FPWM mode
 	*/
 	if (max77660_is_es_1_0(reg->dev))
 		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK4 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK6 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK7)
