@@ -324,7 +324,6 @@ static const struct iio_info palmas_gpadc_iio_info = {
 	.driver_module = THIS_MODULE,
 };
 
-
 #define PALMAS_ADC_CHAN_IIO(chan)					\
 {									\
 	.datasheet_name = PALMAS_DATASHEET_NAME(chan),			\
@@ -387,6 +386,21 @@ static int __devinit palmas_gpadc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	if (adc_pdata->iio_maps) {
+		ret = iio_map_array_register(iodev, adc_pdata->iio_maps);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "iio_map_array_register failed\n");
+			goto out;
+		}
+	} else {
+		dev_info(&pdev->dev, "Using default IIO mapping\n");
+		ret = iio_map_array_register(iodev, palmas_iio_map);
+		if (ret < 0) {
+			dev_err(adc->dev, "iio_map_array_register() failed: %d\n", ret);
+			goto out;
+		}
+	}
+
 	adc = iio_priv(iodev);
 	adc->dev = &pdev->dev;
 	adc->palmas = dev_get_drvdata(pdev->dev.parent);
@@ -402,7 +416,7 @@ static int __devinit palmas_gpadc_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(adc->dev,
 			"request irq %d failed: %dn", adc->irq, ret);
-		goto out;
+		goto out_unregister_map;
 	}
 
 	if (adc_pdata->channel0_current_uA == 0)
@@ -436,12 +450,6 @@ static int __devinit palmas_gpadc_probe(struct platform_device *pdev)
 		goto out_irq_free;
 	}
 
-	ret = iio_map_array_register(iodev, palmas_iio_map);
-	if (ret < 0) {
-		dev_err(adc->dev, "iio_map_array_register() failed: %d\n", ret);
-		goto out_irq_free;
-		}
-
 	device_set_wakeup_capable(&pdev->dev, 1);
 	for (i = 0; i < PALMAS_ADC_CH_MAX; i++) {
 		if (!(adc->adc_info[i].is_correct_code))
@@ -452,6 +460,9 @@ static int __devinit palmas_gpadc_probe(struct platform_device *pdev)
 
 out_irq_free:
 	free_irq(adc->irq, adc);
+out_unregister_map:
+	if (adc_pdata->iio_maps)
+		iio_map_array_unregister(iodev, adc_pdata->iio_maps);
 out:
 	iio_free_device(iodev);
 	return ret;
@@ -461,7 +472,10 @@ static int __devexit palmas_gpadc_remove(struct platform_device *pdev)
 {
 	struct iio_dev *iodev = dev_get_drvdata(&pdev->dev);
 	struct palmas_gpadc *adc = iio_priv(iodev);
+	struct palmas_platform_data *pdata = dev_get_platdata(pdev->dev.parent);
 
+	if (pdata->adc_pdata->iio_maps)
+		iio_map_array_unregister(iodev, pdata->adc_pdata->iio_maps);
 	iio_device_unregister(iodev);
 	free_irq(adc->irq, adc);
 	iio_free_device(iodev);
