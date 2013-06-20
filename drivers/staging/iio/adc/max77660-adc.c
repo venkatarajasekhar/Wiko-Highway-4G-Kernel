@@ -27,13 +27,13 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include "linux/iio/machine.h"
 #include <linux/pm.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/completion.h>
 
 #include "../iio.h"
 #include "../iio_core.h"
-#include "../machine.h"
 #include "../driver.h"
 
 #define MOD_NAME "max77660-adc"

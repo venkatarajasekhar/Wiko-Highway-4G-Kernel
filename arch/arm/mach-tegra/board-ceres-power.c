@@ -19,6 +19,7 @@
 #include <linux/edp.h>
 #include <linux/edpdev.h>
 #include <linux/i2c.h>
+#include "linux/iio/machine.h"
 #include <linux/pda_power.h>
 #include <linux/platform_device.h>
 #include <linux/resource.h>
@@ -53,7 +54,6 @@
 #include "board-ceres.h"
 #include "board-atlantis.h"
 #include "fuse.h"
-#include "../../../drivers/staging/iio/machine.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)

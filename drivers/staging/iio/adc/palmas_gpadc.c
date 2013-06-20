@@ -27,12 +27,12 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/iio/machine.h>
 #include <linux/pm.h>
 #include <linux/mfd/palmas.h>
 #include <linux/completion.h>
 
 #include "../iio.h"
-#include "../machine.h"
 #include "../driver.h"
 
 #define MOD_NAME "palmas-gpadc"

@@ -36,7 +36,7 @@
 #include <linux/power_supply.h>
 #include <linux/mfd/palmas.h>
 #include <linux/byteorder/generic.h>
-#include "../../drivers/staging/iio/consumer.h"
+#include <linux/iio/consumer.h>
 #include <linux/power/battery-charger-gauge-comm.h>
 
 #define MODULE_NAME			"palmas-battery"

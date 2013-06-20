@@ -30,6 +30,7 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/i2c.h>
+#include <linux/iio/consumer.h>
 #include <linux/pm.h>
 #include <linux/extcon.h>
 #include <linux/regulator/driver.h>
@@ -43,7 +44,6 @@
 #include <linux/timer.h>
 #include <linux/power_supply.h>
 #include <linux/power/battery-charger-gauge-comm.h>
-#include "../../drivers/staging/iio/consumer.h"
 
 #define MODULE_NAME	"max77660-charger-extcon"
 #define VTHM_CHANNEL	"vthm_channel"
