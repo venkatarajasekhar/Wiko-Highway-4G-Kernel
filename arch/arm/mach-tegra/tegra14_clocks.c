@@ -6628,6 +6628,7 @@ struct clk_duplicate tegra_clk_duplicates[] = {
 	CLK_DUPLICATE("dmic0", "tegra-dmic.0", NULL),
 	CLK_DUPLICATE("dmic1", "tegra-dmic.1", NULL),
 	CLK_DUPLICATE("vi_sensor2", NULL, "default_mclk"),
+	CLK_DUPLICATE("vim2_clk", NULL, "mclk_out_enb"),
 };
 
 struct clk *tegra_ptr_clks[] = {

@@ -7166,6 +7166,7 @@ struct clk_duplicate tegra_clk_duplicates[] = {
 	CLK_DUPLICATE("cpu_g", "tegra_cl_dvfs", "safe_dvfs"),
 	CLK_DUPLICATE("epp.cbus", "tegra_isp", "epp"),
 	CLK_DUPLICATE("vi_sensor", NULL, "default_mclk"),
+	CLK_DUPLICATE("csus", NULL, "mclk_out_enb"),
 };
 
 struct clk *tegra_ptr_clks[] = {
