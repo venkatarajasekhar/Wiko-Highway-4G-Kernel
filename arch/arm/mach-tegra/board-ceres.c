@@ -930,6 +930,12 @@ struct spi_board_info rm31080a_ceres_spi_board[1] = {
 
 int synaptics_touch_enable(void)
 {
+	static int first_call = 1;
+	if (first_call) {
+		first_call = 0;
+		return 0;
+	}
+
 	if (board_info.board_id == BOARD_E1670)
 		gpio_free(TEGRA_GPIO_PL3);
 
