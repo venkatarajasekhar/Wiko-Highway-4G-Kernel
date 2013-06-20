@@ -302,9 +302,19 @@ static int ceres_imx135_power_on(struct imx135_power_rail *pw)
 	if (unlikely(WARN_ON(!pw || !pw->iovdd || !pw->dvdd || !pw->avdd)))
 		return -EFAULT;
 
-	gpio_set_value(CAM_RSTN, 0);
-	gpio_set_value(CAM_AF_PWDN, 1);
-	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+	err = gpio_request_one(CAM_RSTN,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+			"camera_reset");
+	if (err < 0)
+		pr_notice("%s: gpio_request failed for gpio %s\n",
+			__func__, "CAM_RSTN");
+
+	err = gpio_request_one(CAM1_POWER_DWN_GPIO,
+			GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+			"camera1_power_down");
+	if (err < 0)
+		pr_notice("%s: gpio_request failed for gpio %s\n",
+			__func__, "CAM1_POWER_DWN_GPIO");
 	usleep_range(10, 20);
 
 	err = regulator_enable(pw->avdd);
@@ -351,6 +361,9 @@ static int ceres_imx135_power_off(struct imx135_power_rail *pw)
 	regulator_disable(pw->iovdd);
 	regulator_disable(pw->dvdd);
 	regulator_disable(pw->avdd);
+
+	gpio_free(CAM_RSTN);
+	gpio_free(CAM1_POWER_DWN_GPIO);
 	return 0;
 }
 
@@ -466,6 +479,7 @@ static unsigned imx091_estates[] = {600, 0};
 static struct imx091_platform_data ceres_imx091_data = {
 	.num			= 0,
 	.sync			= 0,
+	.cfg			= NVC_CFG_NODEV,
 	.dev_name		= "camera",
 	.gpio_count		= ARRAY_SIZE(imx091_gpio_pdata),
 	.gpio			= imx091_gpio_pdata,
@@ -582,10 +596,6 @@ static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
 		I2C_BOARD_INFO("ad5816", 0x0E),
 		.platform_data = &ceres_ad5816_pdata,
 	},
-	{
-		I2C_BOARD_INFO("max77387", 0x4A),
-		.platform_data = &ceres_max77387_pdata,
-	},
 };
 
 static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
@@ -600,10 +610,6 @@ static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
 	{
 		I2C_BOARD_INFO("ad5816", 0x0E),
 		.platform_data = &ceres_ad5816_pdata,
-	},
-	{
-		I2C_BOARD_INFO("lm3565", 0x30),
-		.platform_data = &atlantis_lm3565_pdata,
 	},
 };
 
@@ -624,6 +630,21 @@ static struct i2c_board_info ceres_i2c_board_info_e1690[] = {
 		I2C_BOARD_INFO("max77387", 0x4A),
 		.platform_data = &ceres_max77387_pdata,
 	},
+};
+
+static struct i2c_board_info ceres_i2c_board_info_imx135 = {
+	I2C_BOARD_INFO("imx135", 0x10),
+	.platform_data = &ceres_imx135_data,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_max77387 = {
+	I2C_BOARD_INFO("max77387", 0x4A),
+	.platform_data = &ceres_max77387_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_lm3565 = {
+	I2C_BOARD_INFO("lm3565", 0x30),
+	.platform_data = &atlantis_lm3565_pdata,
 };
 
 static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
@@ -954,3 +975,62 @@ int __init ceres_sensors_init(void)
 
 	return 0;
 }
+
+#define IMX091_ID	0x0091
+static int ceres_chk_imx091(struct device *dev, void *addrp)
+{
+	struct i2c_client *client = i2c_verify_client(dev);
+	unsigned short addr = *(unsigned short *)addrp;
+
+	if (!client)
+		return 0;
+
+	if (client->addr == addr) {
+		struct i2c_adapter *adap = i2c_get_adapter(2);
+		u16 *imx091_devid = (u16 *) i2c_get_clientdata(client);
+
+		if (imx091_devid != NULL && *imx091_devid == IMX091_ID) {
+			if (board_info.board_id == BOARD_E1670)
+				i2c_new_device(adap,
+					&ceres_i2c_board_info_lm3565);
+			else
+				i2c_new_device(adap,
+					&ceres_i2c_board_info_max77387);
+		} else {
+			i2c_unregister_device(client);
+			i2c_new_device(adap, &ceres_i2c_board_info_imx135);
+			i2c_new_device(adap, &ceres_i2c_board_info_max77387);
+		}
+		return 1;
+	}
+
+	return 0;
+}
+
+int camera_auto_detect(void)
+{
+	struct i2c_adapter *adap = i2c_get_adapter(2);
+	u16 imx091_addr = 0x10;
+
+	device_for_each_child(&adap->dev,
+			&imx091_addr,
+			ceres_chk_imx091);
+
+	return 0;
+}
+
+int __init ceres_camera_late_init(void)
+{
+	if ((board_info.board_id != BOARD_E1670) &&
+		(board_info.board_id != BOARD_E1740) &&
+		(board_info.board_id != BOARD_E1680)) {
+		pr_err("%s: Ceres/Atlantis ERS not found!\n", __func__);
+		return 0;
+	}
+
+	camera_auto_detect();
+
+	return 0;
+}
+
+late_initcall(ceres_camera_late_init);
