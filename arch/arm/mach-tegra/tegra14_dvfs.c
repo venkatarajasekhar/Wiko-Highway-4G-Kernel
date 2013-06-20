@@ -119,7 +119,7 @@ static struct cpu_cvb_dvfs cpu_cvb_dvfs_table[] = {
 			{      0, {      0,      0,   0}, {      0,    0,    0} },
 		},
 		.therm_trips_table = { 20 },
-		.therm_floors_table = { 850 },
+		.therm_floors_table = { 900 },
 	},
 	{
 		.speedo_id = 1,
@@ -161,7 +161,7 @@ static struct cpu_cvb_dvfs cpu_cvb_dvfs_table[] = {
 			{      0, {      0,      0,   0}, {      0,    0,    0} },
 		},
 		.therm_trips_table = { 20 },
-		.therm_floors_table = { 850 },
+		.therm_floors_table = { 900 },
 	},
 };
 
