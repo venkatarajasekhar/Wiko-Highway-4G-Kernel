@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 NVIDIA, Inc.
+ * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1633,11 +1633,11 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		12750,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
-		0x4001003e, /* CLK_SOURCE_EMC */
+		0x4000003e, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
 		9,          /* number of up_down_regs */
 		{
@@ -1741,7 +1741,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0xa0f10404, /* EMC_AUTO_CAL_CONFIG */
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
-			0x80000164, /* EMC_DYN_SELF_REF_CONTROL */
+			0x80000091, /* EMC_DYN_SELF_REF_CONTROL */
 			0x00000006, /* EMC_QUSE */
 			0x00000006, /* EMC_EINPUT */
 			0x00000003, /* EMC_EINPUT_DURATION */
@@ -1750,29 +1750,29 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000006, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
 			0x0000000b, /* EMC_QPOP */
-			0x02000006, /* MC_EMEM_ARB_CFG */
-			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x40040001, /* MC_EMEM_ARB_CFG */
+			0x8000002c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x80000021, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000005, /* MC_EMEM_ARB_TIMING_RC */
-			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
-			0x00000007, /* MC_EMEM_ARB_TIMING_FAW */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RAP2PRE */
-			0x0000000e, /* MC_EMEM_ARB_TIMING_WAP2PRE */
-			0x00000007, /* MC_EMEM_ARB_TIMING_R2R */
-			0x00000005, /* MC_EMEM_ARB_TIMING_W2W */
-			0x0000000b, /* MC_EMEM_ARB_TIMING_R2W */
-			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
-			0x0d0b0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00130905, /* MC_EMEM_ARB_DA_COVERS */
-			0x7fc30306, /* MC_EMEM_ARB_MISC0 */
-			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
+			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RAP2PRE */
+			0x00000007, /* MC_EMEM_ARB_TIMING_WAP2PRE */
+			0x00000002, /* MC_EMEM_ARB_TIMING_R2R */
+			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
+			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
+			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x77c30303, /* MC_EMEM_ARB_MISC0 */
+			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
 		{
-			0x00000008, /* MC_PTSA_GRANT_DECREMENT */
+			0x00000004, /* MC_PTSA_GRANT_DECREMENT */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_G2_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_G2_1 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_NV_0 */
@@ -1793,11 +1793,11 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		51000,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
-		0x4001000e, /* CLK_SOURCE_EMC */
+		0x4000000e, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
 		9,          /* number of up_down_regs */
 		{
@@ -1901,7 +1901,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0xa0f10404, /* EMC_AUTO_CAL_CONFIG */
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
-			0x80000287, /* EMC_DYN_SELF_REF_CONTROL */
+			0x80000249, /* EMC_DYN_SELF_REF_CONTROL */
 			0x00000006, /* EMC_QUSE */
 			0x00000006, /* EMC_EINPUT */
 			0x00000003, /* EMC_EINPUT_DURATION */
@@ -1910,29 +1910,29 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000006, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
 			0x0000000b, /* EMC_QPOP */
-			0x02000006, /* MC_EMEM_ARB_CFG */
-			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x50000001, /* MC_EMEM_ARB_CFG */
+			0x8000003a, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x8000002b, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000005, /* MC_EMEM_ARB_TIMING_RC */
-			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
-			0x00000007, /* MC_EMEM_ARB_TIMING_FAW */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RAP2PRE */
-			0x0000000e, /* MC_EMEM_ARB_TIMING_WAP2PRE */
-			0x00000007, /* MC_EMEM_ARB_TIMING_R2R */
-			0x00000005, /* MC_EMEM_ARB_TIMING_W2W */
-			0x0000000b, /* MC_EMEM_ARB_TIMING_R2W */
-			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
-			0x0d0b0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00130905, /* MC_EMEM_ARB_DA_COVERS */
-			0x7ac30506, /* MC_EMEM_ARB_MISC0 */
-			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
+			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RAP2PRE */
+			0x00000007, /* MC_EMEM_ARB_TIMING_WAP2PRE */
+			0x00000002, /* MC_EMEM_ARB_TIMING_R2R */
+			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
+			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
+			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x72c30303, /* MC_EMEM_ARB_MISC0 */
+			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
 		{
-			0x00000021, /* MC_PTSA_GRANT_DECREMENT */
+			0x00000010, /* MC_PTSA_GRANT_DECREMENT */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_G2_0 */
 			0x008d00ff, /* MC_LATENCY_ALLOWANCE_G2_1 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_NV_0 */
@@ -1953,11 +1953,11 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		102000,     /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
-		0x40010006, /* CLK_SOURCE_EMC */
+		0x40000006, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
 		9,          /* number of up_down_regs */
 		{
@@ -2062,37 +2062,37 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x8000040b, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000006, /* EMC_QUSE */
-			0x00000006, /* EMC_EINPUT */
+			0x00000007, /* EMC_QUSE */
+			0x00000007, /* EMC_EINPUT */
 			0x00000003, /* EMC_EINPUT_DURATION */
 			0x0000000b, /* EMC_QSAFE */
 			0x0000000d, /* EMC_RDV */
-			0x00000006, /* EMC_FBIO_CFG6 */
+			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
 			0x0000000b, /* EMC_QPOP */
-			0x02000006, /* MC_EMEM_ARB_CFG */
-			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x08000001, /* MC_EMEM_ARB_CFG */
+			0x8000004c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x80000038, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000007, /* MC_EMEM_ARB_TIMING_RC */
-			0x00000003, /* MC_EMEM_ARB_TIMING_RAS */
-			0x00000007, /* MC_EMEM_ARB_TIMING_FAW */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RAP2PRE */
-			0x0000000e, /* MC_EMEM_ARB_TIMING_WAP2PRE */
-			0x00000007, /* MC_EMEM_ARB_TIMING_R2R */
-			0x00000005, /* MC_EMEM_ARB_TIMING_W2W */
-			0x0000000b, /* MC_EMEM_ARB_TIMING_R2W */
-			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
-			0x0d0b0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00130907, /* MC_EMEM_ARB_DA_COVERS */
-			0x7a440a08, /* MC_EMEM_ARB_MISC0 */
-			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
+			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RAP2PRE */
+			0x00000007, /* MC_EMEM_ARB_TIMING_WAP2PRE */
+			0x00000002, /* MC_EMEM_ARB_TIMING_R2R */
+			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
+			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
+			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
+			0x00090403, /* MC_EMEM_ARB_DA_COVERS */
+			0x72430504, /* MC_EMEM_ARB_MISC0 */
+			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
 		{
-			0x00000041, /* MC_PTSA_GRANT_DECREMENT */
+			0x00000021, /* MC_PTSA_GRANT_DECREMENT */
 			0x00a400ff, /* MC_LATENCY_ALLOWANCE_G2_0 */
 			0x004600bc, /* MC_LATENCY_ALLOWANCE_G2_1 */
 			0x00b400eb, /* MC_LATENCY_ALLOWANCE_NV_0 */
@@ -2113,9 +2113,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		204000,     /* SDRAM frequency */
-		800,        /* min voltage */
+		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
@@ -2138,7 +2138,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_WDV */
 			0x00000003, /* EMC_WDV_MASK */
 			0x00000000, /* EMC_QUSE_WIDTH */
-			0x00000007, /* EMC_IBDLY */
+			0x00000008, /* EMC_IBDLY */
 			0x00000001, /* EMC_PUTERM */
 			0x00000005, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
@@ -2155,9 +2155,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000c, /* EMC_RW2PDEN */
 			0x0000001d, /* EMC_TXSR */
 			0x0000001d, /* EMC_TXSRDLL */
-			0x00000004, /* EMC_TCKE */
+			0x00000003, /* EMC_TCKE */
 			0x00000004, /* EMC_TCKESR */
-			0x00000004, /* EMC_TPD */
+			0x00000003, /* EMC_TPD */
 			0x0000000b, /* EMC_TFAW */
 			0x00000005, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -2227,12 +2227,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_EINPUT_DURATION */
 			0x0000000c, /* EMC_QSAFE */
 			0x0000000e, /* EMC_RDV */
-			0x00000004, /* EMC_FBIO_CFG6 */
+			0x00000006, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
 			0x0000000c, /* EMC_QPOP */
 			0x02000006, /* MC_EMEM_ARB_CFG */
 			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x80000053, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000005, /* MC_EMEM_ARB_TIMING_RP */
 			0x0000000c, /* MC_EMEM_ARB_TIMING_RC */
@@ -2273,7 +2273,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		326400,     /* SDRAM frequency */
 		900,        /* min voltage */
 		"pllm_out0", /* clock source id */
@@ -2286,7 +2286,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x0000000d, /* EMC_RAS */
 			0x00000005, /* EMC_RP */
-			0x00000006, /* EMC_R2W */
+			0x00000007, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
 			0x0000000a, /* EMC_W2P */
@@ -2298,12 +2298,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_WDV */
 			0x00000003, /* EMC_WDV_MASK */
 			0x00000003, /* EMC_QUSE_WIDTH */
-			0x00000006, /* EMC_IBDLY */
-			0x00000003, /* EMC_PUTERM */
-			0x00000004, /* EMC_PUTERM_WIDTH */
+			0x00000007, /* EMC_IBDLY */
+			0x00000004, /* EMC_PUTERM */
+			0x00000005, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x00000004, /* EMC_QRST */
-			0x0000000e, /* EMC_RDV_MASK */
+			0x0000000f, /* EMC_RDV_MASK */
 			0x000004d1, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x00000134, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -2315,9 +2315,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000d, /* EMC_RW2PDEN */
 			0x0000002e, /* EMC_TXSR */
 			0x0000002e, /* EMC_TXSRDLL */
-			0x00000005, /* EMC_TCKE */
+			0x00000003, /* EMC_TCKE */
 			0x00000005, /* EMC_TCKESR */
-			0x00000005, /* EMC_TPD */
+			0x00000003, /* EMC_TPD */
 			0x00000011, /* EMC_TFAW */
 			0x00000007, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -2343,9 +2343,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x00064000, /* EMC_DLL_XFORM_ADDR0 */
+			0x0000000c, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x00064000, /* EMC_DLL_XFORM_ADDR2 */
+			0x0000000c, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -2354,10 +2354,10 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLI_TRIM_TXDQS5 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS6 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS7 */
-			0x00070000, /* EMC_DLL_XFORM_DQ0 */
-			0x00070000, /* EMC_DLL_XFORM_DQ1 */
-			0x00070000, /* EMC_DLL_XFORM_DQ2 */
-			0x00070000, /* EMC_DLL_XFORM_DQ3 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ0 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ1 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ2 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ3 */
 			0x00010020, /* EMC_XM2CMDPADCTRL */
 			0x00000000, /* EMC_XM2CMDPADCTRL4 */
 			0x0027023d, /* EMC_XM2DQSPADCTRL2 */
@@ -2374,25 +2374,25 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
 			0x00000076, /* EMC_ZCAL_WAIT_CNT */
-			0x0147000d, /* EMC_MRS_WAIT_CNT */
-			0x0147000d, /* EMC_MRS_WAIT_CNT2 */
+			0x0147000e, /* EMC_MRS_WAIT_CNT */
+			0x0147000e, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG3 */
 			0xa0f10404, /* EMC_AUTO_CAL_CONFIG */
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000ab6, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000006, /* EMC_QUSE */
-			0x00000005, /* EMC_EINPUT */
+			0x00000007, /* EMC_QUSE */
+			0x00000006, /* EMC_EINPUT */
 			0x00000006, /* EMC_EINPUT_DURATION */
-			0x0000000c, /* EMC_QSAFE */
-			0x0000000e, /* EMC_RDV */
+			0x0000000d, /* EMC_QSAFE */
+			0x0000000f, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x0000000c, /* EMC_QPOP */
+			0x0000000d, /* EMC_QPOP */
 			0x0e000004, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000009, /* MC_EMEM_ARB_TIMING_RC */
@@ -2403,16 +2403,16 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000007, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000002, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000005, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
-			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
+			0x05050102, /* MC_EMEM_ARB_DA_TURNS */
 			0x000c0709, /* MC_EMEM_ARB_DA_COVERS */
 			0x71c50f0a, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
 		{
-			0x000000d1, /* MC_PTSA_GRANT_DECREMENT */
+			0x00000068, /* MC_PTSA_GRANT_DECREMENT */
 			0x00330055, /* MC_LATENCY_ALLOWANCE_G2_0 */
 			0x0016003a, /* MC_LATENCY_ALLOWANCE_G2_1 */
 			0x00380049, /* MC_LATENCY_ALLOWANCE_NV_0 */
@@ -2425,7 +2425,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x00000022, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf330008e, /* EMC_CFG */
-		0x00580048, /* EMC_CFG_DIG_DLL */
+		0x30270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x00020004, /* Mode Register 2 */
@@ -2433,7 +2433,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		408000,     /* SDRAM frequency */
 		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -2446,7 +2446,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000011, /* EMC_RAS */
 			0x00000007, /* EMC_RP */
-			0x00000008, /* EMC_R2W */
+			0x00000009, /* EMC_R2W */
 			0x00000009, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
 			0x0000000d, /* EMC_W2P */
@@ -2457,13 +2457,13 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_WEXT */
 			0x00000003, /* EMC_WDV */
 			0x00000003, /* EMC_WDV_MASK */
-			0x00000003, /* EMC_QUSE_WIDTH */
+			0x00000004, /* EMC_QUSE_WIDTH */
 			0x00000008, /* EMC_IBDLY */
 			0x00000005, /* EMC_PUTERM */
-			0x00000004, /* EMC_PUTERM_WIDTH */
+			0x00000006, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x00000005, /* EMC_QRST */
-			0x00000012, /* EMC_RDV_MASK */
+			0x00000013, /* EMC_RDV_MASK */
 			0x00000607, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x00000181, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -2475,9 +2475,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000f, /* EMC_RW2PDEN */
 			0x0000003a, /* EMC_TXSR */
 			0x0000003a, /* EMC_TXSRDLL */
-			0x00000007, /* EMC_TCKE */
+			0x00000004, /* EMC_TCKE */
 			0x00000007, /* EMC_TCKESR */
-			0x00000007, /* EMC_TPD */
+			0x00000004, /* EMC_TPD */
 			0x00000015, /* EMC_TFAW */
 			0x00000009, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -2503,9 +2503,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x00038000, /* EMC_DLL_XFORM_ADDR0 */
+			0x0000000c, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x00038000, /* EMC_DLL_XFORM_ADDR2 */
+			0x0000000c, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -2514,10 +2514,10 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLI_TRIM_TXDQS5 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS6 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS7 */
-			0x00034000, /* EMC_DLL_XFORM_DQ0 */
-			0x00034000, /* EMC_DLL_XFORM_DQ1 */
-			0x00034000, /* EMC_DLL_XFORM_DQ2 */
-			0x00034000, /* EMC_DLL_XFORM_DQ3 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ0 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ1 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ2 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ3 */
 			0x00010020, /* EMC_XM2CMDPADCTRL */
 			0x00000000, /* EMC_XM2CMDPADCTRL4 */
 			0x0027023d, /* EMC_XM2DQSPADCTRL2 */
@@ -2534,8 +2534,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
 			0x00000093, /* EMC_ZCAL_WAIT_CNT */
-			0x01980010, /* EMC_MRS_WAIT_CNT */
-			0x01980010, /* EMC_MRS_WAIT_CNT2 */
+			0x01980011, /* EMC_MRS_WAIT_CNT */
+			0x01980011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG3 */
 			0xa0f10404, /* EMC_AUTO_CAL_CONFIG */
@@ -2544,15 +2544,15 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x80000d22, /* EMC_DYN_SELF_REF_CONTROL */
 			0x00000008, /* EMC_QUSE */
 			0x00000006, /* EMC_EINPUT */
-			0x00000007, /* EMC_EINPUT_DURATION */
-			0x0000000f, /* EMC_QSAFE */
-			0x00000012, /* EMC_RDV */
+			0x00000008, /* EMC_EINPUT_DURATION */
+			0x00000010, /* EMC_QSAFE */
+			0x00000013, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x0000000e, /* EMC_QPOP */
-			0x01000003, /* MC_EMEM_ARB_CFG */
-			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x0000000f, /* EMC_QPOP */
+			0x02000006, /* MC_EMEM_ARB_CFG */
+			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RP */
 			0x0000000c, /* MC_EMEM_ARB_TIMING_RC */
@@ -2563,9 +2563,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000009, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000003, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000005, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000006, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000006, /* MC_EMEM_ARB_TIMING_W2R */
-			0x06050103, /* MC_EMEM_ARB_DA_TURNS */
+			0x06060103, /* MC_EMEM_ARB_DA_TURNS */
 			0x0010090c, /* MC_EMEM_ARB_DA_COVERS */
 			0x71c7130d, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
@@ -2585,7 +2585,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x00000029, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
-		0x00580048, /* EMC_CFG_DIG_DLL */
+		0x301c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
 		0x00020006, /* Mode Register 2 */
@@ -2593,7 +2593,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		518400,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -2606,7 +2606,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000015, /* EMC_RAS */
 			0x00000009, /* EMC_RP */
-			0x00000008, /* EMC_R2W */
+			0x00000009, /* EMC_R2W */
 			0x00000009, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
 			0x0000000d, /* EMC_W2P */
@@ -2618,12 +2618,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000003, /* EMC_WDV */
 			0x00000003, /* EMC_WDV_MASK */
 			0x00000003, /* EMC_QUSE_WIDTH */
-			0x00000008, /* EMC_IBDLY */
-			0x00000005, /* EMC_PUTERM */
-			0x00000004, /* EMC_PUTERM_WIDTH */
+			0x00000009, /* EMC_IBDLY */
+			0x00000006, /* EMC_PUTERM */
+			0x00000005, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x00000005, /* EMC_QRST */
-			0x00000012, /* EMC_RDV_MASK */
+			0x00000013, /* EMC_RDV_MASK */
 			0x000007a8, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x000001ea, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -2635,9 +2635,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000011, /* EMC_RW2PDEN */
 			0x00000049, /* EMC_TXSR */
 			0x00000049, /* EMC_TXSRDLL */
-			0x00000008, /* EMC_TCKE */
+			0x00000004, /* EMC_TCKE */
 			0x00000008, /* EMC_TCKESR */
-			0x00000008, /* EMC_TPD */
+			0x00000004, /* EMC_TPD */
 			0x0000001a, /* EMC_TFAW */
 			0x0000000b, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -2694,25 +2694,25 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
 			0x000000bb, /* EMC_ZCAL_WAIT_CNT */
-			0x02070010, /* EMC_MRS_WAIT_CNT */
-			0x02070010, /* EMC_MRS_WAIT_CNT2 */
+			0x02070011, /* EMC_MRS_WAIT_CNT */
+			0x02070011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG3 */
 			0xa0f10404, /* EMC_AUTO_CAL_CONFIG */
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x8000106a, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000008, /* EMC_QUSE */
-			0x00000005, /* EMC_EINPUT */
+			0x00000009, /* EMC_QUSE */
+			0x00000006, /* EMC_EINPUT */
 			0x00000008, /* EMC_EINPUT_DURATION */
-			0x0000000f, /* EMC_QSAFE */
-			0x00000012, /* EMC_RDV */
+			0x00000010, /* EMC_QSAFE */
+			0x00000013, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x0000000e, /* EMC_QPOP */
+			0x0000000f, /* EMC_QPOP */
 			0x0c000007, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
-			0x80000048, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
+			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
 			0x0000000f, /* MC_EMEM_ARB_TIMING_RC */
@@ -2723,9 +2723,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000009, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000003, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000005, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000006, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000006, /* MC_EMEM_ARB_TIMING_W2R */
-			0x06050103, /* MC_EMEM_ARB_DA_TURNS */
+			0x06060103, /* MC_EMEM_ARB_DA_TURNS */
 			0x00120b0f, /* MC_EMEM_ARB_DA_COVERS */
 			0x71c81810, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
@@ -2745,7 +2745,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x00000033, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
-		0x10130249, /* EMC_CFG_DIG_DLL */
+		0x30130249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
 		0x00020006, /* Mode Register 2 */
@@ -2753,7 +2753,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		652800,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -2766,7 +2766,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x0000001b, /* EMC_RAS */
 			0x0000000b, /* EMC_RP */
-			0x00000009, /* EMC_R2W */
+			0x0000000a, /* EMC_R2W */
 			0x0000000c, /* EMC_W2R */
 			0x00000004, /* EMC_R2P */
 			0x00000011, /* EMC_W2P */
@@ -2778,12 +2778,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000005, /* EMC_WDV */
 			0x00000005, /* EMC_WDV_MASK */
 			0x00000004, /* EMC_QUSE_WIDTH */
-			0x0000000a, /* EMC_IBDLY */
-			0x00000007, /* EMC_PUTERM */
-			0x00000005, /* EMC_PUTERM_WIDTH */
+			0x0000000b, /* EMC_IBDLY */
+			0x00000008, /* EMC_PUTERM */
+			0x00000006, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x00000007, /* EMC_QRST */
-			0x00000015, /* EMC_RDV_MASK */
+			0x00000016, /* EMC_RDV_MASK */
 			0x000009b1, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x0000026c, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -2795,9 +2795,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000015, /* EMC_RW2PDEN */
 			0x0000005c, /* EMC_TXSR */
 			0x0000005c, /* EMC_TXSRDLL */
-			0x0000000a, /* EMC_TCKE */
+			0x00000005, /* EMC_TCKE */
 			0x0000000a, /* EMC_TCKESR */
-			0x0000000a, /* EMC_TPD */
+			0x00000005, /* EMC_TPD */
 			0x00000021, /* EMC_TFAW */
 			0x0000000e, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -2862,14 +2862,14 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80001468, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000a, /* EMC_QUSE */
-			0x00000006, /* EMC_EINPUT */
+			0x0000000b, /* EMC_QUSE */
+			0x00000007, /* EMC_EINPUT */
 			0x0000000a, /* EMC_EINPUT_DURATION */
-			0x00000010, /* EMC_QSAFE */
-			0x00000015, /* EMC_RDV */
+			0x00000011, /* EMC_QSAFE */
+			0x00000016, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x00000011, /* EMC_QPOP */
+			0x00000012, /* EMC_QPOP */
 			0x0d000009, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
@@ -2905,7 +2905,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x0000003f, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
-		0x300c0249, /* EMC_CFG_DIG_DLL */
+		0x200c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010003, /* Mode Register 1 */
 		0x00020018, /* Mode Register 2 */
@@ -2913,9 +2913,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		768000,     /* SDRAM frequency */
-		1050,        /* min voltage */
+		1050,       /* min voltage */
 		"pllc_ud",  /* clock source id */
 		0xe0000000, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
@@ -2926,7 +2926,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000020, /* EMC_RAS */
 			0x0000000d, /* EMC_RP */
-			0x0000000c, /* EMC_R2W */
+			0x0000000d, /* EMC_R2W */
 			0x0000000d, /* EMC_W2R */
 			0x00000005, /* EMC_R2P */
 			0x00000013, /* EMC_W2P */
@@ -2938,12 +2938,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000006, /* EMC_WDV */
 			0x00000006, /* EMC_WDV_MASK */
 			0x00000004, /* EMC_QUSE_WIDTH */
-			0x0000000e, /* EMC_IBDLY */
-			0x0000000b, /* EMC_PUTERM */
-			0x00000005, /* EMC_PUTERM_WIDTH */
+			0x0000000f, /* EMC_IBDLY */
+			0x0000000c, /* EMC_PUTERM */
+			0x00000006, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x0000000a, /* EMC_QRST */
-			0x00000019, /* EMC_RDV_MASK */
+			0x0000001a, /* EMC_RDV_MASK */
 			0x00000b73, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x000002dc, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -2955,9 +2955,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000017, /* EMC_RW2PDEN */
 			0x0000006c, /* EMC_TXSR */
 			0x0000006c, /* EMC_TXSRDLL */
-			0x0000000c, /* EMC_TCKE */
+			0x00000006, /* EMC_TCKE */
 			0x0000000c, /* EMC_TCKESR */
-			0x0000000c, /* EMC_TPD */
+			0x00000006, /* EMC_TPD */
 			0x00000027, /* EMC_TFAW */
 			0x00000011, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -3022,14 +3022,14 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x800017d4, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000e, /* EMC_QUSE */
-			0x00000009, /* EMC_EINPUT */
+			0x0000000f, /* EMC_QUSE */
+			0x0000000a, /* EMC_EINPUT */
 			0x0000000b, /* EMC_EINPUT_DURATION */
-			0x00000011, /* EMC_QSAFE */
-			0x00000019, /* EMC_RDV */
+			0x00000012, /* EMC_QSAFE */
+			0x0000001a, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x00000015, /* EMC_QPOP */
+			0x00000016, /* EMC_QPOP */
 			0x0800000b, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
@@ -3043,9 +3043,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000c, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000003, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000007, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000008, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000008, /* MC_EMEM_ARB_TIMING_W2R */
-			0x08070103, /* MC_EMEM_ARB_DA_TURNS */
+			0x08080103, /* MC_EMEM_ARB_DA_TURNS */
 			0x00191017, /* MC_EMEM_ARB_DA_COVERS */
 			0x71ac2318, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
@@ -3065,7 +3065,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x0000004a, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
-		0x30080249, /* EMC_CFG_DIG_DLL */
+		0x20080249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
 		0x0002001a, /* Mode Register 2 */
@@ -3073,9 +3073,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		787200,     /* SDRAM frequency */
-		1050,        /* min voltage */
+		1050,       /* min voltage */
 		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
 		129,        /* number of burst_regs */
@@ -3086,7 +3086,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000021, /* EMC_RAS */
 			0x0000000e, /* EMC_RP */
-			0x0000000c, /* EMC_R2W */
+			0x0000000d, /* EMC_R2W */
 			0x0000000d, /* EMC_W2R */
 			0x00000005, /* EMC_R2P */
 			0x00000013, /* EMC_W2P */
@@ -3098,12 +3098,12 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000006, /* EMC_WDV */
 			0x00000006, /* EMC_WDV_MASK */
 			0x00000004, /* EMC_QUSE_WIDTH */
-			0x0000000e, /* EMC_IBDLY */
-			0x0000000b, /* EMC_PUTERM */
-			0x00000005, /* EMC_PUTERM_WIDTH */
+			0x0000000f, /* EMC_IBDLY */
+			0x0000000c, /* EMC_PUTERM */
+			0x00000006, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x0000000a, /* EMC_QRST */
-			0x00000019, /* EMC_RDV_MASK */
+			0x0000001a, /* EMC_RDV_MASK */
 			0x00000bbe, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x000002ef, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -3115,9 +3115,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000017, /* EMC_RW2PDEN */
 			0x0000006f, /* EMC_TXSR */
 			0x0000006f, /* EMC_TXSRDLL */
-			0x0000000c, /* EMC_TCKE */
+			0x00000006, /* EMC_TCKE */
 			0x0000000c, /* EMC_TCKESR */
-			0x0000000c, /* EMC_TPD */
+			0x00000006, /* EMC_TPD */
 			0x00000028, /* EMC_TFAW */
 			0x00000011, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -3182,14 +3182,14 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80001866, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000e, /* EMC_QUSE */
-			0x00000009, /* EMC_EINPUT */
+			0x0000000f, /* EMC_QUSE */
+			0x0000000a, /* EMC_EINPUT */
 			0x0000000b, /* EMC_EINPUT_DURATION */
-			0x00000011, /* EMC_QSAFE */
-			0x00000019, /* EMC_RDV */
+			0x00000012, /* EMC_QSAFE */
+			0x0000001a, /* EMC_RDV */
 			0x00000004, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x00000015, /* EMC_QPOP */
+			0x00000016, /* EMC_QPOP */
 			0x0d00000b, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
@@ -3203,9 +3203,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000c, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000003, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000007, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000008, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000008, /* MC_EMEM_ARB_TIMING_W2R */
-			0x08070103, /* MC_EMEM_ARB_DA_TURNS */
+			0x08080103, /* MC_EMEM_ARB_DA_TURNS */
 			0x001a1118, /* MC_EMEM_ARB_DA_COVERS */
 			0x71ac2419, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
@@ -3225,7 +3225,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x0000004b, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
-		0x30070249, /* EMC_CFG_DIG_DLL */
+		0x20070249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
 		0x0002001a, /* Mode Register 2 */
@@ -3233,7 +3233,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"d11_prel", /* DVFS table version */
+		"d13",      /* DVFS table version */
 		921600,     /* SDRAM frequency */
 		1100,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -3246,7 +3246,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000026, /* EMC_RAS */
 			0x00000010, /* EMC_RP */
-			0x0000000e, /* EMC_R2W */
+			0x0000000f, /* EMC_R2W */
 			0x0000000e, /* EMC_W2R */
 			0x00000006, /* EMC_R2P */
 			0x00000015, /* EMC_W2P */
@@ -3257,13 +3257,13 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_WEXT */
 			0x00000006, /* EMC_WDV */
 			0x00000006, /* EMC_WDV_MASK */
-			0x00000005, /* EMC_QUSE_WIDTH */
-			0x0000000f, /* EMC_IBDLY */
-			0x0000000b, /* EMC_PUTERM */
-			0x00000007, /* EMC_PUTERM_WIDTH */
+			0x00000004, /* EMC_QUSE_WIDTH */
+			0x00000011, /* EMC_IBDLY */
+			0x0000000c, /* EMC_PUTERM */
+			0x00000006, /* EMC_PUTERM_WIDTH */
 			0x00000001, /* EMC_CDB_CNTL_2 */
 			0x0000000a, /* EMC_QRST */
-			0x0000001a, /* EMC_RDV_MASK */
+			0x0000001b, /* EMC_RDV_MASK */
 			0x00000dca, /* EMC_REFRESH */
 			0x00000000, /* EMC_BURST_REFRESH_NUM */
 			0x00000372, /* EMC_PRE_REFRESH_REQ_CNT */
@@ -3275,9 +3275,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000019, /* EMC_RW2PDEN */
 			0x00000082, /* EMC_TXSR */
 			0x00000082, /* EMC_TXSRDLL */
-			0x0000000e, /* EMC_TCKE */
+			0x00000007, /* EMC_TCKE */
 			0x0000000e, /* EMC_TCKESR */
-			0x0000000e, /* EMC_TPD */
+			0x00000007, /* EMC_TPD */
 			0x0000002f, /* EMC_TFAW */
 			0x00000014, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
@@ -3342,14 +3342,14 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80001c64, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000e, /* EMC_QUSE */
-			0x00000008, /* EMC_EINPUT */
-			0x0000000d, /* EMC_EINPUT_DURATION */
-			0x00000012, /* EMC_QSAFE */
-			0x0000001a, /* EMC_RDV */
+			0x00000010, /* EMC_QUSE */
+			0x0000000a, /* EMC_EINPUT */
+			0x0000000c, /* EMC_EINPUT_DURATION */
+			0x00000013, /* EMC_QSAFE */
+			0x0000001b, /* EMC_RDV */
 			0x00000006, /* EMC_FBIO_CFG6 */
 			0x70000f0f, /* EMC_PIPE_MACRO_CTL */
-			0x00000016, /* EMC_QPOP */
+			0x00000017, /* EMC_QPOP */
 			0x0d00000d, /* MC_EMEM_ARB_CFG */
 			0x80000080, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000060, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
@@ -3363,9 +3363,9 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0000000d, /* MC_EMEM_ARB_TIMING_WAP2PRE */
 			0x00000003, /* MC_EMEM_ARB_TIMING_R2R */
 			0x00000001, /* MC_EMEM_ARB_TIMING_W2W */
-			0x00000008, /* MC_EMEM_ARB_TIMING_R2W */
+			0x00000009, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000008, /* MC_EMEM_ARB_TIMING_W2R */
-			0x08080103, /* MC_EMEM_ARB_DA_TURNS */
+			0x08090103, /* MC_EMEM_ARB_DA_TURNS */
 			0x001d141b, /* MC_EMEM_ARB_DA_COVERS */
 			0x71ae2a1c, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
@@ -3385,7 +3385,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x00000057, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3f00084, /* EMC_CFG */
-		0x30040249, /* EMC_CFG_DIG_DLL */
+		0x20040249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x0002001a, /* Mode Register 2 */
