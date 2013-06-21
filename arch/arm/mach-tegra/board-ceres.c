@@ -1124,9 +1124,9 @@ static void __init tegra_ceres_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	/* for PANEL_5_SHARP_1080p: 1920*1080*4*2 = 16588800 bytes */
-	tegra_reserve(0, SZ_16M, SZ_4M);
+	tegra_reserve(0, SZ_16M, SZ_16M);
 #else
-	tegra_reserve(SZ_128M, SZ_16M, SZ_4M);
+	tegra_reserve(SZ_128M, SZ_16M, SZ_16M);
 #endif
 }
 
