@@ -37,6 +37,7 @@ static bool tegra_dvfs_core_disabled;
 
 /* FIXME: need tegra14 step */
 #define VDD_SAFE_STEP			100
+#define VDD_CORE_SAFE_STEP_UP		500
 
 static int vdd_core_vmin_trips_table[MAX_THERMAL_LIMITS] = { 20, };
 static int vdd_core_therm_floors_table[MAX_THERMAL_LIMITS] = { 900, };
@@ -71,6 +72,7 @@ static struct dvfs_rail tegra14_dvfs_rail_vdd_core = {
 	.max_millivolts = 1400,
 	.min_millivolts = 800,
 	.step = VDD_SAFE_STEP,
+	.step_up = VDD_CORE_SAFE_STEP_UP,
 	.vmin_cdev = &core_vmin_cdev,
 };
 
