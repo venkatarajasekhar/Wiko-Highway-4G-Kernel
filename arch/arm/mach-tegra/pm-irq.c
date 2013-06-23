@@ -23,6 +23,7 @@
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
+#include <linux/export.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -30,6 +31,7 @@
 #include <linux/moduleparam.h>
 #include <linux/seq_file.h>
 #include <linux/syscore_ops.h>
+#include <linux/tegra_pm_irq.h>
 
 #include <mach/iomap.h>
 
@@ -234,6 +236,31 @@ int tegra_pm_irq_set_wake_type(int wake, int flow_type)
 
 	return 0;
 }
+
+int tegra_pm_irq_get_wakeup_irq(void)
+{
+	unsigned long long wake_status_ll = read_pmc_wake_status();
+	unsigned long wake_status;
+	int wake;
+	int irq;
+	int index;
+	struct irq_desc *desc;
+
+	for (index = 0; index < 2; ++index) {
+		wake_status = (u32)(wake_status_ll >> (index * 32));
+		for_each_set_bit(wake, &wake_status, sizeof(wake_status) * 8) {
+			irq = tegra_wake_to_irq(wake + 32 * index);
+			if (!irq)
+				continue;
+			desc = irq_to_desc(irq);
+			if (!desc || !desc->action || !desc->action->name)
+				continue;
+			return irq;
+		}
+	}
+	return -EINVAL;
+}
+EXPORT_SYMBOL(tegra_pm_irq_get_wakeup_irq);
 
 /* translate lp0 wake sources back into irqs to catch edge triggered wakeups */
 static void tegra_pm_irq_syscore_resume_helper(
