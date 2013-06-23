@@ -2199,6 +2199,12 @@ int __init tegra11_soctherm_init(struct soctherm_platform_data *data)
 	return 0;
 }
 
+void tegra_soctherm_adjust_cpu_zone(bool high_voltage_range)
+{
+	pr_debug("soctherm: cpu zone adjusted %s\n",
+		 high_voltage_range ? "high" : "low");
+}
+
 #ifdef CONFIG_DEBUG_FS
 
 static int regs_show(struct seq_file *s, void *data)
