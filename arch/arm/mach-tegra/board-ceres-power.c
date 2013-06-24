@@ -1327,6 +1327,8 @@ void __init ceres_sysedp_init(void)
 }
 
 static unsigned int ceres_psydepl_states[] = {
+	9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
+	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600,
 	5400, 5200, 5000, 4800, 4600, 4400, 4200, 4000,
 	3800, 3600, 3400, 3200, 3000, 2800, 2600, 2400,
 	2200, 2000, 1900, 1800, 1700, 1600, 1500, 1400,
@@ -1360,7 +1362,7 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.power_supply = "battery",
 	.states = ceres_psydepl_states,
 	.num_states = ARRAY_SIZE(ceres_psydepl_states),
-	.e0_index = 0,
+	.e0_index = 16,
 	.r_const = 141600,
 	.vsys_min = 3250000,
 	.vcharge = 4200000,
