@@ -52,6 +52,7 @@
 /* BB status mask */
 #define TEGRA_BB_STATUS_MASK  (0xffff)
 #define TEGRA_BB_IPC_COLDBOOT  (0x0001)
+#define TEGRA_BB_IPC_FW_READY (0x0004)
 #define TEGRA_BB_IPC_READY  (0x0005)
 #define TEGRA_BB_BOOT_RESTART_FW_REQ	(0x0003)
 
@@ -485,6 +486,12 @@ static ssize_t store_tegra_bb_status(struct device *dev,
 	ptr = bb->mb_virt + TEGRA_BB_REG_MAILBOX;
 	*ptr = (value & 0xFFFF) | ((~value << 16) & 0xFFFF0000);
 	tegra_bb_generate_ipc(pdev);
+	if (value == TEGRA_BB_IPC_FW_READY) {
+		/* request enough iso bw for boot */
+		tegra_bbc_proxy_bw_request(bb->proxy_dev, 0, BBC_ISO_BOOT_BW,
+						1000, BBC_ISO_MARGIN_BW);
+	}
+
 	dev_dbg(&pdev->dev, "%s status=0x%x\n",
 		 __func__,
 		 (unsigned int)value);
@@ -990,6 +997,10 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 
 		tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		clk_set_rate(bb->emc_clk, BBC_MC_MAX_FREQ);
+
+		/* request enough iso bw for crash handling */
+		tegra_bbc_proxy_bw_request(bb->proxy_dev, 0, BBC_ISO_CRASH_BW,
+						1000, BBC_ISO_MARGIN_BW);
 		return;
 	default:
 		spin_unlock_irqrestore(&bb->lock, flags);
