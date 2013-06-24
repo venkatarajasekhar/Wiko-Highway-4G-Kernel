@@ -27,9 +27,6 @@ struct tegra_bbc_proxy_platform_data {
 	struct edp_client *modem_boot_edp_client;
 	char *edp_manager_name;
 	char *ap_name;
-	unsigned int i_breach_ppm;
-	unsigned int i_thresh_3g_adjperiod;
-	unsigned int i_thresh_lte_adjperiod;
 };
 
 int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,

@@ -41,9 +41,6 @@ struct tegra_bbc_proxy {
 	int edp_initialized;
 	char *edp_manager_name;
 	char *ap_name;
-	unsigned int i_breach_ppm; /* percent time current exceeds i_thresh */
-	unsigned int i_thresh_3g_adjperiod; /* 3g i_thresh adj period */
-	unsigned int i_thresh_lte_adjperiod; /* lte i_thresh adj period */
 	unsigned int threshold; /* current edp threshold value */
 	unsigned int state; /* current edp state value */
 	struct mutex edp_lock; /* lock for edp operations */
@@ -66,24 +63,6 @@ struct tegra_bbc_proxy {
 	struct regulator *rf2v65;
 };
 
-
-#define EDP_INT_ATTR(field)						\
-static ssize_t								\
-field ## _show(struct device *pdev, struct device_attribute *attr,      \
-	       char *buf)						\
-{									\
-	struct tegra_bbc_proxy *bbc = dev_get_drvdata(pdev);		\
-									\
-	if (!bbc)							\
-		return -EAGAIN;						\
-									\
-	return sprintf(buf, "%d\n", bbc->field);			\
-}									\
-static DEVICE_ATTR(field, S_IRUSR, field ## _show, NULL);
-
-EDP_INT_ATTR(i_breach_ppm);
-EDP_INT_ATTR(i_thresh_3g_adjperiod);
-EDP_INT_ATTR(i_thresh_lte_adjperiod);
 
 static ssize_t i_max_store(struct device *pdev, struct device_attribute *attr,
 			   const char *buff, size_t size)
@@ -304,9 +283,6 @@ static ssize_t threshold_store(struct device *pdev,
 static DEVICE_ATTR(threshold, S_IWUSR, NULL, threshold_store);
 
 static struct device_attribute *edp_attributes[] = {
-	&dev_attr_i_breach_ppm,
-	&dev_attr_i_thresh_3g_adjperiod,
-	&dev_attr_i_thresh_lte_adjperiod,
 	&dev_attr_i_max,
 	&dev_attr_request,
 	&dev_attr_threshold,
@@ -770,10 +746,6 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		}
 
 		bbc->edp_boot_client_registered = 1;
-
-		bbc->i_breach_ppm = pdata->i_breach_ppm;
-		bbc->i_thresh_3g_adjperiod = pdata->i_thresh_3g_adjperiod;
-		bbc->i_thresh_lte_adjperiod = pdata->i_thresh_lte_adjperiod;
 
 		attrs = edp_attributes;
 		while ((attr = *attrs++)) {

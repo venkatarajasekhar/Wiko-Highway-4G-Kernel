@@ -433,9 +433,6 @@ static struct tegra_bbc_proxy_platform_data bbc_proxy_pdata = {
 	.modem_boot_edp_client = &bbc_boot_edp_client,
 	.edp_manager_name = "battery",
 	.ap_name = "core",
-	.i_breach_ppm = 500000,
-	.i_thresh_3g_adjperiod = 10000,
-	.i_thresh_lte_adjperiod = 10000,
 };
 
 static struct platform_device tegra_bbc_proxy_device = {
