@@ -461,7 +461,7 @@ static struct max77660_pinctrl_platform_data max77660_pinctrl_pdata[] = {
 	MAX77660_INIT_PINS(GPIO9, 1, 1, PULL_UP, GPIOF_IN),
 };
 
-static struct regulator_consumer_supply max77660_vbus_sypply[] = {
+static struct regulator_consumer_supply max77660_vbus_supply[] = {
 	REGULATOR_SUPPLY("usb_vbus", "tegra-ehci.0"),
 	REGULATOR_SUPPLY("usb_vbus", "tegra-otg"),
 };
@@ -471,8 +471,8 @@ static struct regulator_consumer_supply max77660_batt_supply[] = {
 };
 
 struct max77660_vbus_platform_data max77660_vbus_pdata = {
-	.num_consumer_supplies = 1,
-	.consumer_supplies = max77660_vbus_sypply,
+	.num_consumer_supplies = ARRAY_SIZE(max77660_vbus_supply),
+	.consumer_supplies = max77660_vbus_supply,
 };
 
 uint32_t max77660_adc_temperature_lookup_table[] = {
