@@ -1018,6 +1018,7 @@ struct max77660_bcharger_platform_data {
 	int temp_table_size;
 	int temperature_sensing_enable;
 	int temperature_poll_period_secs;
+	const char *tz_name; /* Thermal zone name */
 };
 
 struct max77660_vbus_platform_data {

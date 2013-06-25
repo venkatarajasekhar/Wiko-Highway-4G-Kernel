@@ -45,9 +45,6 @@
 #include <linux/power_supply.h>
 #include <linux/power/battery-charger-gauge-comm.h>
 
-#define MODULE_NAME	"max77660-charger-extcon"
-#define VTHM_CHANNEL	"vthm_channel"
-
 #define CHARGER_USB_EXTCON_REGISTRATION_DELAY	5000
 #define CHARGER_TYPE_DETECTION_DEBOUNCE_TIME_MS	500
 
@@ -62,12 +59,6 @@ enum charging_states {
 	ENABLED_HALF_IBAT = 1,
 	ENABLED_FULL_IBAT,
 	DISABLED,
-};
-
-enum change_to_charging_state {
-	CURRENT_DISABLE,
-	CURRENT_ENABLE,
-	HALF_CURRENT_ENABLE,
 };
 
 static int max77660_dccrnt_current_lookup[] = {
@@ -108,11 +99,12 @@ struct max77660_chg_extcon {
 	int				cable_connected;
 	struct regulator_desc		chg_reg_desc;
 	struct regulator_init_data	chg_reg_init_data;
-	struct delayed_work		temp_work;
 	struct battery_charger_dev	*bc_dev;
 	int				charging_state;
 	int				cable_connected_state;
 	int				battery_present;
+
+	struct battery_charger_thermal_dev *bc_therm_dev;
 };
 
 struct max77660_chg_extcon *max77660_ext;
@@ -163,25 +155,6 @@ static int max77660_battery_detect(struct max77660_chg_extcon *chip)
 	if ((status & MAX77660_BATDET_DTLS) == MAX77660_BATDET_DTLS_NO_BAT)
 		return -EPERM;
 	return 0;
-}
-
-static int max77660_gpadc_conversion(struct max77660_chg_extcon *chip,
-							char *channel_name)
-{
-	struct iio_channel *iio_channel;
-	int channel_value = 0;
-	int ret;
-
-	iio_channel = iio_st_channel_get(MODULE_NAME, channel_name);
-
-	ret = iio_st_read_channel_raw(iio_channel, &channel_value);
-
-	if (ret < 0) {
-		dev_err(chip->dev, "%s(): Gpadc conversion failed\n", __func__);
-		return ret;
-	}
-
-	return channel_value;
 }
 
 static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
@@ -411,6 +384,7 @@ static int max77660_set_charging_current(struct regulator_dev *rdev,
 			goto error;
 		battery_charging_status_update(chip->bc_dev,
 					BATTERY_DISCHARGING);
+		battery_charger_thermal_stop_monitoring(chip->bc_therm_dev);
 	} else {
 		chip->cable_connected = 1;
 		charger->status = BATTERY_CHARGING;
@@ -419,6 +393,7 @@ static int max77660_set_charging_current(struct regulator_dev *rdev,
 			goto error;
 		battery_charging_status_update(chip->bc_dev,
 					BATTERY_CHARGING);
+		battery_charger_thermal_start_monitoring(chip->bc_therm_dev);
 	}
 
 	return 0;
@@ -477,75 +452,57 @@ static int max77660_init_charger_regulator(struct max77660_chg_extcon *chip,
 	return ret;
 }
 
-
-static void max77660_check_temperature(struct work_struct *work)
+static int max77660_charger_thermal_configure(
+		struct battery_charger_thermal_dev *bct_dev,
+		int temp, bool enable_charger, bool enable_charg_half_current,
+		int battery_voltage)
 {
 	struct max77660_chg_extcon *chip;
-	int adc_code, temp;
-	int temperature, charger_en;
+	int temperature;
 	int ret;
-	struct max77660_bcharger_platform_data *charger_pdata;
 
-	chip = container_of(work, struct max77660_chg_extcon, temp_work.work);
-	charger_pdata = chip->charger->bcharger_pdata;
+	chip = battery_charger_thermal_get_drvdata(bct_dev);
+	if (!chip->cable_connected)
+		return 0;
 
-	adc_code = max77660_gpadc_conversion(chip, VTHM_CHANNEL);
-	if (adc_code < 0) {
-		dev_err(chip->dev, "Could not obtain adc code\n");
-		return;
-	}
-
-	if (!charger_pdata->temp_table) {
-		dev_err(chip->dev, "Temperature table unavailable...\n");
-		goto err;
-	}
-
-	for (temp = 0; temp < charger_pdata->temp_table_size; temp++) {
-		if (adc_code <= charger_pdata->temp_table[temp])
-			break;
-	}
-
-	temperature = charger_pdata->temp_table_size - temp - 40;
-
-	if (temperature >= BATT_TEMP_HOT || temperature <= BATT_TEMP_COLD)
-	       charger_en = CURRENT_DISABLE;
-	else if (temperature >= BATT_TEMP_COOL && temperature <= BATT_TEMP_WARM)
-	       charger_en = CURRENT_ENABLE;
-	else
-	       charger_en = HALF_CURRENT_ENABLE;
-
-
-	if (chip->cable_connected == 1) {
-		if (charger_en == CURRENT_ENABLE
-		       && chip->charging_state != ENABLED_FULL_IBAT) {
-		       max77660_full_current_enable(chip);
+	temperature = temp;
+	dev_info(chip->dev, "Battery temp %d\n", temperature);
+	if (enable_charger) {
+		if (!enable_charg_half_current &&
+			chip->charging_state != ENABLED_FULL_IBAT) {
+			max77660_full_current_enable(chip);
 			battery_charging_status_update(chip->bc_dev,
-						BATTERY_CHARGING);
-		} else if (charger_en == HALF_CURRENT_ENABLE
-			       && chip->charging_state != ENABLED_HALF_IBAT) {
-		       max77660_half_current_enable(chip);
+				BATTERY_CHARGING);
+		} else if (enable_charg_half_current &&
+			chip->charging_state != ENABLED_HALF_IBAT)
+			max77660_half_current_enable(chip);
 			/* MBATREGMAX to 4.05V */
 			ret = max77660_reg_write(chip->parent,
 					MAX77660_CHG_SLAVE,
 					MAX77660_CHARGER_MBATREGMAX,
 					MAX77660_MBATREG_4050MV);
 			if (ret < 0)
-				goto err;
+				return ret;
 			battery_charging_status_update(chip->bc_dev,
-						BATTERY_CHARGING);
-		} else if (charger_en == CURRENT_DISABLE
-			       && chip->charging_state != DISABLED) {
-		       max77660_charging_disable(chip);
+							BATTERY_CHARGING);
+	} else {
+		if (chip->charging_state != DISABLED) {
+			max77660_charging_disable(chip);
 			battery_charging_status_update(chip->bc_dev,
 						BATTERY_DISCHARGING);
 		}
 	}
-	schedule_delayed_work(&chip->temp_work,
-		msecs_to_jiffies(charger_pdata
-				->temperature_poll_period_secs*HZ));
-err:
-	return;
+	return 0;
 }
+
+struct battery_charger_thermal_ops max77660_charger_thermal_ops = {
+	.thermal_configure = max77660_charger_thermal_configure,
+};
+
+struct battery_charger_thermal_info max77660_charger_thermal_info = {
+	.cell_id = 0,
+	.bct_ops = &max77660_charger_thermal_ops,
+};
 
 static int max77660_chg_extcon_cable_update(
 		struct max77660_chg_extcon *chg_extcon)
@@ -1058,17 +1015,26 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 	}
 	battery_charger_set_drvdata(chg_extcon->bc_dev, chg_extcon);
 
-	if (bcharger_pdata->temperature_sensing_enable == 1) {
-		INIT_DELAYED_WORK_DEFERRABLE(&chg_extcon->temp_work,
-						max77660_check_temperature);
-		schedule_delayed_work(&chg_extcon->temp_work,
-				bcharger_pdata->temperature_poll_period_secs*HZ);
+	max77660_charger_thermal_info.polling_time_sec =
+			bcharger_pdata->temperature_poll_period_secs;
+	max77660_charger_thermal_info.tz_name = bcharger_pdata->tz_name;
+	if (!max77660_charger_thermal_info.polling_time_sec)
+		goto skip_bcharger_init;
+	chg_extcon->bc_therm_dev = battery_charger_thermal_register(&pdev->dev,
+				&max77660_charger_thermal_info, chg_extcon);
+	if (IS_ERR(chg_extcon->bc_therm_dev)) {
+		ret = PTR_ERR(chg_extcon->bc_therm_dev);
+		dev_err(&pdev->dev,
+			"battery charger thermal register failed: %d\n", ret);
+		goto thermal_chg_reg_err;
 	}
 
 skip_bcharger_init:
 	device_set_wakeup_capable(&pdev->dev, 1);
 	return 0;
 
+thermal_chg_reg_err:
+	battery_charger_unregister(chg_extcon->bc_dev);
 chg_reg_err:
 	regulator_unregister(chg_extcon->chg_rdev);
 wdt_irq_free:
@@ -1089,6 +1055,7 @@ static int __devexit max77660_chg_extcon_remove(struct platform_device *pdev)
 	free_irq(chg_extcon->chg_irq, chg_extcon);
 	regulator_unregister(chg_extcon->vbus_rdev);
 	if (chg_extcon->battery_present) {
+		battery_charger_thermal_unregister(chg_extcon->bc_therm_dev);
 		battery_charger_unregister(chg_extcon->bc_dev);
 		extcon_dev_unregister(chg_extcon->edev);
 		free_irq(chg_extcon->chg_wdt_irq, chg_extcon);
