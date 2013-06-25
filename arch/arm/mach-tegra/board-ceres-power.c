@@ -31,6 +31,7 @@
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/platform_data/lp8755.h>
 #include <linux/pid_thermal_gov.h>
+#include <linux/generic_adc_thermal.h>
 #include <linux/power/power_supply_extcon.h>
 
 #include <asm/mach-types.h>
@@ -507,13 +508,11 @@ uint32_t max77660_adc_temperature_lookup_table[] = {
 */
 
 static struct max77660_bcharger_platform_data max77660_bcharger_pdata = {
+	.tz_name = "battery-temp",
 	.max_charge_current_mA = 3000,
 	.consumer_supplies = max77660_batt_supply,
 	.num_consumer_supplies = ARRAY_SIZE(max77660_batt_supply),
 	.wdt_timeout    = 32,
-	.temp_table = max77660_adc_temperature_lookup_table,
-	.temp_table_size = ARRAY_SIZE(max77660_adc_temperature_lookup_table),
-	.temperature_sensing_enable = 1,
 	.temperature_poll_period_secs = 5,
 };
 
@@ -536,11 +535,28 @@ static struct platform_device power_supply_extcon_device = {
 };
 
 static struct iio_map max77660_iio_map[] = {
-	MAX77660_GPADC_IIO_MAP(VTHM, "max77660-charger-extcon",
-							"vthm_channel"),
-	MAX77660_GPADC_IIO_MAP(DUMMY, NULL, NULL),
+	MAX77660_GPADC_IIO_MAP(VTHM, "generic-adc-thermal.0", "vthm_channel"),
+	MAX77660_GPADC_IIO_MAP(NULL, NULL, NULL),
 };
 
+static struct gadc_thermal_platform_data gadc_thermal_battery_pdata = {
+	.iio_channel_name = "vthm_channel",
+	.tz_name = "battery-temp",
+	.temp_offset = 0,
+	.adc_to_temp = NULL,
+	.adc_temp_lookup = max77660_adc_temperature_lookup_table,
+	.lookup_table_size = ARRAY_SIZE(max77660_adc_temperature_lookup_table),
+	.first_index_temp = 125,
+	.last_index_temp = -40,
+};
+
+static struct platform_device gadc_thermal_battery = {
+	.name   = "generic-adc-thermal",
+	.id     = 0,
+	.dev    = {
+		.platform_data = &gadc_thermal_battery_pdata,
+	},
+};
 
 struct max77660_adc_platform_data max77660_adc_pdata = {
 	.adc_current_uA = 10,
@@ -985,6 +1001,7 @@ int __init ceres_regulator_init(void)
 				ARRAY_SIZE(max77660_regulators));
 
 	platform_device_register(&power_supply_extcon_device);
+	platform_device_register(&gadc_thermal_battery);
 
 reg_populate_done:
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
