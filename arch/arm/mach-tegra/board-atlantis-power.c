@@ -564,19 +564,6 @@ struct palmas_clk32k_init_data atlantis_palmas_clk32k_idata[] = {
 	},
 };
 
-/* based on an old table for 10bit GPADC hence the *4 for 12bit GPADC */
-static int palmas_batt_temperature_table[] = {
-	/* adc code for temperature in degree C */
-	929*4, 925*4, /* -2 ,-1 */
-	920*4, 917*4, 912*4, 908*4, 904*4, 899*4, 895*4, 890*4, 885*4, 880*4, /* 00 - 09 */
-	875*4, 869*4, 864*4, 858*4, 853*4, 847*4, 841*4, 835*4, 829*4, 823*4, /* 10 - 19 */
-	816*4, 810*4, 804*4, 797*4, 790*4, 783*4, 776*4, 769*4, 762*4, 755*4, /* 20 - 29 */
-	748*4, 740*4, 732*4, 725*4, 718*4, 710*4, 703*4, 695*4, 687*4, 679*4, /* 30 - 39 */
-	671*4, 663*4, 655*4, 647*4, 639*4, 631*4, 623*4, 615*4, 607*4, 599*4, /* 40 - 49 */
-	591*4, 583*4, 575*4, 567*4, 559*4, 551*4, 543*4, 535*4, 527*4, 519*4, /* 50 - 59 */
-	511*4, 504*4, 496*4 /* 60 - 62 */
-};
-
 /* OCV Configuration */
 static struct ocv_config ocv_cfg = {
 	.voltage_diff = 75,
@@ -671,11 +658,6 @@ static struct palmas_battery_platform_data battery_pdata = {
 	/* How often we should update the info about charge status */
 	.battery_status_interval = 10000,
 
-	/* temperature conversion for this battery */
-	.battery_temperature_chart = palmas_batt_temperature_table,
-	.battery_temperature_chart_size =
-			ARRAY_SIZE(palmas_batt_temperature_table),
-
 	/* Battery Configuration for Fuel Guage */
 	.cell_cfg = &cell_cfg,
 	.gpadc_retry_count = 5,
@@ -709,6 +691,7 @@ static struct palmas_vbus_platform_data palmas_vbus_pdata = {
 };
 
 struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
+	.battery_tz_name = "battery-temp",
 	.max_charge_current_mA = 3000,
 	.charging_term_current_mA = 100,
 	.consumer_supplies = palmas_batt_supply,
@@ -716,6 +699,7 @@ struct palmas_bcharger_platform_data palmas_bcharger_pdata = {
 	.wdt_timeout    = 40,
 	.rtc_alarm_time = 3600,
 	.chg_restart_time = 1800,
+	.temperature_poll_period_secs = 5,
 };
 
 static struct power_supply_extcon_plat_data extcon_pdata = {
