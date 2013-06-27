@@ -3,7 +3,8 @@
  *
  * Author: Nikesh Oswal <noswal@nvidia.com>
  * Copyright (C) 2011 - NVIDIA, Inc.
- *
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * version 2 as published by the Free Software Foundation.
@@ -190,8 +191,6 @@ int tegra30_dam_set_acif(int ifc, int chtype, unsigned int audio_channels,
 	unsigned int client_bits);
 void tegra30_dam_enable(int ifc, int on, int chtype);
 int tegra30_dam_set_acif_stereo_conv(int ifc, int chtype, int conv);
-void tegra30_dam_ch0_set_datasync(int ifc, int datasync);
-void tegra30_dam_ch1_set_datasync(int ifc, int datasync);
 #ifndef CONFIG_ARCH_TEGRA_3x_SOC
 void tegra30_dam_write_coeff_ram(int ifc, int fsin, int fsout);
 void tegra30_dam_set_farrow_param(int ifc, int fsin, int fsout);

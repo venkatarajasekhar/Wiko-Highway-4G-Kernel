@@ -303,15 +303,9 @@ static int tegra_aic325x_call_mode_put(struct snd_kcontrol *kcontrol,
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_asoc_utils_tristate_dap(
 		machine->codec_info[codec_index].i2s_id, false);
-	if (machine->is_device_bt) {
-		t14x_make_bt_voice_call_connections(
+	t14x_make_voice_call_connections(
 			&machine->codec_info[codec_index],
 			&machine->ahub_bbc1_info, 0);
-	} else {
-		t14x_make_voice_call_connections(
-			&machine->codec_info[codec_index],
-			&machine->ahub_bbc1_info, 0);
-	}
 #else
 		tegra30_make_voice_call_connections(
 			&machine->codec_info[codec_index],
@@ -319,15 +313,9 @@ static int tegra_aic325x_call_mode_put(struct snd_kcontrol *kcontrol,
 #endif
 	} else {
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		if (machine->is_device_bt) {
-			t14x_break_bt_voice_call_connections(
-				&machine->codec_info[codec_index],
-				&machine->ahub_bbc1_info, 0);
-		} else {
-			t14x_break_voice_call_connections(
+		t14x_break_voice_call_connections(
 			&machine->codec_info[codec_index],
 			&machine->ahub_bbc1_info, 0);
-		}
 		tegra_asoc_utils_tristate_dap(
 			machine->codec_info[codec_index].i2s_id, true);
 #else
@@ -1168,8 +1156,7 @@ static int tegra_aic325x_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int ret;
 
-	i2s->is_dam_used = false;
-	if (i2s->id == machine->codec_info[BT_SCO].i2s_id)
+	if (machine->codec_info[BASEBAND].i2s_id != -1)
 		i2s->is_dam_used = true;
 
 	if (machine->init_done)

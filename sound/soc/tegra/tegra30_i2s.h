@@ -2,6 +2,7 @@
  * tegra30_i2s.h - Definitions for Tegra 30 I2S driver
  *
  * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -305,14 +306,6 @@ int tegra30_break_voice_call_connections(struct codec_config *codec_info,
 			int uses_voice_codec);
 
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-int t14x_make_bt_voice_call_connections(struct codec_config *codec_info,
-				struct ahub_bbc1_config *bb_info,
-				int uses_voice_codec);
-
-int t14x_break_bt_voice_call_connections(struct codec_config *codec_info,
-				struct ahub_bbc1_config *bb_info,
-				int uses_voice_codec);
-
 int t14x_make_voice_call_connections(struct codec_config *codec_info,
 				struct ahub_bbc1_config *bb_info,
 				int uses_voice_codec);

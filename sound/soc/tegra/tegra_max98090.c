@@ -150,15 +150,9 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_asoc_utils_tristate_dap(
 		machine->codec_info[codec_index].i2s_id, false);
-	if (machine->is_device_bt) {
-		t14x_make_bt_voice_call_connections(
-			&machine->codec_info[codec_index],
-			&machine->ahub_bbc1_info, 0);
-	} else {
 		t14x_make_voice_call_connections(
 			&machine->codec_info[codec_index],
 			&machine->ahub_bbc1_info, 0);
-	}
 #else
 		tegra30_make_voice_call_connections(
 			&machine->codec_info[codec_index],
@@ -166,15 +160,9 @@ static int tegra_call_mode_put(struct snd_kcontrol *kcontrol,
 #endif
 	} else {
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		if (machine->is_device_bt) {
-			t14x_break_bt_voice_call_connections(
-				&machine->codec_info[codec_index],
-				&machine->ahub_bbc1_info, 0);
-		} else {
-			t14x_break_voice_call_connections(
+		t14x_break_voice_call_connections(
 			&machine->codec_info[codec_index],
 			&machine->ahub_bbc1_info, 0);
-		}
 		tegra_asoc_utils_tristate_dap(
 			machine->codec_info[codec_index].i2s_id, true);
 #else
@@ -360,7 +348,7 @@ static int tegra_max98090_hw_params(struct snd_pcm_substream *substream,
 		}
 	}
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK && i2s->is_dam_used)
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		tegra_max98090_set_dam_cif(i2s->dam_ifc, srate,
 			params_channels(params), sample_size, 0, 0, 0, 0);
 
@@ -450,7 +438,7 @@ static int tegra_bt_hw_params(struct snd_pcm_substream *substream,
 		return err;
 	}
 
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK && i2s->is_dam_used)
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		tegra_max98090_set_dam_cif(i2s->dam_ifc, params_rate(params),
 			params_channels(params), sample_size, 0, 0, 0, 0);
 
@@ -1084,8 +1072,7 @@ static int tegra_max98090_init(struct snd_soc_pcm_runtime *rtd)
 	struct tegra30_i2s *i2s = snd_soc_dai_get_drvdata(rtd->cpu_dai);
 	int ret;
 
-	i2s->is_dam_used = false;
-	if (i2s->id == machine->codec_info[BT_SCO].i2s_id)
+	if (machine->codec_info[BASEBAND].i2s_id != -1)
 		i2s->is_dam_used = true;
 
 	if (machine->init_done)
