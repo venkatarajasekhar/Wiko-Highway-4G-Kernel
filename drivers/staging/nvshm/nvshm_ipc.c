@@ -115,6 +115,7 @@ static int init_interfaces(struct nvshm_handle *handle)
 	int chan;
 
 	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+		handle->chan[chan].xoff = 0;
 		switch (handle->chan[chan].map.type) {
 		case NVSHM_CHAN_UNMAP:
 			break;
