@@ -44,6 +44,9 @@ DHDCFLAGS += -DQUEUE_BW
 DHDCFLAGS += -DP2P_DISCOVERY_WAR
 #endif
 
+## Set dhd_dpd_thread priority to 2 to avoid starvation
+DHDCFLAGS += -DCUSTOM_DPC_PRIO_SETTING=2
+
 ifeq ($(CONFIG_BCMDHD_HW_OOB),y)
 DHDCFLAGS += -DHW_OOB -DOOB_INTR_ONLY
 else
