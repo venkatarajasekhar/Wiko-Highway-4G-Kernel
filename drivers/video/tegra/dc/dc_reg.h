@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -695,7 +695,6 @@
 #define DC_DISP_SD_SMOOTH_K			0x4e3
 #define  SD_SMOOTH_K_INCR(x)		(((x) & 0x3fff) << 0)
 
-#define  NUM_AGG_PRI_LVLS		4
 #define  SD_AGG_PRI_LVL(x)		((x) >> 3)
 #define  SD_GET_AGG(x)			((x) & 0x7)
 
