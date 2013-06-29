@@ -356,17 +356,6 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 	if (mode)
 		atomic_set(&bbc->mode, mode);
 
-	if (margin != bbc->margin) {
-		ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
-			margin, true);
-		if (ret) {
-			dev_err(dev, "can't margin for bbc bw\n");
-			return ret;
-		}
-
-		bbc->margin = margin;
-	}
-
 	if ((bw != bbc->bw) || (lt != bbc->lt)) {
 		ret = tegra_isomgr_reserve(bbc->isomgr_handle, bw, lt);
 		if (!ret) {
@@ -384,6 +373,17 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 
 		tegra_set_latency_allowance(TEGRA_LA_BBCR, bw / 1000);
 		tegra_set_latency_allowance(TEGRA_LA_BBCW, bw / 1000);
+	}
+
+	if (margin != bbc->margin) {
+		ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
+			margin, true);
+		if (ret) {
+			dev_err(dev, "can't margin for bbc bw\n");
+			return ret;
+		}
+
+		bbc->margin = margin;
 	}
 
 	return 0;
