@@ -7,7 +7,7 @@
  *  Copyright (C) 2009 Palm
  *  All Rights Reserved
  *
- *  Copyright (C) 2010-2011 NVIDIA Corporation
+ *  Copyright (c) 2012-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,6 +45,7 @@ extern void tegra_secondary_startup(void);
 #include "reset.h"
 #include "sleep.h"
 #include "cpu-tegra.h"
+#include "timer.h"
 
 bool tegra_all_cpus_booted;
 
@@ -459,9 +460,14 @@ struct arm_soc_smp_init_ops tegra_soc_smp_init_ops __initdata = {
 	.smp_prepare_cpus	= tegra_smp_prepare_cpus,
 };
 
-#ifdef CONFIG_TEGRA_VIRTUAL_CPUID
+#ifdef CONFIG_HOTPLUG_CPU
 static int tegra_cpu_disable(unsigned int cpu)
 {
+	if (cpu == 0) return -EPERM;
+	/* only call this if the cputimer is in use */
+#if !defined(CONFIG_ARM_ARCH_TIMER) && !defined(CONFIG_HAVE_ARM_TWD)
+	tegra_cputimer_reset_irq_affinity(cpu);
+#endif
 	return 0;
 }
 #endif
@@ -472,10 +478,6 @@ struct arm_soc_smp_ops tegra_soc_smp_ops __initdata = {
 #ifdef CONFIG_HOTPLUG_CPU
 	.cpu_kill		= tegra_cpu_kill,
 	.cpu_die		= tegra_cpu_die,
-#ifdef CONFIG_TEGRA_VIRTUAL_CPUID
 	.cpu_disable		= tegra_cpu_disable,
-#else
-	.cpu_disable		= dummy_cpu_disable,
-#endif
 #endif
 };
