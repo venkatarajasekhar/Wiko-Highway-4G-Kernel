@@ -421,11 +421,26 @@ struct palmas_rtc_platform_data {
 	unsigned charging_current_ua;
 };
 
+/*
+ * ADC wakeup property: Wakup the system from suspend when threshold crossed.
+ * @adc_channel_number: ADC channel number for monitoring.
+ * @adc_high_threshold: ADC High raw data for upper threshold to generate int.
+ * @adc_low_threshold: ADC low raw data for lower threshold to generate int.
+ */
+struct palmas_adc_wakeup_property {
+	int adc_channel_number;
+	int adc_high_threshold;
+	int adc_low_threshold;
+};
+
 struct palmas_gpadc_platform_data {
 	int channel0_current_uA;
 	int channel3_current_uA;
 
 	struct iio_map *iio_maps;
+	int auto_conversion_period_ms;
+	struct palmas_adc_wakeup_property *adc_wakeup1_data;
+	struct palmas_adc_wakeup_property *adc_wakeup2_data;
 };
 
 struct palmas_pinctrl_config {
