@@ -949,7 +949,10 @@ enum max77660_regulator_fps_src {
 #define ENABLE_EN1			BIT(0)
 #define ENABLE_EN2			BIT(1)
 #define ENABLE_EN3			BIT(2)
-#define ENABLE_EN			(ENABLE_EN1 | ENABLE_EN2 | ENABLE_EN3)
+#define ENABLE_EN4			BIT(3)
+#define ENABLE_EN5			BIT(4)
+#define ENABLE_EN			(ENABLE_EN1 | ENABLE_EN2 | ENABLE_EN3 \
+					| ENABLE_EN4 | ENABLE_EN5)
 
 /* Disable DVFS */
 #define DISABLE_DVFS			0x10

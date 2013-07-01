@@ -376,6 +376,18 @@ max77660_regulator_ext_control(struct max77660_regulator *reg, bool enable)
 	u8 mask = 0;
 	int ret;
 
+	if (reg_pdata->flags & ENABLE_EN5) {
+		ret = max77660_reg_update(to_max77660_chip(reg),
+				MAX77660_PWR_SLAVE,
+				MAX77660_REG_GLOBAL_CFG5,
+				enable ? 0 : GLBLCNFG5_EN5_MASK_MASK,
+				GLBLCNFG5_EN5_MASK_MASK);
+		if (ret < 0)
+			dev_err(reg->dev, "Failed to update GLBLCNFG5 reg");
+
+		return ret;
+	}
+
 	if (reg_pdata->flags & ENABLE_EN1 || reg_pdata->flags & ENABLE_EN2) {
 		ret = max77660_reg_update(to_max77660_chip(reg),
 				MAX77660_PWR_SLAVE,
@@ -392,6 +404,8 @@ max77660_regulator_ext_control(struct max77660_regulator *reg, bool enable)
 		mask |= GLBLCNFG7_EN2_MASK_MASK;
 	else if (reg_pdata->flags & ENABLE_EN3)
 		mask |= GLBLCNFG7_EN3_MASK_MASK;
+	else if (reg_pdata->flags & ENABLE_EN4)
+		mask |= GLBLCNFG7_EN4_MASK_MASK;
 
 	ret = max77660_reg_update(to_max77660_chip(reg),
 				MAX77660_PWR_SLAVE, MAX77660_REG_GLOBAL_CFG7,
