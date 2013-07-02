@@ -249,6 +249,7 @@ struct thermal_zone_device *thermal_zone_device_find(void *data,
 	int (*match)(struct thermal_zone_device *, void *));
 struct thermal_zone_device *thermal_zone_device_find_by_name(const char *name);
 
+int thermal_zone_get_temp(struct thermal_zone_device *tz, long *temp);
 int get_tz_trend(struct thermal_zone_device *, int);
 struct thermal_instance *get_thermal_instance(struct thermal_zone_device *,
 		struct thermal_cooling_device *, int);

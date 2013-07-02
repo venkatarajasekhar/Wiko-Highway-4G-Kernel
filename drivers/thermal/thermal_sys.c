@@ -425,6 +425,27 @@ void thermal_zone_device_update(struct thermal_zone_device *tz)
 }
 EXPORT_SYMBOL(thermal_zone_device_update);
 
+int thermal_zone_get_temp(struct thermal_zone_device *tz, long *temp)
+{
+	int ret;
+
+	mutex_lock(&tz->lock);
+
+	ret = tz->ops->get_temp(tz, temp);
+	if (ret) {
+		pr_warn("failed to read out thermal zone %d\n", tz->id);
+		goto exit;
+	}
+
+	tz->last_temperature = tz->temperature;
+	tz->temperature = *temp;
+
+exit:
+	mutex_unlock(&tz->lock);
+	return ret;
+}
+EXPORT_SYMBOL(thermal_zone_get_temp);
+
 static void thermal_zone_device_check(struct work_struct *work)
 {
 	struct thermal_zone_device *tz = container_of(work, struct
