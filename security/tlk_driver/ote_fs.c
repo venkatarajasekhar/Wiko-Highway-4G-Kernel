@@ -24,7 +24,6 @@
 #include <linux/freezer.h>
 #include <linux/bitops.h>
 #include <linux/uaccess.h>
-#include <linux/delay.h>
 
 #include "ote_protocol.h"
 
@@ -64,18 +63,13 @@ int te_handle_fs_ioctl(struct file *file, unsigned int ioctl_num,
 
 		ptr_user_req = (struct te_file_req *)ioctl_param;
 
+		set_freezable();
+
 		set_bit(TE_FS_READY_BIT, &fs_ready);
 
 		/* wait for a new request */
-		while (wait_for_completion_interruptible(&req_ready)) {
-			set_freezable();
-
-			/*
-			 * let the scheduler go through its motions before
-			 * rescheduling us
-			 */
-			msleep(20);
-		}
+		while (wait_for_completion_interruptible(&req_ready))
+			try_to_freeze();
 
 		/* dequeue new request from the secure world */
 		req_node = list_first_entry(&req_list, struct te_file_req_node,
@@ -187,16 +181,11 @@ static void _te_fs_file_operation(const char *name, void *buf, int len,
 	list_add_tail(&req_list, &req_node->node);
 	complete(&req_ready);
 
-	/* wait for the consumer's signal */
-	while (wait_for_completion_interruptible(&req_complete)) {
-		set_freezable();
+	set_freezable();
 
-		/*
-		 * let the scheduler go through its motions before
-		 * rescheduling us
-		 */
-		msleep(20);
-	}
+	/* wait for the consumer's signal */
+	while (wait_for_completion_interruptible(&req_complete))
+		try_to_freeze();
 
 	kfree(new_req);
 
