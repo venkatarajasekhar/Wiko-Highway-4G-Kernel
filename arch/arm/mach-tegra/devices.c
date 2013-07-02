@@ -1829,7 +1829,7 @@ struct platform_device tegra_das_device = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_IOVMM_GART) || defined(CONFIG_TEGRA_IOMMU_GART)
+#ifdef CONFIG_TEGRA_IOMMU_GART
 static struct resource tegra_gart_resources[] = {
 	[0] = {
 		.name	= "mc",
@@ -1853,7 +1853,7 @@ struct platform_device tegra_gart_device = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_IOVMM_SMMU) || defined(CONFIG_TEGRA_IOMMU_SMMU)
+#ifdef CONFIG_TEGRA_IOMMU_SMMU
 static struct resource tegra_smmu_resources[] = {
 	{
 		.name	= "mc",

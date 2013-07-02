@@ -390,9 +390,6 @@ static struct platform_device *dolak_devices[] __initdata = {
 #if !defined(USB_HOST_ONLY)
 	&tegra_udc_device,
 #endif
-#if defined(CONFIG_TEGRA_IOVMM_SMMU)
-	&tegra_smmu_device,
-#endif
 	&dolak_keys_device,
 #if defined(CONFIG_SND_HDA_PLATFORM_NVIDIA_TEGRA)
 	&tegra_hda_device,
