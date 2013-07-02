@@ -32,7 +32,6 @@
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
 
-#include <mach/iovmm.h>
 #include <linux/nvmap.h>
 #include <trace/events/nvmap.h>
 
@@ -52,12 +51,12 @@ static int map_iovmm_area(struct nvmap_handle *h)
 	       h->size & ~PAGE_MASK);
 	WARN_ON(!h->pgalloc.dirty);
 
-	err = tegra_iovmm_vm_insert_pages(h->pgalloc.area,
+	err = tegra_iommu_vm_insert_pages(h->pgalloc.area,
 					  h->pgalloc.area->iovm_start,
 					  h->pgalloc.pages,
 					  h->size >> PAGE_SHIFT);
 	if (err) {
-		tegra_iovmm_zap_vm(h->pgalloc.area);
+		tegra_iommu_zap_vm(h->pgalloc.area);
 		return err;
 	}
 	h->pgalloc.dirty = false;
@@ -70,7 +69,7 @@ static int map_iovmm_area(struct nvmap_handle *h)
  * this function. */
 static int pin_locked(struct nvmap_client *client, struct nvmap_handle *h)
 {
-	struct tegra_iovmm_area *area;
+	struct tegra_iommu_area *area;
 	BUG_ON(!h->alloc);
 	if (atomic_inc_return(&h->pin) == 1) {
 		if (h->heap_pgalloc && !h->pgalloc.contig) {
@@ -113,11 +112,11 @@ static int handle_unpin(struct nvmap_client *client,
 			/* if a secure handle is clean (i.e., mapped into
 			 * IOVMM, it needs to be zapped on unpin. */
 			if (h->secure && !h->pgalloc.dirty) {
-				tegra_iovmm_zap_vm(h->pgalloc.area);
+				tegra_iommu_zap_vm(h->pgalloc.area);
 				h->pgalloc.dirty = true;
 			}
 			if (free_vm) {
-				tegra_iovmm_free_vm(h->pgalloc.area);
+				tegra_iommu_free_vm(h->pgalloc.area);
 				h->pgalloc.area = NULL;
 			} else
 				nvmap_mru_insert_locked(client->share, h);
@@ -163,7 +162,7 @@ static int pin_array_locked(struct nvmap_client *client,
 		}
 	}
 
-	if (err && tegra_iovmm_get_max_free(client->share->iovmm) >=
+	if (err && dma_iova_get_free_max(client->share->iovmm->dev) >=
 							client->iovm_limit) {
 		/* First attempt to pin in empty iovmm
 		 * may still fail because of fragmentation caused by
@@ -332,7 +331,7 @@ int nvmap_pin_ids(struct nvmap_client *client,
 			if (h[i]->heap_pgalloc && h[i]->pgalloc.dirty) {
 				ret = map_iovmm_area(h[i]);
 				while (ret && --i >= 0)
-					tegra_iovmm_zap_vm(h[i]->pgalloc.area);
+					tegra_iommu_zap_vm(h[i]->pgalloc.area);
 			}
 		}
 	}
@@ -518,7 +517,7 @@ int nvmap_pin_array(struct nvmap_client *client,
 			    unique_arr[i]->pgalloc.dirty) {
 				ret = map_iovmm_area(unique_arr[i]);
 				while (ret && --i >= 0) {
-					tegra_iovmm_zap_vm(
+					tegra_iommu_zap_vm(
 						unique_arr[i]->pgalloc.area);
 					atomic_dec(&unique_arr_refs[i]->pin);
 				}

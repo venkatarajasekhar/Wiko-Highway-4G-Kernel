@@ -1,7 +1,7 @@
 /*
  * IOMMU backend support for NVMAP
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,15 +18,15 @@
  */
 
 #include <linux/slab.h>
+#include <linux/platform_device.h>
 #include <mach/iomap.h>
-#include <mach/iovmm.h>
 
 #include "nvmap_priv.h"
 
-struct tegra_iovmm_area *tegra_iommu_create_vm(struct device *dev,
+struct tegra_iommu_area *tegra_iommu_create_vm(struct device *dev,
 			       dma_addr_t req, size_t size, pgprot_t prot)
 {
-	struct tegra_iovmm_area *area;
+	struct tegra_iommu_area *area;
 	dma_addr_t iova;
 
 	area = kmalloc(sizeof(*area), GFP_KERNEL);
@@ -51,7 +51,7 @@ err_out:
 	return NULL;
 }
 
-void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
+void tegra_iommu_free_vm(struct tegra_iommu_area *area)
 {
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
@@ -60,7 +60,7 @@ void tegra_iommu_free_vm(struct tegra_iovmm_area *area)
 	kfree(area);
 }
 
-void tegra_iommu_zap_vm(struct tegra_iovmm_area *area)
+void tegra_iommu_zap_vm(struct tegra_iommu_area *area)
 {
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
@@ -107,9 +107,9 @@ static void tegra_iommu_delete_map(struct device *dev)
 
 #endif
 
-struct tegra_iovmm_client *tegra_iommu_alloc_client(struct device *dev)
+struct tegra_iommu_client *tegra_iommu_alloc_client(struct device *dev)
 {
-	struct tegra_iovmm_client *client;
+	struct tegra_iommu_client *client;
 
 	if (WARN_ON(!dev))
 		return NULL;
@@ -128,7 +128,7 @@ struct tegra_iovmm_client *tegra_iommu_alloc_client(struct device *dev)
 	return client;
 }
 
-void tegra_iommu_free_client(struct tegra_iovmm_client *client)
+void tegra_iommu_free_client(struct tegra_iommu_client *client)
 {
 	if (WARN_ON(!client))
 		return;

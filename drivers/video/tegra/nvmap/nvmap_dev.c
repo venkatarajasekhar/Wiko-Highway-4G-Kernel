@@ -40,8 +40,6 @@
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
 
-#include <mach/iovmm.h>
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
 
@@ -1348,9 +1346,8 @@ static int nvmap_probe(struct platform_device *pdev)
 #endif
 
 	dev->iovmm_master.iovmm =
-		tegra_iovmm_alloc_client(&pdev->dev, NULL,
-			&(dev->dev_user));
-#if defined(CONFIG_TEGRA_IOVMM) || defined(CONFIG_IOMMU_API)
+		tegra_iommu_alloc_client(&pdev->dev);
+#ifdef CONFIG_IOMMU_API
 	if (!dev->iovmm_master.iovmm) {
 		e = PTR_ERR(dev->iovmm_master.iovmm);
 		dev_err(&pdev->dev, "couldn't create iovmm client\n");
@@ -1547,7 +1544,7 @@ fail:
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
 	if (!IS_ERR_OR_NULL(dev->iovmm_master.iovmm))
-		tegra_iovmm_free_client(dev->iovmm_master.iovmm);
+		tegra_iommu_free_client(dev->iovmm_master.iovmm);
 	if (dev->vm_rgn)
 		free_vm_area(dev->vm_rgn);
 	kfree(dev);
@@ -1572,7 +1569,7 @@ static int nvmap_remove(struct platform_device *pdev)
 	}
 
 	if (!IS_ERR_OR_NULL(dev->iovmm_master.iovmm))
-		tegra_iovmm_free_client(dev->iovmm_master.iovmm);
+		tegra_iommu_free_client(dev->iovmm_master.iovmm);
 
 	nvmap_mru_destroy(&dev->iovmm_master);
 

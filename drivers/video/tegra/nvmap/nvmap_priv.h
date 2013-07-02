@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,13 +32,20 @@
 #include <linux/atomic.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
-#include "nvmap_heap.h"
 #include <linux/workqueue.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-direction.h>
+
 #include <asm/tlbflush.h>
+#include <asm/dma-iommu.h>
+
+#include <mach/iomap.h>
+
+#include "nvmap_heap.h"
 
 struct nvmap_device;
 struct page;
-struct tegra_iovmm_area;
+struct tegra_iommu_area;
 
 extern const struct file_operations nvmap_fd_fops;
 void _nvmap_handle_free(struct nvmap_handle *h);
@@ -75,7 +82,7 @@ struct nvmap_deferred_ops {
  * page allocations */
 struct nvmap_pgalloc {
 	struct page **pages;
-	struct tegra_iovmm_area *area;
+	struct tegra_iommu_area *area;
 	struct list_head mru_list;	/* MRU entry for IOVMM reclamation */
 	bool contig;			/* contiguous system memory */
 	bool dirty;			/* area is invalid and needs mapping */
@@ -143,7 +150,7 @@ int nvmap_page_pool_init(struct nvmap_page_pool *pool, int flags);
 #endif
 
 struct nvmap_share {
-	struct tegra_iovmm_client *iovmm;
+	struct tegra_iommu_client *iovmm;
 	wait_queue_head_t pin_wait;
 	struct mutex pin_lock;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -364,6 +371,59 @@ static inline void inner_clean_cache_all(void)
 #else
 	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
 #endif
+}
+
+struct tegra_iommu_client {
+	struct device *dev;
+};
+
+struct tegra_iommu_area {
+	dma_addr_t		iovm_start;
+	size_t			iovm_length;
+	pgprot_t		pgprot;
+	struct device		*dev;
+};
+
+#define tegra_iommu_vm_insert_pfn(area, handle, pfn)			\
+	({								\
+		dma_addr_t da;						\
+		struct device *dev = area->dev;				\
+		const struct dma_map_ops *ops = get_dma_ops(dev);	\
+		DEFINE_DMA_ATTRS(attrs);				\
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);		\
+		da = ops->map_page_at(dev, pfn_to_page(pfn), handle,	\
+				 PAGE_SIZE, 0, 0, &attrs);		\
+		dma_mapping_error(dev, da) ? -ENOMEM : 0;		\
+	})
+
+static inline int tegra_iommu_vm_insert_pages(struct tegra_iommu_area *area,
+					      dma_addr_t va,
+					      struct page **pages, size_t count)
+{
+	dma_addr_t da;
+	struct device *dev = area->dev;
+	const struct dma_map_ops *ops = get_dma_ops(dev);
+	DEFINE_DMA_ATTRS(attrs);
+
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	da = ops->map_pages(dev, pages, va, count, 0, &attrs);
+	return dma_mapping_error(dev, da) ? -ENOMEM : 0;
+}
+
+struct tegra_iommu_area *tegra_iommu_create_vm(struct device *dev,
+		       dma_addr_t req, size_t size, pgprot_t prot);
+
+void tegra_iommu_free_vm(struct tegra_iommu_area *area);
+
+void tegra_iommu_zap_vm(struct tegra_iommu_area *area);
+
+struct tegra_iommu_client *tegra_iommu_alloc_client(struct device *dev);
+
+void tegra_iommu_free_client(struct tegra_iommu_client *client);
+
+static inline ulong tegra_iommu_get_vm_size(struct tegra_iommu_client *client)
+{
+	return TEGRA_IOMMU_SIZE;
 }
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

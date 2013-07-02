@@ -40,7 +40,6 @@
 #include <asm/tlbflush.h>
 #include <asm/pgtable.h>
 
-#include <mach/iovmm.h>
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
@@ -561,7 +560,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 
 skip_attr_restore:
 	if (h->pgalloc.area)
-		tegra_iovmm_free_vm(h->pgalloc.area);
+		tegra_iommu_free_vm(h->pgalloc.area);
 
 	for (i = page_index; i < nr_page; i++)
 		__free_page(h->pgalloc.pages[i]);
@@ -672,7 +671,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 		}
 
 #ifndef CONFIG_NVMAP_RECLAIM_UNPINNED_VM
-		h->pgalloc.area = tegra_iovmm_create_vm(client->share->iovmm,
+		h->pgalloc.area = tegra_iommu_create_vm(client->share->iovmm,
 					NULL, size, h->align, prot,
 					h->pgalloc.iovm_addr);
 		if (!h->pgalloc.area)
@@ -817,13 +816,6 @@ int nvmap_alloc_handle_id(struct nvmap_client *client,
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 
-#ifndef CONFIG_TEGRA_IOVMM
-	/* convert iovmm requests to generic carveout. */
-	if (heap_mask & NVMAP_HEAP_IOVMM) {
-		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |
-			    NVMAP_HEAP_CARVEOUT_GENERIC;
-	}
-#endif
 	/* secure allocations can only be served from secure heaps */
 	if (h->secure)
 		heap_mask &= NVMAP_SECURE_HEAPS;

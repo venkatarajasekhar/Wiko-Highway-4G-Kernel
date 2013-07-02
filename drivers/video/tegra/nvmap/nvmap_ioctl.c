@@ -34,7 +34,6 @@
 #include <asm/outercache.h>
 #include <asm/tlbflush.h>
 
-#include <mach/iovmm.h>
 #include <trace/events/nvmap.h>
 #include <linux/vmalloc.h>
 
