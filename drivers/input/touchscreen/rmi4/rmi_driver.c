@@ -684,6 +684,11 @@ static int process_interrupt_requests(struct rmi_device *rmi_dev)
  * @input: Pointer to input device
  *
  */
+#ifdef CONFIG_PM
+static int rmi_driver_input_enable(struct input_dev *input);
+static int rmi_driver_input_disable(struct input_dev *input);
+#endif
+
 static int rmi_driver_set_input_params(struct rmi_device *rmi_dev,
 				struct input_dev *input)
 {
@@ -694,6 +699,12 @@ static int rmi_driver_set_input_params(struct rmi_device *rmi_dev,
 	input->id.product = data->board;
 	input->id.version = data->rev;
 	input->id.bustype = BUS_RMI;
+
+#ifdef CONFIG_PM
+	input->enable = rmi_driver_input_enable;
+	input->disable = rmi_driver_input_disable;
+	input->enabled = true;
+#endif
 	return 0;
 }
 
@@ -1399,6 +1410,18 @@ static int rmi_driver_resume(struct device *dev)
 exit:
 	mutex_unlock(&data->suspend_mutex);
 	return retval;
+}
+
+static int rmi_driver_input_enable(struct input_dev *input)
+{
+	struct device *dev = input->dev.parent;
+	return rmi_driver_resume(dev);
+}
+
+static int rmi_driver_input_disable(struct input_dev *input)
+{
+	struct device *dev = input->dev.parent;
+	return rmi_driver_suspend(dev);
 }
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)
