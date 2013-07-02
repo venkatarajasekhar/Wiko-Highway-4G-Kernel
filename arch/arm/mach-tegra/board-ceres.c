@@ -28,6 +28,7 @@
 #include <linux/platform_data/tegra_usb_modem_power.h>
 #include <linux/memblock.h>
 #include <linux/of_platform.h>
+#include <linux/bluedroid_pm.h>
 #include <linux/serial_8250.h>
 #include <linux/tegra_uart.h>
 #include <linux/i2c.h>
@@ -163,11 +164,18 @@ static struct resource ceres_bluedroid_pm_resources[] = {
 	},
 };
 
+static struct bluedroid_pm_platform_data ceres_bluedroid_pm_data = {
+	.resume_min_frequency = 204000,
+};
+
 static struct platform_device ceres_bluedroid_pm_device = {
 	.name = "bluedroid_pm",
 	.id             = 0,
 	.num_resources  = ARRAY_SIZE(ceres_bluedroid_pm_resources),
 	.resource       = ceres_bluedroid_pm_resources,
+	.dev = {
+		.platform_data = &ceres_bluedroid_pm_data,
+	},
 };
 
 static noinline void __init ceres_setup_bluedroid_pm(void)
