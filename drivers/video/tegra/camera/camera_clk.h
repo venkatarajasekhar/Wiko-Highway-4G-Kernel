@@ -16,6 +16,7 @@
 
 #ifndef __DRIVERS_VIDEO_TEGRA_CAMERA_CAMERA_CLK_H
 #define __DRIVERS_VIDEO_TEGRA_CAMERA_CAMERA_CLK_H
+#include <mach/dc.h>
 #include "camera_priv_defs.h"
 
 int tegra_camera_enable_clk(struct tegra_camera *camera);
@@ -26,4 +27,9 @@ int tegra_camera_init_clk(struct tegra_camera *camera,
 unsigned int tegra_camera_get_max_bw(struct tegra_camera *camera);
 int tegra_camera_set_latency_allowance(struct tegra_camera *camera,
 	unsigned long vi_freq);
+
+#if defined(CONFIG_TEGRA_ISOMGR) && defined(CONFIG_TEGRA_DC)
+extern void tegra_fb_data_get(struct tegra_fb_data **fb_data);
+#endif
+
 #endif

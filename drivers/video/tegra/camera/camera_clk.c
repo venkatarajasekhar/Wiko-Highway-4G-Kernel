@@ -240,12 +240,36 @@ unsigned int tegra_camera_get_max_bw(struct tegra_camera *camera)
 
 	/*
 	 * Peak memory bandwidth is calculated as follows.
-	 * BW = max(VI clock) * (2BPP + 1.5BPP)
-	 * Preview port has 2BPP and video port has 1.5BPP.
+	 * BW = max(VI clock) * (2BPP + 2BPP)
+	 * Preview port has 2BPP and video port has 1.5BPP on average.
+	 * However, peak BPP in video port is 2BPP because chroma is present
+	 * every other line.
 	 * max_bw is KBps.
 	 */
-	max_bw = ((clk_round_rate(camera->clock[CAMERA_VI_CLK].clk, UINT_MAX) /
-			1000) * 7) / 2;
+#if defined(CONFIG_TEGRA_ISOMGR) && defined(CONFIG_TEGRA_DC)
+	{
+		struct tegra_fb_data *fb_data;
+		tegra_fb_data_get(&fb_data);
+
+		/*
+		 * Video BW
+		 */
+		max_bw = (clk_round_rate(camera->clock[CAMERA_VI_CLK].clk,
+				UINT_MAX) / 1000) * 2;
+		/*
+		 * Preview BW
+		 * Max fps is 30 and BPP is 2.
+		 * VI/ISP scales down sensor input to display size.
+		 * Effective BW in previw port can be derived from display size.
+		 */
+		if (fb_data)
+			max_bw += (fb_data->xres * fb_data->yres * 2 * 30) /
+				1000;
+	}
+#else
+	max_bw = (clk_round_rate(camera->clock[CAMERA_VI_CLK].clk, UINT_MAX) /
+			1000) * 4;
+#endif
 	dev_dbg(camera->dev, "%s: max_bw = %lu", __func__, max_bw);
 
 	return (unsigned int)max_bw;
