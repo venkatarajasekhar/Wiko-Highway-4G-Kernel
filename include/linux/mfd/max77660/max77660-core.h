@@ -634,6 +634,7 @@
 #define MAX77660_CHARGER_CHGCCMAX		0x6D
 #define MAX77660_CHARGER_MBATREGMAX		0x6E
 
+#define MAX77660_MBATREGMAX_4300MV		4300
 #define MAX77660_CHGCCMAX_CRNT			0x1F
 #define MAX77660_BATDET_DTLS			0x03
 #define MAX77660_BATDET_DTLS_NO_BAT		0x03
@@ -1014,6 +1015,7 @@ struct max77660_bcharger_platform_data {
 	u8	regtemp;	/* Die temperature thermal regulation */
 	u8	int_mask;	/* CHGINT_MASK */
 	u8	wdt_timeout;	/* WDT timeout */
+	int	max_term_vol_mV;	/* Maximum charge Termination Voltage */
 	int num_consumer_supplies;
 	struct regulator_consumer_supply *consumer_supplies;
 	int max_charge_current_mA;

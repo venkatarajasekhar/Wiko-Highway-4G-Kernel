@@ -73,6 +73,11 @@ static int max77660_dccrnt_current_lookup[] = {
 	16500, 16875, 17250, 17625, 18000, 18375, 18750, NO_LIMIT,
 };
 
+static int max77660_maxcharge_voltage_lookup[] = {
+	3550, 3700, 3750, 3800, 3850, 3900, 3950, 4000,
+	4050, 4100, 4150, 4200, 4250, 4300, 4350, 4400,
+};
+
 static int max77660_chrg_wdt[] = {16, 32, 64, 128};
 
 struct max77660_charger {
@@ -82,6 +87,7 @@ struct max77660_charger {
 	int status;
 	int in_current_lim;
 	int wdt_timeout;
+	int max_term_vol_mV;
 };
 
 struct max77660_chg_extcon {
@@ -140,6 +146,18 @@ static inline int fchg_current(int x)
 		return 0;
 	else
 		return ret;
+}
+
+static inline int convert_to_reg(int x)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(max77660_maxcharge_voltage_lookup); i++) {
+		if (x < max77660_maxcharge_voltage_lookup[i])
+			break;
+	}
+
+	return i > 0 ? i - 1 : -EINVAL;
 }
 
 static int max77660_battery_detect(struct max77660_chg_extcon *chip)
@@ -228,11 +246,11 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 				MAX77660_MBATREG_4200MV);
 		if (ret < 0)
 			return ret;
-		/* MBATREGMAX to 4.2V */
+		/* set MBATREGMAX voltage */
 		ret = max77660_reg_write(chip->parent,
 				MAX77660_CHG_SLAVE,
 				MAX77660_CHARGER_MBATREGMAX,
-				MAX77660_MBATREG_4200MV);
+				charger->max_term_vol_mV);
 		if (ret < 0)
 			return ret;
 
@@ -997,6 +1015,12 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 			"Battery not connected, charging not supported\n");
 		goto skip_bcharger_init;
 	}
+
+	if(bcharger_pdata->max_term_vol_mV)
+		charger->max_term_vol_mV = convert_to_reg(bcharger_pdata->max_term_vol_mV);
+	else
+		charger->max_term_vol_mV = convert_to_reg(MAX77660_MBATREGMAX_4300MV);
+
 	chg_extcon->battery_present = true;
 	charger->wdt_timeout = bcharger_pdata->wdt_timeout;
 
