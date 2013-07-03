@@ -3396,12 +3396,14 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 static struct tegra14_emc_pdata ceres_emc_pdata = {
 	.description = "ceres_e1680_elpida_edf8132a1mc_tables",
 	.tables = ceres_e1680_elpida_edf8132a1mc_table,
+	.tables_derated = ceres_e1680_elpida_edf8132a1mc_table,
 	.num_tables = ARRAY_SIZE(ceres_e1680_elpida_edf8132a1mc_table),
 };
 
 static struct tegra14_emc_pdata atlantis_emc_pdata = {
 	.description = "atlantis_e1670_elpida_edf8132a1mc_tables",
 	.tables = atlantis_e1670_elpida_edf8132a1mc_table,
+	.tables_derated = atlantis_e1670_elpida_edf8132a1mc_table,
 	.num_tables = ARRAY_SIZE(atlantis_e1670_elpida_edf8132a1mc_table),
 };
 
