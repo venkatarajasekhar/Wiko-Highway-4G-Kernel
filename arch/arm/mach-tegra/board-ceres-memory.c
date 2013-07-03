@@ -30,7 +30,7 @@
 static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		12750,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -190,7 +190,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		51000,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -350,7 +350,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		102000,     /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -510,7 +510,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		204000,     /* SDRAM frequency */
 		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -670,7 +670,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		326400,     /* SDRAM frequency */
 		850,        /* min voltage */
 		"pllm_out0", /* clock source id */
@@ -740,9 +740,9 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x00054000, /* EMC_DLL_XFORM_ADDR0 */
+			0x00000010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x00054000, /* EMC_DLL_XFORM_ADDR2 */
+			0x00000010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -751,10 +751,10 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLI_TRIM_TXDQS5 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS6 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS7 */
-			0x00060000, /* EMC_DLL_XFORM_DQ0 */
-			0x00060000, /* EMC_DLL_XFORM_DQ1 */
-			0x00060000, /* EMC_DLL_XFORM_DQ2 */
-			0x00060000, /* EMC_DLL_XFORM_DQ3 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ0 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ1 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ2 */
+			0x0000000e, /* EMC_DLL_XFORM_DQ3 */
 			0x00010020, /* EMC_XM2CMDPADCTRL */
 			0x00000000, /* EMC_XM2CMDPADCTRL4 */
 			0x0027023d, /* EMC_XM2DQSPADCTRL2 */
@@ -784,7 +784,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 			0x00000006, /* EMC_EINPUT_DURATION */
 			0x00000011, /* EMC_QSAFE */
 			0x00000012, /* EMC_RDV */
-			0x00000004, /* EMC_FBIO_CFG6 */
+			0x00000006, /* EMC_FBIO_CFG6 */
 			0x70050a0a, /* EMC_PIPE_MACRO_CTL */
 			0x0000000e, /* EMC_QPOP */
 			0x0e000004, /* MC_EMEM_ARB_CFG */
@@ -822,7 +822,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 		0x00000022, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
-		0x00580048, /* EMC_CFG_DIG_DLL */
+		0x10270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
 		0x00020004, /* Mode Register 2 */
@@ -830,7 +830,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		408000,     /* SDRAM frequency */
 		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -900,9 +900,9 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x00040000, /* EMC_DLL_XFORM_ADDR0 */
+			0x00000010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x00040000, /* EMC_DLL_XFORM_ADDR2 */
+			0x00000010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -911,10 +911,10 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 			0x00000000, /* EMC_DLI_TRIM_TXDQS5 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS6 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS7 */
-			0x00030000, /* EMC_DLL_XFORM_DQ0 */
-			0x00030000, /* EMC_DLL_XFORM_DQ1 */
-			0x00030000, /* EMC_DLL_XFORM_DQ2 */
-			0x00030000, /* EMC_DLL_XFORM_DQ3 */
+			0x0000000c, /* EMC_DLL_XFORM_DQ0 */
+			0x0000000c, /* EMC_DLL_XFORM_DQ1 */
+			0x0000000c, /* EMC_DLL_XFORM_DQ2 */
+			0x0000000c, /* EMC_DLL_XFORM_DQ3 */
 			0x00010020, /* EMC_XM2CMDPADCTRL */
 			0x00000000, /* EMC_XM2CMDPADCTRL4 */
 			0x0027023d, /* EMC_XM2DQSPADCTRL2 */
@@ -982,7 +982,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 		0x00000029, /* EMC_ZCAL_WAIT_CNT after clock change */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
-		0x00580048, /* EMC_CFG_DIG_DLL */
+		0x101c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
 		0x00020006, /* Mode Register 2 */
@@ -990,7 +990,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		518400,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -1150,7 +1150,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		652800,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -1310,7 +1310,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		768000,     /* SDRAM frequency */
 		1050,       /* min voltage */
 		"pllc_ud",  /* clock source id */
@@ -1470,7 +1470,7 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 	},
 	{
 		0x52,       /* Rev 5.2.9 */
-		"D10",      /* DVFS table version */
+		"D11",      /* DVFS table version */
 		921600,     /* SDRAM frequency */
 		1100,       /* min voltage */
 		"pllm_ud",  /* clock source id */
