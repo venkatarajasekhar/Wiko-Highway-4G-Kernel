@@ -79,6 +79,15 @@ static struct regulator_consumer_supply max77660_buck2_supply[] = {
 	REGULATOR_SUPPLY("vdd_cpu_dbg", NULL),
 };
 
+static struct regulator_consumer_supply max77660_buck3_a02_supply[] = {
+	REGULATOR_SUPPLY("vdd2_lpddr3", NULL),
+	REGULATOR_SUPPLY("vddca_lpddr3", NULL),
+	REGULATOR_SUPPLY("vrefca_lpddr3", NULL),
+	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.1"),
+	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.2"),
+	REGULATOR_SUPPLY("vddio_hsic_modem2", NULL),
+};
+
 static struct regulator_consumer_supply max77660_buck3_supply[] = {
 	REGULATOR_SUPPLY("vdd2_lpddr3", NULL),
 	REGULATOR_SUPPLY("vddca_lpddr3", NULL),
@@ -86,6 +95,9 @@ static struct regulator_consumer_supply max77660_buck3_supply[] = {
 	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.1"),
 	REGULATOR_SUPPLY("vddio_hsic", "tegra-ehci.2"),
 	REGULATOR_SUPPLY("vddio_hsic_modem2", NULL),
+	REGULATOR_SUPPLY("vddio_ddr", NULL),
+	REGULATOR_SUPPLY("vddq_lpddr3", NULL),
+	REGULATOR_SUPPLY("vrefdq_lpddr3", NULL),
 };
 
 static struct regulator_consumer_supply max77660_buck4_supply[] = {
@@ -266,10 +278,19 @@ static struct regulator_consumer_supply max77660_sw4_supply[] = {
 	REGULATOR_SUPPLY("vdd_rtc_alt1", NULL),
 };
 
-static struct regulator_consumer_supply max77660_sw5_supply[] = {
+static struct regulator_consumer_supply max77660_sw5_a02_supply[] = {
 	REGULATOR_SUPPLY("vddio_ddr", NULL),
 	REGULATOR_SUPPLY("vddq_lpddr3", NULL),
 	REGULATOR_SUPPLY("vrefdq_lpddr3", NULL),
+	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.0"),
+	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.1"),
+	REGULATOR_SUPPLY("avdd_dsi_csi", "vi"),
+	REGULATOR_SUPPLY("vdd_1v2_lcd", NULL),
+	REGULATOR_SUPPLY("vdd_1v2_cdc", NULL),
+	REGULATOR_SUPPLY("vdd_prox", "0-0044"),
+};
+
+static struct regulator_consumer_supply max77660_sw5_supply[] = {
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.0"),
 	REGULATOR_SUPPLY("avdd_dsi_csi", "tegradc.1"),
 	REGULATOR_SUPPLY("avdd_dsi_csi", "vi"),
@@ -1003,6 +1024,20 @@ int __init ceres_regulator_init(void)
 		!tegra_fuse_readl(FUSE_SPARE_BIT_12_0)) {
 		max77660_pdata.dvfs_pd.base_voltage_uV = 900000;
 		max77660_pdata.dvfs_pd.step_voltage_uV = 12500;
+	}
+
+	/* Ceres FAB <= A02 LPDDR3 regulators on SW5 so keep it always_on */
+	if (tegra_revision <= TEGRA_REVISION_A02) {
+		max77660_regulator_pdata_sw5.fps_src = FPS_SRC_NONE;
+		max77660_regulator_idata_sw5.constraints.always_on = 1;
+		max77660_regulator_idata_sw5.consumer_supplies =
+						max77660_sw5_a02_supply;
+		max77660_regulator_idata_sw5.num_consumer_supplies =
+					ARRAY_SIZE(max77660_sw5_a02_supply);
+		max77660_regulator_idata_buck3.consumer_supplies =
+						max77660_buck3_a02_supply;
+		max77660_regulator_idata_buck3.num_consumer_supplies =
+					ARRAY_SIZE(max77660_buck3_a02_supply);
 	}
 
 	i2c_register_board_info(4, max77660_regulators,
