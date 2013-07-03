@@ -403,6 +403,12 @@ static struct tegra_dc_sd_settings ceres_sd_settings = {
 	.use_vpulse2 = true,
 };
 
+void tegra_fb_data_get(struct tegra_fb_data **fb_data)
+{
+	*fb_data = &ceres_disp1_fb_data;
+}
+EXPORT_SYMBOL(tegra_fb_data_get);
+
 static void ceres_panel_select(void)
 {
 	struct tegra_panel *panel;
