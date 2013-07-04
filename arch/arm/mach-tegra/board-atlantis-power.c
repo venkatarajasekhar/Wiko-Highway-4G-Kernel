@@ -933,6 +933,7 @@ int __init atlantis_regulator_init(void)
 		pmic_platform.reg_init[i] = atlantis_reg_init[i];
 	}
 
+	reg_init_data_ldo5.tracking_regulator = PALMAS_REG_SMPS6;
 	/* Enable full constraints to disable unused rails */
 	regulator_has_full_constraints();
 	if (((board_info.fab != BOARD_FAB_A00) ||
