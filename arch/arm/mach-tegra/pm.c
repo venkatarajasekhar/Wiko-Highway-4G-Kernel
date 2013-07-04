@@ -1656,8 +1656,9 @@ out:
 		memcpy(tegra_lp1_register_i2c_base_addr(), &pdata->i2c_base_addr, 4);
 
 		if (pdata->lp1_lookup_reg)
-			lp1_core_hv =
-				 pdata->lp1_lookup_reg(tegra_core_speedo_mv());
+			lp1_core_hv = pdata->lp1_lookup_reg(
+					tegra_dvfs_rail_get_nominal_millivolts(
+							tegra_core_rail));
 		else
 			lp1_core_hv = pdata->lp1_core_volt_high;
 
