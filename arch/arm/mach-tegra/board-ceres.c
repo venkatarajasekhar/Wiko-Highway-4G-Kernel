@@ -899,6 +899,9 @@ static void ceres_i2c_init(void)
 	platform_device_register(&tegra14_i2c_device2);
 	platform_device_register(&tegra14_i2c_device1);
 
+	if (board_info.board_id == BOARD_E1690)
+		nfc_pdata.en_gpio = TEGRA_GPIO_PM5;
+
 	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(CERES_NFC_IRQ);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
 }
