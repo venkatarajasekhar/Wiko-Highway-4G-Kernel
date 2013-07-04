@@ -519,6 +519,7 @@ static struct max77660_bcharger_platform_data max77660_bcharger_pdata = {
 	.consumer_supplies = max77660_batt_supply,
 	.num_consumer_supplies = ARRAY_SIZE(max77660_batt_supply),
 	.wdt_timeout    = 32,
+	.max_term_vol_mV = 4300,
 	.temperature_poll_period_secs = 5,
 };
 
