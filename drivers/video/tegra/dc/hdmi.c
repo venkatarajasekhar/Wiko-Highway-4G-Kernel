@@ -373,7 +373,9 @@ static inline void tegra_hdmi_clrsetbits(struct tegra_dc_hdmi_data *hdmi,
 static inline void tegra_hdmi_hotplug_signal(struct tegra_dc_hdmi_data *hdmi)
 {
 	queue_delayed_work(system_nrt_wq, &hdmi->work,
-		msecs_to_jiffies(100));
+		msecs_to_jiffies(30));
+
+
 }
 
 /* disables hotplug IRQ - this must be balanced */
