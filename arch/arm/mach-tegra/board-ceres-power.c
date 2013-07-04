@@ -296,7 +296,7 @@ static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
 			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
 					   REGULATOR_CHANGE_STATUS |	\
 					   REGULATOR_CHANGE_VOLTAGE),	\
-			.always_on = _always_on,			\
+			.always_on = _always_on || (_flags & DISABLE_DVFS), \
 			.boot_on = _boot_on,				\
 			.apply_uV = _apply_uV,				\
 		},							\
@@ -317,16 +317,16 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 
 
 MAX77660_PDATA_INIT(BUCK1, buck1,  650, 1400, NULL,
-		1, 1, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN1);
+		1, 1, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN1);
 
 MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL,
-		1, 1, 0, FPS_SRC_DEF, 0, 0, ENABLE_EN2);
+		1, 1, 0, FPS_SRC_DEF, 0, 0, MAX77660_EXT_ENABLE_EN2);
 
 MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(BUCK4, buck4,  1100, 1100, NULL,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3);
+		0, 0, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN3);
 
 MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
@@ -338,7 +338,7 @@ MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2800, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO1, ldo1, 800, 800, max77660_rails(buck3),
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO2, ldo2, 2800, 2800, NULL,
 		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
@@ -362,7 +362,7 @@ MAX77660_PDATA_INIT(LDO7, ldo7, 1050, 1050, max77660_rails(buck3),
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO8, ldo8, 900, 1100, max77660_rails(buck3),
-		0, 0, 0, FPS_SRC_DEF, -1, -1, ENABLE_EN3);
+		0, 0, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN3);
 
 MAX77660_PDATA_INIT(LDO9, ldo9, 2800, 2800, NULL,
 		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
@@ -927,6 +927,7 @@ int __init ceres_regulator_init(void)
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 
+	regulator_has_full_constraints();
 	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
 		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
 
@@ -948,7 +949,7 @@ int __init ceres_regulator_init(void)
 			max77660_regulator_pdata_ldo17.fps_src = FPS_SRC_NONE;
 			max77660_regulator_pdata_ldo18.fps_src = FPS_SRC_NONE;
 		} else {
-			max77660_regulator_pdata_buck2.flags = ENABLE_EN1;
+			max77660_regulator_pdata_buck2.flags = MAX77660_EXT_ENABLE_EN1;
 			max77660_regulator_pdata_buck1.flags = 0;
 			max77660_regulator_idata_buck1.consumer_supplies = max77660_unused_supply;
 			max77660_regulator_idata_buck1.num_consumer_supplies =
