@@ -996,13 +996,30 @@ static int tpa_hp_event(struct snd_soc_dapm_widget *w,
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (machine->avdd_aud)
 			regulator_enable(machine->avdd_aud);
-		val = 0x00;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
-			TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
+
+		if (machine->tpa2054d4a_client) {
+			val = 0x00;
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+				TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
+
+			tpa2054d4a_i2c_read_device(machine->tpa2054d4a_client,
+				TPA2054D4A_POWER_MGMT_REG, 1, &val);
+			val |=  (TPA2054D4A_HPR_EN | TPA2054D4A_HPL_EN);
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+				TPA2054D4A_POWER_MGMT_REG, 1, &val);
+		}
 	} else {
-		val = 0x1f;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
+		if (machine->tpa2054d4a_client) {
+			val = 0x1f;
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
 			TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
+
+			tpa2054d4a_i2c_read_device(machine->tpa2054d4a_client,
+				TPA2054D4A_POWER_MGMT_REG, 1, &val);
+			val &= !(TPA2054D4A_HPR_EN | TPA2054D4A_HPL_EN);
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+				TPA2054D4A_POWER_MGMT_REG, 1, &val);
+			}
 		if (machine->avdd_aud)
 			regulator_disable(machine->avdd_aud);
 	}
@@ -1029,19 +1046,30 @@ static int tpa_spk_event(struct snd_soc_dapm_widget *w,
 	if (SND_SOC_DAPM_EVENT_ON(event)) {
 		if (machine->avdd_aud)
 			regulator_enable(machine->avdd_aud);
-		val = 0x1f;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
-			TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
-		val = TPA2054D4A_HPR_EN | TPA2054D4A_HPL_EN | TPA2054D4A_PA_EN;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
-			TPA2054D4A_POWER_MGMT_REG, 1, &val);
+
+		if (machine->tpa2054d4a_client) {
+			val = 0x1f;
+			tpa2054d4a_i2c_write_device(tpa2054d4a_client,
+				TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
+
+			tpa2054d4a_i2c_read_device(machine->tpa2054d4a_client,
+					TPA2054D4A_POWER_MGMT_REG, 1, &val);
+			val |= TPA2054D4A_PA_EN;
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+					TPA2054D4A_POWER_MGMT_REG, 1, &val);
+		}
 	} else {
-		val = 0x00;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
-			TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
-		val = TPA2054D4A_HPR_EN | TPA2054D4A_HPL_EN;
-		tpa2054d4a_i2c_write_device(tpa2054d4a_client,
-			TPA2054D4A_POWER_MGMT_REG, 1, &val);
+		if (machine->tpa2054d4a_client) {
+			val = 0x00;
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+				TPA2054D4A_HP_OUTPUT_CNTRL_REG, 1, &val);
+
+			tpa2054d4a_i2c_read_device(machine->tpa2054d4a_client,
+					TPA2054D4A_POWER_MGMT_REG, 1, &val);
+			val &= ~TPA2054D4A_PA_EN;
+			tpa2054d4a_i2c_write_device(machine->tpa2054d4a_client,
+					TPA2054D4A_POWER_MGMT_REG, 1, &val);
+		}
 		if (machine->avdd_aud)
 			regulator_disable(machine->avdd_aud);
 	}
