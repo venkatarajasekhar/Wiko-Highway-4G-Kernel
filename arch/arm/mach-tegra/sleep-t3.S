@@ -1059,9 +1059,10 @@ tegra3_cpu_clk32k:
 	ldr r1, [r4, #PMC_POR_DPD_CTRL]
 	orr r1, r1, #0x47
 	str r1, [r4, #PMC_POR_DPD_CTRL]
-#endif
-
+	/* fall thru lp1 clocks prepare to set low voltage for LP0BB */
+#else
 	mov	pc, lr
+#endif
 
 lp1_clocks_prepare:
 	/* start by jumping to clkm to safely disable PLLs, then jump
@@ -1082,6 +1083,19 @@ lp1_clocks_prepare:
 	ldr	r0, [r5, #CLK_RESET_CLK_SOURCE_MSELECT]
 	orr	r0, r0, #MSELECT_CLKM
 	str	r0, [r5, #CLK_RESET_CLK_SOURCE_MSELECT]
+
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	/* if lp0 entry exit here */
+	ldr	r0, [r4, #PMC_CTRL]
+	tst	r0, #PMC_CTRL_SIDE_EFFECT_LP0
+	beq	lp1_clocks_disable
+
+	/* Lower the Core voltage through an i2c communication */
+	set_voltage r0, r1, r3, r5, lp0_register_core_lowvolt
+	mov	pc, lr
+
+lp1_clocks_disable:
+#endif
 
 	/* Lower the Core voltage through an i2c communication */
 	set_voltage r0, r1, r3, r5, lp1_register_core_lowvolt
