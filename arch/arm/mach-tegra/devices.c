@@ -1959,6 +1959,7 @@ struct swgid_fixup tegra_swgid_fixup[] = {
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 	{ .name = dummy_name,	.swgids = SWGID(PPCS) },
 #endif
+	{ .name = "tegra-xhci",	.swgids = SWGID(XUSB_HOST), },
 	{},
 };
 
