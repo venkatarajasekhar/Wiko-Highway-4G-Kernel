@@ -310,6 +310,7 @@ struct tegra_freq_gov_data {
 	unsigned int		freqs[TUNING_FREQ_COUNT];
 	unsigned int		freq_switch_count;
 	bool			monitor_idle_load;
+	void			*data;
 };
 
 struct sdhci_tegra {
@@ -603,8 +604,7 @@ static unsigned long calculate_mmc_target_freq(
 	unsigned long desired_freq = gov_data->curr_freq;
 	unsigned int type = MMC_TYPE_MMC;
 	unsigned long cur_state = 0;
-	struct sdhci_tegra *tegra_host =
-		container_of(&gov_data, struct sdhci_tegra, gov_data);
+	struct sdhci_tegra *tegra_host = gov_data->data;
 
 	sdhci_tegra_get_cur_state(tegra_host->cdev, &cur_state);
 
@@ -643,8 +643,7 @@ static unsigned long calculate_sdio_target_freq(
 	unsigned long desired_freq = gov_data->curr_freq;
 	unsigned int type = MMC_TYPE_SDIO;
 	unsigned long cur_state = 0;
-	struct sdhci_tegra *tegra_host =
-		container_of(&gov_data, struct sdhci_tegra, gov_data);
+	struct sdhci_tegra *tegra_host = gov_data->data;
 
 	sdhci_tegra_get_cur_state(tegra_host->cdev, &cur_state);
 
@@ -777,6 +776,7 @@ static int sdhci_tegra_freq_gov_init(struct sdhci_host *sdhci)
 				"Failed to allocate memory for dfs data\n");
 			return -ENOMEM;
 		}
+		tegra_host->gov_data->data = tegra_host;
 	}
 
 	/* Find the supported frequencies */
