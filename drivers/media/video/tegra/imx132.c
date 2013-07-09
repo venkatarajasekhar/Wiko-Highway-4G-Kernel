@@ -1034,8 +1034,6 @@ imx132_release(struct inode *inode, struct file *file)
 
 	imx132_mclk_disable(info);
 
-	imx132_mclk_disable(info);
-
 	file->private_data = NULL;
 
 	/* warn if device is already released */
