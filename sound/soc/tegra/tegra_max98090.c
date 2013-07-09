@@ -965,6 +965,14 @@ static int tegra_max98090_event_hp(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static void tegra_speaker_edp_set_volume(struct snd_soc_codec *codec,
+					 int l_vol,
+					 int r_vol)
+{
+	snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, r_vol);
+	snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, l_vol);
+}
+
 static void tegra_speaker_throttle(unsigned int new_state,  void *priv_data)
 {
 	struct tegra_max98090 *machine = priv_data;
@@ -981,18 +989,15 @@ static void tegra_speaker_throttle(unsigned int new_state,  void *priv_data)
 	switch (new_state) {
 	case TEGRA_SPK_EDP_NEG_1:
 		/* set codec volume to +12.5 dB, E-1 state */
-		snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, 0x3c);
-		snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, 0x3c);
+		tegra_speaker_edp_set_volume(codec, 0x3c, 0x3c);
 		break;
 	case TEGRA_SPK_EDP_ZERO:
 		/* set codec volume to 0 dB, E0 state */
-		snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, 0x2c);
-		snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, 0x2c);
+		tegra_speaker_edp_set_volume(codec, 0x2c, 0x2c);
 		break;
 	case TEGRA_SPK_EDP_1:
 		/* turn off codec volume, -23 dB, E1 state */
-		snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, 0x1f);
-		snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, 0x1f);
+		tegra_speaker_edp_set_volume(codec, 0x1f, 0x1f);
 		break;
 	default:
 		pr_err("%s: New E-state %d don't support!\n",
@@ -1009,8 +1014,11 @@ static int tegra_max98090_event_int_spk(struct snd_soc_dapm_widget *w,
 	struct snd_soc_card *card = dapm->card;
 	struct snd_soc_codec *codec = card->rtd[DAI_LINK_HIFI].codec;
 	struct tegra_max98090 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int approved;
+	unsigned int approved = TEGRA_SPK_EDP_NUM_STATES;
 	int ret;
+
+	if (!machine)
+		return 0;
 
 	if (machine->spk_edp_client == NULL)
 		goto err_null_spk_edp_client;
@@ -1022,21 +1030,14 @@ static int tegra_max98090_event_int_spk(struct snd_soc_dapm_widget *w,
 		if (ret || approved != TEGRA_SPK_EDP_NEG_1) {
 			if (approved == TEGRA_SPK_EDP_ZERO) {
 				/* set codec volume to 0 dB, E0 state */
-				snd_soc_write(codec,
-					M98090_REG_32_LVL_SPK_RIGHT, 0x2c);
-				snd_soc_write(codec,
-					M98090_REG_31_LVL_SPK_LEFT, 0x2c);
+				tegra_speaker_edp_set_volume(codec, 0x2c, 0x2c);
 			} else if (approved == TEGRA_SPK_EDP_1) {
 				/* turn off codec volume,-23 dB, E1 state */
-				snd_soc_write(codec,
-					M98090_REG_32_LVL_SPK_RIGHT, 0x1f);
-				snd_soc_write(codec,
-					M98090_REG_31_LVL_SPK_LEFT, 0x1f);
+				tegra_speaker_edp_set_volume(codec, 0x1f, 0x1f);
 			}
 		} else {
 			/* set codec voulme to +12.5 dB, E-1 state */
-			snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, 0x3c);
-			snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, 0x3c);
+			tegra_speaker_edp_set_volume(codec, 0x3c, 0x3c);
 		}
 	} else {
 		ret = edp_update_client_request(
@@ -1497,8 +1498,7 @@ static __devinit int tegra_max98090_driver_probe(struct platform_device *pdev)
 		}
 		codec = card->rtd[DAI_LINK_HIFI].codec;
 		/* set codec volume to 0 dB , E0 state*/
-		snd_soc_write(codec, M98090_REG_32_LVL_SPK_RIGHT, 0x2c);
-		snd_soc_write(codec, M98090_REG_31_LVL_SPK_LEFT, 0x2c);
+		tegra_speaker_edp_set_volume(codec, 0x2c, 0x2c);
 		/* request E1 */
 		ret = edp_update_client_request(machine->spk_edp_client,
 				TEGRA_SPK_EDP_1, NULL);
