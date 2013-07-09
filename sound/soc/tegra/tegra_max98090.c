@@ -519,8 +519,7 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 
 		tegra30_dam_allocate_channel(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_CHIN0_SRC);
-		tegra30_dam_allocate_channel(i2s->call_record_dam_ifc,
-			TEGRA30_DAM_CHIN1);
+
 		tegra30_dam_enable_clock(i2s->call_record_dam_ifc);
 
 		/* setup the connections for voice call record */
@@ -534,14 +533,10 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 			machine->ahub_bbc1_info.channels,
 			machine->ahub_bbc1_info.sample_size);
 
-		tegra30_ahub_set_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0 +
-			(i2s->call_record_dam_ifc*2),
-			TEGRA30_AHUB_TXCIF_BBC1_TX0);
-
 		tegra30_ahub_set_rx_cif_source(
-			TEGRA30_AHUB_RXCIF_DAM0_RX1 +
+			TEGRA30_AHUB_RXCIF_DAM0_RX0 +
 			(i2s->call_record_dam_ifc*2),
-			TEGRA30_AHUB_TXCIF_I2S0_TX0 + codec_info->i2s_id);
+			TEGRA30_AHUB_TXCIF_BBC1_TX1);
 
 		tegra30_ahub_set_rx_cif_source(i2s->rxcif,
 			TEGRA30_AHUB_TXCIF_DAM0_TX0 +
@@ -564,9 +559,6 @@ static int tegra_max98090_startup(struct snd_pcm_substream *substream)
 				machine->ahub_bbc1_info.rate, codec_info->rate);
 		}
 
-		tegra30_dam_enable(i2s->call_record_dam_ifc,
-				TEGRA30_DAM_ENABLE,
-				TEGRA30_DAM_CHIN1);
 		tegra30_dam_enable(i2s->call_record_dam_ifc,
 				TEGRA30_DAM_ENABLE,
 				TEGRA30_DAM_CHIN0_SRC);
@@ -614,21 +606,15 @@ static void tegra_max98090_shutdown(struct snd_pcm_substream *substream)
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		/* disable the dam*/
 		tegra30_dam_enable(i2s->call_record_dam_ifc,
-			TEGRA30_DAM_DISABLE, TEGRA30_DAM_CHIN1);
-		tegra30_dam_enable(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_DISABLE, TEGRA30_DAM_CHIN0_SRC);
 
 		/* disconnect the ahub connections*/
 		tegra30_ahub_unset_rx_cif_source(i2s->rxcif);
 		tegra30_ahub_unset_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0 +
 			(i2s->call_record_dam_ifc*2));
-		tegra30_ahub_unset_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX1 +
-			(i2s->call_record_dam_ifc*2));
 
 		/* free the dam channels and dam controller */
 		tegra30_dam_disable_clock(i2s->call_record_dam_ifc);
-		tegra30_dam_free_channel(i2s->call_record_dam_ifc,
-			TEGRA30_DAM_CHIN1);
 		tegra30_dam_free_channel(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_CHIN0_SRC);
 		tegra30_dam_free_controller(i2s->call_record_dam_ifc);
