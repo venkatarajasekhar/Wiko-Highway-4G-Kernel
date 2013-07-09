@@ -833,7 +833,7 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 				.addr = MAX77660_REG_##_id##_CNFG, \
 			},					\
 			[FPS_REG] = {				\
-				.addr = MAX77660_REG_FPS_NONE,	\
+				.addr = MAX77660_REG_FPS_##_id,	\
 			},					\
 		},						\
 		.desc = {					\
