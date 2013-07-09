@@ -732,6 +732,8 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	iounmap(hcd->regs);
 	usb_put_hcd(hcd);
 
+	tegra_pd_remove_device(&pdev->dev);
+
 	return 0;
 }
 
