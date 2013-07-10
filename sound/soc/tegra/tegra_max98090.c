@@ -89,6 +89,7 @@ struct tegra_max98090 {
 	int gpio_requested;
 	bool init_done;
 	int is_call_mode;
+	bool is_capture_dapm_enable;
 	int is_device_bt;
 	struct codec_config codec_info[NUM_I2S_DEVICES];
 	struct ahub_bbc1_config ahub_bbc1_info;
@@ -631,19 +632,29 @@ static void tegra_max98090_shutdown(struct snd_pcm_substream *substream)
 		tegra30_dam_free_channel(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_CHIN0_SRC);
 		tegra30_dam_free_controller(i2s->call_record_dam_ifc);
+
+		if (!machine->is_device_bt) {
+			/* force enable the capture dapm path,
+			*  if voice call stream still open */
+			if (i2s->capture_ref_count) {
+				machine->is_capture_dapm_enable = true;
+				snd_soc_dapm_force_enable_pin(dapm,
+						"HiFi Capture");
+				snd_soc_dapm_sync(dapm);
+			}
+		}
 #endif
 	 }
 
 	if (!machine->is_device_bt) {
-		/* force enable the capture dapm path,
-		 * if capture stream still open */
-		if (i2s->capture_ref_count)
-			snd_soc_dapm_force_enable_pin(dapm, "HiFi Capture");
-		else
+		/* disable capture dapm path*/
+		if ((!i2s->capture_ref_count) &&
+				machine->is_capture_dapm_enable) {
+			machine->is_capture_dapm_enable = false;
 			snd_soc_dapm_disable_pin(dapm, "HiFi Capture");
-		snd_soc_dapm_sync(dapm);
+			snd_soc_dapm_sync(dapm);
+		}
 	}
-
 	return;
 }
 

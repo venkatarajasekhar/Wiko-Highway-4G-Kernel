@@ -115,6 +115,7 @@ struct tegra_aic325x {
 	int gpio_requested;
 	bool init_done;
 	int is_call_mode;
+	bool is_capture_dapm_enable;
 	int is_device_bt;
 
 	struct i2c_client *tpa2054d4a_client;
@@ -730,19 +731,28 @@ static void tegra_aic325x_shutdown(struct snd_pcm_substream *substream)
 		tegra30_dam_free_channel(i2s->call_record_dam_ifc,
 			TEGRA30_DAM_CHIN0_SRC);
 		tegra30_dam_free_controller(i2s->call_record_dam_ifc);
+
+		if (!machine->is_device_bt) {
+			/* force enable the capture dapm path,
+			*  if voice call stream still open */
+			if (i2s->capture_ref_count) {
+				machine->is_capture_dapm_enable = true;
+				snd_soc_dapm_force_enable_pin(dapm, "Capture");
+				snd_soc_dapm_sync(dapm);
+			}
+		}
 #endif
 	 }
 
 	if (!machine->is_device_bt) {
-		/* force enable the capture dapm path,
-		 * if capture stream still open */
-		if (i2s->capture_ref_count)
-			snd_soc_dapm_force_enable_pin(dapm, "Capture");
-		else
+		/* disable capture dapm path*/
+		if ((!i2s->capture_ref_count) &&
+				machine->is_capture_dapm_enable) {
+			machine->is_capture_dapm_enable = false;
 			snd_soc_dapm_disable_pin(dapm, "Capture");
-		snd_soc_dapm_sync(dapm);
+			snd_soc_dapm_sync(dapm);
+		}
 	}
-
 	return;
 }
 
