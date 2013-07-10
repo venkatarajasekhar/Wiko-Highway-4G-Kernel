@@ -3,7 +3,7 @@
  *
  * System watchdog timer for MAXIM MAX77660 PMIC.
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -43,7 +43,7 @@ static bool nowayout = WATCHDOG_NOWAYOUT;
 
 /* Kthread scheduling parameters */
 struct sched_param max77660_wdt_kthread_param = {
-	.sched_priority = MAX_RT_PRIO - 1,
+	.sched_priority = 0,
 };
 
 struct max77660_sys_wdt {
@@ -256,7 +256,7 @@ static int __devinit max77660_sys_wdt_probe(struct platform_device *pdev)
 
 		init_kthread_work(&wdt->wdt_work, max77660_work_thread);
 		sched_setscheduler(wdt->wdt_kworker_task,
-				SCHED_FIFO, &max77660_wdt_kthread_param);
+				SCHED_NORMAL, &max77660_wdt_kthread_param);
 		wdt->sw_wdt_reset = true;
 		wdt->system_watchdog_reset_timeout =
 				pdata->system_watchdog_reset_timeout;
