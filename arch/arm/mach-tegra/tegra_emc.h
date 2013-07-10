@@ -32,7 +32,8 @@ enum {
 };
 
 enum emc_user_id {
-	EMC_USER_DC = 0,
+	EMC_USER_DC1 = 0,
+	EMC_USER_DC2,
 	EMC_USER_VI,
 	EMC_USER_MSENC,
 	EMC_USER_2D,
