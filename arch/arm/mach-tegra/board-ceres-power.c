@@ -589,7 +589,7 @@ static struct platform_device gadc_thermal_battery = {
 struct max77660_adc_platform_data max77660_adc_pdata = {
 	.adc_current_uA = 10,
 	.adc_avg_sample = 2,
-	.adc_ref_enabled = 1,
+	.adc_ref_enabled = 0,
 	.channel_mapping = max77660_iio_map,
 };
 
