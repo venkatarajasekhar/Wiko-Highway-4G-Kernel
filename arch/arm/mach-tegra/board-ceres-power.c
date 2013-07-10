@@ -1192,8 +1192,7 @@ int __init ceres_suspend_init(void)
 	struct board_info board_info;
 
 	tegra_get_board_info(&board_info);
-	if ((board_info.board_id == BOARD_E1690) ||
-	    (board_info.board_id == BOARD_E1680) ||
+	if ((board_info.board_id == BOARD_E1680) ||
 	    (board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
 		ceres_suspend_data.cpu_timer = 100;
 		ceres_suspend_data.core_timer = 0x1510;
