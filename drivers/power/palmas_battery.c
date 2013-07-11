@@ -1638,12 +1638,39 @@ static int __devexit palmas_battery_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int palmas_battery_suspend(struct device *dev)
+{
+	struct palmas_battery_info *di = dev_get_drvdata(dev);
+	int ret;
+
+	cancel_delayed_work_sync(&di->battery_current_avg_work);
+
+	return 0;
+}
+
+static int palmas_battery_resume(struct device *dev)
+{
+	struct palmas_battery_info *di = dev_get_drvdata(dev);
+	int ret;
+
+	schedule_delayed_work(&di->battery_current_avg_work,
+		msecs_to_jiffies(1000 * di->battery_current_avg_interval));
+
+	return 0;
+}
+
+static const struct dev_pm_ops palmas_battery_pm_ops = {
+	.suspend = palmas_battery_suspend,
+	.resume = palmas_battery_resume,
+};
+
 static struct platform_driver palmas_battery_driver = {
 	.probe = palmas_battery_probe,
 	.remove = __devexit_p(palmas_battery_remove),
 	.driver = {
 		.name = "palmas-battery-gauge",
 		.owner = THIS_MODULE,
+		.pm = &palmas_battery_pm_ops
 	},
 };
 
