@@ -1385,6 +1385,19 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 				},
 			},
 		},
+		[THROTTLE_OC2] = {
+			.throt_mode = BRIEF,
+			.devs = {
+				[THROTTLE_DEV_CPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+				[THROTTLE_DEV_GPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+			},
+		},
 	},
 	.tshut_pmu_trip_data = &tpdata_max77660,
 };
