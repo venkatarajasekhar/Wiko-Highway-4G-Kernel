@@ -54,12 +54,9 @@
 #include "devices.h"
 #include "board-ceres.h"
 #include "board-atlantis.h"
-#include "fuse.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
-
-#define FUSE_SPARE_BIT_12_0     0x2d0
 
 /* max77660 consumer rails */
 static struct regulator_consumer_supply max77660_unused_supply[] = {
@@ -668,7 +665,7 @@ static struct max77660_platform_data max77660_pdata = {
 		.en_pwm = true,
 		.step_voltage_uV = 25000,
 		.default_voltage_uV = 1100000,
-		.base_voltage_uV = 700000,
+		.base_voltage_uV = 600000,
 		.max_voltage_uV = 1200000,
 	},
 };
@@ -1015,13 +1012,6 @@ int __init ceres_regulator_init(void)
 	/* Pass NULL bcharger platform data for Adapter source */
 	if (get_power_supply_type() == POWER_SUPPLY_TYPE_MAINS) {
 		max77660_charger_pdata.bcharger_pdata = NULL;
-	}
-
-	/* screened A01 parts with lower bbc vmin have this fuse set */
-	if ((tegra_revision == TEGRA_REVISION_A01) &&
-		!tegra_fuse_readl(FUSE_SPARE_BIT_12_0)) {
-		max77660_pdata.dvfs_pd.base_voltage_uV = 900000;
-		max77660_pdata.dvfs_pd.step_voltage_uV = 12500;
 	}
 
 	/* Ceres FAB <= A02 LPDDR3 regulators on SW5 so keep it always_on */
