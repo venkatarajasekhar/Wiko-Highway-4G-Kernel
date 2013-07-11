@@ -410,10 +410,10 @@ MAX77660_PDATA_INIT(LDO16, ldo16, 1800, 3000, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO17, ldo17, 1800, 1800, max77660_rails(buck7),
-		0, 1, 1, FPS_SRC_DEF, -1, -1, 0);
+		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(LDO18, ldo18, 3100, 3100, NULL,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
