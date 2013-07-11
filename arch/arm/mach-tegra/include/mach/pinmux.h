@@ -2,7 +2,7 @@
  * linux/arch/arm/mach-tegra/include/mach/pinmux.h
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2012 NVIDIA Corporation.
+ * Copyright (C) 2011-2013 NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -486,6 +486,7 @@ void tegra14x_pinmux_init(const struct tegra_pingroup_desc **pg, int *pg_max,
 void tegra11x_default_pinmux(void);
 
 int tegra_pinmux_get_func(int pg);
+int tegra_pinmux_set_func(const struct tegra_pingroup_config *config);
 int tegra_pinmux_set_tristate(int pg, enum tegra_tristate tristate);
 int tegra_pinmux_set_io(int pg, enum tegra_pin_io input);
 int tegra_pinmux_get_pingroup(int gpio_nr);

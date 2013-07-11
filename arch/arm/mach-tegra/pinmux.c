@@ -2,7 +2,7 @@
  * linux/arch/arm/mach-tegra/pinmux.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2012 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2013 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -209,7 +209,7 @@ int tegra_pinmux_get_pingroup(int gpio_nr)
 }
 EXPORT_SYMBOL_GPL(tegra_pinmux_get_pingroup);
 
-static int tegra_pinmux_set_func(const struct tegra_pingroup_config *config)
+int tegra_pinmux_set_func(const struct tegra_pingroup_config *config)
 {
 	int mux = -1;
 	int i;
