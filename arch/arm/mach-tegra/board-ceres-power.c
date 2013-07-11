@@ -624,15 +624,12 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 };
 
 static struct max77660_haptic_platform_data max77660_haptic_pdata = {
-	/*
-	 * FIXME: external pwm mode not tested, only internal mode tested
-	 */
 	.type = MAX77660_HAPTIC_ERM,
 	.mode = MAX77660_INTERNAL_MODE,
 	.internal_mode_pattern = 0,
 	.pattern_cycle = 10,
-	.pattern_signal_period = 0xFF,
-	.feedback_duty_cycle = 0xF /* 100% duty cycle */ ,
+	.pattern_signal_period = 0xD0,
+	.feedback_duty_cycle = 12,
 	.invert = MAX77660_INVERT_OFF,
 	.cont_mode = MAX77660_CONT_MODE,
 	.motor_startup_val = 0,
