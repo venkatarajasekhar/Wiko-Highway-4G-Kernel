@@ -410,8 +410,10 @@ static int max77660_regulator_enable(struct regulator_dev *rdev)
 	/* ES 1.1 suggest to keep BUCK3 and BUCK5 in GLPM */
 	if (max77660_is_es_1_1(reg->dev))
 		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
-			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5)
-			max77660_regulator_set_power_mode(reg,
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO1 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO14)
+			return max77660_regulator_set_power_mode(reg,
 					POWER_MODE_GLPM);
 
 	if (reg->fps_src != FPS_SRC_NONE) {
@@ -720,6 +722,15 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK6 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK7)
 			pdata->flags |= SD_FORCED_PWM_MODE;
+
+	/* ES 1.1 suggest to keep BUCK3, BUCK5, LDO1 and LDO14 in GLPM */
+	if (max77660_is_es_1_1(reg->dev))
+		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO1 ||
+			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO14)
+			max77660_regulator_set_power_mode(reg,
+					POWER_MODE_GLPM);
 
 	if (rinfo->type == REGULATOR_TYPE_BUCK) {
 		val = 0;
