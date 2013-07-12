@@ -848,6 +848,14 @@ lp1_register_core_highvolt:
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 lp_enter_state:
 	.word	0
+
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	.globl lp_resume_vectors
+lp_resume_vectors:
+	.rept	PMC_LP_MAX_STATES
+	.long	0
+	.endr
+#endif
 #endif
 
 /* tegra3_tear_down_core
@@ -886,6 +894,7 @@ lp1bb_entry:
 	str	r0, lp_enter_state
 	bl	tegra148_set_lp_state
 	bl	tegra148_set_mem_req_interrupt
+	bl	tegra148_issue_smc
 	bl	tegra3_save_config
 	bl	tegra3_cpu_clk32k
 	b	tegra3_enter_sleep
@@ -966,6 +975,26 @@ tegra148_set_lp_state:
 	str	r1, [r4, #PMC_LP_STATE_SCRATCH_REG]
 	mov	pc, lr
 
+/*
+ * Issue SMC to secure world
+ */
+tegra148_issue_smc:
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	/* indicate LP state */
+	ldr	r0, lp_enter_state
+	cmp	r0, #PMC_LP_STATE_LP0
+	ldreq	r1, =0xFFFFFFE3		@ LP0
+	ldrne	r1, =0xFFFFFFE6		@ LP1 / LP1BB
+
+	/* set resume address */
+	mov	r0, r0, lsl #2
+	adr	r2, lp_resume_vectors
+	ldr	r2, [r2, r0]
+	mov32	r0, 0xFFFFFFFC
+	smc	#0
+#endif
+	mov	pc, lr
+
 /* tegra3_lp0_tear_down_core
  *
  * copied into and executed from IRAM
@@ -979,6 +1008,7 @@ tegra3_lp0_tear_down_core:
 	str	r0, lp_enter_state
 	bleq	tegra148_set_mem_req_interrupt
 	bl	tegra148_set_lp_state
+	bl	tegra148_issue_smc
 #endif
 	bl	tegra3_save_config
 	bl	tegra3_sdram_self_refresh

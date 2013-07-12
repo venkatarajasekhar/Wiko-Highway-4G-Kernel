@@ -79,7 +79,7 @@
 #define PMC_LP_STATE_LP0		0
 #define PMC_LP_STATE_LP1		1
 #define PMC_LP_STATE_LP1BB		2
-
+#define PMC_LP_MAX_STATES		3
 
 #define PMC_SCRATCH1_ECO		0x264
 
@@ -283,6 +283,9 @@ void tegra3_hotplug_shutdown(void);
 #ifdef CONFIG_TEGRA_USE_SECURE_KERNEL
 extern unsigned long tegra_resume_timestamps_start;
 extern unsigned long tegra_resume_timestamps_end;
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+extern unsigned lp_resume_vectors[PMC_LP_MAX_STATES];
+#endif
 #ifndef CONFIG_ARCH_TEGRA_11x_SOC
 extern unsigned long tegra_resume_smc_entry_time;
 extern unsigned long tegra_resume_smc_exit_time;

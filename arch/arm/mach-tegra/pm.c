@@ -619,7 +619,13 @@ bool tegra_set_cpu_in_pd(int cpu)
 static void tegra_sleep_core(enum tegra_suspend_mode mode,
 			     unsigned long v2p)
 {
-#ifdef CONFIG_TEGRA_USE_SECURE_KERNEL
+#if defined(CONFIG_TEGRA_USE_SECURE_KERNEL) &&	\
+		!defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	/*
+	 * Issue the SMC here, except for T14x, where it's deferred until
+	 * we've determined which state we're actually entering (i.e. can
+	 * start as LP0, but later end up as LP1BB).
+	 */
 	outer_flush_range(__pa(&tegra_resume_timestamps_start),
 			  __pa(&tegra_resume_timestamps_end));
 

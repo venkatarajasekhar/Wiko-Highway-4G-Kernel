@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/reset.c
  *
- * Copyright (C) 2011-2012 NVIDIA Corporation.
+ * Copyright (C) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -37,7 +37,10 @@ static bool is_enabled;
 static void tegra_cpu_reset_handler_enable(void)
 {
 	void __iomem *iram_base = IO_ADDRESS(TEGRA_IRAM_BASE);
-#if !defined(CONFIG_TEGRA_USE_SECURE_KERNEL)
+#if defined(CONFIG_TEGRA_USE_SECURE_KERNEL)
+	unsigned long cpu_common_reset_handler =
+		(TEGRA_RESET_HANDLER_BASE + tegra_cpu_reset_handler_offset);
+#else
 	void __iomem *evp_cpu_reset =
 		IO_ADDRESS(TEGRA_EXCEPTION_VECTORS_BASE + 0x100);
 	void __iomem *sb_ctrl = IO_ADDRESS(TEGRA_SB_BASE);
@@ -50,8 +53,15 @@ static void tegra_cpu_reset_handler_enable(void)
 		tegra_cpu_reset_handler_size);
 
 #if defined(CONFIG_TEGRA_USE_SECURE_KERNEL)
-	tegra_generic_smc(0xFFFFF200,
-		TEGRA_RESET_HANDLER_BASE + tegra_cpu_reset_handler_offset, 0);
+	tegra_generic_smc(0xFFFFF200, cpu_common_reset_handler, 0);
+
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	/* setup LP resume vectors */
+	lp_resume_vectors[PMC_LP_STATE_LP0]   = virt_to_phys(tegra_resume);
+	lp_resume_vectors[PMC_LP_STATE_LP1]   = cpu_common_reset_handler;
+	lp_resume_vectors[PMC_LP_STATE_LP1BB] = cpu_common_reset_handler;
+#endif
+
 #else
 	/* NOTE: This must be the one and only write to the EVP CPU reset
 		 vector in the entire system. */
