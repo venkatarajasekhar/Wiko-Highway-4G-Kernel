@@ -1,7 +1,7 @@
 /*
  * max77660-charger-extcon.c -- MAXIM MAX77660 VBUS detection.
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Darbha Sriharsha <dsriharsha@nvidia.com>
  * Author: Syed Rafiuddin <srafiuddin@nvidia.com>
@@ -987,13 +987,6 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 		goto extcon_free;
 	}
 
-	ret = max77660_reg_clr_bits(chg_extcon->parent, MAX77660_CHG_SLAVE,
-			MAX77660_CHARGER_CHGINTM, MAX77660_CHG_CHGINT_DC_UVP);
-	if (ret < 0) {
-		dev_err(chg_extcon->dev, "CHGINTM update failed: %d\n", ret);
-		goto extcon_free;
-	}
-
 	ret = request_threaded_irq(chg_extcon->chg_irq, NULL,
 		max77660_chg_extcon_irq,
 		IRQF_ONESHOT | IRQF_EARLY_RESUME, "max77660-charger",
@@ -1014,6 +1007,14 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 		dev_info(chg_extcon->dev,
 			"Battery not connected, charging not supported\n");
 		goto skip_bcharger_init;
+	}
+
+	ret = max77660_reg_clr_bits(chg_extcon->parent, MAX77660_CHG_SLAVE,
+			MAX77660_CHARGER_CHGINTM, MAX77660_CHG_CHGINT_DC_UVP |
+			MAX77660_CHG_CHGINT_CHG_M);
+	if (ret < 0) {
+		dev_err(chg_extcon->dev, "CHGINTM update failed: %d\n", ret);
+		goto extcon_free;
 	}
 
 	if(bcharger_pdata->max_term_vol_mV)
