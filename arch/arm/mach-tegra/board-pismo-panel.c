@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-pismo-panel.c
  *
- * Copyright (c) 2011-2013, NVIDIA Corporation.
+ * Copyright (C) 2011-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -228,7 +228,7 @@ static struct tegra_dc_out pismo_disp2_out = {
 	.flags		= TEGRA_DC_OUT_HOTPLUG_HIGH,
 	.parent_clk	= "pll_d2_out0",
 
-	.dcc_bus	= 3,
+	.ddc_bus	= 3,
 	.hotplug_gpio	= pismo_hdmi_hpd,
 
 	.max_pixclock	= KHZ2PICOS(148500),

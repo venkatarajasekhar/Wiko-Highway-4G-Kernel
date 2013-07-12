@@ -303,7 +303,7 @@ static struct tegra_dc_out p1852_ser2_out = {
 	.n_modes	= ARRAY_SIZE(p1852_hdmi_lvds_modes),
 	.enable		= p1852_lvds2_enable,
 	.disable	= p1852_lvds2_disable,
-	.dcc_bus	= 3,
+	.ddc_bus	= 3,
 	.out_pins	= p1852_dc_out_pins,
 	.n_out_pins	= ARRAY_SIZE(p1852_dc_out_pins),
 };
@@ -320,7 +320,7 @@ static struct tegra_dc_out p1852_hdmi_out = {
 	.enable		= p1852_hdmi_enable,
 	.disable	= p1852_hdmi_disable,
 
-	.dcc_bus	= 1,
+	.ddc_bus	= 1,
 };
 
 /* End of DC_OUT data */

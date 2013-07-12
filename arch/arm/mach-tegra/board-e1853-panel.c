@@ -179,7 +179,7 @@ static struct tegra_dc_out e1853_hdmi_out = {
 	.hotplug_gpio   = E1853_HDMI_HPD,
 	.enable		= e1853_hdmi_enable,
 	.disable	= e1853_hdmi_disable,
-	.dcc_bus        = 3,
+	.ddc_bus        = 3,
 };
 
 static struct tegra_dc_platform_data e1853_hdmi_pdata = {

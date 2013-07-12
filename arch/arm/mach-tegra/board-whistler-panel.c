@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-whistler-panel.c
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.
+ * Copyright (C) 2010-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -211,7 +211,7 @@ static struct tegra_dc_out whistler_disp2_out = {
 	.type		= TEGRA_DC_OUT_HDMI,
 	.flags		= TEGRA_DC_OUT_HOTPLUG_HIGH,
 
-	.dcc_bus	= 1,
+	.ddc_bus	= 1,
 	.hotplug_gpio	= whistler_hdmi_hpd,
 
 	.max_pixclock	= KHZ2PICOS(148500),

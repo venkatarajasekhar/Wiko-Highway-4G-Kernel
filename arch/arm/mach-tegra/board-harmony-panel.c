@@ -250,7 +250,7 @@ static struct tegra_dc_out harmony_disp2_out = {
 	.type		= TEGRA_DC_OUT_HDMI,
 	.flags		= TEGRA_DC_OUT_HOTPLUG_HIGH,
 
-	.dcc_bus	= 1,
+	.ddc_bus	= 1,
 	.hotplug_gpio	= harmony_hdmi_hpd,
 
 	.align		= TEGRA_DC_ALIGN_MSB,

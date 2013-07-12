@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-kai-panel.c
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (C) 2012-2013 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -499,7 +499,7 @@ static struct tegra_dc_out kai_disp2_out = {
 	.type		= TEGRA_DC_OUT_HDMI,
 	.flags		= TEGRA_DC_OUT_HOTPLUG_HIGH,
 
-	.dcc_bus	= 3,
+	.ddc_bus	= 3,
 	.hotplug_gpio	= kai_hdmi_hpd,
 
 	.max_pixclock	= KHZ2PICOS(148500),
