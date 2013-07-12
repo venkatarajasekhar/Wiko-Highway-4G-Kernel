@@ -283,6 +283,10 @@ static int __devinit palmas_sim_probe(struct platform_device *pdev)
 		goto err_sim1_irq;
 	}
 
+	/* WAR spurious SIM removals by disabling interrupts */
+	disable_irq(sim1_irq);
+	disable_irq(sim2_irq);
+
 	/* enable insertion/removal detection based on sim status */
 	val = ((sim1_inserted ? 1 : 0) << PALMAS_SIM_DEBOUNCE_SIM1_IR_SHIFT) |
 	      ((sim2_inserted ? 1 : 0) << PALMAS_SIM_DEBOUNCE_SIM2_IR_SHIFT);

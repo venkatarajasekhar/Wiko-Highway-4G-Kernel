@@ -152,13 +152,14 @@ static int __devinit max77660_sim_probe(struct platform_device *pdev)
 	}
 
 	/* SIM interrupt mask */
+	/* WAR spurious SIM removals by masking interrupts */
 	ret = max77660_reg_write(pdev->dev.parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_SIM1NTM, 0x00);
+			MAX77660_REG_SIM1NTM, 0x03);
 	if (ret < 0)
 		goto err_reg_access;
 
 	ret = max77660_reg_write(pdev->dev.parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_SIM2NTM, 0x00);
+			MAX77660_REG_SIM2NTM, 0x03);
 	if (ret < 0)
 		goto err_reg_access;
 
