@@ -1856,15 +1856,18 @@ static inline bool pmc_write_check(int index, int bit_position)
 
 static void update_pmc_registers(unsigned long rate)
 {
-	u32 i, j;
+	u32 i, j, base2;
+	void __iomem *base;
 	int instance = 1;
 
-	/* FIXME: convert rate to instance */
+	/* Convert rate to instance */
+	if (rate <= 204000000)
+		instance = 2;
 
 	/* Based on index, we select that block of scratches */
-	u32 base2 = (tegra_wb0_params_address + (instance - 1) *
+	base2 = (tegra_wb0_params_address + (instance - 1) *
 		tegra_wb0_params_block_size);
-	void __iomem *base = ioremap(base2, tegra_wb0_params_block_size);
+	base = ioremap(base2, tegra_wb0_params_block_size);
 
 #define copy_dram_to_pmc(index, bit)	\
 	pmc_32kwritel(readl(base + PMC_REGISTER_OFFSET(index, bit)), \
