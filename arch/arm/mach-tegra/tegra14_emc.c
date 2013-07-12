@@ -511,6 +511,165 @@ static inline void do_clock_change(u32 clk_setting)
 	}
 }
 
+/*
+ * Out of band mechanism to relock the DLL. This is useful when voltage rails
+ * change significantly. The only way this is currently called is through
+ * debugfs so this is a highly non-optimal implementation. However, since it is
+ * mostly identical to the normal prelock routine, it should be stable and
+ * functional.
+ */
+u32 __emc_relock_dll(void)
+{
+	u32 dll_locked, dll_out;
+	u32 emc_cfg_dig_dll;
+	u32 emc_dll_clk_src;
+	u32 div_value = readl((u32)clk_base + emc->reg) & EMC_CLK_DIV_MASK;
+	u32 src_value = readl((u32)clk_base + emc->reg) & EMC_CLK_SOURCE_MASK;
+
+	/* WAR for missing PLLC_UD DLL clock source selector. */
+	if (src_value == (0x7 << EMC_CLK_SOURCE_SHIFT))
+		src_value = (0x1 << EMC_CLK_SOURCE_SHIFT);
+
+	/*
+	 * Step 1:
+	 *   If the DLL is disabled don't bother disabling it again.
+	 */
+	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
+
+
+	/* Disable DLL. */
+	emc_cfg_dig_dll &= ~EMC_CFG_DIG_DLL_EN;
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+
+	/*
+	 * Step 1.25:
+	 *   Force the DLL into override mode.
+	 */
+	dll_out = emc_readl(EMC_DIG_DLL_STATUS) & EMC_DIG_DLL_STATUS_OUT;
+	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
+	emc_cfg_dig_dll &= ~(EMC_CFG_DIG_DLL_OVERRIDE_VAL_MASK <<
+			     EMC_CFG_DIG_DLL_OVERRIDE_VAL_SHIFT);
+	emc_cfg_dig_dll |= ((dll_out & EMC_CFG_DIG_DLL_OVERRIDE_VAL_MASK) <<
+			    EMC_CFG_DIG_DLL_OVERRIDE_VAL_SHIFT);
+	emc_cfg_dig_dll |= EMC_CFG_DIG_DLL_OVERRIDE_EN;
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+
+	/*
+	 * Step 1.5:
+	 *   Force the DLL into one shot mode.
+	 */
+	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
+	emc_cfg_dig_dll &= ~(EMC_CFG_DIG_DLL_MODE_MASK <<
+			     EMC_CFG_DIG_DLL_MODE_SHIFT);
+	emc_cfg_dig_dll |= (EMC_CFG_DIG_DLL_MODE_RUN_TIL_LOCK <<
+			    EMC_CFG_DIG_DLL_MODE_SHIFT);
+	emc_cfg_dig_dll &= ~(EMC_CFG_DIG_DLL_UDSET_MASK <<
+			     EMC_CFG_DIG_DLL_UDSET_SHIFT);
+	emc_cfg_dig_dll |= (0x2 << EMC_CFG_DIG_DLL_UDSET_SHIFT);
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+
+
+	/*
+	 * Step 2:
+	 *   Reset the DLL and wait for it to lock against the target freq.
+	 */
+	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
+	emc_cfg_dig_dll |= (EMC_CFG_DIG_DLL_EN | EMC_CFG_DIG_DLL_RESET);
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+	udelay(1);
+
+	do {
+		dll_locked = emc_readl(EMC_DIG_DLL_STATUS) &
+			EMC_DIG_DLL_STATUS_LOCKED;
+	} while (!dll_locked);
+
+	if (WARN_ON((emc_readl(EMC_INTSTATUS) &
+		     EMC_INTSTATUS_DLL_LOCK_TIMEOUT_INT)))
+		emc_writel(EMC_INTSTATUS_DLL_LOCK_TIMEOUT_INT,
+			   EMC_INTSTATUS);
+
+
+	/*
+	 * Step 3:
+	 *   Set the DLL's prelocking input. We do this so that we can get an
+	 * override value for when we do the actual swap to this PLL later on.
+	 * Once we swap, we will want this override value.
+	 */
+	emc_dll_clk_src = (div_value | src_value);
+	writel(emc_dll_clk_src,
+	       clk_base + CLK_RST_CONTROLLER_CLK_SOURCE_EMC_DLL);
+	writel(emc_dll_clk_src | EMC_DLL_DYN_MUX_CTRL,
+	       clk_base + CLK_RST_CONTROLLER_CLK_SOURCE_EMC_DLL);
+
+	/*
+	 * Step 4:
+	 *   Disable CLK to DLL from CAR.
+	 */
+	writel(CLK_ENB_EMC_DLL,
+	       clk_base + CLK_RST_CONTROLLER_CLK_OUT_ENB_X_CLR);
+	udelay(1);
+
+	/*
+	 * Step 5:
+	 *   Now, reinvoke the state machine logic without the clock.
+	 */
+	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
+	emc_cfg_dig_dll &= ~EMC_CFG_DIG_DLL_EN;
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+
+	emc_cfg_dig_dll &= ~EMC_CFG_DIG_DLL_OVERRIDE_EN;
+	emc_cfg_dig_dll |= EMC_CFG_DIG_DLL_EN;
+	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
+	emc_timing_update();
+	udelay(1);
+
+	dll_out = emc_readl(EMC_DIG_DLL_STATUS) & EMC_DIG_DLL_STATUS_OUT;
+
+	/*
+	 * Step 6:
+	 * Put back to EMC branch
+	 */
+	/* Enable clock before switching */
+	writel(CLK_ENB_EMC_DLL,
+	       clk_base + CLK_RST_CONTROLLER_CLK_OUT_ENB_X_SET);
+	udelay(1);
+
+	/* Switch to EMC */
+	emc_dll_clk_src = (div_value | src_value);
+	writel(emc_dll_clk_src,
+	       clk_base + CLK_RST_CONTROLLER_CLK_SOURCE_EMC_DLL);
+	writel(emc_dll_clk_src & ~EMC_DLL_DYN_MUX_CTRL,
+	       clk_base + CLK_RST_CONTROLLER_CLK_SOURCE_EMC_DLL);
+
+	return dll_out;
+}
+
+int emc_relock_dll(u32 *val)
+{
+	unsigned long flags;
+	int status = 0;
+
+	spin_lock_irqsave(&emc_access_lock, flags);
+	if (!emc_timing) {
+		pr_warn("[emc] Relocking with no valid timing.\n");
+	} else if ((emc_timing->emc_cfg_dig_dll & EMC_CFG_DIG_DLL_EN) == 0) {
+		pr_err("[emc] Cannot relock - DLL disabled for timing.\n");
+		status = -EINVAL;
+		goto done;
+	}
+
+	*val = __emc_relock_dll();
+
+done:
+	spin_unlock_irqrestore(&emc_access_lock, flags);
+	return status;
+}
+
 static u32 emc_prelock_dll(const struct tegra14_emc_table *last_timing,
 			   const struct tegra14_emc_table *next_timing)
 {

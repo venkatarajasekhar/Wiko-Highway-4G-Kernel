@@ -24,7 +24,7 @@
 #include "tegra_emc.h"
 
 int tegra14_emc_init(void);
-extern u32 notrace tegra_read_usec_raw(void);
+u32 notrace tegra_read_usec_raw(void);
 
 enum {
 	DRAM_DEV_SEL_ALL = 0,
@@ -33,6 +33,9 @@ enum {
 };
 #define DRAM_BROADCAST(num)			\
 	(((num) > 1) ? DRAM_DEV_SEL_ALL : DRAM_DEV_SEL_0)
+
+int emc_relock_dll(u32 *out);
+
 
 #define EMC_INTSTATUS				0x0
 #define EMC_INTSTATUS_CLKCHANGE_COMPLETE	(0x1 << 4)
