@@ -89,7 +89,7 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	/* our bandwidth is in kbytes/sec, but LA takes MBps.
 	 * round up bandwidth to next 1MBps */
 	if (bw != ULONG_MAX)
-		bw = bw / 1000 + 1;
+		bw = (bw + 1000 - 1) / 1000;
 
 	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
@@ -308,8 +308,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *w = &dc->windows[i];
 
-		if ((use_new || w->bandwidth != w->new_bandwidth) &&
-			w->new_bandwidth != 0)
+		if (use_new || w->bandwidth != w->new_bandwidth)
 			tegra_dc_set_latency_allowance(dc, w);
 		trace_program_bandwidth(dc);
 		w->bandwidth = w->new_bandwidth;
