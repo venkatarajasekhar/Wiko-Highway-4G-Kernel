@@ -542,6 +542,7 @@ static struct max77660_bcharger_platform_data max77660_bcharger_pdata = {
 	.wdt_timeout    = 32,
 	.max_term_vol_mV = 4300,
 	.temperature_poll_period_secs = 5,
+	.oc_thresh = OC_THRESH_3A0
 };
 
 static struct max77660_charger_platform_data max77660_charger_pdata = {
@@ -1382,6 +1383,21 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 				[THROTTLE_DEV_GPU] = {
 					.enable = true,
 					.depth = 80,
+				},
+			},
+		},
+		[THROTTLE_OC1] = {
+			.throt_mode = BRIEF,
+			.polarity = 1,
+			.pgmask = 1,
+			.devs = {
+				[THROTTLE_DEV_CPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+				[THROTTLE_DEV_GPU] = {
+					.enable = true,
+					.depth = 50,
 				},
 			},
 		},
