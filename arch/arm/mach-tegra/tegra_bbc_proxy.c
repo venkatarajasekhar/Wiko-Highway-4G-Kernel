@@ -32,6 +32,9 @@
 
 #define MAX_ISO_BW_REQ  1200000
 
+#define BBCR_BW_PERCENTAGE 50
+#define BBCW_BW_PERCENTAGE 50
+
 struct tegra_bbc_proxy {
 	struct edp_client *modem_boot_edp_client;
 	struct edp_client modem_edp_client;
@@ -349,8 +352,10 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 		}
 		bbc->lt = lt;
 
-		tegra_set_latency_allowance(TEGRA_LA_BBCR, bw / 1000);
-		tegra_set_latency_allowance(TEGRA_LA_BBCW, bw / 1000);
+		tegra_set_latency_allowance(TEGRA_LA_BBCR,
+				(((bw / 1000) * BBCR_BW_PERCENTAGE) / 100));
+		tegra_set_latency_allowance(TEGRA_LA_BBCW,
+				(((bw / 1000) * BBCW_BW_PERCENTAGE) / 100));
 	}
 
 	if (margin != bbc->margin) {
