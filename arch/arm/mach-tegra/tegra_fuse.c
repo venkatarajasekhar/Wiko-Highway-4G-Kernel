@@ -932,6 +932,9 @@ int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
 	int index;
 	int ret;
 	int delay = FUSE_PGM_TIMEOUT_MS;
+#ifdef TEGRA_FUSE_MIRRORING
+	int is_mirroring_enabled = 0;
+#endif
 
 	if (!pgm_data || !flags) {
 		pr_err("invalid parameter");
@@ -955,6 +958,17 @@ int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
 		pr_err("odm production mode and sbk/devkey not allowed");
 		return -EPERM;
 	}
+
+#ifdef TEGRA_FUSE_MIRRORING
+	/* Disable fuse mirroring if already enabled */
+	reg = readl(IO_TO_VIRT(TEGRA_PMC_BASE + PMC_FUSE_CONTROL_0_OFFSET));
+	if (reg & PMC_FUSE_ENABLE_REDIRECTION) {
+		is_mirroring_enabled = 1;
+		writel(PMC_FUSE_DISABLE_REDIRECTION,
+			IO_TO_VIRT(TEGRA_PMC_BASE + PMC_FUSE_CONTROL_0_OFFSET));
+	}
+#endif
+
 
 	/* calculate the number of program cycles from the oscillator freq */
 	reg = readl(IO_ADDRESS(TEGRA_PMC_BASE) + PMC_PLLP_OVERRIDE);
@@ -1034,6 +1048,14 @@ int tegra_fuse_program(struct fuse_data *pgm_data, u32 flags)
 	}
 
 	clk_disable(clk_fuse);
+
+#ifdef TEGRA_FUSE_MIRRORING
+	/* Enable fuse mirroring if already enabled before burning*/
+	if (is_mirroring_enabled) {
+		writel(PMC_FUSE_ENABLE_REDIRECTION,
+			IO_TO_VIRT(TEGRA_PMC_BASE + PMC_FUSE_CONTROL_0_OFFSET));
+	}
+#endif
 
 	return ((delay > 0) ? 0 : -ETIMEDOUT);
 }
