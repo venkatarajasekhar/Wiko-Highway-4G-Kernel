@@ -805,7 +805,10 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 		} else if ((reg->rinfo->id >= MAX77660_REGULATOR_ID_BUCK6) &&
 			(reg->rinfo->id <= MAX77660_REGULATOR_ID_BUCK7)) {
 			mask |= MAX77660_BUCK6_7_CNFG_FPWM_MASK;
-			val |= MAX77660_BUCK6_7_CNFG_FPWM_MASK;
+			/* ES 1.1 suggest to remove all BUCKS from FPWM */
+			if ((pdata->flags & SD_FORCED_PWM_MODE) &&
+					!(max77660_is_es_1_1(reg->dev)))
+				val |= MAX77660_BUCK6_7_CNFG_FPWM_MASK;
 		}
 
 		ret = max77660_reg_update(to_max77660_chip(reg),
