@@ -230,6 +230,7 @@ void tegra_assert_system_reset(char mode, const char *cmd)
 #endif
 }
 static int modem_id;
+static int modem_config;
 static int commchip_id;
 static int sku_override;
 static int debug_uart_port_id;
@@ -1556,6 +1557,20 @@ int tegra_get_modem_id(void)
 }
 
 __setup("modem_id=", tegra_modem_id);
+
+static int __init tegra_modem_config(char *options)
+{
+	char *p = options;
+	modem_config = memparse(p, &p);
+	return modem_config;
+}
+
+int tegra_get_modem_config(void)
+{
+	return modem_config;
+}
+
+__setup("modem_config=", tegra_modem_config);
 
 static int __init tegra_usb_port_owner_info(char *id)
 {
