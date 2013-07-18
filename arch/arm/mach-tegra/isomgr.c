@@ -188,7 +188,7 @@ static struct isoclient_info *get_iso_client_info(void)
 		break;
 	case TEGRA_CHIPID_TEGRA14:
 		cinfo = tegra14x_isoclients;
-		iso_bw_percentage = 50;
+		iso_bw_percentage = 45;
 		break;
 	default:
 		cinfo = tegra_null_isoclients;
