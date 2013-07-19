@@ -58,6 +58,8 @@ struct tegra_fb_info {
 	int			yres;
 	int			curr_xoffset;
 	int			curr_yoffset;
+
+	struct fb_videomode	mode;
 };
 
 /* palette array used by the fbcon */
@@ -143,6 +145,8 @@ static int tegra_fb_set_par(struct fb_info *info)
 		unsigned old_len = 0;
 		struct fb_videomode m;
 		struct fb_videomode *old_mode = NULL;
+		struct tegra_fb_info *tegra_fb = info->par;
+
 
 		fb_var_to_videomode(&m, var);
 
@@ -150,8 +154,9 @@ static int tegra_fb_set_par(struct fb_info *info)
 		old_mode = info->mode;
 		old_len  = info->fix.line_length;
 
-		info->mode = (struct fb_videomode *)
-			fb_find_nearest_mode(&m, &info->modelist);
+		memcpy(&tegra_fb->mode, &m, sizeof(tegra_fb->mode));
+
+		info->mode = (struct fb_videomode *)&tegra_fb->mode;
 		if (!info->mode) {
 			dev_warn(&tegra_fb->ndev->dev, "can't match video mode\n");
 			info->mode = old_mode;
