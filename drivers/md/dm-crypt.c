@@ -2,7 +2,6 @@
  * Copyright (C) 2003 Christophe Saout <christophe@saout.de>
  * Copyright (C) 2004 Clemens Fruhwirth <clemens@endorphin.org>
  * Copyright (C) 2006-2009 Red Hat, Inc. All rights reserved.
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This file is released under the GPL.
  */
@@ -415,20 +414,20 @@ static int crypt_convert_block(struct crypt_config *cc,
 
 	dmreq->ctx = ctx;
 	sg_init_table(&dmreq->sg_in, 1);
-	sg_set_page(&dmreq->sg_in, bv_in->bv_page, 1 << PAGE_SHIFT,
+	sg_set_page(&dmreq->sg_in, bv_in->bv_page, 1 << SECTOR_SHIFT,
 		    bv_in->bv_offset + ctx->offset_in);
 
 	sg_init_table(&dmreq->sg_out, 1);
-	sg_set_page(&dmreq->sg_out, bv_out->bv_page, 1 << PAGE_SHIFT,
+	sg_set_page(&dmreq->sg_out, bv_out->bv_page, 1 << SECTOR_SHIFT,
 		    bv_out->bv_offset + ctx->offset_out);
 
-	ctx->offset_in += 1 << PAGE_SHIFT;
+	ctx->offset_in += 1 << SECTOR_SHIFT;
 	if (ctx->offset_in >= bv_in->bv_len) {
 		ctx->offset_in = 0;
 		ctx->idx_in++;
 	}
 
-	ctx->offset_out += 1 << PAGE_SHIFT;
+	ctx->offset_out += 1 << SECTOR_SHIFT;
 	if (ctx->offset_out >= bv_out->bv_len) {
 		ctx->offset_out = 0;
 		ctx->idx_out++;
@@ -441,7 +440,7 @@ static int crypt_convert_block(struct crypt_config *cc,
 	}
 
 	ablkcipher_request_set_crypt(req, &dmreq->sg_in, &dmreq->sg_out,
-				     1 << PAGE_SHIFT, iv);
+				     1 << SECTOR_SHIFT, iv);
 
 	if (bio_data_dir(ctx->bio_in) == WRITE)
 		r = crypto_ablkcipher_encrypt(req);
@@ -1459,14 +1458,6 @@ static int crypt_iterate_devices(struct dm_target *ti,
 	return fn(ti, cc->dev, cc->start, ti->len, data);
 }
 
-#define CRYPT_BLOCK_SIZE	PAGE_SIZE
-static void crypt_io_hints(struct dm_target *ti, struct queue_limits *limits)
-{
-	limits->logical_block_size = CRYPT_BLOCK_SIZE;
-	limits->physical_block_size = CRYPT_BLOCK_SIZE;
-	blk_limits_io_min(limits, CRYPT_BLOCK_SIZE);
-}
-
 static struct target_type crypt_target = {
 	.name   = "crypt",
 	.version = {1, 8, 0},
@@ -1481,7 +1472,6 @@ static struct target_type crypt_target = {
 	.message = crypt_message,
 	.merge  = crypt_merge,
 	.iterate_devices = crypt_iterate_devices,
-	.io_hints = crypt_io_hints,
 };
 
 static int __init dm_crypt_init(void)
