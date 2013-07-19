@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -144,12 +144,18 @@ static int vi_suspend(struct device *dev)
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(pdev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
+	int ret;
 #endif
 
 	dev_info(dev, "%s: ++\n", __func__);
 
 #ifdef CONFIG_TEGRA_CAMERA
-	tegra_camera_suspend(tegra_vi->camera);
+	ret = tegra_camera_suspend(tegra_vi->camera);
+	if (ret) {
+		dev_info(dev, "%s: tegra_camera_suspend error=%d\n",
+		__func__, ret);
+		return ret;
+	}
 #endif
 
 	return nvhost_client_device_suspend(dev);
