@@ -205,9 +205,6 @@ int tegra_core_speedo_mv(void)
 {
 	switch (soc_speedo_id) {
 	case 0:
-		if (core_process_id == 1)
-			return 1200;
-	/* fall thru if core_process_id = 0 */
 	case 1:
 		return 1230;
 	default:
