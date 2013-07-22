@@ -1093,7 +1093,7 @@ static int tegra_suspend_enter(suspend_state_t state)
 	ktime_t delta;
 	struct timespec ts_entry, ts_exit;
 
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	u32 suspend_state;
 	u32 reg;
 #endif
