@@ -2460,7 +2460,8 @@ static int rt5640_pll_calc(const unsigned int freq_in,
 	const unsigned int freq_out, struct rt5640_pll_code *pll_code)
 {
 	int max_n = RT5640_PLL_N_MAX, max_m = RT5640_PLL_M_MAX;
-	int n, m, red, n_t, m_t, in_t, out_t, red_t = abs(freq_out - freq_in);
+	int red, n_t, m_t, in_t, out_t, red_t = abs(freq_out - freq_in);
+	int n = 0, m = 0;
 	bool bypass = false;
 
 	if (RT5640_PLL_INP_MAX < freq_in || RT5640_PLL_INP_MIN > freq_in)
