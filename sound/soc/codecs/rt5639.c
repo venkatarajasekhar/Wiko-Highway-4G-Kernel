@@ -2030,7 +2030,8 @@ static int rt5639_pll_calc(const unsigned int freq_in,
 	const unsigned int freq_out, struct rt5639_pll_code *pll_code)
 {
 	int max_n = RT5639_PLL_N_MAX, max_m = RT5639_PLL_M_MAX;
-	int n, m, red, n_t, m_t, in_t, out_t, red_t = abs(freq_out - freq_in);
+	int red, n_t, m_t, in_t, out_t, red_t = abs(freq_out - freq_in);
+	int n = 0, m = 0;
 	bool bypass = false;
 
 	if (RT5639_PLL_INP_MAX < freq_in || RT5639_PLL_INP_MIN > freq_in)
@@ -2332,7 +2333,7 @@ static int rt5639_remove(struct snd_soc_codec *codec)
 }
 
 #ifdef CONFIG_PM
-static int rt5639_suspend(struct snd_soc_codec *codec, pm_message_t state)
+static int rt5639_suspend(struct snd_soc_codec *codec)
 {
 	rt5639_reset(codec);
 	rt5639_set_bias_level(codec, SND_SOC_BIAS_OFF);
