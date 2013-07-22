@@ -145,6 +145,8 @@ extern int tegra_smmu_resume(struct device *dev);
 extern int tegra_smmu_suspend(struct device *dev);
 #endif
 
+bool tegra_is_dpd_mode;
+
 #define TEGRA_POWER_PWRREQ_POLARITY	(1 << 8)   /* core power request polarity */
 #define TEGRA_POWER_PWRREQ_OE		(1 << 9)   /* core power request enable */
 #define TEGRA_POWER_SYSCLK_POLARITY	(1 << 10)  /* sys clk polarity */
@@ -1004,6 +1006,7 @@ static void tegra_pm_set(enum tegra_suspend_mode mode)
 					 !defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		writel(0x800fdfff, pmc + PMC_IO_DPD_REQ);
 		writel(0x80001fff, pmc + PMC_IO_DPD2_REQ);
+		tegra_is_dpd_mode = true;
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_11x_SOC

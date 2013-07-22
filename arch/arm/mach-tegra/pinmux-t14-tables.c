@@ -3,7 +3,7 @@
  *
  * Common pinmux configurations for Tegra14x SoCs
  *
- * Copyright (C) 2012 NVIDIA Corporation
+ * Copyright (C) 2012-2013 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 #include <mach/pinmux.h>
 #include <mach/pinmux-t14.h>
 #include "gpio-names.h"
+#include "pm.h"
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 
@@ -324,18 +325,21 @@ static void tegra14x_pinmux_resume(void)
 {
 	unsigned int i;
 	u32 *ctx = pinmux_reg;
-	u32 *tmp = pinmux_reg;
-	u32 reg_value;
+	if (tegra_is_dpd_mode) {
+		u32 *tmp = pinmux_reg;
+		u32 reg_value;
 
-	for (i = 0; i < TEGRA_MAX_PINGROUP; i++) {
-		reg_value = *tmp++;
-		reg_value |= TRISTATE;
-		pg_writel(reg_value, tegra_soc_pingroups[i].mux_bank,
-			tegra_soc_pingroups[i].mux_reg);
+		for (i = 0; i < TEGRA_MAX_PINGROUP; i++) {
+			reg_value = *tmp++;
+			reg_value |= TRISTATE;
+			pg_writel(reg_value, tegra_soc_pingroups[i].mux_bank,
+					tegra_soc_pingroups[i].mux_reg);
+		}
+
+		writel(0x400fffff, pmc + PMC_IO_DPD_REQ_0);
+		writel(0x40001fff, pmc + PMC_IO_DPD2_REQ_0);
+		tegra_is_dpd_mode = false;
 	}
-
-	writel(0x400fffff, pmc + PMC_IO_DPD_REQ_0);
-	writel(0x40001fff, pmc + PMC_IO_DPD2_REQ_0);
 
 	for (i = 0; i < TEGRA_MAX_PINGROUP; i++)
 		pg_writel(*ctx++, tegra_soc_pingroups[i].mux_bank,

@@ -323,5 +323,6 @@ extern struct clk *debug_uart_clk;
 void tegra_console_uart_suspend(void);
 void tegra_console_uart_resume(void);
 
+extern bool tegra_is_dpd_mode;
 
 #endif /* _MACH_TEGRA_PM_H_ */
