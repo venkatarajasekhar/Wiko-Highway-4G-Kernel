@@ -15,6 +15,8 @@
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/err.h>
+#include <linux/debugfs.h>
+#include <linux/fs.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
@@ -31,7 +33,14 @@
 #define LP8755_REG_BUCK3	0x01
 #define LP8755_REG_BUCK4	0x05
 #define LP8755_REG_BUCK5	0x02
-#define LP8755_REG_MAX		0xFF
+
+#define LP8755_REG_B0_CTRL	0x07
+#define LP8755_REG_PH_LEV_B0	0x1F
+#define LP8755_REG_PH_LEV_B3	0x20
+#define LP8755_REG_LOCK		0xDD
+#define LP8755_REG_DEBUG	0xFF
+
+#define LP8755_REG_MAX		(0xFF + 1)
 
 #define LP8755_BUCK_EN_M	BIT(7)
 #define LP8755_BUCK_LINEAR_OUT_MAX	0x76
@@ -61,6 +70,7 @@ struct lp8755_chip {
 
 	int mphase;
 	struct regulator_dev *rdev[LP8755_BUCK_MAX];
+	int test_mode;
 };
 
 /**
@@ -378,6 +388,83 @@ out_i2c_error:
 	return ret;
 }
 
+static int lp8755_test_mode_show(void *data, u64 *val)
+{
+	struct regulator_dev *rdev = (struct regulator_dev *)data;
+	struct lp8755_chip *pchip = rdev_get_drvdata(rdev);
+	*val = pchip->test_mode;
+	return 0;
+}
+
+static int lp8755_test_mode_set(void *data, u64 val)
+{
+	struct regulator_dev *rdev = (struct regulator_dev *)data;
+	struct lp8755_chip *pchip = rdev_get_drvdata(rdev);
+	int ret;
+
+	dev_info(pchip->dev, "Doing Test mode writes\n");
+
+	pchip->test_mode++;
+	ret = lp8755_write(pchip, LP8755_REG_LOCK, 0x00);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_LOCK write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_LOCK, 0x2C);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_LOCK write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_LOCK, 0x58);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_LOCK write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_DEBUG, 0x01);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_DEUG write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_B0_CTRL, 0x83);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_B0_CTRL write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_DEBUG, 0x00);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_DEBUG write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_PH_LEV_B0, 0x00);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_PH_LEV_B0 write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = lp8755_write(pchip, LP8755_REG_PH_LEV_B3, 0x00);
+	if (ret < 0) {
+		dev_err(pchip->dev, "REG_PH_LEV_B3 write failed: %d\n", ret);
+		return ret;
+	}
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(lp8755_test_mode_ops, lp8755_test_mode_show,
+		lp8755_test_mode_set, "%llu\n");
+
+static int lp8755_buck_debug_fs_init(struct regulator_dev *rdev)
+{
+	if (!debugfs_create_file("test_mode", 0644, rdev->debugfs,
+			(void *)rdev, &lp8755_test_mode_ops))
+		return -ENODEV;
+	return 0;
+}
+
 #define lp8755_buck_desc(_id)\
 {\
 	.name = lp8755_rail(_id),\
@@ -423,6 +510,7 @@ static int lp8755_regulator_init(struct lp8755_chip *pchip)
 			goto err_buck;
 		}
 
+		lp8755_buck_debug_fs_init(pchip->rdev[buck_num]);
 		lp8755_buck_set_ramp(pchip->rdev[buck_num],
 					pdata->ramp_us[buck_num]);
 	}
