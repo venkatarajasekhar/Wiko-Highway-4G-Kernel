@@ -140,9 +140,9 @@ static inline int fchg_current(int x)
 		if (10*x < max77660_dccrnt_current_lookup[i])
 			break;
 	}
-	ret = i-1;
+	ret = i;
 
-	if (ret < 3)
+	if (ret <= 3)
 		return 0;
 	else
 		return ret;
