@@ -665,6 +665,9 @@ static struct palmas_battery_platform_data battery_pdata = {
 	.cell_cfg = &cell_cfg,
 	.gpadc_retry_count = 5,
 	.is_battery_present = false,
+	.enable_ovc_alarm = true,
+	.ovc_period = 3900,
+	.ovc_threshold = 3000
 };
 
 static struct iio_map palmas_iio_map[] = {
