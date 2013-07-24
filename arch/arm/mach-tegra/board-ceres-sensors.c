@@ -613,6 +613,25 @@ static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
 	},
 };
 
+static struct i2c_board_info ceres_i2c_board_info_e1740[] = {
+	{
+		I2C_BOARD_INFO("imx135", 0x10),
+		.platform_data = &ceres_imx135_data,
+	},
+	{
+		I2C_BOARD_INFO("imx132", 0x36),
+		.platform_data = &ceres_imx132_data,
+	},
+	{
+		I2C_BOARD_INFO("ad5816", 0x0E),
+		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("lm3565", 0x30),
+		.platform_data = &atlantis_lm3565_pdata,
+	},
+};
+
 static struct i2c_board_info ceres_i2c_board_info_e1690[] = {
 	{
 		I2C_BOARD_INFO("imx135", 0x10),
@@ -661,10 +680,12 @@ static struct i2c_board_info __initdata ceres_i2c_board_info_tcs3772[] = {
 
 static int ceres_camera_init(void)
 {
-	if ((board_info.board_id == BOARD_E1670) ||
-		 (board_info.board_id == BOARD_E1740))
+	if (board_info.board_id == BOARD_E1670)
 		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
 			ARRAY_SIZE(ceres_i2c_board_info_e1697));
+	else if (board_info.board_id == BOARD_E1740)
+		i2c_register_board_info(2, ceres_i2c_board_info_e1740,
+			ARRAY_SIZE(ceres_i2c_board_info_e1740));
 	else if (board_info.board_id == BOARD_E1680)
 		i2c_register_board_info(2, ceres_i2c_board_info_e1707,
 			ARRAY_SIZE(ceres_i2c_board_info_e1707));
