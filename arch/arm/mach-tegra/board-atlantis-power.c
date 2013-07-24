@@ -29,6 +29,7 @@
 #include <linux/mfd/palmas.h>
 #include <linux/power/bq2419x-charger.h>
 #include <linux/platform_data/lp8755.h>
+#include <linux/pid_thermal_gov.h>
 #include <linux/irq.h>
 #include <linux/input/drv2603-vibrator.h>
 #include <linux/generic_adc_thermal.h>
@@ -37,13 +38,17 @@
 #include <asm/mach-types.h>
 
 #include <mach/iomap.h>
+#include <mach/edp.h>
 #include <mach/irqs.h>
 #include <mach/gpio-tegra.h>
 
 #include "pm.h"
 #include "board.h"
+#include "board-common.h"
 #include "tegra-board-id.h"
 #include "board-atlantis.h"
+#include "tegra11_soctherm.h"
+#include "tegra3_tsensor.h"
 #include "board-pmu-defines.h"
 #include "devices.h"
 
@@ -1064,4 +1069,173 @@ void __init atlantis_sysedp_psydepl_init(void)
 
 	r = platform_device_register(&atlantis_psydepl_device);
 	WARN_ON(r);
+}
+
+static struct tegra_tsensor_pmu_data tpdata_palmas = {
+	.reset_tegra = 1,
+	.pmu_16bit_ops = 0,
+	.controller_type = 0,
+	.pmu_i2c_addr = 0x58,
+	.i2c_controller_id = 4,
+	.poweroff_reg_addr = 0xa0,
+	.poweroff_reg_data = 0x0,
+};
+
+static struct pid_thermal_gov_params soctherm_pid_params = {
+	.max_err_temp = 9000,
+	.max_err_gain = 1000,
+
+	.gain_p = 1000,
+	.gain_d = 0,
+
+	.up_compensation = 20,
+	.down_compensation = 20,
+};
+
+static struct thermal_zone_params soctherm_tzp = {
+	.governor_name = "pid_thermal_gov",
+	.governor_params = &soctherm_pid_params,
+};
+
+/* atlantis has POP package, for which the trip points are different */
+static struct soctherm_platform_data atlantis_soctherm_data = {
+	.therm = {
+		[THERM_CPU] = {
+			.zone_enable = true,
+			.passive_delay = 1000,
+			.hotspot_offset = 6000,
+			.num_trips = 3,
+			.trips = {
+				{
+					.cdev_type = "tegra-balanced",
+					.trip_temp = 80000,
+					.trip_type = THERMAL_TRIP_PASSIVE,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+				{
+					.cdev_type = "tegra-heavy",
+					.trip_temp = 90000,
+					.trip_type = THERMAL_TRIP_HOT,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+				{
+					.cdev_type = "tegra-shutdown",
+					.trip_temp = 92000,
+					.trip_type = THERMAL_TRIP_CRITICAL,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+			},
+			.tzp = &soctherm_tzp,
+		},
+		[THERM_GPU] = {
+			.zone_enable = true,
+			.passive_delay = 1000,
+			.hotspot_offset = 6000,
+			.num_trips = 3,
+			.trips = {
+				{
+					.cdev_type = "tegra-balanced",
+					.trip_temp = 82000,
+					.trip_type = THERMAL_TRIP_PASSIVE,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+				{
+					.cdev_type = "tegra-heavy",
+					.trip_temp = 92000,
+					.trip_type = THERMAL_TRIP_HOT,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+				{
+					.cdev_type = "tegra-shutdown",
+					.trip_temp = 94000,
+					.trip_type = THERMAL_TRIP_CRITICAL,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
+			},
+			.tzp = &soctherm_tzp,
+		},
+		[THERM_PLL] = {
+			.zone_enable = true,
+			.num_trips = 1,
+			.trips = {
+				{
+					.cdev_type = "tegra-dram",
+					.trip_temp = 78000,
+					.trip_type = THERMAL_TRIP_ACTIVE,
+					.upper = 1,
+					.lower = 1,
+				},
+			},
+
+		},
+	},
+	.throttle = {
+		[THROTTLE_HEAVY] = {
+			.priority = 100,
+			.devs = {
+				[THROTTLE_DEV_CPU] = {
+					.enable = true,
+					.depth = 80,
+				},
+				[THROTTLE_DEV_GPU] = {
+					.enable = true,
+					.depth = 80,
+				},
+			},
+		},
+		[THROTTLE_OC1] = {
+			.throt_mode = BRIEF,
+			.polarity = 1,
+			.pgmask = 1,
+			.devs = {
+				[THROTTLE_DEV_CPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+				[THROTTLE_DEV_GPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+			},
+		},
+		[THROTTLE_OC2] = {
+			.throt_mode = BRIEF,
+			.devs = {
+				[THROTTLE_DEV_CPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+				[THROTTLE_DEV_GPU] = {
+					.enable = true,
+					.depth = 50,
+				},
+			},
+		},
+	},
+	.tshut_pmu_trip_data = &tpdata_palmas,
+};
+
+int __init atlantis_soctherm_init(void)
+{
+	struct board_info board_info;
+
+	/* atlantis ERS and FFD */
+	tegra_get_board_info(&board_info);
+	if (!((board_info.board_id == BOARD_E1670) ||
+		(board_info.board_id == BOARD_E1740)))
+		return -EINVAL;
+
+	tegra_platform_edp_init(atlantis_soctherm_data.therm[THERM_CPU].trips,
+				&atlantis_soctherm_data.therm[THERM_CPU].num_trips,
+				14000); /* edp temperature margin */
+	tegra_add_tj_trips(atlantis_soctherm_data.therm[THERM_CPU].trips,
+			   &atlantis_soctherm_data.therm[THERM_CPU].num_trips);
+
+	return tegra11_soctherm_init(&atlantis_soctherm_data);
 }

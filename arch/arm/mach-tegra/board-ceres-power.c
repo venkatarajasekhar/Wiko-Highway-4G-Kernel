@@ -1254,26 +1254,6 @@ int __init ceres_suspend_init(void)
 	return 0;
 }
 
-static struct tegra_tsensor_pmu_data tpdata_palmas = {
-	.reset_tegra = 1,
-	.pmu_16bit_ops = 0,
-	.controller_type = 0,
-	.pmu_i2c_addr = 0x58,
-	.i2c_controller_id = 4,
-	.poweroff_reg_addr = 0xa0,
-	.poweroff_reg_data = 0x0,
-};
-
-static struct tegra_tsensor_pmu_data tpdata_max77660 = {
-	.reset_tegra = 1,
-	.pmu_16bit_ops = 0,
-	.controller_type = 0,
-	.pmu_i2c_addr = 0x23,
-	.i2c_controller_id = 4,
-	.poweroff_reg_addr = 0x1c,
-	.poweroff_reg_data = 0x4,
-};
-
 int __init ceres_edp_init(void)
 {
 	unsigned int regulator_mA;
@@ -1294,6 +1274,16 @@ int __init ceres_edp_init(void)
 
 	return 0;
 }
+
+static struct tegra_tsensor_pmu_data tpdata_max77660 = {
+	.reset_tegra = 1,
+	.pmu_16bit_ops = 0,
+	.controller_type = 0,
+	.pmu_i2c_addr = 0x23,
+	.i2c_controller_id = 4,
+	.poweroff_reg_addr = 0x1c,
+	.poweroff_reg_data = 0x4,
+};
 
 static struct pid_thermal_gov_params soctherm_pid_params = {
 	.max_err_temp = 9000,
@@ -1438,9 +1428,11 @@ int __init ceres_soctherm_init(void)
 {
 	struct board_info board_info;
 
+	/* atlantis soctherm init uses a different config */
 	tegra_get_board_info(&board_info);
-	if (board_info.board_id == BOARD_E1670)
-		ceres_soctherm_data.tshut_pmu_trip_data = &tpdata_palmas;
+	if ((board_info.board_id == BOARD_E1670) ||
+		(board_info.board_id == BOARD_E1740))
+		return atlantis_soctherm_init();
 
 	tegra_platform_edp_init(ceres_soctherm_data.therm[THERM_CPU].trips,
 				&ceres_soctherm_data.therm[THERM_CPU].num_trips,
