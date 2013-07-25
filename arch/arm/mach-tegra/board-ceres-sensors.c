@@ -955,7 +955,23 @@ static struct balanced_throttle skin_throttle = {
 
 static int __init ceres_skin_init(void)
 {
+	int i;
+
 	if (machine_is_ceres()) {
+		if (board_info.board_id == BOARD_E1690 &&
+				board_info.fab <= BOARD_FAB_B) {
+			/* we effectively disabled the shutdown trip point */
+			for (i = 0; i < skin_data.num_trips; i++) {
+				if (strcmp(skin_data.trips[i].cdev_type,
+					  "tegra-shutdown") == 0) {
+					break;
+				}
+			}
+
+			if (i != skin_data.num_trips)
+				skin_data.trips[i].trip_temp = 120000;
+		}
+
 		balanced_throttle_register(&skin_throttle, "skin-balanced");
 		tegra_skin_therm_est_device.dev.platform_data = &skin_data;
 		platform_device_register(&tegra_skin_therm_est_device);
