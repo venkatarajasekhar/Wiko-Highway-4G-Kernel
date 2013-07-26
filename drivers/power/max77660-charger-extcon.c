@@ -322,6 +322,7 @@ int max77660_full_current_enable(struct max77660_chg_extcon *chip)
 {
 	int ret;
 
+	chip->charger->in_current_lim = chip->last_charging_current/1000;
 	ret = max77660_charger_init(chip, true);
 	if (ret < 0) {
 		dev_err(chip->dev,
@@ -337,17 +338,14 @@ int max77660_full_current_enable(struct max77660_chg_extcon *chip)
 int max77660_half_current_enable(struct max77660_chg_extcon *chip)
 {
 	int ret;
-	int temp;
 
-	temp = chip->charger->in_current_lim;
-	chip->charger->in_current_lim = chip->charger->in_current_lim/2;
+	chip->charger->in_current_lim = chip->last_charging_current/2000;
 	ret = max77660_charger_init(chip, true);
 	if (ret < 0) {
 		dev_err(chip->dev,
 			"Failed to initialise full current charging\n");
 		return ret;
 	}
-	chip->charger->in_current_lim = temp;
 	chip->charging_state = ENABLED_HALF_IBAT;
 
 	return 0;
