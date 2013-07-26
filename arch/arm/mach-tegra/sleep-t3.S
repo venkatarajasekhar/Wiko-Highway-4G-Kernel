@@ -835,6 +835,7 @@ tegra11_sdram_pad_address:
 	.globl lp1_register_i2c_base_addr
 	.globl lp1_register_core_lowvolt
 	.globl lp1_register_core_highvolt
+	.globl lp0_register_core_lowvolt
 lp1_register_pmuslave_addr:
 	.word	0
 lp1_register_i2c_base_addr:
@@ -842,6 +843,8 @@ lp1_register_i2c_base_addr:
 lp1_register_core_lowvolt:
 	.word	0
 lp1_register_core_highvolt:
+	.word	0
+lp0_register_core_lowvolt:
 	.word	0
 #endif
 

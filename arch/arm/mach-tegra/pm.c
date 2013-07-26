@@ -133,10 +133,6 @@ static u64 suspend_entry_time;
 static u64 suspend_end_time;
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-static void update_pmc_registers(unsigned long rate);
-#endif
-
 struct suspend_context tegra_sctx;
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
 extern struct device *get_se_device(void);
@@ -904,20 +900,27 @@ static int tegra_common_suspend(void)
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
 	if (pdata && pdata->lp1_lowvolt_support) {
-		u32 lp1_core_lowvolt;
+		u32 lp1_core_lowvolt, lp0_core_lowvolt;
 		if (pdata->lp1_lookup_reg) {
 			lp1_core_lowvolt = pdata->lp1_lookup_reg(
 				pdata->lp1bb_core_volt_min);
 			lp1_core_lowvolt <<= 8;
+
+			lp0_core_lowvolt = pdata->lp1_lookup_reg(
+				pdata->lp0bb_core_volt_min);
+			lp0_core_lowvolt <<= 8;
 		} else {
 			lp1_core_lowvolt = (tegra_is_voice_call_active() ||
 				 tegra_dvfs_rail_get_thermal_floor(
 							tegra_core_rail)) ?
 			pdata->lp1_core_volt_low_cold << 8 :
 			pdata->lp1_core_volt_low << 8;
+			lp0_core_lowvolt = pdata->lp1_core_volt_high << 8;
 		}
 		lp1_core_lowvolt |= pdata->core_reg_addr;
 		memcpy(tegra_lp1_register_core_lowvolt(), &lp1_core_lowvolt, 4);
+		lp0_core_lowvolt |= pdata->core_reg_addr;
+		memcpy(tegra_lp0_register_core_lowvolt(), &lp0_core_lowvolt, 4);
 	}
 #endif
 
@@ -1224,10 +1227,6 @@ int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 		err = -ENXIO;
 		goto fail;
 	}
-
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	update_pmc_registers(tegra_lp1bb_emc_min_rate_get());
-#endif
 
 	if (tegra_is_voice_call_active()) {
 		/* backup the current value of scratch37 */
@@ -1751,6 +1750,14 @@ void tegra_lp1bb_suspend_emc_rate(unsigned long emc_min, unsigned long emc_max)
 	pdata->lp1bb_emc_rate_max = emc_max;
 }
 
+void tegra_lp0bb_suspend_mv_set(int mv)
+{
+	if (WARN_ON_ONCE(!pdata))
+		return;
+
+	pdata->lp0bb_core_volt_min = mv;
+}
+
 void tegra_lp1bb_suspend_mv_set(int mv)
 {
 	if (WARN_ON_ONCE(!pdata))
@@ -1868,15 +1875,18 @@ static inline bool pmc_write_check(int index, int bit_position)
 		return false;
 }
 
-static void update_pmc_registers(unsigned long rate)
+long set_lp0_pmc_registers(unsigned long rate)
 {
 	u32 i, j, base2;
 	void __iomem *base;
 	int instance = 1;
+	long lp0_rate = -ENODATA;	/* FIXME: check instance 1 rate here */
 
 	/* Convert rate to instance */
-	if (rate <= 204000000)
+	if (rate <= 204000000) {
 		instance = 2;
+		lp0_rate = 204000000;	/* FIXME: check instance 2 rate here */
+	}
 
 	/* Based on index, we select that block of scratches */
 	base2 = (tegra_wb0_params_address + (instance - 1) *
@@ -1909,5 +1919,7 @@ static void update_pmc_registers(unsigned long rate)
 
 #undef copy_dram_to_pmc
 	iounmap(base);
+
+	return lp0_rate;
 }
 #endif

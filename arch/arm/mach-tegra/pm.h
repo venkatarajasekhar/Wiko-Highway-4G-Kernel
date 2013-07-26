@@ -86,6 +86,7 @@ struct tegra_suspend_platform_data {
 	unsigned int lp1_core_volt_high;
 	int (*lp1_lookup_reg)(int voltage);
 #endif
+	unsigned int lp0bb_core_volt_min;
 	unsigned int lp1bb_core_volt_min;
 	unsigned long lp1bb_emc_rate_min;
 	unsigned long lp1bb_emc_rate_max;
@@ -124,6 +125,9 @@ int tegra_is_lp1_suspend_mode(void);
 void tegra_lp1bb_suspend_emc_rate(unsigned long emc_min, unsigned long emc_max);
 void tegra_lp1bb_suspend_mv_set(int mv);
 unsigned long tegra_lp1bb_emc_min_rate_get(void);
+
+void tegra_lp0bb_suspend_mv_set(int mv);
+long set_lp0_pmc_registers(unsigned long rate);
 
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 #define FLOW_CTRL_CLUSTER_CONTROL \

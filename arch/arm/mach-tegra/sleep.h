@@ -273,6 +273,7 @@ extern unsigned int lp1_register_pmuslave_addr;
 extern unsigned int lp1_register_i2c_base_addr;
 extern unsigned int lp1_register_core_lowvolt;
 extern unsigned int lp1_register_core_highvolt;
+extern unsigned int lp0_register_core_lowvolt;
 #endif
 int tegra3_sleep_core_finish(unsigned long int);
 int tegra3_sleep_cpu_secondary_finish(unsigned long int);
@@ -348,6 +349,15 @@ static inline void *tegra_lp1_register_core_highvolt(void)
 	return NULL;
 #else
 	return &lp1_register_core_highvolt;
+#endif
+}
+
+static inline void *tegra_lp0_register_core_lowvolt(void)
+{
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
+	return NULL;
+#else
+	return &lp0_register_core_lowvolt;
 #endif
 }
 #endif /* For CONFIG_TEGRA_LP1_LOW_COREVOLTAGE */

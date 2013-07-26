@@ -4333,6 +4333,7 @@ static int emc_bus_set_rate(struct clk *bus, unsigned long rate)
 static int tegra14_clk_emc_suspend(struct clk *c, u32 *ctx)
 {
 	int mv;
+	unsigned long lp0_rate;
 	unsigned long rate = tegra_lp1bb_emc_min_rate_get();
 	unsigned long old_rate = clk_get_rate_all_locked(c);
 	int floor_mv  = tegra_dvfs_rail_get_thermal_floor(tegra_core_rail);
@@ -4343,17 +4344,27 @@ static int tegra14_clk_emc_suspend(struct clk *c, u32 *ctx)
 		mv = tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
 		mv = max(mv, floor_mv);
 		tegra_lp1bb_suspend_mv_set(mv);
+		tegra_lp0bb_suspend_mv_set(mv);
 		pr_debug("EMC suspend: BB IPC pending: voltage %d rate %lu\n",
 			 mv, old_rate);
 		return 0;
 	}
 
-	rate = tegra14_emc_clk_round_rate(c, rate);
+	/* get ready lp0 entry voltage */
+	lp0_rate = set_lp0_pmc_registers(rate);
+	if (IS_ERR_VALUE(lp0_rate))
+		lp0_rate = c->boot_rate;
+	mv = tegra_dvfs_predict_millivolts(c, lp0_rate);
+	mv = max(mv, floor_mv);
+	tegra_lp0bb_suspend_mv_set(mv);
+	pr_debug("EMC lp0 voltage requested before suspend: %d\n", mv);
 
+	/* get ready lp1 entry voltage */
+	rate = tegra14_emc_clk_round_rate(c, rate);
 	mv = tegra_dvfs_predict_millivolts(c, rate);
 	mv = max(mv, floor_mv);
 	tegra_lp1bb_suspend_mv_set(mv);
-	pr_debug("EMC voltage requested before suspend: %d\n", mv);
+	pr_debug("EMC lp1 voltage requested before suspend: %d\n", mv);
 
 	if (rate == old_rate)
 		return 0;
