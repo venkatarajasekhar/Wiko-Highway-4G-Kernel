@@ -57,7 +57,7 @@
 #define TEGRA_BB_BOOT_RESTART_FW_REQ	(0x0003)
 
 #define BBC_MC_MIN_FREQ		600000000
-#define BBC_MC_MAX_FREQ		700000000
+#define BBC_MC_MAX_FREQ		760000000
 
 #define PMC_EVENT_COUNTER_0		(0x44c)
 #define PMC_EVENT_COUNTER_0_EN_MASK	(1<<20)
@@ -774,7 +774,9 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 		/* going from high to 0 */
 		if (bb->emc_flags & EMC_DSR)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
-		clk_set_rate(bb->emc_clk, 0);
+
+		if (bb->is_suspending != true)
+			clk_set_rate(bb->emc_clk, 0);
 		clk_disable_unprepare(bb->emc_clk);
 		pr_debug("bbc removing emc floor\n");
 
@@ -859,11 +861,13 @@ static int tegra_bb_pm_notifier_event(struct notifier_block *this,
 		bb->is_suspending = true;
 
 		/* inform tegra_common_suspend about EMC requirement */
-		tegra_lp1bb_suspend_emc_rate(bb->emc_min_freq, BBC_MC_MIN_FREQ);
+		tegra_lp1bb_suspend_emc_rate(bb->emc_min_freq, BBC_MC_MAX_FREQ);
 
 		/* prepare for possible LP1BB state */
-		if (sts)
-			clk_set_rate(bb->emc_clk, BBC_MC_MIN_FREQ);
+		if (sts) {
+			clk_prepare_enable(bb->emc_clk);
+			clk_set_rate(bb->emc_clk, BBC_MC_MAX_FREQ);
+		}
 
 		return NOTIFY_OK;
 
@@ -871,9 +875,10 @@ static int tegra_bb_pm_notifier_event(struct notifier_block *this,
 		/* no need for IRQ to send a pm wake events anymore */
 		bb->is_suspending = false;
 
-		if (sts && !mem_req_soon) {
-			pr_debug("bbc is inactive, remove floor\n");
-			clk_set_rate(bb->emc_clk, 0);
+		if (sts) {
+			if (!mem_req_soon)
+				clk_set_rate(bb->emc_clk, 0);
+			clk_disable_unprepare(bb->emc_clk);
 		}
 		/* else, wait for IRQs to do the job */
 		return NOTIFY_OK;
