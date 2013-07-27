@@ -1240,8 +1240,6 @@ int __init ceres_suspend_init(void)
 {
 	struct board_info board_info;
 
-	tegra_init_suspend(&ceres_suspend_data);
-
 	tegra_get_board_info(&board_info);
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
 	if (board_info.board_id == BOARD_E1680) {
@@ -1251,6 +1249,8 @@ int __init ceres_suspend_init(void)
 		ceres_suspend_data.lp1_lowvolt_support = false;
 	}
 #endif
+	tegra_init_suspend(&ceres_suspend_data);
+
 	return 0;
 }
 
