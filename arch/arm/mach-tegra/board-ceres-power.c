@@ -1191,6 +1191,7 @@ static void ceres_board_resume(int lp_state, enum resume_stage stg)
 static struct lpx_corev_reg_lookup ceres_reg_lookup[] = {
 	{   0, 0x20}, /* No voltage is no lp1bb, set lowest voltage 0.8V */
 	{ 800, 0x20},
+	{ 825, 0x24},
 	{ 850, 0x28},
 	{ 900, 0x30},
 	{ 950, 0x38},
@@ -1198,6 +1199,7 @@ static struct lpx_corev_reg_lookup ceres_reg_lookup[] = {
 	{1050, 0x48},
 	{1100, 0x50},
 	{1150, 0x58},
+	{1200, 0x60},
 	{1230, 0x65},
 	{INT_MAX, 0x68},
 };
@@ -1206,9 +1208,9 @@ static int ceres_lp1_reg_lookup(int voltage)
 {
 	int i;
 	for (i = 0; i < ARRAY_SIZE(ceres_reg_lookup); i++)
-		if (voltage == ceres_reg_lookup[i].core_voltage)
+		if (voltage <= ceres_reg_lookup[i].core_voltage)
 			return ceres_reg_lookup[i].reg_value;
-	return 0x50; /* Default Voltage: 1.1V */
+	return 0x65; /* Default Voltage: 1.230V */
 }
 #endif
 
