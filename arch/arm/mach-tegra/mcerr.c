@@ -377,15 +377,19 @@ static int __init tegra_mcerr_init(void)
 	writel(reg, mc + MC_RESERVED_RSV);
 #endif
 
-#if defined(CONFIG_TEGRA_MC_EARLY_ACK)
 	reg = readl(mc + MC_EMEM_ARB_OVERRIDE);
+#if defined(CONFIG_TEGRA_MC_EARLY_ACK)
 	reg |= 3;
 #if defined(CONFIG_TEGRA_ERRATA_1157520)
 	if (tegra_revision == TEGRA_REVISION_A01)
 		reg &= ~2;
 #endif
-	writel(reg, mc + MC_EMEM_ARB_OVERRIDE);
 #endif
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+	/* Set MERGE_FDC_OVERRIDE to 0. */
+	reg &= ~MC_EMEM_ARB_OVERRIDE_MERGE_FDC_OVERRIDE;
+#endif
+	writel(reg, mc + MC_EMEM_ARB_OVERRIDE);
 
 	chip_specific.mcerr_info         = mcerr_default_info;
 	chip_specific.mcerr_info_update  = mcerr_default_info_update;
