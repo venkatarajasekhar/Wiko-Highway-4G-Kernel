@@ -111,7 +111,7 @@ void tegra_init_speedo_data(void)
 	if (fuse_opt_cp_rev < OPT_CP_REV_W130)
 		core_speedo_value = tegra_fuse_readl(FUSE_CORE_SPEEDO_0);
 	else
-		core_speedo_value = tegra_fuse_readl(FUSE_CORE_SPEEDO_1);
+		core_speedo_value = 1024 + tegra_fuse_readl(FUSE_CORE_SPEEDO_1);
 
 	rev_sku_to_speedo_ids(tegra_revision, tegra_sku_id);
 
