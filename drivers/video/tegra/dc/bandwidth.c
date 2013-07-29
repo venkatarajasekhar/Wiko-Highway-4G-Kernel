@@ -71,9 +71,9 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	};
 #endif
 
-	BUG_ON(dc->ndev->id >= ARRAY_SIZE(la_id_tab));
+	BUG_ON(dc->controller_id >= ARRAY_SIZE(la_id_tab));
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	BUG_ON(dc->ndev->id >= ARRAY_SIZE(vfilter_tab));
+	BUG_ON(dc->controller_id >= ARRAY_SIZE(vfilter_tab));
 #endif
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
 
@@ -91,11 +91,11 @@ static void tegra_dc_set_latency_allowance(struct tegra_dc *dc,
 	if (bw != ULONG_MAX)
 		bw = (bw + 1000 - 1) / 1000;
 
-	tegra_set_latency_allowance(la_id_tab[dc->ndev->id][w->idx], bw);
+	tegra_set_latency_allowance(la_id_tab[dc->controller_id][w->idx], bw);
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* if window B, also set the 1B client for the 2-tap V filter. */
 	if (w->idx == 1)
-		tegra_set_latency_allowance(vfilter_tab[dc->ndev->id], bw);
+		tegra_set_latency_allowance(vfilter_tab[dc->controller_id], bw);
 #endif
 }
 

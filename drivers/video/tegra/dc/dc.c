@@ -1988,7 +1988,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 	tegra_dc_writel(dc, 0x00000100, DC_CMD_GENERAL_INCR_SYNCPT_CNTRL);
-	if (dc->ndev->id == 0) {
+	if (dc->controller_id == 0) {
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0A,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0B,
@@ -2002,7 +2002,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 #endif
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAYHC,
 				      TEGRA_MC_PRIO_HIGH);
-	} else if (dc->ndev->id == 1) {
+	} else if (dc->controller_id == 1) {
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0AB,
 				      TEGRA_MC_PRIO_MED);
 		tegra_mc_set_priority(TEGRA_MC_CLIENT_DISPLAY0BB,
@@ -2579,6 +2579,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_release_resource_reg;
 	}
 	if (TEGRA_DISPLAY_BASE == res->start) {
+		dc->controller_id = 0;
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
 		dc->win_syncpt[0] = NVSYNCPT_DISP0_A;
 		dc->win_syncpt[1] = NVSYNCPT_DISP0_B;
@@ -2597,6 +2598,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->powergate_id = TEGRA_POWERGATE_DISA;
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
+		dc->controller_id = 1;
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->win_syncpt[0] = NVSYNCPT_DISP1_A;
 		dc->win_syncpt[1] = NVSYNCPT_DISP1_B;

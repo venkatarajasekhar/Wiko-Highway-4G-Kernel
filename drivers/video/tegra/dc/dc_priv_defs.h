@@ -209,6 +209,7 @@ struct tegra_dc {
 	u32				reserved_bw;
 	u32				available_bw;
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];
+	int				controller_id; /* 0=dispA 1=dispB */
 };
 
 #endif
