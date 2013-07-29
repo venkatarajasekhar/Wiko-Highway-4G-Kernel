@@ -78,6 +78,7 @@
 #include "timer.h"
 #include "dvfs.h"
 #include "cpu-tegra.h"
+#include "tegra-board-id.h"
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #include "tegra14_scratch.h"
 #endif
@@ -892,15 +893,18 @@ int tegra_is_lp1_suspend_mode(void)
 
 static int tegra_common_suspend(void)
 {
+	struct board_info board_info;
 	void __iomem *mc = IO_ADDRESS(TEGRA_MC_BASE);
 
+	writel(0, pmc + PMC_SCRATCH21);
+	tegra_get_board_info(&board_info);
 	tegra_sctx.mc[0] = readl(mc + MC_SECURITY_START);
 	tegra_sctx.mc[1] = readl(mc + MC_SECURITY_SIZE);
 	tegra_sctx.mc[2] = readl(mc + MC_SECURITY_CFG2);
 
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
 	if (pdata && pdata->lp1_lowvolt_support) {
-		u32 lp1_core_lowvolt, lp0_core_lowvolt;
+		u32 lp1_core_lowvolt, lp0_core_lowvolt, reg;
 		if (pdata->lp1_lookup_reg) {
 			lp1_core_lowvolt = pdata->lp1_lookup_reg(
 				pdata->lp1bb_core_volt_min);
@@ -921,6 +925,13 @@ static int tegra_common_suspend(void)
 		memcpy(tegra_lp1_register_core_lowvolt(), &lp1_core_lowvolt, 4);
 		lp0_core_lowvolt |= pdata->core_reg_addr;
 		memcpy(tegra_lp0_register_core_lowvolt(), &lp0_core_lowvolt, 4);
+		if (board_info.board_id == BOARD_E1680) {
+			reg = (pdata->pmuslave_addr << 24) |
+				(pdata->lp1_core_volt_high << 16) |
+				(pdata->lp1_core_volt_low << 8) |
+				(pdata->core_reg_addr);
+			writel(reg, pmc + PMC_SCRATCH21);
+		}
 	}
 #endif
 

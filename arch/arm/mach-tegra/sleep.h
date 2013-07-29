@@ -120,6 +120,10 @@
 #define PMC_SCRATCH39                   0x138
 /* PMC_SCRATCH41 stores the reset vector of the CPU after LP0 and LP1 */
 #define PMC_SCRATCH41                   0x140
+/* PMC_SCRATCH21 stores the pmu slave address, core voltage address,
+ * low and high core voltage
+ */
+#define PMC_SCRATCH21			0xa4
 
 /* Legacy Interrupt Controller register to allow PMC Wake events
  * to be propagated to LIC as interrupts.
