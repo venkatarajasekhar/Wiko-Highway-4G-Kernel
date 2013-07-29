@@ -399,6 +399,17 @@ static bool rd_wr_reg_power(struct device *dev, unsigned int reg)
 	return false;
 }
 
+static bool volatile_reg_power(struct device *dev, unsigned int reg)
+{
+	switch (reg) {
+		case MAX77660_REG_CNFG_FPS_AP_OFF ... MAX77660_REG_BUCK_PWR_MODE2:
+		case MAX77660_REG_LDO_PWR_MODE1 ... MAX77660_REG_SW5_CNFG:
+			return false;
+		default:
+			return true;
+	}
+}
+
 static bool rd_wr_reg_rtc(struct device *dev, unsigned int reg)
 {
 	if (reg < 0x1C)
@@ -448,6 +459,8 @@ static const struct regmap_config max77660_regmap_config[] = {
 		.max_register = 0xC0,
 		.writeable_reg = rd_wr_reg_power,
 		.readable_reg = rd_wr_reg_power,
+		.volatile_reg = volatile_reg_power,
+		.cache_type = REGCACHE_RBTREE,
 	}, {
 		.reg_bits = 8,
 		.val_bits = 8,
