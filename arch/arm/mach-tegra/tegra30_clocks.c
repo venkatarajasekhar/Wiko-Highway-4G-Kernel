@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra3_clocks.c
  *
- * Copyright (C) 2010-2013 NVIDIA Corporation
+ * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -4440,7 +4440,8 @@ struct clk tegra_list_clks[] = {
 	SHARED_CLK("sbc6.sclk", "spi_tegra.5",		"sclk", &tegra_clk_sbus_cmplx, NULL, 0, 0),
 
 	SHARED_CLK("avp.emc",	"tegra-avp",		"emc",	&tegra_clk_emc, NULL, 0, 0),
-	SHARED_CLK("cpu.emc",	"cpu",			"emc",	&tegra_clk_emc, NULL, 0, 0),
+	SHARED_CLK("mon_cpu.emc",	"tegra_mon",		"cpu_emc",
+					&tegra_clk_emc, NULL, 0, 0),
 	SHARED_CLK("disp1.emc",	"tegradc.0",		"emc",	&tegra_clk_emc, NULL, 0, SHARED_BW),
 	SHARED_CLK("disp2.emc",	"tegradc.1",		"emc",	&tegra_clk_emc, NULL, 0, SHARED_BW),
 	SHARED_CLK("hdmi.emc",	"hdmi",			"emc",	&tegra_clk_emc, NULL, 0, 0),
