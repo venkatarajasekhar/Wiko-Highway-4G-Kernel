@@ -76,6 +76,7 @@ enum {
 	TE_SMC_OPEN_SESSION		= 0xFFFF1004,
 	TE_SMC_CLOSE_SESSION		= 0xFFFF1005,
 	TE_SMC_LAUNCH_OPERATION		= 0xFFFF1000,
+	TE_SMC_INIT_LOGGER		= 0xFFFF1FF3,
 };
 
 enum {
@@ -199,4 +200,6 @@ struct te_file_req {
 
 int te_handle_fs_ioctl(struct file *file, unsigned int ioctl_num,
 		unsigned long ioctl_param);
+void ote_print_logs(void);
+
 #endif

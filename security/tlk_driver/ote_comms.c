@@ -309,6 +309,12 @@ static void do_smc(struct te_request *request)
 		smc_params = virt_to_phys(request->params);
 
 	tlk_generic_smc(request->type, smc_args, smc_params);
+
+	/*
+	 * Check to see if there are any logs in written by TLK.
+	 * If there are, print them out.
+	 */
+	ote_print_logs();
 }
 
 /*
