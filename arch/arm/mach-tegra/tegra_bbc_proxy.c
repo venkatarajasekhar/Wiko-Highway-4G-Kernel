@@ -64,6 +64,7 @@ struct tegra_bbc_proxy {
 	struct regulator *sim1;
 	struct regulator *rf1v7;
 	struct regulator *rf2v65;
+	int fpwm; /* rf regulators operate in fpwm or auto mode */
 };
 
 
@@ -676,6 +677,36 @@ field ## _store_mode(struct device *dev, struct device_attribute *attr,	\
 static DEVICE_ATTR(field ## _mode, 0644,				\
 		   field ## _show_mode, field ## _store_mode);
 
+int tegra_bbc_proxy_set_rf_mode(struct device *dev, bool fpwm)
+{
+	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
+
+	if (!bbc)
+		return -EAGAIN;
+
+	if (!bbc->rf1v7 || !bbc->rf2v65)
+		return -EINVAL;
+
+	if (fpwm == bbc->fpwm)
+		return 0;
+
+	if (fpwm) {
+		if (regulator_set_mode(bbc->rf1v7, REGULATOR_MODE_NORMAL))
+			return -EINVAL;
+		if (regulator_set_mode(bbc->rf2v65, REGULATOR_MODE_NORMAL))
+			return -EINVAL;
+	} else {
+		if (regulator_set_mode(bbc->rf1v7, REGULATOR_MODE_FAST))
+			return -EINVAL;
+		if (regulator_set_mode(bbc->rf2v65, REGULATOR_MODE_FAST))
+			return -EINVAL;
+	}
+	bbc->fpwm = fpwm;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_bbc_proxy_set_rf_mode);
+
 REG_ATTR(sim0);
 REG_ATTR(sim1);
 REG_ATTR(rf1v7);
@@ -850,6 +881,9 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't create sysfs file\n");
 		goto mode_error;
 	}
+
+	/* set to -1 to ensure the mode gets programmed the first time */
+	bbc->fpwm = -1;
 
 	dev_set_drvdata(&pdev->dev, bbc);
 

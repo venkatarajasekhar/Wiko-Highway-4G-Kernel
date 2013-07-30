@@ -40,6 +40,8 @@ int tegra_bbc_proxy_bw_request(struct device *dev, u32 mode, u32 bw, u32 lt,
 int tegra_bbc_proxy_restore_iso(struct device *dev);
 int tegra_bbc_proxy_clear_iso(struct device *dev);
 
+int tegra_bbc_proxy_set_rf_mode(struct device *dev, bool fpwm);
+
 #define BBC_ISO_CRASH_BW	500000
 #define BBC_ISO_BOOT_BW		1200000
 #define BBC_ISO_MARGIN_BW	1200000

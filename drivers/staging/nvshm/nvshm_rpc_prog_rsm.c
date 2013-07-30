@@ -25,6 +25,8 @@
 #include <nvshm_rpc_utils.h>
 #include <nvshm_rpc_dispatcher.h>
 
+#define RSM_FLAGS_MODE_NOT_2G		BIT(1)
+
 /*
  * RSM APIs:
  * int bbc_edp_request(u32 mode, u32 state, u32 threshold)
@@ -163,6 +165,8 @@ static enum rpc_accept_stat rpc_bbc_bw_request(
 	/* Call */
 	rc = tegra_bbc_proxy_bw_request(proxy_dev, mode, bw, lt, margin);
 	tegra_bb_set_emc_floor(tegra_bb, freq_floor, flags);
+	tegra_bbc_proxy_set_rf_mode(proxy_dev, !(flags &
+						RSM_FLAGS_MODE_NOT_2G));
 
 	/* Encode response */
 	{
