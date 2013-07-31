@@ -959,6 +959,7 @@ int __init ceres_regulator_init(void)
 					MAX77660_PIN_PULL_NORMAL;
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO2].open_drain = 0;
 
+		max77660_regulator_idata_ldo13.constraints.boot_off = 1;
 		if (board_info.sku == 1001) {
 			max77660_regulator_pdata_buck1.fps_src = FPS_SRC_3;
 			max77660_regulator_pdata_buck6.fps_src = FPS_SRC_3;
