@@ -127,7 +127,7 @@ static struct balanced_throttle tj_throttle = {
 
 static int __init ceres_throttle_init(void)
 {
-	if (machine_is_ceres())
+	if (of_machine_is_compatible("nvidia,ceres"))
 		balanced_throttle_register(&tj_throttle, "tegra-balanced");
 	return 0;
 }
@@ -957,7 +957,7 @@ static int __init ceres_skin_init(void)
 {
 	int i;
 
-	if (machine_is_ceres()) {
+	if (of_machine_is_compatible("nvidia,ceres")) {
 		if (board_info.board_id == BOARD_E1690 &&
 				board_info.fab <= BOARD_FAB_B) {
 			/* we effectively disabled the shutdown trip point */
