@@ -121,6 +121,11 @@
 #define CLK_RESET_CLK_ENB_W_CLR		0x44c
 #endif
 
+#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#define CLK_RESET_CLK_ENB_X_SET		0x284
+#define CLK_RESET_CLK_ENB_X_CLR		0x288
+#endif
+
 #define I2C_CNFG	0x0
 #define I2C_ADDR0	0x4
 #define I2C_DATA1	0xc
@@ -766,6 +771,9 @@ zcal_done:
 	mov	r1, #PMC_IPC_SET_MEM_STS
 	str	r1, [r4, #PMC_IPC_SET]
 self_refresh_skip:
+	mov32	r0, TEGRA_CLK_RESET_BASE
+	mov	r1, #(3 << 7)
+	str	r1, [r0, #CLK_RESET_CLK_ENB_X_SET]
 #endif
 	mov32	r0, TEGRA_PMC_BASE
 	ldr	r0, [r0, #PMC_SCRATCH41]
@@ -901,6 +909,8 @@ lp1bb_entry:
 	bl	tegra148_set_mem_req_interrupt
 	bl	tegra148_issue_smc
 	bl	tegra3_save_config
+	mov	r1, #(3 << 7)
+	str	r1, [r5, #CLK_RESET_CLK_ENB_X_CLR]
 	bl	tegra3_cpu_clk32k
 	b	tegra3_enter_sleep
 
