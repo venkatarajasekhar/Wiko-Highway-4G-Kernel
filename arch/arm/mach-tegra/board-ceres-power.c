@@ -1315,8 +1315,16 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 			.zone_enable = true,
 			.passive_delay = 1000,
 			.hotspot_offset = 6000,
-			.num_trips = 3,
+			.num_trips = 4,
 			.trips = {
+				{
+					/*camera cooling device trip point*/
+					.cdev_type = "camera-throttle",
+					.trip_temp = 76000,
+					.trip_type = THERMAL_TRIP_PASSIVE,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
 				{
 					.cdev_type = "tegra-balanced",
 					.trip_temp = 86000,
@@ -1345,8 +1353,16 @@ static struct soctherm_platform_data ceres_soctherm_data = {
 			.zone_enable = true,
 			.passive_delay = 1000,
 			.hotspot_offset = 6000,
-			.num_trips = 3,
+			.num_trips = 4,
 			.trips = {
+				{
+					/*camera cooling device trip point*/
+					.cdev_type = "camera-throttle",
+					.trip_temp = 78000,
+					.trip_type = THERMAL_TRIP_PASSIVE,
+					.upper = THERMAL_NO_LIMIT,
+					.lower = THERMAL_NO_LIMIT,
+				},
 				{
 					.cdev_type = "tegra-balanced",
 					.trip_temp = 88000,
