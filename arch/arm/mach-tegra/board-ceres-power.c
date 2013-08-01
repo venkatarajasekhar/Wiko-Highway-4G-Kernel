@@ -753,6 +753,7 @@ static void lp8755_regulator_init(void)
  *  E1690(CERES FFD): CPU_VDD is from Buck2 of Max 77660
  *  E1680(CERES)    : For SKU 1001 CPU_VDD is from Buck2 of Max 77660
  *		      For SKU 1000 CPU_VDD is from LP8755LME
+ *  E1740(ATLANTIS FFD) : CPU_VDD is from SMPS12 of TPS80036
  *  E1670(ATLANTIS) : For SKU 100 CPU_VDD is from SMPS12 of TPS80036
  *		      For SKU 120 CPU_VDD is from LP8755LME	     */
 
@@ -893,8 +894,9 @@ static int __init ceres_cl_dvfs_init(void)
 		max77660_vdd_cpu_fill_reg_map();
 		tegra_cl_dvfs_device.dev.platform_data =
 					&ceres_cl_dvfs_max77660_vdd_cpu_data;
-	} else if ((board_info.board_id == BOARD_E1670) &&
-			(board_info.sku == 100)) {
+	} else if (((board_info.board_id == BOARD_E1670) &&
+			(board_info.sku == 100)) ||
+			(board_info.board_id == BOARD_E1740)) {
 		tps80036_vdd_cpu_fill_reg_map();
 		tegra_cl_dvfs_device.dev.platform_data =
 					&atlantis_cl_dvfs_tps80036_vdd_cpu_data;
