@@ -638,5 +638,6 @@ MACHINE_START(M2601, "m2601")
 	.init_machine   = tegra_m2601_init,
 	.map_io         = tegra_map_common_io,
 	.timer          = &tegra_timer,
+	.restart	= tegra_assert_system_reset,
 	.handle_irq     = gic_handle_irq,
 MACHINE_END
