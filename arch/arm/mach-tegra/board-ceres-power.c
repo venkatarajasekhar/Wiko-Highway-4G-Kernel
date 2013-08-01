@@ -1508,6 +1508,20 @@ static struct psy_depletion_rbat_lut ceres_rbat_lut[] = {
 	{   0, 136000 }
 };
 
+static struct psy_depletion_ocv_lut ceres_ocv_lut[] = {
+	{ 100, 4200000 },
+	{  90, 4151388 },
+	{  80, 4064953 },
+	{  70, 3990914 },
+	{  60, 3916230 },
+	{  50, 3863778 },
+	{  40, 3807535 },
+	{  30, 3781554 },
+	{  20, 3761117 },
+	{  10, 3663381 },
+	{   0, 3514236 }
+};
+
 static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.power_supply = "battery",
 	.states = ceres_psydepl_states,
@@ -1518,8 +1532,8 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.vcharge = 4200000,
 	.ibat_nom = 3000,
 	.ibat_lut = ceres_ibat_lut,
+	.ocv_lut = ceres_ocv_lut,
 	.rbat_lut = ceres_rbat_lut
-
 };
 
 static struct platform_device ceres_psydepl_device = {
