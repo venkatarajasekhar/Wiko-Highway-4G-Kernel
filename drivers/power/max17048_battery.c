@@ -223,13 +223,19 @@ static void max17048_get_vcell(struct i2c_client *client)
 static void max17048_get_soc(struct i2c_client *client)
 {
 	struct max17048_chip *chip = i2c_get_clientdata(client);
+	struct max17048_platform_data *pdata;
 	int soc;
 
+	pdata = chip->pdata;
 	soc = max17048_read_word(client, MAX17048_SOC);
 	if (soc < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, soc);
-	else
+	else {
 		chip->soc = (uint16_t)soc >> 9;
+		if (pdata->soc_error_max_value)
+			chip->soc =(chip->soc * MAX17048_BATTERY_FULL)
+						/ pdata->soc_error_max_value;
+	}
 
 	if (chip->soc >= MAX17048_BATTERY_FULL && chip->charge_complete != 1)
 		chip->soc = MAX17048_BATTERY_FULL-1;
