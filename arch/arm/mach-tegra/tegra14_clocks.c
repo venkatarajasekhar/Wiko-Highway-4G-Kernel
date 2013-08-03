@@ -117,7 +117,10 @@
 #define OSC_CTRL_PLL_REF_DIV_4		(2<<26)
 
 #define PERIPH_CLK_SOURCE_I2S1		0x100
+
 #define PERIPH_CLK_SOURCE_EMC		0x19c
+#define PERIPH_CLK_SOURCE_EMC_MC_SAME	(1<<16)
+
 #define PERIPH_CLK_SOURCE_OSC		0x1fc
 #define PERIPH_CLK_SOURCE_NUM1 \
 	((PERIPH_CLK_SOURCE_OSC - PERIPH_CLK_SOURCE_I2S1) / 4)
@@ -4178,6 +4181,12 @@ static long tegra14_emc_clk_round_rate(struct clk *c, unsigned long rate)
 	return tegra14_emc_clk_round_updown(c, rate, true);
 }
 
+static inline void mc_divider_update(struct clk *emc)
+{
+	emc->child_bus->div = (clk_readl(emc->reg) &
+			       PERIPH_CLK_SOURCE_EMC_MC_SAME) ? 1 : 2;
+}
+
 static int tegra14_emc_clk_set_rate(struct clk *c, unsigned long rate)
 {
 	int ret;
@@ -4215,6 +4224,7 @@ static int tegra14_emc_clk_set_rate(struct clk *c, unsigned long rate)
 	}
 	c->div = div_value;
 	c->mul = 2;
+	mc_divider_update(c);
 	return 0;
 }
 
@@ -4380,8 +4390,10 @@ static void tegra14_clk_emc_resume(struct clk *c, const u32 *ctx)
 	unsigned long rate = *ctx;
 	unsigned long old_rate = clk_get_rate_all_locked(c);
 
-	if (rate == old_rate)
+	if (rate == old_rate) {
+		mc_divider_update(c); /* in case div changed at the same rate */
 		return;
+	}
 
 	pr_debug("EMC rate change after suspend: %lu => %lu\n",
 		 old_rate, rate);
@@ -4399,6 +4411,23 @@ static struct clk_ops tegra_emc_clk_ops = {
 	.round_rate_updown	= &tegra14_emc_clk_round_updown,
 	.reset			= &tegra14_periph_clk_reset,
 	.shared_bus_update	= &tegra14_clk_emc_bus_update,
+};
+
+static void tegra14_mc_clk_init(struct clk *c)
+{
+	c->state = ON;
+	if (!(clk_readl(PERIPH_CLK_TO_ENB_REG(c)) & PERIPH_CLK_TO_BIT(c)))
+		c->state = OFF;
+
+	c->parent->child_bus = c;
+	mc_divider_update(c->parent);
+	c->mul = 1;
+}
+
+static struct clk_ops tegra_mc_clk_ops = {
+	.init			= &tegra14_mc_clk_init,
+	.enable			= &tegra14_periph_clk_enable,
+	.disable		= &tegra14_periph_clk_disable,
 };
 
 /* Clock doubler ops (non-atomic shared register access) */
@@ -6264,9 +6293,9 @@ static struct clk_mux_sel mux_clk_32k[] = {
 	{ 0, 0},
 };
 
-static struct clk tegra_clk_emc;
-static struct clk_mux_sel mux_clk_emc[] = {
-	{ .input = &tegra_clk_emc, .value = 0},
+static struct clk tegra_clk_mc;
+static struct clk_mux_sel mux_clk_mc[] = {
+	{ .input = &tegra_clk_mc, .value = 0},
 	{ 0, 0},
 };
 
@@ -6289,6 +6318,17 @@ static struct clk tegra_clk_emc = {
 		.clk_num = 57,
 	},
 	.rate_change_nh = &emc_rate_change_nh,
+};
+
+static struct clk tegra_clk_mc = {
+	.name = "mc",
+	.ops = &tegra_mc_clk_ops,
+	.max_rate = 1066000000,
+	.parent = &tegra_clk_emc,
+	.flags = PERIPH_NO_RESET,
+	.u.periph = {
+		.clk_num = 32,
+	},
 };
 
 static struct raw_notifier_head host1x_rate_change_nh;
@@ -6676,9 +6716,9 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("dds",	"dds",			NULL,	150,	0,	26000000, mux_clk_m,			PERIPH_ON_APB),
 	PERIPH_CLK("dp2",	"dp2",			NULL,	152,	0,	26000000, mux_clk_m,			PERIPH_ON_APB),
 
-	PERIPH_CLK("mc_bbc",	"mc_bbc",		NULL,	170,	0,	1066000000,mux_clk_emc,			PERIPH_NO_RESET),
-	PERIPH_CLK("mc_capa",	"mc_capa",		NULL,	167,	0,	1066000000,mux_clk_emc,			PERIPH_NO_RESET),
-	PERIPH_CLK("mc_cbpa",	"mc_cbpa",		NULL,	168,	0,	1066000000,mux_clk_emc,			PERIPH_NO_RESET),
+	PERIPH_CLK("mc_bbc",	"mc_bbc",		NULL,	170,	0,	1066000000, mux_clk_mc,			PERIPH_NO_RESET),
+	PERIPH_CLK("mc_capa",	"mc_capa",		NULL,	167,	0,	1066000000, mux_clk_mc,			PERIPH_NO_RESET),
+	PERIPH_CLK("mc_cbpa",	"mc_cbpa",		NULL,	168,	0,	1066000000, mux_clk_mc,			PERIPH_NO_RESET),
 	PERIPH_CLK("pll_p_bbc",	"pll_p_bbc",		NULL,	175,	0,	432000000,mux_pll_p,			PERIPH_NO_RESET),
 
 	PERIPH_CLK("isp_sapor",	"isp_sapor",		NULL,	163,	0x654,	150000000, mux_pllm_pllc_pllp_plla,	MUX | DIV_U71 | PERIPH_NO_RESET),
@@ -6890,6 +6930,7 @@ struct clk *tegra_ptr_clks[] = {
 	&tegra_clk_ahb,
 	&tegra_clk_apb,
 	&tegra_clk_emc,
+	&tegra_clk_mc,
 	&tegra_clk_host1x,
 	&tegra_clk_msenc,
 	&tegra14_clk_twd,

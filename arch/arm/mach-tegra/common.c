@@ -493,8 +493,8 @@ static __initdata struct tegra_clk_init_table tegra14x_clk_init_table[] = {
 	{ "sbc3.sclk",	NULL,		20000000,	false},
 	{ "msenc",	"pll_p",	108000000,	false },
 	{ "tsec",	"pll_p",	108000000,	false },
-	{ "mc_capa",	"emc",		0,		true },
-	{ "mc_cbpa",	"emc",		0,		true },
+	{ "mc_capa",	"mc",		0,		true },
+	{ "mc_cbpa",	"mc",		0,		true },
 #ifdef CONFIG_TEGRA_SOCTHERM
 	{ "soc_therm",	"pll_p",	51000000,	false },
 	{ "tsensor",	"clk_m",	400000,		false },
