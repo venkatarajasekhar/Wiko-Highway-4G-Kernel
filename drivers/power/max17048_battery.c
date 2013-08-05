@@ -181,7 +181,7 @@ static int max17048_get_property(struct power_supply *psy,
 		val->intval = chip->status;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		val->intval = chip->vcell;
+		val->intval = chip->vcell * 1000;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = chip->soc;
@@ -200,7 +200,7 @@ static int max17048_get_property(struct power_supply *psy,
 								&temp);
 		if (ret < 0)
 			return -EINVAL;
-		val->intval = temp;
+		val->intval = temp * 10;
 		break;
 	default:
 	return -EINVAL;
