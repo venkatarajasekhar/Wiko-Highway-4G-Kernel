@@ -158,16 +158,34 @@ static int max77660_rtc_alarm_irq_enable(struct device *dev,
 
 	dev_dbg(dev, "%s(): enabled %u\n", __func__, enabled);
 
-	if (enabled)
+	if (enabled) {
+		ret = max77660_reg_write(rtc->parent, MAX77660_RTC_SLAVE,
+				MAX77660_RTC_AE1, 0x77);
+		if (ret < 0) {
+			dev_err(rtc->dev, "RTC_AE1 write failed: %d\n", ret);
+			return ret;
+		}
 		ret = max77660_reg_clr_bits(rtc->parent, MAX77660_RTC_SLAVE,
 			MAX77660_RTC_IRQ_MASK, MAX77660_RTC_IRQ_ALARM1_MASK);
-	else
+		if (ret < 0) {
+			dev_err(rtc->dev, "RTC_IRQ_MASK update failed: %d\n", ret);
+			return ret;
+		}
+	} else {
+		ret = max77660_reg_write(rtc->parent, MAX77660_RTC_SLAVE,
+				MAX77660_RTC_AE1, 0x00);
+		if (ret < 0) {
+			dev_err(rtc->dev, "RTC_AE1 write failed: %d\n", ret);
+			return ret;
+		}
 		ret = max77660_reg_set_bits(rtc->parent, MAX77660_RTC_SLAVE,
 			MAX77660_RTC_IRQ_MASK, MAX77660_RTC_IRQ_ALARM1_MASK);
-	if (ret < 0) {
-		dev_err(rtc->dev, "RTC_IRQ_MASK update failed: %d\n", ret);
-		return ret;
+		if (ret < 0) {
+			dev_err(rtc->dev, "RTC_IRQ_MASK update failed: %d\n", ret);
+			return ret;
+		}
 	}
+
 	rtc->alarm1_enabled = enabled;
 	return 0;
 }
@@ -208,14 +226,6 @@ static int max77660_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 		dev_warn(rtc->dev,
 			"device is shutdown: skipping alarm setting\n");
 		return -ESHUTDOWN;
-	}
-
-	/* Set alarm for sec/min/hour/month/year/day */
-	ret = max77660_reg_write(rtc->parent, MAX77660_RTC_SLAVE,
-			MAX77660_RTC_AE1, 0x77);
-	if (ret < 0) {
-		dev_err(rtc->dev, "RTC_AE1 write failed: %d\n", ret);
-		return ret;
 	}
 
 	dev_dbg(dev, "%s() %d %d %d %d %d %d\n", __func__,
@@ -266,11 +276,26 @@ static const struct rtc_class_ops max77660_rtc_ops = {
 static int max77660_rtc_preinit(struct max77660_rtc *rtc)
 {
 	int ret;
+	u8 status;
+
+	ret = max77660_reg_write(rtc->parent, MAX77660_RTC_SLAVE,
+				MAX77660_RTC_AE1, 0x0);
+	if (ret < 0) {
+		dev_err(rtc->dev, "RTC_AE1 write failed: %d\n", ret);
+		return ret;
+	}
 
 	ret = max77660_reg_write(rtc->parent, MAX77660_RTC_SLAVE,
 			 MAX77660_RTC_IRQ_MASK, 0xFF);
 	if (ret < 0) {
 		dev_err(rtc->dev, "RTC_IRQ_MASK write failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = max77660_reg_read(rtc->parent, MAX77660_RTC_SLAVE,
+				MAX77660_RTC_IRQ, &status);
+	if (ret < 0) {
+		dev_err(rtc->dev, "RTC_IRQ read failed: %d\n", ret);
 		return ret;
 	}
 
