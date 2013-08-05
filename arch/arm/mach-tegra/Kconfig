@@ -834,6 +834,14 @@ config TEGRA_WDT_RECOVERY
 	  Enables watchdog recovery mechanism to protect against
 	  suspend/resume hangs.
 
+config TEGRA_WDT_CLEAR_EARLY
+	bool "Enable clear watchdog timer early after resume from LP0"
+	depends on ARCH_TEGRA_14x_SOC
+	default n
+	help
+	  Enables clear watchdog timer early after resume from LP0. This
+	  uses to improve the latency for clearing WDT while in LP0.
+
 config TEGRA_LP2_CPU_TIMER
 	bool
 

@@ -125,6 +125,9 @@ static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 static void __iomem *tert_ictlr = IO_ADDRESS(TEGRA_TERTIARY_ICTLR_BASE);
 #endif
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+static void __iomem *apb_misc = IO_ADDRESS(TEGRA_APB_MISC_BASE);
+#endif
 static void __iomem *tmrus_reg_base = IO_ADDRESS(TEGRA_TMR1_BASE);
 static int tegra_last_pclk;
 static u64 resume_time;
@@ -135,7 +138,7 @@ static u64 suspend_end_time;
 #endif
 
 struct suspend_context tegra_sctx;
-#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
 extern struct device *get_se_device(void);
 extern int se_suspend(struct device *dev, bool pooling);
 extern struct device *get_smmu_device(void);
@@ -1064,7 +1067,7 @@ static const char *lp_state[TEGRA_MAX_SUSPEND_MODE] = {
 	[TEGRA_SUSPEND_LP0] = "LP0",
 };
 
-#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
 static int save_se_context(void)
 {
 	struct device *smmu_dev, *se_dev;
@@ -1109,37 +1112,68 @@ save_fail:
 
 static int tegra_suspend_enter(suspend_state_t state)
 {
-	int ret = 0;
-	ktime_t delta;
-	struct timespec ts_entry, ts_exit;
-
-#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
 	u32 suspend_state;
 	u32 reg;
+	u32 status1, status2;
 #endif
+	int ret = 0, reenter_suspend;
+	ktime_t delta;
+	struct timespec ts_entry, ts_exit;
 
 	if (pdata && pdata->board_suspend)
 		pdata->board_suspend(current_suspend_mode, TEGRA_SUSPEND_BEFORE_PERIPHERAL);
 
 	read_persistent_clock(&ts_entry);
 
-	ret = tegra_suspend_dram(current_suspend_mode, 0);
-	if (ret) {
-		pr_info("Aborting suspend, tegra_suspend_dram error=%d\n", ret);
-		goto abort_suspend;
-	}
-
-#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE) && defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	reg = readl(pmc + PMC_LP_STATE_SCRATCH_REG);
-	suspend_state = (reg >> PMC_LP_STATE_BIT_OFFSET) & PMC_LP_STATE_BIT_MASK;
-	if (suspend_state == PMC_LP_STATE_LP0) {
-		ret = save_se_context();
+	do {
+		reenter_suspend = 0;
+		ret = tegra_suspend_dram(current_suspend_mode, 0);
 		if (ret) {
-			pr_err("Failed to save SE context\n");
+			pr_info("Abort suspend, tegra_suspend_dram error=%d\n",
+				ret);
 			goto abort_suspend;
 		}
-	}
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+		reg = readl(pmc + PMC_LP_STATE_SCRATCH_REG);
+		suspend_state = (reg >> PMC_LP_STATE_BIT_OFFSET) \
+			& PMC_LP_STATE_BIT_MASK;
+		if (suspend_state == PMC_LP_STATE_LP0) {
+			if (pdata->wdt_clear_early_support) {
+				status1 = readl(IO_ADDRESS(TEGRA_PMC_BASE)
+					+ PMC_WAKE_STATUS);
+				pm_i2c_init();
+				if (is_wdt_int()) {
+					/* Clear WDT bit if exist */
+					if (pdata->wdt_clr_reg.addr != -1)
+						pm_i2c_write_byte(
+							pdata->pmuslave_addr,
+							pdata->wdt_clr_reg.addr,
+							pdata->wdt_clr_reg.mask
+							);
+#if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
+					ret = save_se_context();
+					if (ret) {
+						pr_err("Fail save SE context");
+						goto abort_suspend;
+					}
 #endif
+					reenter_suspend = 1;
+					status1 &= ~(1 << 18);
+				}
+				pm_i2c_deinit();
+				/*
+				 * Not reenter suspend if there is other non-wdt
+				 * wakeup occur
+				 */
+				status2 = readl(IO_ADDRESS(TEGRA_PMC_BASE)
+					+ PMC_WAKE2_STATUS);
+				if (status1 || status2)
+					reenter_suspend = 0;
+			}
+		}
+#endif
+	} while (reenter_suspend);
 
 	read_persistent_clock(&ts_exit);
 
@@ -1934,4 +1968,114 @@ long set_lp0_pmc_registers(unsigned long rate)
 
 	return lp0_rate;
 }
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+#define TIMEOUT 2000
+void pm_i2c_wait(void)
+{
+	u32 reg;
+	u32 t1 = 0, t2 = 0;
+	void __iomem *i2c_base = IO_ADDRESS(pdata->i2c_base_addr);
+
+	t1 = readl(tmrus_reg_base + TIMERUS_CNTR_1US);
+	reg = readl(i2c_base + I2C_STATUS);
+	while ((reg != 0) || (t2-t1 <= TIMEOUT)) {
+		reg = readl(i2c_base + I2C_STATUS);
+		t2 = readl(tmrus_reg_base + TIMERUS_CNTR_1US);
+	}
+}
+
+void pm_i2c_init(void)
+{
+	u32 reg;
+
+	/* Take pinmux out of tristate for I2C controller */
+	reg = readl(apb_misc + PINMUX_AUX_PWR_I2C_SDA_0);
+	reg &= ~PINMUX_AUX_PWR_I2C_SDA_0_TRISTATE;
+	writel(reg, apb_misc + PINMUX_AUX_PWR_I2C_SDA_0);
+
+	reg = readl(apb_misc + PINMUX_AUX_PWR_I2C_SCL_0);
+	reg &= ~PINMUX_AUX_PWR_I2C_SCL_0_TRISTATE;
+	writel(reg, apb_misc + PINMUX_AUX_PWR_I2C_SCL_0);
+
+	/* Program pad control register for PWR_I2C_SCL/SDA */
+	reg = readl(apb_misc + APB_MISC_GP_AOCFG1PADCTRL_0);
+	reg |= SCHMT_ENABLE;
+	writel(reg, apb_misc + APB_MISC_GP_AOCFG1PADCTRL_0);
+
+	/*
+	 * Bring I2C pads out of DPD early to communitcate over I2C to PMIC.
+	 * This is for T148 only as clear DPD_SAMPLE early depends on per chip.
+	 */
+	writel(0x0, pmc + PMC_DPD_SAMPLE);
+
+	/* Set reset, clear reset, then enable clock for I2C */
+	reg = pdata->i2c_clk_offset;
+	writel(reg, clk_rst + CLK_RST_CONTROLLER_RST_DEV_H_SET_0);
+	/* Wait 2us */
+	udelay(2);
+	writel(reg, clk_rst + CLK_RST_CONTROLLER_RST_DEV_H_CLR_0);
+	writel(reg, clk_rst + CLK_RST_CONTROLLER_CLK_ENB_H_SET_0);
+}
+
+void pm_i2c_deinit(void)
+{
+	u32 reg;
+
+	reg = pdata->i2c_clk_offset;
+	writel(reg, clk_rst + CLK_RST_CONTROLLER_CLK_ENB_H_CLR_0);
+
+	/* Put I2C pads back into of DPD after done I2C transactions */
+	writel(0x1, pmc + PMC_DPD_SAMPLE);
+}
+
+void pm_i2c_write_byte(u8 slave_addr, u8 offset, u8 value)
+{
+	void __iomem *i2c_base = IO_ADDRESS(pdata->i2c_base_addr);
+
+	writel(slave_addr, i2c_base + I2C_ADDR0);
+	writel(0x2, i2c_base + I2C_CNFG);
+	writel((value << 8) | offset, i2c_base + I2C_DATA1);
+	writel(0x0, i2c_base + I2C_DATA2);
+	writel(0xA02, i2c_base + I2C_CNFG);
+	pm_i2c_wait();
+}
+
+u8 pm_i2c_read_byte(u8 slave_addr, u8 offset)
+{
+	u8 byte_read;
+	void __iomem *i2c_base = IO_ADDRESS(pdata->i2c_base_addr);
+
+	writel(slave_addr, i2c_base + I2C_ADDR0);
+	writel(offset, i2c_base + I2C_DATA1);
+	writel(0x0, i2c_base + I2C_DATA2);
+	writel(0xA00, i2c_base + I2C_CNFG);
+	pm_i2c_wait();
+	writel(slave_addr | 0x1, i2c_base + I2C_ADDR0);
+	writel(0x0, i2c_base + I2C_DATA2);
+	writel(0xA40, i2c_base + I2C_CNFG);
+	pm_i2c_wait();
+
+	byte_read = readl(i2c_base + I2C_DATA1) & 0xFF;
+
+	return byte_read;
+}
+
+bool is_wdt_int(void)
+{
+	int i;
+	bool wdt_int = true;
+
+	for (i = 0; i < MAX_WDT_INT_STATUS_REGS; i++) {
+		if (pdata->wdt_int_status_regs[i].addr == -1)
+			continue;
+		if (!(pm_i2c_read_byte(pdata->pmuslave_addr,
+			pdata->wdt_int_status_regs[i].addr) &
+			pdata->wdt_int_status_regs[i].mask)) {
+			wdt_int = false;
+			break;
+		}
+	}
+	return wdt_int;
+}
+#endif
 #endif

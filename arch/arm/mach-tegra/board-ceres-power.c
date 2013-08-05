@@ -1251,6 +1251,17 @@ static struct tegra_suspend_platform_data ceres_suspend_data = {
 	.lp1_core_volt_high = 0x58,
 	.lp1_lookup_reg = ceres_lp1_reg_lookup,
 #endif
+#ifdef CONFIG_TEGRA_WDT_CLEAR_EARLY
+	/* Settings for Ceres */
+	.wdt_clear_early_support = true,
+	.i2c_clk_offset = (1 << 15),
+	.wdt_clr_reg = { 0x20, 1 },
+	.wdt_int_status_regs = {
+		{0x5, 1 << 7},
+		{0x8, 1 << 1},
+		{-1, -1},
+	},
+#endif
 };
 
 
@@ -1265,6 +1276,9 @@ int __init ceres_suspend_init(void)
 			ceres_suspend_data.core_reg_addr = 0x47;
 	} else {
 		ceres_suspend_data.lp1_lowvolt_support = false;
+#ifdef CONFIG_TEGRA_WDT_CLEAR_EARLY
+		ceres_suspend_data.wdt_clear_early_support = false;
+#endif
 	}
 #endif
 	tegra_init_suspend(&ceres_suspend_data);

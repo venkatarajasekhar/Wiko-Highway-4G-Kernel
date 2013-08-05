@@ -36,6 +36,24 @@
 #define PMC_SCRATCH1		0x54
 #define PMC_SCRATCH4		0x60
 
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+#define PINMUX_AUX_PWR_I2C_SCL_0		0x32b4
+#define PINMUX_AUX_PWR_I2C_SCL_0_TRISTATE	0x10
+#define PINMUX_AUX_PWR_I2C_SDA_0		0x32b8
+#define PINMUX_AUX_PWR_I2C_SDA_0_TRISTATE	0x10
+#define APB_MISC_GP_AOCFG1PADCTRL_0		0x868
+#define SCHMT_ENABLE				0x8
+#define CLK_RST_CONTROLLER_RST_DEV_H_SET_0	0x308
+#define CLK_RST_CONTROLLER_RST_DEV_H_CLR_0	0x30c
+#define CLK_RST_CONTROLLER_CLK_ENB_H_SET_0	0x328
+#define CLK_RST_CONTROLLER_CLK_ENB_H_CLR_0	0x32c
+#define I2C_CNFG				0x0
+#define I2C_ADDR0				0x4
+#define I2C_DATA1				0xc
+#define I2C_DATA2				0x10
+#define I2C_STATUS				0x1c
+#endif
+
 enum tegra_suspend_mode {
 	TEGRA_SUSPEND_NONE = 0,
 	TEGRA_SUSPEND_LP2,	/* CPU voltage off */
@@ -58,6 +76,14 @@ enum resume_stage {
 struct lpx_corev_reg_lookup {
 	int core_voltage;
 	int reg_value;
+};
+#endif
+
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+#define MAX_WDT_INT_STATUS_REGS	3
+struct pmic_reg_info {
+	int addr;
+	int mask;
 };
 #endif
 
@@ -99,6 +125,12 @@ struct tegra_suspend_platform_data {
 	unsigned long min_residency_mc_clk;
 	bool usb_vbus_internal_wake; /* support for internal vbus wake */
 	bool usb_id_internal_wake; /* support for internal id wake */
+#ifdef CONFIG_TEGRA_WDT_CLEAR_EARLY
+	bool wdt_clear_early_support;
+	unsigned int i2c_clk_offset;
+	struct pmic_reg_info wdt_clr_reg;
+	struct pmic_reg_info wdt_int_status_regs[MAX_WDT_INT_STATUS_REGS];
+#endif
 };
 
 /* clears io dpd settings before kernel code */
@@ -314,6 +346,14 @@ static inline void tegra_smp_clear_power_mask(void){}
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 void tegra_smp_save_power_mask(void);
 void tegra_smp_restore_power_mask(void);
+#endif
+#if defined(CONFIG_TEGRA_WDT_CLEAR_EARLY)
+void pm_i2c_init(void);
+void pm_i2c_deinit(void);
+void pm_i2c_wait(void);
+u8 pm_i2c_read_byte(u8 slave_addr, u8 offset);
+void pm_i2c_write_byte(u8 slave_addr, u8 offset, u8 value);
+bool is_wdt_int(void);
 #endif
 
 #ifdef CONFIG_TEGRA_USE_SECURE_KERNEL
