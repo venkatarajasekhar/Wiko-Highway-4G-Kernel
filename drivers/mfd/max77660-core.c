@@ -412,7 +412,7 @@ static bool volatile_reg_power(struct device *dev, unsigned int reg)
 
 static bool rd_wr_reg_rtc(struct device *dev, unsigned int reg)
 {
-	if (reg < 0x1C)
+	if (reg <= MAX77660_RTC_MAX_REG)
 		return true;
 
 	dev_err(dev, "non-existing reg %s() reg 0x%x\n", __func__, reg);
@@ -432,7 +432,11 @@ static bool rd_wr_reg_fg(struct device *dev, unsigned int reg)
 
 static bool rd_wr_reg_chg(struct device *dev, unsigned int reg)
 {
-
+	if (reg > MAX77660_CHARGER_MAX_REG) {
+		dev_err(dev, "non-existing reg %s() reg 0x%x\n", __func__, reg);
+		BUG();
+		return false;
+	}
 	switch (reg) {
 	case MAX77660_CHARGER_USBCHGCTRL:
 	case MAX77660_CHARGER_CHGINT ... MAX77660_CHARGER_MBATREGMAX:
@@ -444,7 +448,7 @@ static bool rd_wr_reg_chg(struct device *dev, unsigned int reg)
 
 static bool rd_wr_reg_haptic(struct device *dev, unsigned int reg)
 {
-	if (reg <= 0xFF)
+	if (reg <= MAX77660_HAPTIC_MAX_REG)
 		return true;
 
 	dev_err(dev, "non-existing reg %s() reg 0x%x\n", __func__, reg);
@@ -464,9 +468,15 @@ static const struct regmap_config max77660_regmap_config[] = {
 	}, {
 		.reg_bits = 8,
 		.val_bits = 8,
-		.max_register = 0xF2,
+		.max_register = MAX77660_RTC_MAX_REG,
 		.writeable_reg = rd_wr_reg_rtc,
 		.readable_reg = rd_wr_reg_rtc,
+	}, {
+		.reg_bits = 8,
+		.val_bits = 8,
+		.max_register = MAX77660_CHARGER_MAX_REG,
+		.writeable_reg = rd_wr_reg_chg,
+		.readable_reg = rd_wr_reg_chg,
 	}, {
 		.reg_bits = 8,
 		.val_bits = 8,
@@ -476,13 +486,7 @@ static const struct regmap_config max77660_regmap_config[] = {
 	}, {
 		.reg_bits = 8,
 		.val_bits = 8,
-		.max_register = 0xFF,
-		.writeable_reg = rd_wr_reg_chg,
-		.readable_reg = rd_wr_reg_chg,
-	}, {
-		.reg_bits = 8,
-		.val_bits = 8,
-		.max_register = 0xFF,
+		.max_register = MAX77660_HAPTIC_MAX_REG,
 		.writeable_reg = rd_wr_reg_haptic,
 		.readable_reg = rd_wr_reg_haptic,
 	},
