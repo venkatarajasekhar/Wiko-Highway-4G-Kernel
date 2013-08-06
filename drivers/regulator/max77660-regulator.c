@@ -547,7 +547,7 @@ static int max77660_regulator_set_mode(struct regulator_dev *rdev,
 
 		ret = max77660_reg_update(to_max77660_chip(reg),
 				MAX77660_PWR_SLAVE, rinfo->regs[CFG_REG].addr,
-				mask, val);
+				val, mask);
 		if (ret < 0)
 			return ret;
 	}
