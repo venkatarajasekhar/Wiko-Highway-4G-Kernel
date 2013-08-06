@@ -1,5 +1,6 @@
 /*
  * Copyright 2010 MontaVista Software, LLC.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anton Vorontsov <avorontsov@ru.mvista.com>
  *
@@ -17,7 +18,7 @@
 
 struct sdhci_pltfm_data {
 	struct sdhci_ops *ops;
-	u64 quirks;
+	u32 quirks;
 	u32 quirks2;
 };
 

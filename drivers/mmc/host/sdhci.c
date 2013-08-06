@@ -1089,12 +1089,10 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 
 	if (host->quirks & SDHCI_QUIRK_NONSTANDARD_CLOCK)
 		return;
-	if (host->quirks & SDHCI_QUIRK_DISABLE_CARD_CLOCK) {
-		clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
-		clk &= ~SDHCI_CLOCK_CARD_EN;
-		sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
-		clk = 0;
-	}
+	clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+	clk &= ~SDHCI_CLOCK_CARD_EN;
+	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
+	clk = 0;
 	sdhci_writew(host, 0, SDHCI_CLOCK_CONTROL);
 
 	if (clock == 0)
@@ -1172,7 +1170,7 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 
 	/* Do a dummy write */
-	if (host->quirks & SDHCI_QUIRK_DO_DUMMY_WRITE) {
+	if (host->quirks & SDHCI_QUIRK2_DO_DUMMY_WRITE) {
 		ctrl = sdhci_readb(host, SDHCI_CAPABILITIES);
 		ctrl |= 1;
 		sdhci_writeb(host, ctrl, SDHCI_CAPABILITIES);
@@ -1649,7 +1647,7 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 	if (host->version < SDHCI_SPEC_300)
 		return 0;
 
-	if (host->quirks & SDHCI_QUIRK_NON_STD_VOLTAGE_SWITCHING) {
+	if (host->quirks2 & SDHCI_QUIRK2_NON_STD_VOLTAGE_SWITCHING) {
 		if (host->ops->switch_signal_voltage)
 			return host->ops->switch_signal_voltage(
 				host, ios->signal_voltage);
@@ -1772,7 +1770,7 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	disable_irq(host->irq);
 	spin_lock(&host->lock);
 
-	if ((host->quirks & SDHCI_QUIRK_NON_STANDARD_TUNING) &&
+	if ((host->quirks2 & SDHCI_QUIRK2_NON_STANDARD_TUNING) &&
 		host->ops->execute_freq_tuning) {
 		err = host->ops->execute_freq_tuning(host, opcode);
 		spin_unlock(&host->lock);
@@ -2969,7 +2967,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->quirks & SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK)
 		host->timeout_clk = mmc->f_max / 1000;
 
-	if (!(host->quirks & SDHCI_QUIRK_NO_CALC_MAX_DISCARD_TO))
+	if (!(host->quirks2 & SDHCI_QUIRK2_NO_CALC_MAX_DISCARD_TO))
 		mmc->max_discard_to = (1 << 27) / host->timeout_clk;
 
 	if (host->quirks & SDHCI_QUIRK_MULTIBLOCK_READ_ACMD12)
