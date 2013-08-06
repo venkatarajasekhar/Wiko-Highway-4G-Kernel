@@ -134,7 +134,7 @@ static unsigned int uhs_max_freq_MHz[] = {
 /* Erratum: Enable block gap interrupt detection */
 #define NVQUIRK_ENABLE_BLOCK_GAP_DET		BIT(1)
 /* Do not enable auto calibration if the platform doesn't support */
-#define NVQUIRK_DISABLE_AUTO_CALIBRATION	BIT(2)
+#define NVQUIRK_NO_AUTO_CALIBRATION		BIT(2)
 /* Set Calibration Offsets */
 #define NVQUIRK_SET_CALIBRATION_OFFSETS		BIT(3)
 /* Set Drive Strengths */
@@ -173,6 +173,7 @@ static unsigned int uhs_max_freq_MHz[] = {
  */
 #define NVQUIRK_BROKEN_SDR50_CONTROLLER_CLOCK	BIT(19)
 #define NVQUIRK_DFS_MAX_HIGH			BIT(20)
+#define NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON	BIT(21)
 
 #ifdef CONFIG_THERMAL
 static int sdhci_mmc_temperature[] = {40, 60};
@@ -1315,7 +1316,7 @@ static void tegra_sdhci_do_calibration(struct sdhci_host *sdhci)
 		(tegra_host->instance == 3))
 		return;
 
-	if (unlikely(soc_data->nvquirks & NVQUIRK_DISABLE_AUTO_CALIBRATION))
+	if (unlikely(soc_data->nvquirks & NVQUIRK_NO_AUTO_CALIBRATION))
 		return;
 
 	val = sdhci_readl(sdhci, SDMMC_SDMEMCOMPPADCTRL);
@@ -1364,9 +1365,11 @@ skip_setting_calib_offsets:
 		dev_err(mmc_dev(sdhci->mmc), "Auto calibration failed\n");
 
 	/* Disable Auto calibration */
-	val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
-	val &= ~SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
-	sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
+	if (!(soc_data->nvquirks & NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON)) {
+		val = sdhci_readl(sdhci, SDMMC_AUTO_CAL_CONFIG);
+		val &= ~SDMMC_AUTO_CAL_CONFIG_AUTO_CAL_ENABLE;
+		sdhci_writel(sdhci, val, SDMMC_AUTO_CAL_CONFIG);
+	}
 
 	if (unlikely(soc_data->nvquirks & NVQUIRK_SET_DRIVE_STRENGTH)) {
 		unsigned int pulldown_code;
@@ -2563,7 +2566,7 @@ static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 		    NVQUIRK_DISABLE_SDMMC4_CALIB |
 #endif
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-		    NVQUIRK_DISABLE_AUTO_CALIBRATION |
+		    NVQUIRK_NO_AUTO_CALIBRATION |
 #elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		    NVQUIRK_ENABLE_SD_3_0 |
 		    NVQUIRK_BROKEN_SDR50_CONTROLLER_CLOCK |
@@ -2575,6 +2578,7 @@ static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 #endif
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		    NVQUIRK_DFS_MAX_HIGH |
+		    NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON |
 #endif
 		    NVQUIRK_ENABLE_BLOCK_GAP_DET,
 };
