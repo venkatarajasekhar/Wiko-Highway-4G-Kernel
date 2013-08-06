@@ -5166,6 +5166,7 @@ static struct tegra14_emc_pdata ceres_emc_pdata = {
 static struct tegra14_emc_pdata ceres_slt_emc_pdata = {
 	.description = "ceres_e1681_elpida_edf8132a1mc_tables",
 	.tables = ceres_e1681_elpida_edf8132a1mc_table,
+	.tables_derated = ceres_e1681_elpida_edf8132a1mc_table,
 	.num_tables = ARRAY_SIZE(ceres_e1681_elpida_edf8132a1mc_table),
 };
 
