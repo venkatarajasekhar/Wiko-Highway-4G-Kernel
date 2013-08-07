@@ -211,6 +211,10 @@ static bool tegra_cpu_cluster_power_down(struct cpuidle_device *dev,
 	/* LP2 entry time */
 	entry_time = ktime_get();
 
+#if !defined(CONFIG_HAVE_ARM_TWD)
+	request = tegra_pd_timer_remain();
+#endif
+
 	if (request < state->target_residency) {
 		/* Not enough time left to enter LP2 */
 		cpu_do_idle();
@@ -277,7 +281,9 @@ static bool tegra_cpu_cluster_power_down(struct cpuidle_device *dev,
 	bin = time_to_bin((u32)request / 1000);
 	idle_stats.tear_down_count[cpu_number(dev->cpu)]++;
 
+#ifdef CONFIG_HAVE_ARM_TWD
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
+#endif
 	if (is_lp_cluster()) {
 		/* here we are not supporting emulation mode, for now */
 		flag = TEGRA_POWER_CLUSTER_PART_NONCPU;
@@ -320,7 +326,9 @@ static bool tegra_cpu_cluster_power_down(struct cpuidle_device *dev,
 		idle_stats.pd_int_count[irq]++;
 	}
 
+#ifdef CONFIG_HAVE_ARM_TWD
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
+#endif
 	exit_time = ktime_get();
 
 	if (flag & TEGRA_POWER_STOP_MC_CLK)
@@ -424,6 +432,9 @@ static bool tegra_cpu_core_power_down(struct cpuidle_device *dev,
 	}
 #endif
 
+#if !defined(CONFIG_HAVE_ARM_TWD)
+	request = tegra_pd_timer_remain();
+#endif
 	if (!tegra_is_cpu_wake_timer_ready(dev->cpu) ||
 	    (request < state->target_residency) ||
 	    (!ts) || (ts->nohz_mode == NOHZ_MODE_INACTIVE)) {
@@ -438,8 +449,8 @@ static bool tegra_cpu_core_power_down(struct cpuidle_device *dev,
 
 #if !defined(CONFIG_TEGRA_LP2_CPU_TIMER)
 	sleep_time = request - state->exit_latency;
-	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
 #ifdef CONFIG_HAVE_ARM_TWD
+	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &dev->cpu);
 	tegra_twd_suspend(&twd_context);
 #endif
 	tegra_pd_set_trigger(sleep_time);
@@ -473,8 +484,8 @@ static bool tegra_cpu_core_power_down(struct cpuidle_device *dev,
 	tegra_pd_set_trigger(0);
 #ifdef CONFIG_HAVE_ARM_TWD
 	tegra_twd_resume(&twd_context);
-#endif
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &dev->cpu);
+#endif
 #endif
 	sleep_time = ktime_to_us(ktime_sub(ktime_get(), entry_time));
 	idle_stats.cpu_pg_time[cpu_number(dev->cpu)] += sleep_time;
