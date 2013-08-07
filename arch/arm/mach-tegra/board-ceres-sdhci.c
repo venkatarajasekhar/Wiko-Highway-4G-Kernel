@@ -355,6 +355,10 @@ int __init ceres_sdhci_init(void)
 	if ((board_info.board_id == BOARD_E1670) ||
 		 (board_info.board_id == BOARD_E1740))
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
+	else {
+		tegra_sdhci_platform_data2.max_clk_limit = 204000000;
+		tegra_sdhci_platform_data2.en_freq_scaling = true;
+	}
 
 	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device2);
