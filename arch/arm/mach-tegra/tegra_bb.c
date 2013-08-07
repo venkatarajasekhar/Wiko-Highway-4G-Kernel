@@ -801,6 +801,11 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 		/* request enough iso bw for crash handling */
 		tegra_bbc_proxy_bw_request(bb->proxy_dev, 0, BBC_ISO_CRASH_BW,
 						1000, BBC_ISO_MARGIN_BW);
+
+		/* request a high enough power budget for crash handling */
+		tegra_bbc_proxy_edp_request(bb->proxy_dev, 0, BBC_EDP_E0_INDEX,
+						BBC_EDP_E0_THRESHOLD);
+
 		return;
 	default:
 		spin_unlock_irqrestore(&bb->lock, flags);

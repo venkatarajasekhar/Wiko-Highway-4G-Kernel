@@ -137,7 +137,7 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 	bbc->modem_edp_client.name[EDP_NAME_LEN - 1] = '\0';
 	bbc->modem_edp_client.states = bbc->modem_edp_states;
 	bbc->modem_edp_client.num_states = num_states;
-	bbc->modem_edp_client.e0_index = 0;
+	bbc->modem_edp_client.e0_index = BBC_EDP_E0_INDEX;
 	bbc->modem_edp_client.max_borrowers = 1;
 	bbc->modem_edp_client.priority = EDP_MAX_PRIO;
 
@@ -166,7 +166,8 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 
 	bbc->edp_client_registered = 1;
 
-	ret = edp_update_client_request(&bbc->modem_edp_client, 0, NULL);
+	ret = edp_update_client_request(&bbc->modem_edp_client,
+					BBC_EDP_E0_INDEX, NULL);
 	if (ret) {
 		dev_err(dev, "initial state update failed\n");
 		goto done;

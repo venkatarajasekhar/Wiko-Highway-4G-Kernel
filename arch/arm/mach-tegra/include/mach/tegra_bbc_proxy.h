@@ -46,4 +46,7 @@ int tegra_bbc_proxy_set_rf_mode(struct device *dev, bool fpwm);
 #define BBC_ISO_BOOT_BW		1200000
 #define BBC_ISO_MARGIN_BW	1200000
 
+#define BBC_EDP_E0_INDEX	0
+#define BBC_EDP_E0_THRESHOLD	3600
+
 #endif /* __MACH_TEGRA_BBC_PROXY_H */
