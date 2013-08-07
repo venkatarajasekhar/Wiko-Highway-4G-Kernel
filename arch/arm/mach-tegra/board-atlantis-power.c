@@ -940,6 +940,10 @@ int __init atlantis_regulator_init(void)
 	reg_init_data_ldo5.tracking_regulator = PALMAS_REG_SMPS6;
 	/* Enable full constraints to disable unused rails */
 	regulator_has_full_constraints();
+
+	/* Set LDO11 startup time to 600us */
+	reg_idata_ldo11.constraints.startup_delay = 600;
+
 	if (((board_info.fab != BOARD_FAB_A00) ||
 		 (board_info.board_id == BOARD_E1740)))
 			reg_idata_regen7.num_consumer_supplies = 0;
