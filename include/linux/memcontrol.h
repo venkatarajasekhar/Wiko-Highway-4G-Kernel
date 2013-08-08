@@ -64,7 +64,7 @@ extern int mem_cgroup_cache_charge(struct page *page, struct mm_struct *mm,
 
 struct lruvec *mem_cgroup_zone_lruvec(struct zone *, struct mem_cgroup *);
 struct lruvec *mem_cgroup_lru_add_list(struct zone *, struct page *,
-				       enum lru_list);
+				enum lru_list);
 void mem_cgroup_lru_del_list(struct page *, enum lru_list);
 void mem_cgroup_lru_del(struct page *);
 struct lruvec *mem_cgroup_lru_move_lists(struct zone *, struct page *,
@@ -129,6 +129,37 @@ extern void mem_cgroup_print_oom_info(struct mem_cgroup *memcg,
 					struct task_struct *p);
 extern void mem_cgroup_replace_page_cache(struct page *oldpage,
 					struct page *newpage);
+
+/**
+ * mem_cgroup_toggle_oom - toggle the memcg OOM killer for the current task
+ * @new: true to enable, false to disable
+ *
+ * Toggle whether a failed memcg charge should invoke the OOM killer
+ * or just return -ENOMEM.  Returns the previous toggle state.
+ */
+static inline bool mem_cgroup_toggle_oom(bool new)
+{
+	bool old;
+
+	old = current->memcg_oom.may_oom;
+	current->memcg_oom.may_oom = new;
+
+	return old;
+}
+
+static inline void mem_cgroup_enable_oom(void)
+{
+	bool old = mem_cgroup_toggle_oom(true);
+
+	WARN_ON(old == true);
+}
+
+static inline void mem_cgroup_disable_oom(void)
+{
+	bool old = mem_cgroup_toggle_oom(false);
+
+	WARN_ON(old == false);
+}
 
 #ifdef CONFIG_CGROUP_MEM_RES_CTLR_SWAP
 extern int do_swap_account;
@@ -376,6 +407,19 @@ static inline void mem_cgroup_begin_update_page_stat(struct page *page,
 
 static inline void mem_cgroup_end_update_page_stat(struct page *page,
 					bool *locked, unsigned long *flags)
+{
+}
+
+static inline bool mem_cgroup_toggle_oom(bool new)
+{
+	return false;
+}
+
+static inline void mem_cgroup_enable_oom(void)
+{
+}
+
+static inline void mem_cgroup_disable_oom(void)
 {
 }
 
