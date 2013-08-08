@@ -146,13 +146,19 @@ static struct regulator_consumer_supply max77660_ldo1_supply[] = {
 static struct regulator_consumer_supply max77660_ldo2_supply[] = {
 	REGULATOR_SUPPLY("avdd_2v8_cam_af", NULL),
 	REGULATOR_SUPPLY("avdd_cam2", NULL),
-	REGULATOR_SUPPLY("vana", "2-0036"),
+	REGULATOR_SUPPLY("vana_imx132", "2-0036"),
+	REGULATOR_SUPPLY("avdd", "2-003c"),
 	REGULATOR_SUPPLY("vdd", "2-000e"),
+	REGULATOR_SUPPLY("vdd", "2-000c"),
+	REGULATOR_SUPPLY("af_vdd", "2-0010"),
+	REGULATOR_SUPPLY("af_vdd", "2-004a"),
 };
 
 static struct regulator_consumer_supply max77660_ldo3_supply[] = {
 	REGULATOR_SUPPLY("avdd_cam1", NULL),
 	REGULATOR_SUPPLY("vana", "2-0010"),
+	REGULATOR_SUPPLY("vana", "2-0036"),
+	REGULATOR_SUPPLY("avdd_ov5693", "2-0010"),
 };
 
 static struct regulator_consumer_supply max77660_ldo4_supply[] = {
@@ -174,6 +180,7 @@ static struct regulator_consumer_supply max77660_ldo6_supply[] = {
 	REGULATOR_SUPPLY("vdd_cam_1v2", NULL),
 	REGULATOR_SUPPLY("vdig", "2-0010"),
 	REGULATOR_SUPPLY("vdig", "2-0036"),
+	REGULATOR_SUPPLY("dvdd", "2-0010"),
 };
 
 static struct regulator_consumer_supply max77660_ldo7_supply[] = {
@@ -257,8 +264,11 @@ static struct regulator_consumer_supply max77660_sw2_supply[] = {
 	REGULATOR_SUPPLY("vdd_cam_1v8", NULL),
 	REGULATOR_SUPPLY("vif", "2-0010"),
 	REGULATOR_SUPPLY("vif", "2-0036"),
+	REGULATOR_SUPPLY("dvdd", "2-003c"),
 	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
+	REGULATOR_SUPPLY("vdd_i2c", "2-000c"),
 	REGULATOR_SUPPLY("vdd", "2-004a"),
+	REGULATOR_SUPPLY("dovdd", "2-0010"),
 };
 
 static struct regulator_consumer_supply max77660_sw3_supply[] = {

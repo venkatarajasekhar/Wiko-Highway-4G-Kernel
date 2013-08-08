@@ -21,18 +21,26 @@
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
+#include <linux/nct1008.h>
+#include <linux/max17048_battery.h>
+#include <linux/pid_thermal_gov.h>
+#include <generated/mach-types.h>
+#include <mach/edp.h>
 
+#include <media/camera.h>
 #include <media/imx091.h>
 #include <media/imx132.h>
 #include <media/ad5816.h>
 #include <media/imx135.h>
+#include <media/ov9772.h>
+#include <media/as364x.h>
+#include <media/ov5693.h>
+#include <media/ov5640.h>
+#include <media/ad5823.h>
+#include <media/ar0833.h>
+#include <media/dw9718.h>
 #include <media/max77387.h>
 #include <media/lm3565.h>
-#include <linux/nct1008.h>
-#include <linux/max17048_battery.h>
-#include <mach/edp.h>
-#include <generated/mach-types.h>
-#include <linux/pid_thermal_gov.h>
 
 #include "cpu-tegra.h"
 #include "devices.h"
@@ -44,11 +52,6 @@
 #include "battery-ini-model-data.h"
 
 static struct board_info board_info;
-
-static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
-	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
-	{IMX091_GPIO_PWDN, CAM1_POWER_DWN_GPIO, true, false},
-};
 
 static struct throttle_table tj_throttle_table[] = {
 	/* CPU_THROT_LOW cannot be used by other than CPU */
@@ -202,7 +205,7 @@ static int ceres_nct1008_init(void)
 
 	return ret;
 }
-static int ceres_focuser_power_on(struct ad5816_power_rail *pw)
+static int ceres_ad5816_power_on(struct ad5816_power_rail *pw)
 {
 	int err;
 
@@ -228,7 +231,7 @@ ad5816_vdd_i2c_fail:
 	return -ENODEV;
 }
 
-static int ceres_focuser_power_off(struct ad5816_power_rail *pw)
+static int ceres_ad5816_power_off(struct ad5816_power_rail *pw)
 {
 	if (unlikely(WARN_ON(!pw || !pw->vdd || !pw->vdd_i2c)))
 		return -EFAULT;
@@ -444,6 +447,11 @@ static int ceres_imx132_power_off(struct imx132_power_rail *pw)
 	return 0;
 }
 
+static struct nvc_gpio_pdata imx091_gpio_pdata[] = {
+	{IMX091_GPIO_RESET, CAM_RSTN, true, false},
+	{IMX091_GPIO_PWDN, CAM1_POWER_DWN_GPIO, true, false},
+};
+
 static struct nvc_imager_cap imx091_cap = {
 	.identifier		= "IMX091",
 	.sensor_nvc_interface	= 3,
@@ -480,7 +488,7 @@ static unsigned imx091_estates[] = {600, 0};
 static struct imx091_platform_data ceres_imx091_data = {
 	.num			= 0,
 	.sync			= 0,
-	.cfg			= NVC_CFG_NODEV,
+	.cfg			= 0,
 	.dev_name		= "camera",
 	.gpio_count		= ARRAY_SIZE(imx091_gpio_pdata),
 	.gpio			= imx091_gpio_pdata,
@@ -517,8 +525,8 @@ static struct ad5816_platform_data ceres_ad5816_pdata = {
 	.num		= 0,
 	.sync		= 0,
 	.dev_name	= "focuser",
-	.power_on	= ceres_focuser_power_on,
-	.power_off	= ceres_focuser_power_off,
+	.power_on	= ceres_ad5816_power_on,
+	.power_off	= ceres_ad5816_power_off,
 };
 
 /* estate values under 1000/200/0/0mA, 3.5V input */
@@ -548,7 +556,7 @@ static struct max77387_platform_data ceres_max77387_pdata = {
 			.lumi_levels		= NULL,
 			},
 		},
-	.cfg		= NVC_CFG_NODEV,
+	.cfg		= 0,
 	.dev_name	= "torch",
 	.gpio_strobe	= CAM_FLASH_STROBE,
 	.edpc_config	= {
@@ -584,34 +592,369 @@ static struct lm3565_platform_data atlantis_lm3565_pdata = {
 		},
 };
 
-static struct i2c_board_info ceres_i2c_board_info_e1707[] = {
-	{
-		I2C_BOARD_INFO("imx091", 0x10),
-		.platform_data = &ceres_imx091_data,
-	},
-	{
-		I2C_BOARD_INFO("imx132", 0x36),
-		.platform_data = &ceres_imx132_data,
-	},
-	{
-		I2C_BOARD_INFO("ad5816", 0x0E),
-		.platform_data = &ceres_ad5816_pdata,
-	},
+static int ceres_ar0833_power_on(struct ar0833_power_rail *pw)
+{
+	int err;
+	pr_debug("%s ++\n", __func__);
+
+	if (unlikely(!pw || !pw->avdd || !pw->iovdd))
+		return -EFAULT;
+
+	gpio_set_value(CAM_RSTN, 0);
+	usleep_range(1000, 1020);
+
+	err = regulator_enable(pw->iovdd);
+	if (unlikely(err))
+		goto ar0833_iovdd_fail;
+	usleep_range(300, 320);
+
+	err = regulator_enable(pw->avdd);
+	if (unlikely(err))
+		goto ar0833_avdd_fail;
+
+	usleep_range(1000, 1020);
+	gpio_set_value(CAM_RSTN, 1);
+
+	usleep_range(200, 220);
+
+	/* return 1 to skip the in-driver power_on sequence */
+	pr_debug("%s --\n", __func__);
+	return 0;
+
+ar0833_avdd_fail:
+	regulator_disable(pw->iovdd);
+
+ar0833_iovdd_fail:
+	pr_err("%s FAILED\n", __func__);
+	return -ENODEV;
+}
+
+static int ceres_ar0833_power_off(struct ar0833_power_rail *pw)
+{
+	if (unlikely(!pw || !pw->avdd || !pw->iovdd))
+		return -EFAULT;
+
+	usleep_range(100, 120);
+	gpio_set_value(CAM_RSTN, 0);
+	regulator_disable(pw->avdd);
+	usleep_range(100, 120);
+	regulator_disable(pw->iovdd);
+
+	return 1;
+}
+
+struct ar0833_platform_data ceres_ar0833_pdata = {
+	.power_on = ceres_ar0833_power_on,
+	.power_off = ceres_ar0833_power_off,
 };
 
-static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
+static int ceres_dw9718_power_on(struct dw9718_power_rail *pw)
+{
+	int err;
+	pr_info("%s\n", __func__);
+
+	if (unlikely(!pw || !pw->vdd || !pw->vdd_i2c))
+		return -EFAULT;
+
+	err = regulator_enable(pw->vdd);
+	if (unlikely(err))
+		goto dw9718_vdd_fail;
+
+	err = regulator_enable(pw->vdd_i2c);
+	if (unlikely(err))
+		goto dw9718_i2c_fail;
+
+	usleep_range(1000, 1020);
+
+	/* return 1 to skip the in-driver power_on sequence */
+	pr_debug("%s --\n", __func__);
+	return 1;
+
+dw9718_i2c_fail:
+	regulator_disable(pw->vdd);
+
+dw9718_vdd_fail:
+	pr_err("%s FAILED\n", __func__);
+	return -ENODEV;
+}
+
+static int ceres_dw9718_power_off(struct dw9718_power_rail *pw)
+{
+	pr_info("%s\n", __func__);
+
+	if (unlikely(!pw || !pw->vdd || !pw->vdd_i2c))
+		return -EFAULT;
+
+	regulator_disable(pw->vdd);
+	regulator_disable(pw->vdd_i2c);
+
+	return 1;
+}
+
+static struct nvc_focus_cap dw9718_cap = {
+	.settle_time = 30,
+	.slew_rate = 0x3A200C,
+	.focus_macro = 450,
+	.focus_infinity = 200,
+	.focus_hyper = 200,
+};
+
+static struct dw9718_platform_data ceres_dw9718_pdata = {
+	.cfg = 0,
+	.num = 1,
+	.sync = 0,
+	.dev_name = "focuser",
+	.cap = &dw9718_cap,
+	.power_on = ceres_dw9718_power_on,
+	.power_off = ceres_dw9718_power_off,
+};
+
+static int ceres_ov5693_power_on(struct ov5693_power_rail *pw)
+{
+	int err;
+
+	if (unlikely(!pw || !pw->avdd || !pw->dovdd))
+		return -EFAULT;
+
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+	usleep_range(10, 20);
+
+	err = regulator_enable(pw->avdd);
+	if (err)
+		goto ov5693_avdd_fail;
+
+	err = regulator_enable(pw->dovdd);
+	if (err)
+		goto ov5693_iovdd_fail;
+
+	udelay(2);
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 1);
+	usleep_range(300, 310);
+
+	return 0;
+
+ov5693_iovdd_fail:
+	regulator_disable(pw->avdd);
+
+ov5693_avdd_fail:
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+
+	pr_err("%s FAILED\n", __func__);
+	return -ENODEV;
+}
+
+static int ceres_ov5693_power_off(struct ov5693_power_rail *pw)
+{
+	if (unlikely(!pw || !pw->dovdd || !pw->avdd))
+		return -EFAULT;
+
+	usleep_range(21, 25);
+	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
+	udelay(2);
+
+	regulator_disable(pw->dovdd);
+	regulator_disable(pw->avdd);
+
+	return 0;
+}
+
+static struct nvc_gpio_pdata ov5693_gpio_pdata[] = {
+	{ OV5693_GPIO_TYPE_PWRDN, CAM_RSTN, true, 0, },
+};
+
+static struct ov5693_platform_data ceres_ov5693_pdata = {
+	.num		= 5693,
+	.dev_name	= "camera",
+	.gpio_count	= ARRAY_SIZE(ov5693_gpio_pdata),
+	.gpio		= ov5693_gpio_pdata,
+	.power_on	= ceres_ov5693_power_on,
+	.power_off	= ceres_ov5693_power_off,
+};
+
+static int ceres_ad5823_power_on(struct ad5823_platform_data *pdata)
+{
+	int err = 0;
+
+	pr_info("%s\n", __func__);
+	gpio_set_value_cansleep(pdata->gpio, 1);
+
+	return err;
+}
+
+static int ceres_ad5823_power_off(struct ad5823_platform_data *pdata)
+{
+	pr_info("%s\n", __func__);
+	gpio_set_value_cansleep(pdata->gpio, 0);
+
+	return 0;
+}
+
+static struct ad5823_platform_data ceres_ad5823_pdata = {
+	.gpio = CAM_AF_PWDN,
+	.power_on	= ceres_ad5823_power_on,
+	.power_off	= ceres_ad5823_power_off,
+};
+
+static struct regulator *dvdd_1v8;
+static struct regulator *avdd_cam2;
+static int ceres_ov5640_power_on(struct device *dev)
+{
+	if (avdd_cam2 == NULL) {
+		avdd_cam2 = regulator_get(dev, "avdd");
+		if (WARN_ON(IS_ERR(avdd_cam2))) {
+			pr_err("%s: couldn't get regulator avdd_cam2: %ld\n",
+				__func__, PTR_ERR(avdd_cam2));
+			avdd_cam2 = NULL;
+			goto avdd_cam2_fail;
+		}
+	}
+	if (dvdd_1v8 == NULL) {
+		dvdd_1v8 = regulator_get(dev, "dvdd");
+		if (WARN_ON(IS_ERR(dvdd_1v8))) {
+			pr_err("%s: couldn't get regulator vdd_1v8_cam: %ld\n",
+				__func__, PTR_ERR(dvdd_1v8));
+			dvdd_1v8 = NULL;
+			goto dvdd_1v8_fail;
+		}
+	}
+
+	/* power up sequence */
+	gpio_set_value(CAM2_POWER_DWN_GPIO, 1);
+	gpio_set_value(CAM_RSTN, 0);
+	mdelay(1);
+
+	regulator_enable(dvdd_1v8);
+	regulator_enable(avdd_cam2);
+
+	mdelay(5);
+	gpio_set_value(CAM2_POWER_DWN_GPIO, 0);
+	mdelay(1);
+	gpio_set_value(CAM_RSTN, 1);
+
+	mdelay(20);
+
+	return 0;
+
+dvdd_1v8_fail:
+	regulator_disable(avdd_cam2);
+avdd_cam2_fail:
+	return -ENODEV;
+}
+
+static int ceres_ov5640_power_off(struct device *dev)
+{
+	gpio_set_value(CAM_RSTN, 0);
+
+	if (avdd_cam2)
+		regulator_disable(avdd_cam2);
+	if (dvdd_1v8)
+		regulator_disable(dvdd_1v8);
+
+	gpio_set_value(CAM2_POWER_DWN_GPIO, 1);
+
+	return 0;
+}
+
+struct ov5640_platform_data ceres_ov5640_data = {
+	.power_on = ceres_ov5640_power_on,
+	.power_off = ceres_ov5640_power_off,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_ov5640 = {
+	I2C_BOARD_INFO("ov5640", 0x3c),
+	.platform_data = &ceres_ov5640_data,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_imx091 = {
+	I2C_BOARD_INFO("imx091", 0x10),
+	.platform_data = &ceres_imx091_data,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_ar0833 = {
+	I2C_BOARD_INFO("ar0833", 0x36),
+	.platform_data = &ceres_ar0833_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_ov5693 = {
+	I2C_BOARD_INFO("ov5693", 0x10),
+	.platform_data = &ceres_ov5693_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_imx132 = {
+	I2C_BOARD_INFO("imx132", 0x36),
+	.platform_data = &ceres_imx132_data,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_ad5816 = {
+	I2C_BOARD_INFO("ad5816", 0x0E),
+	.platform_data = &ceres_ad5816_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_ad5823 = {
+		I2C_BOARD_INFO("ad5823", 0x0c),
+		.platform_data = &ceres_ad5823_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_dw9718 = {
+	I2C_BOARD_INFO("dw9718", 0x0c),
+	.platform_data = &ceres_dw9718_pdata,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_imx135 = {
+	I2C_BOARD_INFO("imx135", 0x10),
+	.platform_data = &ceres_imx135_data,
+};
+
+static struct i2c_board_info ceres_i2c_board_info_max77387 = {
+	I2C_BOARD_INFO("max77387", 0x4A),
+	.platform_data = &ceres_max77387_pdata,
+};
+
+static struct camera_module ceres_camera_module_info[] = {
+	/* E1707 camera board */
 	{
-		I2C_BOARD_INFO("imx091", 0x10),
-		.platform_data = &ceres_imx091_data,
+		/* rear camera */
+		.sensor = &ceres_i2c_board_info_imx091,
+		.focuser = &ceres_i2c_board_info_ad5816,
+		.flash = &ceres_i2c_board_info_max77387,
 	},
 	{
-		I2C_BOARD_INFO("imx132", 0x36),
-		.platform_data = &ceres_imx132_data,
+		/* rear camera */
+		.sensor = &ceres_i2c_board_info_imx135,
+		.focuser = &ceres_i2c_board_info_ad5816,
+		.flash = &ceres_i2c_board_info_max77387,
 	},
 	{
-		I2C_BOARD_INFO("ad5816", 0x0E),
-		.platform_data = &ceres_ad5816_pdata,
+		/* rear camera */
+		.sensor = &ceres_i2c_board_info_ar0833,
+		.focuser = &ceres_i2c_board_info_dw9718,
+		.flash = &ceres_i2c_board_info_max77387,
 	},
+	{
+		/* rear camera */
+		.sensor = &ceres_i2c_board_info_ov5693,
+		.focuser = &ceres_i2c_board_info_ad5823,
+	},
+	{
+		/* rear camera */
+		.sensor = &ceres_i2c_board_info_ov5640,
+	},
+	{
+		/* front camera */
+		.sensor = &ceres_i2c_board_info_imx132,
+	},
+
+	{}
+};
+
+static struct camera_platform_data ceres_pcl_pdata = {
+	.cfg = 0xAA55AA55,
+	.modules = ceres_camera_module_info,
+};
+
+static struct platform_device ceres_camera_generic = {
+	.name = "pcl-generic",
+	.id = -1,
 };
 
 static struct i2c_board_info ceres_i2c_board_info_e1740[] = {
@@ -652,20 +995,30 @@ static struct i2c_board_info ceres_i2c_board_info_e1690[] = {
 	},
 };
 
-static struct i2c_board_info ceres_i2c_board_info_imx135 = {
-	I2C_BOARD_INFO("imx135", 0x10),
-	.platform_data = &ceres_imx135_data,
-};
+static int ceres_camera_init(void)
+{
+	/* on atlantis FFD, only IMX135/AD5816/LM3565/IMX132 are
+	supported, auto-detection is not neccessary. */
+	if (board_info.board_id == BOARD_E1740) {
+		i2c_register_board_info(0, ceres_i2c_board_info_e1740,
+			ARRAY_SIZE(ceres_i2c_board_info_e1740));
+		return 0;
+	}
 
-static struct i2c_board_info ceres_i2c_board_info_max77387 = {
-	I2C_BOARD_INFO("max77387", 0x4A),
-	.platform_data = &ceres_max77387_pdata,
-};
+	/* on ceres FFD, only IMX135/AD5816/LM3565/IMX132 are
+	supported, auto-detection is not neccessary. */
+	if (board_info.board_id == BOARD_E1690) {
+		i2c_register_board_info(0, ceres_i2c_board_info_e1690,
+			ARRAY_SIZE(ceres_i2c_board_info_e1690));
+		return 0;
+	}
 
-static struct i2c_board_info ceres_i2c_board_info_lm3565 = {
-	I2C_BOARD_INFO("lm3565", 0x30),
-	.platform_data = &atlantis_lm3565_pdata,
-};
+	platform_device_add_data(&ceres_camera_generic,
+		&ceres_pcl_pdata, sizeof(ceres_pcl_pdata));
+	platform_device_register(&ceres_camera_generic);
+
+	return 0;
+}
 
 static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
 	{
@@ -678,23 +1031,6 @@ static struct i2c_board_info __initdata ceres_i2c_board_info_tcs3772[] = {
 		I2C_BOARD_INFO("tcs3772", 0x29),
 	},
 };
-
-static int ceres_camera_init(void)
-{
-	if (board_info.board_id == BOARD_E1670)
-		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
-			ARRAY_SIZE(ceres_i2c_board_info_e1697));
-	else if (board_info.board_id == BOARD_E1740)
-		i2c_register_board_info(2, ceres_i2c_board_info_e1740,
-			ARRAY_SIZE(ceres_i2c_board_info_e1740));
-	else if (board_info.board_id == BOARD_E1680)
-		i2c_register_board_info(2, ceres_i2c_board_info_e1707,
-			ARRAY_SIZE(ceres_i2c_board_info_e1707));
-	else
-		i2c_register_board_info(2, ceres_i2c_board_info_e1690,
-			ARRAY_SIZE(ceres_i2c_board_info_e1690));
-	return 0;
-}
 
 /* MPU board file definition	*/
 static struct mpu_platform_data mpu9150_gyro_data = {
@@ -1013,61 +1349,3 @@ int __init ceres_sensors_init(void)
 
 	return 0;
 }
-
-#define IMX091_ID	0x0091
-static int ceres_chk_imx091(struct device *dev, void *addrp)
-{
-	struct i2c_client *client = i2c_verify_client(dev);
-	unsigned short addr = *(unsigned short *)addrp;
-
-	if (!client)
-		return 0;
-
-	if (client->addr == addr) {
-		struct i2c_adapter *adap = i2c_get_adapter(2);
-		u16 *imx091_devid = (u16 *) i2c_get_clientdata(client);
-
-		if (imx091_devid != NULL && *imx091_devid == IMX091_ID) {
-			if (board_info.board_id == BOARD_E1670)
-				i2c_new_device(adap,
-					&ceres_i2c_board_info_lm3565);
-			else
-				i2c_new_device(adap,
-					&ceres_i2c_board_info_max77387);
-		} else {
-			i2c_unregister_device(client);
-			i2c_new_device(adap, &ceres_i2c_board_info_imx135);
-			i2c_new_device(adap, &ceres_i2c_board_info_max77387);
-		}
-		return 1;
-	}
-
-	return 0;
-}
-
-int camera_auto_detect(void)
-{
-	struct i2c_adapter *adap = i2c_get_adapter(2);
-	u16 imx091_addr = 0x10;
-
-	device_for_each_child(&adap->dev,
-			&imx091_addr,
-			ceres_chk_imx091);
-
-	return 0;
-}
-
-int __init ceres_camera_late_init(void)
-{
-	if ((board_info.board_id != BOARD_E1670) &&
-		(board_info.board_id != BOARD_E1680)) {
-		pr_err("%s: Ceres/Atlantis ERS not found!\n", __func__);
-		return 0;
-	}
-
-	camera_auto_detect();
-
-	return 0;
-}
-
-late_initcall(ceres_camera_late_init);
