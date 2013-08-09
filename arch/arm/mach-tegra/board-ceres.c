@@ -918,8 +918,8 @@ static struct tegra_i2c_platform_data ceres_i2c4_platform_data = {
 
 static struct tegra_i2c_platform_data ceres_i2c5_platform_data = {
 	.bus_clk_rate	= 400000,
-	.scl_gpio	= -1,
-	.sda_gpio	= -1,
+	.scl_gpio	=  TEGRA_GPIO_PJ7,
+	.sda_gpio	= TEGRA_GPIO_PP0,
 	.needs_cl_dvfs_clock = true,
 };
 
@@ -937,6 +937,9 @@ static void ceres_i2c_init(void)
 	tegra14_i2c_device4.dev.platform_data = &ceres_i2c4_platform_data;
 	tegra14_i2c_device5.dev.platform_data = &ceres_i2c5_platform_data;
 	tegra14_i2c_device6.dev.platform_data = &ceres_i2c6_platform_data;
+
+	if ((board_info.board_id == BOARD_E1680) && (board_info.fab >= BOARD_FAB_A04))
+		ceres_i2c5_platform_data.bit_banging_xfer_after_shutdown = true;
 
 	platform_device_register(&tegra14_i2c_device6);
 	platform_device_register(&tegra14_i2c_device5);
