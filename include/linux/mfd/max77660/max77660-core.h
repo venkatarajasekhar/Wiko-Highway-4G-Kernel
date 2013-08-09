@@ -1292,6 +1292,7 @@ struct max77660_platform_data {
 
 	bool use_power_off;
 	bool use_power_reset;
+	bool use_rcm_reset;
 
 	int system_watchdog_timeout;
 	int system_watchdog_reset_timeout;

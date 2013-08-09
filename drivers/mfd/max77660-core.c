@@ -554,6 +554,7 @@ static int max77660_probe(struct i2c_client *client,
 	struct max77660_chip *chip;
 	int ret = 0;
 	int i;
+	u8 rcm;
 
 	if (!pdata) {
 		dev_err(&client->dev, "probe: Invalid platform_data\n");
@@ -617,6 +618,16 @@ static int max77660_probe(struct i2c_client *client,
 
 	if (pdata->use_power_reset && !pm_power_reset)
 		pm_power_reset = max77660_power_reset;
+
+	/* If RCM bit is set then use PMIC reset for system reset */
+	if (pdata->use_rcm_reset) {
+		ret = max77660_reg_read(chip->dev, MAX77660_PWR_SLAVE, 1, &rcm);
+		if (!ret) {
+			dev_info(&client->dev, "RCM = 0x%02x\n", rcm);
+			if (!(rcm & 0x80))
+				pm_power_reset = max77660_power_reset;
+		}
+	}
 
 	ret = max77660_32kclk_init(chip, pdata);
 	if (ret < 0) {
