@@ -34,6 +34,7 @@
 extern void (*pm_idle)(void);
 extern void (*pm_power_off)(void);
 extern void (*pm_power_off_prepare)(void);
+extern void (*pm_power_reset)(void);
 
 /*
  * Device power management
