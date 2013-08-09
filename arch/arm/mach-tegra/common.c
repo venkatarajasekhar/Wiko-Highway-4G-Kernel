@@ -33,6 +33,7 @@
 #include <linux/persistent_ram.h>
 #include <linux/dma-mapping.h>
 #include <linux/sys_soc.h>
+#include <linux/pm.h>
 
 #include <linux/export.h>
 #include <linux/bootmem.h>
@@ -224,9 +225,13 @@ void tegra_assert_system_reset(char mode, const char *cmd)
 		reg &= ~(BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE);
 	}
 	writel_relaxed(reg, reset + PMC_SCRATCH0);
-	reg = readl_relaxed(reset);
-	reg |= 0x10;
-	writel_relaxed(reg, reset);
+	if (!cmd && pm_power_reset) {
+		pm_power_reset();
+	} else {
+		reg = readl_relaxed(reset);
+		reg |= 0x10;
+		writel_relaxed(reg, reset);
+	}
 #endif
 }
 static int modem_id;
