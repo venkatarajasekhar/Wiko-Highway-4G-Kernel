@@ -181,6 +181,8 @@ extern struct platform_device tegra14_i2c_device6;
 extern struct platform_device tegra_mipi_bif_device;
 #endif
 
+extern struct platform_device ptm_device;
+
 void __init tegra_init_debug_uart_rate(void);
 
 #endif

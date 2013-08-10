@@ -86,6 +86,7 @@ obj-$(CONFIG_ARCH_TEGRA_14x_SOC)        += tegra11x_usb_phy.o
 endif
 obj-$(CONFIG_FIQ)                       += fiq.o
 obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o
+obj-$(CONFIG_TEGRA_PTM)                 += tegra_ptm.o
 obj-$(CONFIG_TEGRA_PWM)                 += pwm.o
 obj-$(CONFIG_TEGRA_ARB_SEMAPHORE)       += arb_sema.o
 
