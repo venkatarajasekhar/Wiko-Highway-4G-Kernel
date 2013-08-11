@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/edp_core.c
  *
- * Copyright (C) 2012 NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -149,7 +149,7 @@ static int __init start_core_edp(void)
 	 * Default state:
 	 * always boot G-cluster (no cpu on core rail),
 	 * non-throttled EMC profile
-	 * all core modules that affect EDP are On
+	 * boot core modules state 0
 	 * unknown temperature - assume maximum (WC)
 	 */
 	core_edp_scpu_state = false;
@@ -198,6 +198,47 @@ void __init tegra_init_core_edp_limits(unsigned int regulator_mA)
 	for (i = 0; i < limits->cap_clocks_num; i++)
 		pr_info("    %10s: %lu\n",
 			limits->cap_clocks[i]->name, cap_rates[i]);
+}
+
+/* core edp modules state update */
+int _modules_state_update(int m_state)
+{
+	int ret = 0;
+	unsigned long *old_cap_rates;
+	unsigned long *new_cap_rates;
+
+	if (m_state >= limits->core_modules_states) {
+		pr_err("Core EDP module state %d out of range\n", m_state);
+		return -EINVAL;
+	}
+
+	if (core_edp_modules_state != m_state) {
+		old_cap_rates = get_current_cap_rates();
+		new_cap_rates = get_cap_rates(core_edp_scpu_state,
+			core_edp_profile, m_state, core_edp_thermal_idx);
+		ret = update_cap_rates(new_cap_rates, old_cap_rates);
+		if (ret)
+			update_cap_rates(old_cap_rates, new_cap_rates);
+		else
+			core_edp_modules_state = m_state;
+	}
+	return ret;
+}
+
+int tegra_core_edp_set_module_limited(int module_id, bool core_edp_limited)
+{
+	int m_state, ret;
+
+	if (!limits || !limits->update_modules_state)
+		return 0;
+
+	mutex_lock(&core_edp_lock);
+	m_state = limits->update_modules_state(module_id, core_edp_limited,
+					       core_edp_modules_state);
+	ret = _modules_state_update(m_state);
+	mutex_unlock(&core_edp_lock);
+
+	return ret;
 }
 
 /* core edp cpu state update */
@@ -594,6 +635,22 @@ static const struct file_operations rates_fops = {
 	.release	= single_release,
 };
 
+static int modules_state_get(void *data, u64 *val)
+{
+	*val = core_edp_modules_state;
+	return 0;
+}
+static int modules_state_set(void *data, u64 val)
+{
+	int ret;
+	mutex_lock(&core_edp_lock);
+	ret = _modules_state_update((int)val);
+	mutex_unlock(&core_edp_lock);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(modules_state_fops,
+			modules_state_get, modules_state_set, "%llu\n");
+
 static int disable_edp_get(void *data, u64 *val)
 {
 	*val = core_edp_disabled;
@@ -654,8 +711,8 @@ int __init tegra_core_edp_debugfs_init(struct dentry *edp_dir)
 	if (!d)
 		goto err_out;
 
-	d = debugfs_create_u32("modules_state", S_IRUGO, dir,
-			       (u32 *)&core_edp_modules_state);
+	d = debugfs_create_file("modules_state", S_IRUGO | S_IWUSR, dir, NULL,
+				&modules_state_fops);
 	if (!d)
 		goto err_out;
 

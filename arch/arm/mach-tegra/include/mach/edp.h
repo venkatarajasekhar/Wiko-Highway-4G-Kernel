@@ -73,6 +73,12 @@ struct tegra_edp_freq_voltage_table {
 	int voltage_mV;
 };
 
+enum tegra_core_edp_module_id {
+	TEGRA_CORE_EDP_MODULE_ID_NONE = 0,
+
+	TEGRA_CORE_EDP_MODILE_ID_NUM,
+};
+
 enum tegra_core_edp_profiles {
 	CORE_EDP_PROFILE_FAVOR_EMC = 0,
 	CORE_EDP_PROFILE_BALANCED,
@@ -90,6 +96,8 @@ struct tegra_core_edp_limits {
 	int core_modules_states;
 	unsigned long *cap_rates_scpu_on;
 	unsigned long *cap_rates_scpu_off;
+	int (*update_modules_state) (int module_id, bool edp_limited,
+				     int modules_state);
 };
 
 #ifdef CONFIG_TEGRA_EDP_LIMITS
@@ -143,12 +151,16 @@ void tegra_edp_throttle_cpu_now(u8 factor);
 #ifdef CONFIG_TEGRA_CORE_EDP_LIMITS
 void tegra_init_core_edp_limits(unsigned int regulator_mA);
 int tegra_core_edp_debugfs_init(struct dentry *edp_dir);
+int tegra_core_edp_set_module_limited(int module_id, bool core_edp_limited);
 int tegra_core_edp_cpu_state_update(bool scpu_state);
 struct tegra_cooling_device *tegra_core_edp_get_cdev(void);
 #else
 static inline void tegra_init_core_edp_limits(unsigned int regulator_mA)
 {}
 static inline int tegra_core_edp_debugfs_init(struct dentry *edp_dir)
+{ return 0; }
+static inline int tegra_core_edp_set_module_limited(
+	int module_id, bool core_edp_limited)
 { return 0; }
 static inline int tegra_core_edp_cpu_state_update(bool scpu_state)
 { return 0; }
