@@ -276,15 +276,14 @@ struct freq_tuning_params {
 };
 
 static struct freq_tuning_params tuning_params[3] = {
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	[TUNING_LOW_FREQ] = {
-		.multiple_tuning = true,
-		.freq_hz = 136000000,
-		.nr_voltages = 2,
-		.voltages = {ULONG_MAX, 1100},
+		.multiple_tuning = false,
+		.freq_hz = 82000000,
+		.nr_voltages = 1,
+		.voltages = {ULONG_MAX},
 	},
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	[TUNING_HIGH_FREQ] = {
-		.multiple_tuning = true,
 		.freq_hz = 136000000,
 		.nr_voltages = 2,
 		.voltages = {ULONG_MAX, 1100},
@@ -296,12 +295,6 @@ static struct freq_tuning_params tuning_params[3] = {
 		.voltages = {ULONG_MAX, ULONG_MAX},
 	},
 #else
-	[TUNING_LOW_FREQ] = {
-		.multiple_tuning = false,
-		.freq_hz = 82000000,
-		.nr_voltages = 1,
-		.voltages = {ULONG_MAX},
-	},
 	[TUNING_HIGH_FREQ] = {
 		.multiple_tuning = true,
 		.freq_hz = 156000000,
@@ -1212,6 +1205,10 @@ static void tegra_sdhci_set_clk_rate(struct sdhci_host *sdhci,
 	u8 freq_band;
 #endif
 
+	/* Return if the current clock rate is already set */
+	if (sdhci->max_clk == clock)
+		return;
+
 	if (sdhci->mmc->ios.timing == MMC_TIMING_UHS_DDR50) {
 		/*
 		 * In ddr mode, tegra sdmmc controller clock frequency
@@ -1539,7 +1536,8 @@ static void sdhci_tegra_dump_tuning_data(struct sdhci_host *sdhci, u8 freq_band)
 			tuning_data->tap_data[0]->full_win_end);
 	}
 
-	if (tuning_data->tap_data[1]) {
+	if ((freq_band == TUNING_HIGH_FREQ) &&
+		(tuning_data->tap_data[1])) {
 		dev_info(mmc_dev(sdhci->mmc),
 			"%d Tuning window data at 1.1V\n", sdhci->max_clk);
 		pr_info("partial window %d\n",
@@ -1661,10 +1659,8 @@ static void calculate_high_freq_tap_value(struct sdhci_host *sdhci)
 	int partial_win_tap;
 	int full_win_quality;
 	int partial_win_quality;
-	u8 freq_band;
 
-	freq_band = sdhci_tegra_get_freq_band(sdhci->max_clk);
-	tuning_data = tegra_host->tuning_data[freq_band];
+	tuning_data = tegra_host->tuning_data[TUNING_HIGH_FREQ];
 	vmax_tap_data = tuning_data->tap_data[0];
 	vmid_tap_data = tuning_data->tap_data[1];
 
@@ -2014,8 +2010,12 @@ static u8 sdhci_tegra_find_tuning_freqs(struct sdhci_host *sdhci)
 				sizeof(tuning_params[freq_band].voltages));
 			tegra_host->tuning_freq[1].multiple_tuning =
 				tuning_params[freq_band].multiple_tuning;
-			tegra_host->tuning_freq[1].freq_hz =
-				tuning_params[freq_band].freq_hz;
+			if (soc_data->nvquirks & NVQUIRK_DFS_MAX_HIGH)
+				tegra_host->tuning_freq[1].freq_hz =
+						TUNING_HIGH_FREQ_HZ;
+			else
+				tegra_host->tuning_freq[1].freq_hz =
+							TUNING_LOW_FREQ_HZ;
 			if (tegra_host->tuning_freq[0].freq_hz >
 				tegra_host->tuning_freq[1].freq_hz)
 				freq_count++;
@@ -2228,13 +2228,15 @@ skip_vcore_override:
 				vcore_lvl = 0;
 			spin_lock(&sdhci->lock);
 
-			if (voltage == tegra_host->nominal_vcore_mv)
-				tuning_data->nominal_vcore_tun_done =
-					vcore_override_failed;
-			if (voltage >=
-				tegra_host->min_vcore_override_mv)
-				tuning_data->override_vcore_tun_done =
-					vcore_override_failed;
+			if (!vcore_override_failed) {
+				if (voltage == tegra_host->nominal_vcore_mv)
+					tuning_data->nominal_vcore_tun_done =
+						true;
+				if (voltage >=
+					tegra_host->min_vcore_override_mv)
+					tuning_data->override_vcore_tun_done =
+						true;
+			}
 		}
 
 		/*
@@ -2242,7 +2244,7 @@ skip_vcore_override:
 		 * min override tuning as done to avoid unnecessary
 		 * vcore override settings.
 		 */
-		if ((freq_tun_params->nr_voltages == 1) &&
+		if ((tuning_params[freq_band].nr_voltages == 1) &&
 			tuning_data->nominal_vcore_tun_done)
 			tuning_data->override_vcore_tun_done = true;
 
@@ -2256,14 +2258,10 @@ skip_vcore_override:
 			tegra_host->set_tuning_override = true;
 
 		/* Calculate best tap for current freq band */
-		if (freq_band == CUR_FREQ_LOW) {
-			if (freq_tun_params->freq_hz > TUNING_LOW_FREQ)
-				calculate_high_freq_tap_value(sdhci);
-			else
-				calculate_low_freq_tap_value(sdhci);
-		} else {
+		if (freq_band == CUR_FREQ_LOW)
+			calculate_low_freq_tap_value(sdhci);
+		else
 			calculate_high_freq_tap_value(sdhci);
-		}
 
 set_best_tap:
 		/* Dump the tap window data */
