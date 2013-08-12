@@ -33,6 +33,7 @@
 #include <linux/tegra_uart.h>
 #include <linux/i2c.h>
 #include <linux/i2c-tegra.h>
+#include <linux/i2c/at24.h>
 #include <linux/spi/spi.h>
 #include <linux/nfc/bcm2079x.h>
 #include <linux/spi/rm31080a_ts.h>
@@ -82,6 +83,7 @@
 #define CERES_NFC_WAKE		TEGRA_GPIO_PM0
 
 static struct board_info board_info;
+char wifi_mac_addr[6];
 
 #ifdef CONFIG_BT_BLUESLEEP
 static struct rfkill_gpio_platform_data ceres_bt_rfkill_pdata = {
@@ -198,6 +200,43 @@ static struct i2c_board_info __initdata ceres_i2c_bus3_board_info[] = {
 		I2C_BOARD_INFO("bcm2079x-i2c", 0x77),
 		.platform_data = &nfc_pdata,
 	},
+};
+
+void ceres_get_mac_addr(struct memory_accessor *mem_acc, void *context)
+{
+	int ret = 0;
+	char *mac_addr;
+	off_t offset = (off_t)context;
+	mac_addr = kzalloc(sizeof(char)*32, GFP_ATOMIC);
+	if (!mac_addr) {
+		pr_err("no memory to allocate");
+		return;
+	}
+
+	/* Read MAC addr from EEPROM */
+	ret = mem_acc->read(mem_acc, mac_addr, offset, 32);
+	if (ret == 32) {
+		wifi_mac_addr[0] = *(mac_addr + 20);
+		wifi_mac_addr[1] = *(mac_addr + 21);
+		wifi_mac_addr[2] = *(mac_addr + 22);
+		wifi_mac_addr[3] = *(mac_addr + 23);
+		wifi_mac_addr[4] = *(mac_addr + 24);
+		wifi_mac_addr[5] = *(mac_addr + 25);
+	} else {
+		pr_err("Error reading MAC addr from EEPROM\n");
+	}
+}
+
+static struct at24_platform_data ceres_eeprom_info = {
+	.byte_len	= (256*1024)/8,
+	.page_size	= 64,
+	.flags		= AT24_FLAG_ADDR16,
+	.setup		= ceres_get_mac_addr,
+};
+
+static struct i2c_board_info ceres_eeprom_mac_add = {
+	I2C_BOARD_INFO("at24", 0x56),
+	.platform_data = &ceres_eeprom_info,
 };
 
 static struct max98090_eq_cfg max98090_eq_cfg[] = {
@@ -911,6 +950,8 @@ static void ceres_i2c_init(void)
 
 	ceres_i2c_bus3_board_info[0].irq = gpio_to_irq(CERES_NFC_IRQ);
 	i2c_register_board_info(1, ceres_i2c_bus3_board_info, 1);
+
+	i2c_register_board_info(0, &ceres_eeprom_mac_add, 1);
 }
 
 static __initdata struct tegra_clk_init_table raydium_touch_clk_init_table[] = {

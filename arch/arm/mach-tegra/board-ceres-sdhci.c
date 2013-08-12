@@ -60,11 +60,13 @@ static int ceres_wifi_status_register(void (*callback)(int , void *), void *);
 static int ceres_wifi_reset(int on);
 static int ceres_wifi_power(int on);
 static int ceres_wifi_set_carddetect(int val);
+static int ceres_wifi_get_mac_addr(unsigned char *buf);
 
 static struct wifi_platform_data ceres_wifi_control = {
 	.set_power	= ceres_wifi_power,
 	.set_reset	= ceres_wifi_reset,
 	.set_carddetect	= ceres_wifi_set_carddetect,
+	.get_mac_addr	= ceres_wifi_get_mac_addr,
 #if defined(CONFIG_BCMDHD_EDP_SUPPORT)
 	/* set the wifi edp client information here */
 	.client_info    = {
@@ -266,6 +268,24 @@ static int ceres_wifi_power(int on)
 static int ceres_wifi_reset(int on)
 {
 	pr_debug("%s: do nothing\n", __func__);
+	return 0;
+}
+
+static int ceres_wifi_get_mac_addr(unsigned char *buf)
+{
+	char mac_addr_str[] = "ff:ff:ff:ff:ff:ff";
+
+	memcpy(buf, wifi_mac_addr, 6);
+	sprintf(mac_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x",
+		buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+
+	if ((strcmp("ff:ff:ff:ff:ff:ff", mac_addr_str) == 0) ||
+			(strcmp("00:00:00:00:00:00", mac_addr_str) == 0)) {
+		pr_err("WiFi MAC addr is not available in EEPROM\n");
+		return -1;
+	}
+
+	pr_err("%s: WiFi MAC addr: %s\n", __func__, mac_addr_str);
 	return 0;
 }
 

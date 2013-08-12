@@ -128,6 +128,7 @@ static inline void __init tegra_ram_console_debug_init(void)
 {}
 #endif
 
+extern char wifi_mac_addr[];
 extern unsigned long tegra_bootloader_fb_start;
 extern unsigned long tegra_bootloader_fb_size;
 extern unsigned long tegra_bootloader_fb2_start;
