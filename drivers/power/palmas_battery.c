@@ -666,6 +666,15 @@ static int palmas_battery_get_props(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = di->battery_capacity;
+		if (di->battery_capacity == 15)
+			dev_warn(&di->dev,
+			"\nSystem Running low on battery - 15%\n");
+		if (di->battery_capacity == 10)
+			dev_warn(&di->dev,
+			"\nSystem Running low on battery - 10%\n");
+		if (di->battery_capacity == 5)
+			dev_warn(&di->dev,
+			"\nSystem Running low on battery - 5%\n");
 		break;
 	default:
 		return -EINVAL;
