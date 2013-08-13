@@ -136,7 +136,7 @@ module_init(ceres_throttle_init);
 static struct nct1008_platform_data ceres_nct1008_pdata = {
 	.supported_hwrev = true,
 	.ext_range = true,
-	.conv_rate = 0x09, /* 0x09 corresponds to 32Hz conversion rate */
+	.conv_rate = 0x06, /* 4Hz conversion rate */
 	.shutdown_ext_limit = 95, /* C */
 	.shutdown_local_limit = 100, /* C */
 
