@@ -876,7 +876,7 @@ static const struct file_operations proc_environ_operations = {
 	.llseek		= generic_file_llseek,
 };
 
-static ssize_t oom_adjust_read(struct file *file, char __user *buf,
+static ssize_t oom_adj_read(struct file *file, char __user *buf,
 				size_t count, loff_t *ppos)
 {
 	struct task_struct *task = get_proc_task(file->f_path.dentry->d_inode);
@@ -900,7 +900,7 @@ static ssize_t oom_adjust_read(struct file *file, char __user *buf,
 	return simple_read_from_buffer(buf, count, ppos, buffer, len);
 }
 
-static ssize_t oom_adjust_write(struct file *file, const char __user *buf,
+static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 				size_t count, loff_t *ppos)
 {
 	struct task_struct *task;
@@ -1000,13 +1000,13 @@ static int oom_adjust_permission(struct inode *inode, int mask)
 	return generic_permission(inode, mask);
 }
 
-static const struct inode_operations proc_oom_adjust_inode_operations = {
+static const struct inode_operations proc_oom_adj_inode_operations = {
 	.permission	= oom_adjust_permission,
 };
 
-static const struct file_operations proc_oom_adjust_operations = {
-	.read		= oom_adjust_read,
-	.write		= oom_adjust_write,
+static const struct file_operations proc_oom_adj_operations = {
+	.read		= oom_adj_read,
+	.write		= oom_adj_write,
 	.llseek		= generic_file_llseek,
 };
 
@@ -3046,7 +3046,7 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score",  S_IRUGO, proc_oom_score),
-	ANDROID("oom_adj",S_IRUGO|S_IWUSR, oom_adjust),
+	ANDROID("oom_adj", S_IRUGO|S_IWUSR, oom_adj),
 	REG("oom_score_adj", S_IRUGO|S_IWUSR, proc_oom_score_adj_operations),
 #ifdef CONFIG_AUDITSYSCALL
 	REG("loginuid",   S_IWUSR|S_IRUGO, proc_loginuid_operations),
@@ -3404,7 +3404,7 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("cgroup",  S_IRUGO, proc_cgroup_operations),
 #endif
 	INF("oom_score", S_IRUGO, proc_oom_score),
-	REG("oom_adj",   S_IRUGO|S_IWUSR, proc_oom_adjust_operations),
+	REG("oom_adj",   S_IRUGO|S_IWUSR, proc_oom_adj_operations),
 	REG("oom_score_adj", S_IRUGO|S_IWUSR, proc_oom_score_adj_operations),
 #ifdef CONFIG_AUDITSYSCALL
 	REG("loginuid",  S_IWUSR|S_IRUGO, proc_loginuid_operations),
