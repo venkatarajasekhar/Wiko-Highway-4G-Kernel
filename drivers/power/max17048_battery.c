@@ -187,13 +187,13 @@ static int max17048_get_property(struct power_supply *psy,
 		val->intval = chip->soc;
 		if (chip->soc == 15)
 			dev_warn(&chip->client->dev,
-			"\nSystem Running low on battery - 15%\n");
+			"/nSystem Running low on battery - 15%\n");
 		if (chip->soc == 10)
 			dev_warn(&chip->client->dev,
-			"\nSystem Running low on battery - 10%\n");
+			"/nSystem Running low on battery - 10%\n");
 		if (chip->soc == 5)
 			dev_warn(&chip->client->dev,
-			"\nSystem Running low on battery - 5%\n");
+			"/nSystem Running low on battery - 5%\n");
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = chip->health;
