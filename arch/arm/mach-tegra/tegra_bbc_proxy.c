@@ -30,7 +30,7 @@
 
 #define MAX_MODEM_EDP_STATES 10
 
-#define MAX_ISO_BW_REQ  1200000
+#define MAX_ISO_BW_REQ  1840000
 
 #define BBCR_BW_PERCENTAGE 50
 #define BBCW_BW_PERCENTAGE 50
@@ -801,7 +801,7 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 	mutex_init(&bbc->iso_lock);
 
 	bbc->isomgr_handle = tegra_isomgr_register(TEGRA_ISO_CLIENT_BBC_0,
-		MAX_ISO_BW_REQ, NULL, NULL);
+		BBC_ISO_BOOT_BW, NULL, NULL);
 	if (!bbc->isomgr_handle)
 		goto iso_error;
 
@@ -809,11 +809,11 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 
 	/* statically margin for bbc bw */
 	ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
-		MAX_ISO_BW_REQ, true);
+		BBC_ISO_MARGIN_BW, true);
 	if (ret)
 		dev_err(&pdev->dev, "can't margin for bbc bw\n");
 	else
-		bbc->margin = MAX_ISO_BW_REQ;
+		bbc->margin = BBC_ISO_MARGIN_BW;
 
 	/* thermal zones from bbc */
 	tegra_bbc_thermal_init();
