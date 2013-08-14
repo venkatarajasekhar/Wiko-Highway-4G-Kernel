@@ -134,64 +134,62 @@ static void max77660_haptic_configure(struct max77660_haptic *chip)
 	max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
 		MAX77660_HAPTIC_REG_CONF2, value1);
 
-	value1 = chip->invert << MAX77660_INVERT_SHIFT |
-		chip->cont_mode << MAX77660_CONT_MODE_SHIFT |
-		chip->motor_startup_val << MAX77660_MOTOR_STRT_SHIFT |
-		chip->scf_val;
+	if ((chip->mode == MAX77660_INTERNAL_MODE) &&
+		(chip->enabled)) {
+		value1 = chip->invert << MAX77660_INVERT_SHIFT |
+			chip->cont_mode << MAX77660_CONT_MODE_SHIFT |
+			chip->motor_startup_val << MAX77660_MOTOR_STRT_SHIFT |
+			chip->scf_val;
 
-	max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
-		MAX77660_HAPTIC_REG_CONF1, value1);
+		max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
+			MAX77660_HAPTIC_REG_CONF1, value1);
 
-	if (chip->mode == MAX77660_INTERNAL_MODE) {
-		if (chip->enabled) {
+		switch (chip->internal_mode_pattern) {
+		case 0:
+			value1 = chip->pattern_cycle << 4;
+			reg1 = MAX77660_HAPTIC_REG_CYCLECONF1;
+			value2 = chip->pattern_signal_period;
+			reg2 = MAX77660_HAPTIC_REG_SIGCONF1;
+			break;
+		case 1:
+			value1 = chip->pattern_cycle;
+			reg1 = MAX77660_HAPTIC_REG_CYCLECONF1;
+			value2 = chip->pattern_signal_period;
+			reg2 = MAX77660_HAPTIC_REG_SIGCONF2;
+			break;
+		case 2:
+			value1 = chip->pattern_cycle << 4;
+			reg1 = MAX77660_HAPTIC_REG_CYCLECONF2;
+			value2 = chip->pattern_signal_period;
+			reg2 = MAX77660_HAPTIC_REG_SIGCONF3;
+			break;
+		case 3:
+			value1 = chip->pattern_cycle;
+			reg1 = MAX77660_HAPTIC_REG_CYCLECONF2;
+			value2 = chip->pattern_signal_period;
+			reg2 = MAX77660_HAPTIC_REG_SIGCONF4;
+			break;
+		default:
+			internal_mode_valid = false;
+			break;
+		}
 
-			switch (chip->internal_mode_pattern) {
-			case 0:
-				value1 = chip->pattern_cycle << 4;
-				reg1 = MAX77660_HAPTIC_REG_CYCLECONF1;
-				value2 = chip->pattern_signal_period;
-				reg2 = MAX77660_HAPTIC_REG_SIGCONF1;
-				break;
-			case 1:
-				value1 = chip->pattern_cycle;
-				reg1 = MAX77660_HAPTIC_REG_CYCLECONF1;
-				value2 = chip->pattern_signal_period;
-				reg2 = MAX77660_HAPTIC_REG_SIGCONF2;
-				break;
-			case 2:
-				value1 = chip->pattern_cycle << 4;
-				reg1 = MAX77660_HAPTIC_REG_CYCLECONF2;
-				value2 = chip->pattern_signal_period;
-				reg2 = MAX77660_HAPTIC_REG_SIGCONF3;
-				break;
-			case 3:
-				value1 = chip->pattern_cycle;
-				reg1 = MAX77660_HAPTIC_REG_CYCLECONF2;
-				value2 = chip->pattern_signal_period;
-				reg2 = MAX77660_HAPTIC_REG_SIGCONF4;
-				break;
-			default:
-				internal_mode_valid = false;
-				break;
-			}
-
-			if (internal_mode_valid) {
-				max77660_reg_write(chip->dev->parent,
-					MAX77660_HAPTIC_SLAVE, reg1, value1);
-				max77660_reg_write(chip->dev->parent,
-					MAX77660_HAPTIC_SLAVE, reg2, value2);
-				value1 = chip->internal_mode_pattern
-						<< MAX77660_CYCLE_SHIFT |
-				      chip->internal_mode_pattern
-						<< MAX77660_SIG_PERIOD_SHIFT |
-				      chip->internal_mode_pattern
-						<< MAX77660_SIG_DUTY_SHIFT |
-				      chip->internal_mode_pattern
-						<< MAX77660_PWM_DUTY_SHIFT;
-				max77660_reg_write(chip->dev->parent,
-					MAX77660_HAPTIC_SLAVE,
-					MAX77660_HAPTIC_REG_DRVCONF, value1);
-			}
+		if (internal_mode_valid) {
+			max77660_reg_write(chip->dev->parent,
+				MAX77660_HAPTIC_SLAVE, reg1, value1);
+			max77660_reg_write(chip->dev->parent,
+				MAX77660_HAPTIC_SLAVE, reg2, value2);
+			value1 = chip->internal_mode_pattern
+					<< MAX77660_CYCLE_SHIFT |
+				chip->internal_mode_pattern
+					<< MAX77660_SIG_PERIOD_SHIFT |
+				chip->internal_mode_pattern
+					<< MAX77660_SIG_DUTY_SHIFT |
+				chip->internal_mode_pattern
+					<< MAX77660_PWM_DUTY_SHIFT;
+			max77660_reg_write(chip->dev->parent,
+				MAX77660_HAPTIC_SLAVE,
+				MAX77660_HAPTIC_REG_DRVCONF, value1);
 		}
 	}
 }
