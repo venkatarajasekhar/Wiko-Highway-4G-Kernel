@@ -26,9 +26,6 @@
 #include <nvshm_rpc_dispatcher.h>
 
 #define RSM_FLAGS_MODE_NOT_2G		BIT(1)
-#define RSM_MODE_2G_MIN			3
-#define RSM_MODE_2G_MAX			7
-static int rsm_flags_mode_not_2g_support;
 
 /*
  * RSM APIs:
@@ -62,12 +59,6 @@ static enum rpc_accept_stat rpc_bbc_edp_request(
 
 	/* Call */
 	rc = tegra_bbc_proxy_edp_request(proxy_dev, mode, state, threshold);
-	if (!rsm_flags_mode_not_2g_support) {
-		if ((mode >= RSM_MODE_2G_MIN) && (mode <= RSM_MODE_2G_MAX))
-			tegra_bbc_proxy_set_rf_mode(proxy_dev, true);
-		else
-			tegra_bbc_proxy_set_rf_mode(proxy_dev, false);
-	}
 
 	/* Encode response */
 	{
@@ -174,10 +165,8 @@ static enum rpc_accept_stat rpc_bbc_bw_request(
 	/* Call */
 	rc = tegra_bbc_proxy_bw_request(proxy_dev, mode, bw, lt, margin);
 	tegra_bb_set_emc_floor(tegra_bb, freq_floor, flags);
-	if (rsm_flags_mode_not_2g_support) {
-		tegra_bbc_proxy_set_rf_mode(proxy_dev, !(flags &
+	tegra_bbc_proxy_set_rf_mode(proxy_dev, !(flags &
 						RSM_FLAGS_MODE_NOT_2G));
-	}
 
 	/* Encode response */
 	{
