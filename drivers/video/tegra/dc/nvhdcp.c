@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp.c
  *
- * Copyright (c) 2010-2012, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1069,13 +1069,17 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 
 static int tegra_nvhdcp_off(struct tegra_nvhdcp *nvhdcp)
 {
+	bool phy_plugged = nvhdcp_is_plugged(nvhdcp);
 	mutex_lock(&nvhdcp->lock);
 	nvhdcp->state = STATE_OFF;
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
 	wake_up_interruptible(&wq_worker);
 	flush_workqueue(nvhdcp->downstream_wq);
-	msleep(1000);
+	/* If hdmi cable is plugged , wait for accesses to  finish*/
+	if (phy_plugged)
+		msleep(1000);
+
 	return 0;
 }
 
