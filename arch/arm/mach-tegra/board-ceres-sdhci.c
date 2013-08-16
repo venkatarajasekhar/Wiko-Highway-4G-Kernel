@@ -333,6 +333,7 @@ int __init ceres_sdhci_init(void)
 	struct board_info board_info;
 	int nominal_core_mv;
 	int min_vcore_override_mv;
+	int boot_vcore_mv;
 
 	nominal_core_mv =
 		tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
@@ -351,6 +352,13 @@ int __init ceres_sdhci_init(void)
 		tegra_sdhci_platform_data3.min_vcore_override_mv =
 			min_vcore_override_mv;
 	}
+	boot_vcore_mv = tegra_dvfs_rail_get_boot_level(tegra_core_rail);
+	if (boot_vcore_mv) {
+		tegra_sdhci_platform_data0.boot_vcore_mv = boot_vcore_mv;
+		tegra_sdhci_platform_data2.boot_vcore_mv = boot_vcore_mv;
+		tegra_sdhci_platform_data3.boot_vcore_mv = boot_vcore_mv;
+	}
+
 	tegra_get_board_info(&board_info);
 	if ((board_info.board_id == BOARD_E1670) ||
 		 (board_info.board_id == BOARD_E1740))

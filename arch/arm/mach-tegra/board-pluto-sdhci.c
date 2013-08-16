@@ -116,6 +116,7 @@ struct tegra_sdhci_platform_data pluto_tegra_sdhci_platform_data0 = {
 	.ddr_clk_limit = 41000000,
 	.base_clk = 208000000,
 	.uhs_mask = MMC_UHS_MASK_DDR50,
+	.en_nominal_vcore_tuning = true,
 };
 
 #ifndef CONFIG_USE_OF
@@ -167,6 +168,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.ddr_clk_limit = 41000000,
 	.max_clk_limit = 156000000,
 	.uhs_mask = MMC_UHS_MASK_DDR50,
+	.en_nominal_vcore_tuning = true,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
@@ -184,6 +186,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 		.ocr_mask = MMC_OCR_1V8_MASK,
 	},
 	.en_freq_scaling = true,
+	.en_nominal_vcore_tuning = true,
 };
 
 static struct platform_device tegra_sdhci_device0 = {
@@ -313,6 +316,7 @@ int __init pluto_sdhci_init(void)
 #ifndef CONFIG_USE_OF
 	int nominal_core_mv;
 	int min_vcore_override_mv;
+	int boot_vcore_mv;
 
 	nominal_core_mv =
 		tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
@@ -332,6 +336,13 @@ int __init pluto_sdhci_init(void)
 		tegra_sdhci_platform_data3.min_vcore_override_mv =
 			min_vcore_override_mv;
 	}
+	boot_vcore_mv = tegra_dvfs_rail_get_boot_level(tegra_core_rail);
+	if (boot_vcore_mv) {
+		tegra_sdhci_platform_data0.boot_vcore_mv = boot_vcore_mv;
+		tegra_sdhci_platform_data2.boot_vcore_mv = boot_vcore_mv;
+		tegra_sdhci_platform_data3.boot_vcore_mv = boot_vcore_mv;
+	}
+
 	if ((tegra_sdhci_platform_data3.uhs_mask & MMC_MASK_HS200)
 		&& (!(tegra_sdhci_platform_data3.uhs_mask &
 		MMC_UHS_MASK_DDR50)))
