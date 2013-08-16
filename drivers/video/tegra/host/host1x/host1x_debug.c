@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011 NVIDIA Corporation
+ * Copyright (C) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -71,7 +71,10 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 {
 	struct nvhost_job *job =
 		list_first_entry(&cdma->sync_queue, struct nvhost_job, list);
+	struct push_buffer *pb = &cdma->push_buffer;
+	u32 base_idx = (job->first_get - (int)pb->phys) / sizeof(u32);
 	int i;
+
 	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d,"
 			" first_get=%08x, timeout=%d, ctx=%p,"
 			" num_slots=%d, num_handles=%d\n",
@@ -83,6 +86,16 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 			job->hwctx,
 			job->num_slots,
 			job->num_unpins);
+
+	/* First, print the data from push buffer */
+	nvhost_debug_output(o, "    SLOT at %u\n", base_idx);
+	for (i = 0; i < job->num_slots; i++) {
+		u32 idx = (base_idx + 2 * i) &
+			(2 * NVHOST_GATHER_QUEUE_SIZE - 1);
+		nvhost_debug_output(o, "%08x %08x ", pb->mapped[idx],
+			pb->mapped[idx + 1]);
+	}
+	nvhost_debug_output(o, "\n");
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
