@@ -4,6 +4,7 @@
  * Header file for Host Controller registers and I/O accessors.
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
+ *  Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -279,6 +280,8 @@ struct sdhci_ops {
 
 	void	(*platform_suspend)(struct sdhci_host *host);
 	void	(*platform_resume)(struct sdhci_host *host);
+	void	(*platform_get_bus)(struct sdhci_host *host);
+	void	(*platform_release_bus)(struct sdhci_host *host);
 	int	(*switch_signal_voltage)(struct sdhci_host *host,
 				unsigned int signal_voltage);
 	void	(*switch_signal_voltage_exit)(struct sdhci_host *host);
