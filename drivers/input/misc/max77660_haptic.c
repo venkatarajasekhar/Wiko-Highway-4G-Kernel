@@ -243,7 +243,8 @@ static void max77660_haptic_play_effect_work(struct work_struct *work)
 					MAX77660_HAPTIC_EDP_HIGH, &approved);
 			if (ret || approved != MAX77660_HAPTIC_EDP_HIGH) {
 				dev_err(chip->dev,
-					"E state transition failed\n");
+					"E state high transition failed, error=%d, approved=%d\n",
+					ret, approved);
 				return;
 			}
 		}
@@ -254,7 +255,8 @@ static void max77660_haptic_play_effect_work(struct work_struct *work)
 					MAX77660_HAPTIC_EDP_LOW, NULL);
 			if (ret) {
 				dev_err(chip->dev,
-					"E state transition failed\n");
+					"E state low transition failed, error=%d\n",
+					ret);
 				return;
 			}
 		}
