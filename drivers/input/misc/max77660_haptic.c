@@ -232,12 +232,7 @@ static void max77660_haptic_play_effect_work(struct work_struct *work)
 	int ret;
 
 	if (chip->level) {
-		ret = max77660_haptic_set_duty_cycle(chip);
-		if (ret) {
-			dev_err(chip->dev, "set_pwm_cycle failed\n");
-			return;
-		}
-
+		/* Request E-state before operating */
 		if (chip->haptic_edp_client) {
 			ret = edp_update_client_request(chip->haptic_edp_client,
 					MAX77660_HAPTIC_EDP_HIGH, &approved);
@@ -248,8 +243,16 @@ static void max77660_haptic_play_effect_work(struct work_struct *work)
 				return;
 			}
 		}
+		ret = max77660_haptic_set_duty_cycle(chip);
+		if (ret) {
+			dev_err(chip->dev, "set_pwm_cycle failed\n");
+			return;
+		}
+
 		max77660_haptic_enable(chip, true);
 	} else {
+		/* Disable device before releasing E-state request */
+		max77660_haptic_enable(chip, false);
 		if (chip->haptic_edp_client) {
 			ret = edp_update_client_request(chip->haptic_edp_client,
 					MAX77660_HAPTIC_EDP_LOW, NULL);
@@ -260,7 +263,6 @@ static void max77660_haptic_play_effect_work(struct work_struct *work)
 				return;
 			}
 		}
-		max77660_haptic_enable(chip, false);
 	}
 }
 
@@ -559,16 +561,17 @@ static int max77660_haptic_suspend(struct device *dev)
 	struct max77660_haptic *chip = platform_get_drvdata(pdev);
 	int ret;
 
+	/* Disable device before releasing E-state request */
+	max77660_haptic_enable(chip, false);
 	if (chip->haptic_edp_client) {
 		ret = edp_update_client_request(chip->haptic_edp_client,
 				MAX77660_HAPTIC_EDP_LOW, NULL);
 		if (ret) {
 			dev_err(chip->dev,
-				"E state transition failed\n");
+				"E state low transition failed in suspend\n");
 			return ret;
 		}
 	}
-	max77660_haptic_enable(chip, false);
 
 	return 0;
 }
