@@ -28,6 +28,7 @@
 #include <linux/module.h>
 #include <linux/clockchips.h>
 #include <linux/cpu_pm.h>
+#include <linux/sched.h>
 
 #include <mach/gpio.h>
 #include <mach/iomap.h>
@@ -47,6 +48,9 @@
 #include "sleep.h"
 #include "tegra3_emc.h"
 #include "dvfs.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/nvpower.h>
 
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
 #define CAR_CCLK_BURST_POLICY \
@@ -417,6 +421,11 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 
 	local_irq_save(irq_flags);
 
+	if (is_idle_task(current))
+		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_START);
+	else
+		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_START);
+
 	if (current_cluster != target_cluster && !timekeeping_suspended) {
 		ktime_t now = ktime_get();
 		if (target_cluster == TEGRA_POWER_CLUSTER_G) {
@@ -465,6 +474,12 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 		cpu_pm_exit();
 		tegra_clear_cpu_in_pd(cpu);
 	}
+
+	if (is_idle_task(current))
+		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_DONE);
+	else
+		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_DONE);
+
 	local_irq_restore(irq_flags);
 
 	DEBUG_CLUSTER(("%s: %s\r\n", __func__, is_lp_cluster() ? "LP" : "G"));

@@ -83,9 +83,6 @@
 #include "tegra14_scratch.h"
 #endif
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/nvpower.h>
-
 struct suspend_context {
 	/*
 	 * The next 7 values are referenced by offset in __restart_plls
@@ -702,10 +699,6 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 	 * are in LP2 state and irqs are disabled
 	 */
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
-		if (is_idle_task(current))
-			trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_START);
-		else
-			trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_START);
 		set_power_timers(pdata->cpu_timer, 2,
 			clk_get_rate_all_locked(tegra_pclk));
 		if (flags & TEGRA_POWER_CLUSTER_G) {
@@ -839,10 +832,6 @@ unsigned int tegra_idle_power_down_last(unsigned int sleep_time,
 
 	if (flags & TEGRA_POWER_CLUSTER_MASK) {
 		tegra_cluster_switch_epilog(flags);
-		if (is_idle_task(current))
-			trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_DONE);
-		else
-			trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_DONE);
 	} else {
 		resume_cpu_dfll_mode();
 	}
