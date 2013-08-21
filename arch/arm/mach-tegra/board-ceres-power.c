@@ -1055,6 +1055,9 @@ int __init ceres_regulator_init(void)
 					ARRAY_SIZE(max77660_buck3_a02_supply);
 	}
 
+	if ((board_info.board_id == BOARD_E1680) && (board_info.fab >= BOARD_FAB_A04))
+		max77660_pdata.use_rcm_reset = true;
+
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
 
