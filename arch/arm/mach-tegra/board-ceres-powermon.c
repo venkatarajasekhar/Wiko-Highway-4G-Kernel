@@ -74,6 +74,13 @@ enum {
 	VDD_SOC_BUCK1,
 };
 
+/* following rails are present on Atlantis-FFD */
+enum {
+	PM_VDD_CELL,
+	VDD_CPU_SMPS1_2,
+	VDD_SOC_SMPS6,
+};
+
 /* following rails are present on Atlantis-ERS */
 enum {
 	ATL_VDD_SYS_CELL,
@@ -378,6 +385,24 @@ static struct ina230_platform_data power_mon_info_ffd[] = {
 	},
 };
 
+/* following are power monitor parameters for Atlantis-FFD */
+static struct ina230_platform_data atl_ffd_power_mon_info[] = {
+	[PM_VDD_CELL] = {
+		.rail_name = "VDD_CELL",
+		.resistor = 5,
+	},
+
+	[VDD_CPU_SMPS1_2] = {
+		.rail_name = "VDD_CPU_SMPS1_2",
+		.resistor = 10,
+	},
+
+	[VDD_SOC_SMPS6] = {
+		.rail_name = "VDD_SOC_SMPS6",
+		.resistor = 10,
+	},
+};
+
 /* following are the power monitor parameters for Atlantis */
 static struct ina230_platform_data atl_power_mon_info_1[] = {
 	[ATL_VDD_SYS_CELL] = {
@@ -674,7 +699,7 @@ enum {
 	ATL_A02_INA_I2C_2_1_ADDR_4F,
 };
 
-/* i2c addresses of rails present on Ceres-FFD */
+/* i2c addresses of rails present on Ceres-FFD and Atlantis-FFD */
 enum {
 	INA_I2C_2_ADDR_40,
 	INA_I2C_2_ADDR_41,
@@ -877,6 +902,27 @@ static struct i2c_board_info ceres_i2c2_ina230_board_info_ffd[] = {
 	},
 };
 
+/* following are the i2c board info for Atlantis-FFD */
+static struct i2c_board_info atl_ffd_ina230_board_info[] = {
+	[INA_I2C_2_ADDR_40] = {
+		I2C_BOARD_INFO("ina230", 0x40),
+		.platform_data = &atl_ffd_power_mon_info[PM_VDD_CELL],
+		.irq = -1,
+	},
+
+	[INA_I2C_2_ADDR_41] = {
+		I2C_BOARD_INFO("ina230", 0x41),
+		.platform_data = &atl_ffd_power_mon_info[VDD_CPU_SMPS1_2],
+		.irq = -1,
+	},
+
+	[INA_I2C_2_ADDR_42] = {
+		I2C_BOARD_INFO("ina230", 0x42),
+		.platform_data = &atl_ffd_power_mon_info[VDD_SOC_SMPS6],
+		.irq = -1,
+	},
+};
+
 /* following are the i2c board info for Atlantis */
 static struct i2c_board_info atlantis_i2c2_1_ina230_board_info[] = {
 	[INA_I2C_2_1_ADDR_40] = {
@@ -1065,6 +1111,12 @@ static void __init register_devices_E1690(void)
 		ARRAY_SIZE(ceres_i2c2_ina230_board_info_ffd));
 }
 
+static void __init register_devices_E1740(void)
+{
+	i2c_register_board_info(1, atl_ffd_ina230_board_info,
+		ARRAY_SIZE(atl_ffd_ina230_board_info));
+}
+
 static void __init register_devices_E1670(void)
 {
 	i2c_register_board_info(PCA954x_I2C_BUS1,
@@ -1122,7 +1174,12 @@ int __init ceres_pmon_init(void)
 		 * so register only those if board is E1690
 		 */
 		register_devices_E1690();
-	} else {
+	} else if (bi.board_id == BOARD_E1740) {
+			/* There are only 3 devices on Atlantis-FFD
+			 * so register only those if board is E1740
+			 */
+			register_devices_E1740();
+		} else {
 		/* register devices common to ceres/atlantis ERS */
 		i2c_register_board_info(1, ceres_i2c2_board_info,
 			ARRAY_SIZE(ceres_i2c2_board_info));
@@ -1131,9 +1188,9 @@ int __init ceres_pmon_init(void)
 			ceres_i2c2_0_ina219_board_info,
 			ARRAY_SIZE(ceres_i2c2_0_ina219_board_info));
 
-		if ((bi.board_id == BOARD_E1670) || (bi.board_id == BOARD_E1671) ||
-			 (bi.board_id == BOARD_E1740)) {
-			/* register devices specific to Atlantis */
+		if ((bi.board_id == BOARD_E1670) ||
+					(bi.board_id == BOARD_E1671)) {
+			/* register devices specific to Atlantis-ERS */
 			if (bi.fab >= BOARD_FAB_A02)
 				register_devices_E1670_A02();
 			else
