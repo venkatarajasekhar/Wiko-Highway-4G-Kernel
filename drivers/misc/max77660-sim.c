@@ -77,7 +77,7 @@ static const struct attribute_group sim_attr_group = {
 static irqreturn_t max77660_sim_irq(int irq, void *data)
 {
 	struct max77660_sim *sim = data;
-	u8 val, val2;
+	u8 val = 0, val2 = 0;
 	int ret, ret2;
 	bool sim1 = sim->sim1_insert;
 	bool sim2 = sim->sim2_insert;
