@@ -1060,7 +1060,6 @@ int camera_auto_detect(void)
 int __init ceres_camera_late_init(void)
 {
 	if ((board_info.board_id != BOARD_E1670) &&
-		(board_info.board_id != BOARD_E1740) &&
 		(board_info.board_id != BOARD_E1680)) {
 		pr_err("%s: Ceres/Atlantis ERS not found!\n", __func__);
 		return 0;
