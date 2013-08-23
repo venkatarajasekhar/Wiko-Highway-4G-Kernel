@@ -580,10 +580,8 @@ static int tegra_aic325x_startup(struct snd_pcm_substream *substream)
 
 	tegra_asoc_utils_tristate_dap(i2s->id, false);
 
-	if (!i2s->is_dam_used)
-		return 0;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			i2s->is_dam_used) {
 		/*dam configuration*/
 		if (!i2s->dam_ch_refcount)
 			i2s->dam_ifc = tegra30_dam_allocate_controller();
@@ -609,7 +607,8 @@ static int tegra_aic325x_startup(struct snd_pcm_substream *substream)
 		/* enable the dam*/
 		tegra30_dam_enable(i2s->dam_ifc, TEGRA30_DAM_ENABLE,
 				TEGRA30_DAM_CHIN1);
-	} else {
+	} else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+
 		i2s->is_call_mode_rec = machine->is_call_mode;
 
 		if (!i2s->is_call_mode_rec)
@@ -691,10 +690,8 @@ static void tegra_aic325x_shutdown(struct snd_pcm_substream *substream)
 
 	tegra_asoc_utils_tristate_dap(i2s->id, true);
 
-	if (!i2s->is_dam_used)
-		return;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			(i2s->is_dam_used)) {
 		/* disable the dam*/
 		tegra30_dam_enable(i2s->dam_ifc, TEGRA30_DAM_DISABLE,
 				TEGRA30_DAM_CHIN1);
@@ -709,7 +706,7 @@ static void tegra_aic325x_shutdown(struct snd_pcm_substream *substream)
 		i2s->dam_ch_refcount--;
 		if (!i2s->dam_ch_refcount)
 			tegra30_dam_free_controller(i2s->dam_ifc);
-	 } else {
+	 } else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 
 		if (!i2s->is_call_mode_rec)
 			return;
