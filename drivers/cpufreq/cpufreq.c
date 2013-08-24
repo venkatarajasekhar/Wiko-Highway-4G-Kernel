@@ -3,6 +3,7 @@
  *
  *  Copyright (C) 2001 Russell King
  *            (C) 2002 - 2003 Dominik Brodowski <linux@brodo.de>
+ *            (C) 2010-2013 NVIDIA CORPORATION. All rights reserved.
  *
  *  Oct 2005 - Ashok Raj <ashok.raj@intel.com>
  *	Added handling for CPU hotplug
@@ -72,6 +73,8 @@ static DEFINE_SPINLOCK(cpufreq_driver_lock);
  */
 static DEFINE_PER_CPU(int, cpufreq_policy_cpu);
 static DEFINE_PER_CPU(struct rw_semaphore, cpu_policy_rwsem);
+/* Serialize policy access across hotplug */
+static DEFINE_PER_CPU(struct mutex, cpu_policy_hp_mutex);
 
 #define lock_policy_rwsem(mode, cpu)					\
 static int lock_policy_rwsem_##mode					\
@@ -630,14 +633,21 @@ static ssize_t show(struct kobject *kobj, struct attribute *attr, char *buf)
 	struct cpufreq_policy *policy;
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret = -EINVAL;
+	int cpu;
 
 	freqobj = to_cpu_kobj(kobj);
 	if (!freqobj->cpu_policy)
 		goto no_policy;
 
+	cpu = freqobj->cpu_policy->cpu;
+
+	mutex_lock(&per_cpu(cpu_policy_hp_mutex, cpu));
+	if (!freqobj->cpu_policy)
+		goto unlock;
+
 	policy = cpufreq_cpu_get(freqobj->cpu_policy->cpu);
 	if (!policy)
-		goto no_policy;
+		goto unlock;
 
 	if (lock_policy_rwsem_read(policy->cpu) < 0)
 		goto fail;
@@ -650,6 +660,8 @@ static ssize_t show(struct kobject *kobj, struct attribute *attr, char *buf)
 	unlock_policy_rwsem_read(policy->cpu);
 fail:
 	cpufreq_cpu_put(policy);
+unlock:
+	mutex_unlock(&per_cpu(cpu_policy_hp_mutex, cpu));
 no_policy:
 	return ret;
 }
@@ -661,18 +673,24 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	struct cpufreq_policy *policy;
 	struct freq_attr *fattr = to_attr(attr);
 	ssize_t ret = -EINVAL;
+	int cpu;
 
 	freqobj = to_cpu_kobj(kobj);
 	if (!freqobj->cpu_policy)
 		goto no_policy;
+	cpu = freqobj->cpu_policy->cpu;
+
+	mutex_lock(&per_cpu(cpu_policy_hp_mutex, cpu));
+
+	if (!freqobj->cpu_policy)
+		goto unlock;
 
 	policy = cpufreq_cpu_get(freqobj->cpu_policy->cpu);
 	if (!policy)
-		goto no_policy;
+		goto unlock;
 
 	if (lock_policy_rwsem_write(policy->cpu) < 0)
 		goto fail;
-
 	if (fattr->store)
 		ret = fattr->store(policy, buf, count);
 	else
@@ -681,6 +699,8 @@ static ssize_t store(struct kobject *kobj, struct attribute *attr,
 	unlock_policy_rwsem_write(policy->cpu);
 fail:
 	cpufreq_cpu_put(policy);
+unlock:
+	mutex_unlock(&per_cpu(cpu_policy_hp_mutex, cpu));
 no_policy:
 	return ret;
 }
@@ -1933,10 +1953,12 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
+			mutex_lock(&per_cpu(cpu_policy_hp_mutex, cpu));
 			if (unlikely(lock_policy_rwsem_write(cpu)))
 				BUG();
 
 			__cpufreq_remove_dev(dev, NULL);
+			mutex_unlock(&per_cpu(cpu_policy_hp_mutex, cpu));
 			break;
 		case CPU_DOWN_FAILED:
 		case CPU_DOWN_FAILED_FROZEN:
@@ -2088,11 +2110,15 @@ static int cpu_freq_notify(struct notifier_block *b,
 	pr_debug("PM QoS %s %lu\n",
 		b == &min_freq_notifier ? "min" : "max", l);
 	for_each_online_cpu(cpu) {
-		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+		struct cpufreq_policy *policy;
+
+		mutex_lock(&per_cpu(cpu_policy_hp_mutex, cpu));
+		policy = cpufreq_cpu_get(cpu);
 		if (policy) {
 			cpufreq_update_policy(policy->cpu);
 			cpufreq_cpu_put(policy);
 		}
+		mutex_unlock(&per_cpu(cpu_policy_hp_mutex, cpu));
 	}
 	return NOTIFY_OK;
 }
@@ -2108,6 +2134,7 @@ static int __init cpufreq_core_init(void)
 	for_each_possible_cpu(cpu) {
 		per_cpu(cpufreq_policy_cpu, cpu) = -1;
 		init_rwsem(&per_cpu(cpu_policy_rwsem, cpu));
+		mutex_init(&per_cpu(cpu_policy_hp_mutex, cpu));
 	}
 
 	cpufreq_global_kobject = kobject_create_and_add("cpufreq", &cpu_subsys.dev_root->kobj);
