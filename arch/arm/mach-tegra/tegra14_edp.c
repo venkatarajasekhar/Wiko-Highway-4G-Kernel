@@ -29,7 +29,7 @@
 #include "clock.h"
 #include "fuse.h"
 
-#define CORE_MODULES_STATES 1
+#define CORE_MODULES_STATES 2
 #define TEMPERATURE_RANGES 5
 #define CAP_CLKS_NUM 2
 #define	TOTAL_CAPS (CORE_EDP_PROFILES_NUM * CORE_MODULES_STATES *\
@@ -52,6 +52,8 @@ static char *cap_clks_names[] = { "edp.emc", "edp.cbus" };
 #endif
 static struct clk *cap_clks[CAP_CLKS_NUM];
 
+static DECLARE_BITMAP(core_modules_mask, TEGRA_CORE_EDP_MODILE_ID_NUM);
+
 /* FIXME: Populate with correct values as per final EDP tables.
  * Currently contains *safe* values
  */
@@ -62,31 +64,52 @@ static struct core_edp_entry core_edp_table[] = {
 		.mult		= 1000000,	/* MHZ */
 		.cap_cpu	= {
 			/* favor emc */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 655 },
-				 { 922, 596 },
+			{	/* sdmmc edp limit cap is Off */
+				{{ 922, 596 },
 				 { 922, 596 },
 				 { 922, 596 },
 				 { 922, 557 },
+				 { 922, 557 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 922, 500 },
+				 { 922, 442 },
+				 { 922, 442 },
+				 { 922, 442 },
+				 { 922, 442 },
 				},
 			},
 			/* balanced profile */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 655 },
-				 { 922, 596 },
-				 { 922, 596 },
-				 { 922, 596 },
-				 { 788, 596 },
+			{	/* sdmmc edp limit cap is Off */
+				{{ 788, 600 },
+				 { 788, 600 },
+				 { 788, 600 },
+				 { 788, 557 },
+				 { 788, 557 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 788, 557 },
+				 { 788, 471 },
+				 { 788, 471 },
+				 { 788, 471 },
+				 { 788, 471 },
 				},
 			},
 			/* favor gpu */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 655 },
-				 { 788, 655 },
-				 { 922, 596 },
-				 { 922, 596 },
-				 { 788, 596 },
-				}
+			{	/* sdmmc edp limit cap is Off */
+				{{ 788, 600 },
+				 { 788, 600 },
+				 { 788, 600 },
+				 { 653, 600 },
+				 { 519, 600 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 653, 586 },
+				 { 653, 500 },
+				 { 653, 500 },
+				 { 653, 500 },
+				 { 653, 500 },
+				},
 			},
 		},
 	},
@@ -96,75 +119,124 @@ static struct core_edp_entry core_edp_table[] = {
 		.mult		= 1000000,	/* MHZ */
 		.cap_cpu	= {
 			/* favor emc */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 672 },
-				 { 922, 596 },
+			{	/* sdmmc edp limit cap is Off */
+				{{ 922, 596 },
 				 { 922, 596 },
 				 { 922, 596 },
 				 { 922, 557 },
+				 { 922, 557 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 922, 500 },
+				 { 922, 442 },
+				 { 922, 442 },
+				 { 922, 442 },
+				 { 922, 442 },
 				},
 			},
 			/* balanced profile */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 672 },
+			{	/* sdmmc edp limit cap is Off */
+				{{ 788, 672 },
 				 { 788, 672 },
-				 { 922, 596 },
-				 { 922, 596 },
 				 { 788, 596 },
+				 { 788, 557 },
+				 { 788, 557 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 788, 557 },
+				 { 788, 471 },
+				 { 788, 471 },
+				 { 788, 471 },
+				 { 788, 471 },
 				},
 			},
 			/* favor gpu */
-			{	/* core modules power state 0 (all ON) */
-				{{ 922, 672 },
-				 { 788, 672 },
-				 { 922, 596 },
-				 { 922, 596 },
-				 { 788, 596 },
-				}
+			{	/* sdmmc edp limit cap is Off */
+				{{ 653, 672 },
+				 { 653, 672 },
+				 { 653, 596 },
+				 { 653, 596 },
+				 { 653, 557 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 653, 586 },
+				 { 653, 500 },
+				 { 653, 500 },
+				 { 653, 500 },
+				 { 653, 500 },
+				},
 			},
 		},
 	},
 	{
-		.sku		= 0x3,		/* SL460 */
+		.sku		= 0x3,
 		.cap_mA		= 3500,		/* 3.5A cap */
 		.mult		= 1000000,	/* MHZ */
 		.cap_cpu	= {
 			/* favor emc */
-			{	/* core modules power state 0 (all ON) */
+			{	/* sdmmc edp limit cap is Off */
 				{{ 922, 711 },
-				 { 922, 711 },
-				 { 922, 711 },
 				 { 922, 672 },
 				 { 922, 672 },
+				 { 922, 596 },
+				 { 922, 596 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 922, 692 },
+				 { 922, 600 },
+				 { 922, 600 },
+				 { 922, 596 },
+				 { 922, 596 },
 				},
 			},
 			/* balanced profile */
-			{	/* core modules power state 0 (all ON) */
+			{	/* sdmmc edp limit cap is Off */
 				{{ 788, 749 },
-				 { 922, 711 },
-				 { 922, 711 },
-				 { 922, 672 },
-				 { 922, 672 },
+				 { 788, 711 },
+				 { 788, 711 },
+				 { 788, 672 },
+				 { 788, 596 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 788, 749 },
+				 { 788, 653 },
+				 { 788, 653 },
+				 { 788, 653 },
+				 { 788, 596 },
 				},
 			},
 			/* favor gpu */
-			{	/* core modules power state 0 (all ON) */
-				{{ 788, 749 },
-				 { 922, 711 },
-				 { 922, 711 },
-				 { 922, 672 },
-				 { 922, 672 },
-				}
+			{	/* sdmmc edp limit cap is Off */
+				{{ 653, 749 },
+				 { 653, 749 },
+				 { 653, 711 },
+				 { 653, 672 },
+				 { 653, 672 },
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 653, 749 },
+				 { 653, 692 },
+				 { 653, 692 },
+				 { 653, 672 },
+				 { 653, 672 },
+				},
 			},
 		},
 	},
 	{
-		.sku		= 0x3,		/* SL460 */
+		.sku		= 0x3,
 		.cap_mA		= 4000,		/* 4A cap */
 		.mult		= 1000000,	/* MHZ */
 		.cap_cpu	= {
 			/* favor emc */
-			{	/* core modules power state 0 (all ON) */
+			{	/* sdmmc edp limit cap is Off */
+				{{ 922, 749 },
+				 { 922, 749 },
+				 { 922, 711 },
+				 { 922, 672 },
+				 { 922, 672 },
+				},
+				/* sdmmc edp limit cap is On */
 				{{ 922, 749 },
 				 { 922, 749 },
 				 { 922, 711 },
@@ -173,7 +245,14 @@ static struct core_edp_entry core_edp_table[] = {
 				},
 			},
 			/* balanced profile */
-			{	/* core modules power state 0 (all ON) */
+			{	/* sdmmc edp limit cap is Off */
+				{{ 922, 749 },
+				 { 922, 749 },
+				 { 922, 711 },
+				 { 922, 672 },
+				 { 922, 672 },
+				},
+				/* sdmmc edp limit cap is On */
 				{{ 922, 749 },
 				 { 922, 749 },
 				 { 922, 711 },
@@ -182,13 +261,20 @@ static struct core_edp_entry core_edp_table[] = {
 				},
 			},
 			/* favor gpu */
-			{	/* core modules power state 0 (all ON) */
+			{	/* sdmmc edp limit cap is Off */
 				{{ 922, 749 },
 				 { 922, 749 },
 				 { 922, 711 },
 				 { 922, 672 },
 				 { 922, 672 },
-				}
+				},
+				/* sdmmc edp limit cap is On */
+				{{ 922, 749 },
+				 { 922, 749 },
+				 { 922, 711 },
+				 { 922, 672 },
+				 { 922, 672 },
+				},
 			},
 		},
 	}
@@ -259,6 +345,10 @@ static struct core_edp_entry *find_edp_entry(int sku, unsigned int regulator_mA)
 {
 	int i;
 
+	/* For sku 0x3 apply 4A table above 4A */
+	if ((sku == 0x3) && (regulator_mA > 4000))
+		regulator_mA = 4000;
+
 	for (i = 0; i < ARRAY_SIZE(core_edp_table); i++) {
 		struct core_edp_entry *entry = &core_edp_table[i];
 		if ((entry->sku == sku) && (entry->cap_mA == regulator_mA))
@@ -300,6 +390,23 @@ static unsigned long clip_cap_rate(struct clk *cap_clk, unsigned long rate)
 	return floor;
 }
 
+static int tegra14x_update_core_edp_modules_state(
+	int module_id, bool edp_limited, int modules_state)
+{
+	if (module_id >= TEGRA_CORE_EDP_MODILE_ID_NUM)
+		return modules_state;
+
+	if (edp_limited)
+		__set_bit(module_id, core_modules_mask);
+	else
+		__clear_bit(module_id, core_modules_mask);
+
+	return test_bit(TEGRA_CORE_EDP_MODULE_ID_SDMMC1, core_modules_mask) ||
+		test_bit(TEGRA_CORE_EDP_MODULE_ID_SDMMC3, core_modules_mask) ||
+		test_bit(TEGRA_CORE_EDP_MODULE_ID_SDMMC4, core_modules_mask) ?
+		1 : 0;
+}
+
 int __init tegra14x_select_core_edp_table(unsigned int regulator_mA,
 					  struct tegra_core_edp_limits *limits)
 {
@@ -321,20 +428,23 @@ int __init tegra14x_select_core_edp_table(unsigned int regulator_mA,
 		cap_clks[i] = c;
 	}
 
+	/* Map skus with the same tables */
 	if (sku == 0x0)
 		sku = 0x7;
+	else if (sku == 0x83)
+		sku = 0x3;
 
 	if ((sku == 0x7) && (regulator_mA >= 3500)) {
-		pr_info("%s: no core edp capping for sku %d, %d mA\n",
-		       __func__, sku, regulator_mA);
+		pr_info("%s: no core edp capping for sku 0x%x, %d mA\n",
+		       __func__, tegra_sku_id, regulator_mA);
 		return -ENODATA;
 	}
 
 	edp_entry = find_edp_entry(sku, regulator_mA);
 	if (!edp_entry) {
-		pr_info("%s: no core edp table for sku %d, %d mA\n",
-		       __func__, sku, regulator_mA);
-		return -ENODATA;
+		WARN(1, "%s: missing core edp table for sku 0x%x, %d mA\n",
+		     __func__, tegra_sku_id, regulator_mA);
+		return -ENOENT;
 	}
 
 	limits->sku = sku;
@@ -343,6 +453,7 @@ int __init tegra14x_select_core_edp_table(unsigned int regulator_mA,
 	limits->temperatures = temperatures;
 	limits->temperature_ranges = TEMPERATURE_RANGES;
 	limits->core_modules_states = CORE_MODULES_STATES;
+	limits->update_modules_state = tegra14x_update_core_edp_modules_state;
 
 	cap_rates = &edp_entry->cap_cpu[0][0][0][0];
 	limits->cap_rates_scpu_on = cap_rates;
