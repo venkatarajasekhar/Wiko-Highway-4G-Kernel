@@ -2133,20 +2133,10 @@ static int pm_genpd_suspend_notifier(struct notifier_block *notifier,
 		return NOTIFY_DONE;
 
 	switch (pm_event) {
-	case PM_SUSPEND_PREPARE:
-		if (genpd->power_off_delay) {
-			/* if a domain has scheduled a delayed work */
-			if (delayed_work_pending(
-				&genpd->power_off_delayed_work)) {
-
-				/* cancel it now */
-				cancel_delayed_work_sync(
-					&genpd->power_off_delayed_work);
-
-				/* call its power off */
-				__pm_genpd_poweroff(genpd);
-			}
-		}
+	case PM_USERSPACE_FROZEN:
+		if (genpd->power_off_delay &&
+		    genpd->status != GPD_STATE_POWER_OFF)
+			return NOTIFY_BAD;
 		return NOTIFY_OK;
 	}
 
