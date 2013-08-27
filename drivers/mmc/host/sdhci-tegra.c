@@ -119,6 +119,7 @@
 #endif
 
 
+#define SDMMC_AHB_MIN_FREQ	100000000
 #define SDMMC_AHB_MAX_FREQ	150000000
 #define SDMMC_EMC_MAX_FREQ	150000000
 
@@ -1279,6 +1280,12 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 			tegra_host->is_sdmmc_emc_clk_on = true;
 		}
 		if (tegra_host->sclk && (!tegra_host->is_sdmmc_sclk_on)) {
+			if (sdhci->max_clk >= TUNING_HIGH_FREQ_HZ)
+				clk_set_rate(tegra_host->sclk,
+						SDMMC_AHB_MAX_FREQ);
+			else
+				clk_set_rate(tegra_host->sclk,
+						SDMMC_AHB_MIN_FREQ);
 			clk_prepare_enable(tegra_host->sclk);
 			tegra_host->is_sdmmc_sclk_on = true;
 		}
@@ -2909,8 +2916,6 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(tegra_host->sclk)) {
 		dev_err(mmc_dev(host->mmc), "Can't get sclk clock\n");
 		tegra_host->sclk = NULL;
-	} else {
-		clk_set_rate(tegra_host->sclk, SDMMC_AHB_MAX_FREQ);
 	}
 	pltfm_host->priv = tegra_host;
 	tegra_host->clk_enabled = true;
