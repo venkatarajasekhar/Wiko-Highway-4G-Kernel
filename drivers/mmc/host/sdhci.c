@@ -2037,7 +2037,7 @@ int sdhci_enable(struct mmc_host *mmc)
 	int ret;
 	struct platform_device *pdev = to_platform_device(mmc_dev(mmc));
 
-	if (!mmc->card || mmc->card->type == MMC_TYPE_SDIO)
+	if (!mmc->card || !(mmc->caps2 & MMC_CAP2_CLOCK_GATING))
 		return 0;
 
 	if (mmc->ios.clock) {
@@ -2062,7 +2062,7 @@ int sdhci_disable(struct mmc_host *mmc)
 	int ret;
 	struct platform_device *pdev = to_platform_device(mmc_dev(mmc));
 
-	if (!mmc->card || mmc->card->type == MMC_TYPE_SDIO)
+	if (!mmc->card || !(mmc->caps2 & MMC_CAP2_CLOCK_GATING))
 		return 0;
 
 	sdhci_set_clock(host, 0);
