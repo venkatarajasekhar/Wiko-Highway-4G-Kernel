@@ -10,6 +10,12 @@
 		status = "okay";
 	};
 
+	host1x {
+		hdmi {
+			status = "okay";
+		};
+	};
+
 	pinmux {
 		pinctrl-names = "default";
 		pinctrl-0 = <&state_default>;

@@ -5,4 +5,10 @@
 / {
 	model = "NVIDIA Tegra114 roth evaluation board";
 	compatible = "nvidia,roth", "nvidia,tegra114";
+
+	host1x {
+		hdmi {
+			status = "okay";
+		};
+	};
 };
