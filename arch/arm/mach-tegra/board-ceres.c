@@ -1152,7 +1152,6 @@ static void __init tegra_ceres_late_init(void)
 	ceres_modem_init();
 	tegra_register_fuse();
 	ceres_soctherm_init();
-	tegra_release_bootloader_fb();
 #ifdef CONFIG_BT_BLUESLEEP
 	ceres_setup_bluesleep();
 	ceres_setup_bt_rfkill();
