@@ -589,12 +589,15 @@ static struct tegra_dsi_cmd dsi_s_1080p_5_init_cmd[] = {
 	DSI_CMD_SHORT(DSI_GENERIC_SHORT_WRITE_2_PARAMS, 0x53, 0x04),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_ON, 0x0),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_EXIT_SLEEP_MODE, 0x0),
+	DSI_DLY_MS(10),
+	DSI_SEND_FRAME(7),
 };
 
 static struct tegra_dsi_cmd dsi_s_1080p_5_suspend_cmd[] = {
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_SET_DISPLAY_OFF, 0x0),
 	DSI_DLY_MS(50),
 	DSI_CMD_SHORT(DSI_DCS_WRITE_0_PARAM, DSI_DCS_ENTER_SLEEP_MODE, 0x0),
+	DSI_DLY_MS(10),
 };
 
 static struct tegra_dsi_out dsi_s_1080p_5_pdata = {
