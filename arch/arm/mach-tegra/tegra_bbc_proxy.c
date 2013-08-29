@@ -328,6 +328,7 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 				u32 lt, u32 margin)
 {
 	int ret;
+	u32 dvfs_latency;
 	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
 
 	if (bw > MAX_ISO_BW_REQ)
@@ -340,17 +341,17 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 		atomic_set(&bbc->mode, mode);
 
 	if ((bw != bbc->bw) || (lt != bbc->lt)) {
-		ret = tegra_isomgr_reserve(bbc->isomgr_handle, bw, lt);
-		if (!ret) {
+		dvfs_latency = tegra_isomgr_reserve(bbc->isomgr_handle, bw, lt);
+		if (!dvfs_latency) {
 			dev_err(dev, "can't reserve iso bw\n");
-			return ret;
+			return -EINVAL;
 		}
 		bbc->bw = bw;
 
-		ret = tegra_isomgr_realize(bbc->isomgr_handle);
-		if (!ret) {
+		dvfs_latency = tegra_isomgr_realize(bbc->isomgr_handle);
+		if (!dvfs_latency) {
 			dev_err(dev, "can't realize iso bw\n");
-			return ret;
+			return -EINVAL;
 		}
 		bbc->lt = lt;
 
