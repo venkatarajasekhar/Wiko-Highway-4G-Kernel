@@ -2959,6 +2959,7 @@ static void tegra_dc_shutdown(struct platform_device *ndev)
 	if (!dc || !dc->enabled)
 		return;
 
+	tegra_dc_blank(dc);
 	tegra_dc_disable(dc);
 }
 

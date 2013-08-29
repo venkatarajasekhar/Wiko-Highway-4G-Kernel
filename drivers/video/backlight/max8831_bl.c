@@ -245,6 +245,14 @@ edp_success:
 	return 0;
 }
 
+static void max8831_bl_shutdown(struct platform_device *pdev)
+{
+	struct backlight_device *bl = platform_get_drvdata(pdev);
+
+	bl->props.brightness = 0;
+	backlight_update_status(bl);
+}
+
 static int __devexit max8831_bl_remove(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
@@ -301,6 +309,7 @@ static struct platform_driver max8831_bl_driver = {
 	},
 	.probe	= max8831_bl_probe,
 	.remove	= __devexit_p(max8831_bl_remove),
+	.shutdown = max8831_bl_shutdown,
 };
 module_platform_driver(max8831_bl_driver);
 
