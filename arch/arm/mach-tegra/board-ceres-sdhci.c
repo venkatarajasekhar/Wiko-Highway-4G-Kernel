@@ -202,6 +202,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	},
 	.edp_support = true,
 	.edp_states = {855, 0},
+	.en_freq_scaling = true,
 };
 
 static struct platform_device tegra_sdhci_device0 = {
