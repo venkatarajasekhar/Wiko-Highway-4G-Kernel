@@ -111,10 +111,11 @@
 #define TUNING_RETRIES	1
 #define CUR_FREQ_LOW	0
 #define CUR_FREQ_HIGH	1
-#define TUNING_LOW_FREQ_HZ	82000000
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#define TUNING_LOW_FREQ_HZ	81000000
 #define TUNING_HIGH_FREQ_HZ	136000000
 #else
+#define TUNING_LOW_FREQ_HZ	82000000
 #define TUNING_HIGH_FREQ_HZ	156000000
 #endif
 
@@ -175,6 +176,7 @@ static unsigned int uhs_max_freq_MHz[] = {
 #define NVQUIRK_BROKEN_SDR50_CONTROLLER_CLOCK	BIT(19)
 #define NVQUIRK_DFS_MAX_HIGH			BIT(20)
 #define NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON	BIT(21)
+#define NVQUIRK_SECOND_LOW_FREQ_TUNING		BIT(22)
 
 #ifdef CONFIG_THERMAL
 static int sdhci_mmc_temperature[] = {40, 60};
@@ -277,13 +279,13 @@ struct freq_tuning_params {
 };
 
 static struct freq_tuning_params tuning_params[3] = {
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	[TUNING_LOW_FREQ] = {
 		.multiple_tuning = false,
-		.freq_hz = 82000000,
+		.freq_hz = 81000000,
 		.nr_voltages = 1,
 		.voltages = {ULONG_MAX},
 	},
-#ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	[TUNING_HIGH_FREQ] = {
 		.freq_hz = 136000000,
 		.nr_voltages = 2,
@@ -296,6 +298,12 @@ static struct freq_tuning_params tuning_params[3] = {
 		.voltages = {ULONG_MAX, ULONG_MAX},
 	},
 #else
+	[TUNING_LOW_FREQ] = {
+		.multiple_tuning = false,
+		.freq_hz = 82000000,
+		.nr_voltages = 1,
+		.voltages = {ULONG_MAX},
+	},
 	[TUNING_HIGH_FREQ] = {
 		.multiple_tuning = true,
 		.freq_hz = 156000000,
@@ -1206,10 +1214,6 @@ static void tegra_sdhci_set_clk_rate(struct sdhci_host *sdhci,
 	u8 freq_band;
 #endif
 
-	/* Return if the current clock rate is already set */
-	if (sdhci->max_clk == clock)
-		return;
-
 	if (sdhci->mmc->ios.timing == MMC_TIMING_UHS_DDR50) {
 		/*
 		 * In ddr mode, tegra sdmmc controller clock frequency
@@ -1543,8 +1547,7 @@ static void sdhci_tegra_dump_tuning_data(struct sdhci_host *sdhci, u8 freq_band)
 			tuning_data->tap_data[0]->full_win_end);
 	}
 
-	if ((freq_band == TUNING_HIGH_FREQ) &&
-		(tuning_data->tap_data[1])) {
+	if (tuning_data->tap_data[1]) {
 		dev_info(mmc_dev(sdhci->mmc),
 			"%d Tuning window data at 1.1V\n", sdhci->max_clk);
 		pr_info("partial window %d\n",
@@ -1578,6 +1581,7 @@ static void calculate_low_freq_tap_value(struct sdhci_host *sdhci)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 	unsigned int curr_clock;
 	unsigned int max_clock;
 	int best_tap_value;
@@ -1586,6 +1590,28 @@ static void calculate_low_freq_tap_value(struct sdhci_host *sdhci)
 
 	tuning_data = tegra_host->tuning_data[TUNING_LOW_FREQ];
 	tap_data = tuning_data->tap_data[0];
+
+	/*
+	 * calculation of best tap value for lowe frequency(82 MHz)
+	 * If X >= 50, select the Partial Window.
+	 * If X <= 155, TAP_VAL = 0
+	 * If X > 155, TAP_VAL = 35
+	 * If X < 50, select the Full Window.
+	 * TAP_VAL = Y + 32
+	 */
+	if (soc_data->nvquirks & NVQUIRK_SECOND_LOW_FREQ_TUNING) {
+		if (tap_data->partial_win >= 50) {
+			if (tap_data->partial_win <= 155)
+				tuning_data->best_tap_value = 0;
+			else
+				tuning_data->best_tap_value = 35;
+			tuning_data->select_partial_win = true;
+		} else {
+			tuning_data->best_tap_value =
+					tap_data->full_win_begin + 32;
+		}
+		return;
+	}
 
 	if (tap_data->abandon_full_win) {
 		if (tap_data->abandon_partial_win) {
@@ -2017,12 +2043,8 @@ static u8 sdhci_tegra_find_tuning_freqs(struct sdhci_host *sdhci)
 				sizeof(tuning_params[freq_band].voltages));
 			tegra_host->tuning_freq[1].multiple_tuning =
 				tuning_params[freq_band].multiple_tuning;
-			if (soc_data->nvquirks & NVQUIRK_DFS_MAX_HIGH)
-				tegra_host->tuning_freq[1].freq_hz =
-						TUNING_HIGH_FREQ_HZ;
-			else
-				tegra_host->tuning_freq[1].freq_hz =
-							TUNING_LOW_FREQ_HZ;
+			tegra_host->tuning_freq[1].freq_hz =
+					tuning_params[freq_band].freq_hz;
 			if (tegra_host->tuning_freq[0].freq_hz >
 				tegra_host->tuning_freq[1].freq_hz)
 				freq_count++;
@@ -2251,7 +2273,7 @@ skip_vcore_override:
 		 * min override tuning as done to avoid unnecessary
 		 * vcore override settings.
 		 */
-		if ((tuning_params[freq_band].nr_voltages == 1) &&
+		if ((freq_tun_params->nr_voltages == 1) &&
 			tuning_data->nominal_vcore_tun_done)
 			tuning_data->override_vcore_tun_done = true;
 
@@ -2582,8 +2604,8 @@ static struct sdhci_tegra_soc_data soc_data_tegra20 = {
 		    NVQUIRK_DISABLE_AUTO_CMD23 |
 #endif
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		    NVQUIRK_DFS_MAX_HIGH |
 		    NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON |
+		    NVQUIRK_SECOND_LOW_FREQ_TUNING |
 #endif
 		    NVQUIRK_ENABLE_BLOCK_GAP_DET,
 };
