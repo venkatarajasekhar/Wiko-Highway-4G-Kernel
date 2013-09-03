@@ -36,15 +36,24 @@ int tegra_bbc_proxy_edp_request(struct device *dev, u32 mode, u32 state,
 int tegra_bbc_proxy_bw_register(struct device *dev, u32 bw);
 int tegra_bbc_proxy_bw_request(struct device *dev, u32 mode, u32 bw, u32 lt,
 				u32 margin);
+int tegra_bbc_proxy_la_request(struct device *dev, s32 bbcllr_la_bw,
+				s32 bbcr_la_bw, s32 bbcw_la_bw);
 
 int tegra_bbc_proxy_restore_iso(struct device *dev);
 int tegra_bbc_proxy_clear_iso(struct device *dev);
 
 int tegra_bbc_proxy_set_rf_mode(struct device *dev, bool fpwm);
 
+/* values in KBps */
 #define BBC_ISO_CRASH_BW	500000
 #define BBC_ISO_BOOT_BW		1200000
 #define BBC_ISO_MARGIN_BW	1200000
+
+/* values in KBps */
+#define BBCLLR_LA_MAX_BW	640000
+#define BBCLLR_LA_CRASH_BW	640000
+#define BBCW_LA_CRASH_BW	500000
+#define BBCR_LA_CRASH_BW	500000
 
 #define BBC_EDP_E0_INDEX	0
 #define BBC_EDP_E0_THRESHOLD	3600

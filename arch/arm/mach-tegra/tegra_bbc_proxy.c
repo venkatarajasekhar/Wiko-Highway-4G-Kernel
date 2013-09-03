@@ -354,11 +354,6 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 			return -EINVAL;
 		}
 		bbc->lt = lt;
-
-		tegra_set_latency_allowance(TEGRA_LA_BBCR,
-				(((bw / 1000) * BBCR_BW_PERCENTAGE) / 100));
-		tegra_set_latency_allowance(TEGRA_LA_BBCW,
-				(((bw / 1000) * BBCW_BW_PERCENTAGE) / 100));
 	}
 
 	if (margin != bbc->margin) {
@@ -391,6 +386,30 @@ int tegra_bbc_proxy_bw_request(struct device *dev, u32 mode, u32 bw, u32 lt,
 	return ret;
 }
 EXPORT_SYMBOL(tegra_bbc_proxy_bw_request);
+
+int tegra_bbc_proxy_la_request(struct device *dev, s32 bbcllr_la_bw,
+				s32 bbcr_la_bw, s32 bbcw_la_bw)
+{
+	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
+
+	if (bbcllr_la_bw < 0)
+		bbcllr_la_bw = BBCLLR_LA_MAX_BW;
+	if (tegra_set_latency_allowance(TEGRA_LA_BBCLLR, bbcllr_la_bw / 1000))
+		return -EINVAL;
+
+	if (bbcr_la_bw < 0)
+		bbcr_la_bw = (bbc->bw  * BBCR_BW_PERCENTAGE) / 100;
+	if (tegra_set_latency_allowance(TEGRA_LA_BBCR, bbcr_la_bw / 1000))
+		return -EINVAL;
+
+	if (bbcw_la_bw < 0)
+		bbcw_la_bw = (bbc->bw * BBCW_BW_PERCENTAGE) / 100;
+	if (tegra_set_latency_allowance(TEGRA_LA_BBCW, bbcw_la_bw / 1000))
+		return -EINVAL;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_bbc_proxy_la_request);
 
 int tegra_bbc_proxy_restore_iso(struct device *dev)
 {
@@ -805,8 +824,6 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		BBC_ISO_BOOT_BW, NULL, NULL);
 	if (!bbc->isomgr_handle)
 		goto iso_error;
-
-	tegra_set_latency_allowance(TEGRA_LA_BBCLLR, 640);
 
 	/* statically margin for bbc bw */
 	ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
