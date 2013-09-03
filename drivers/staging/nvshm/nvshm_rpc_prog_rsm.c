@@ -142,29 +142,46 @@ static enum rpc_accept_stat rpc_bbc_bw_request(
 	struct nvshm_rpc_message **resp)
 {
 	u32 mode;
-	u32 bw;
+	u32 iso_bw;
 	u32 lt;
 	u32 margin;
 	u32 freq_floor;
 	u32 flags;
+	s32 ll_bw;
+	s32 r_bw;
+	s32 w_bw;
 	struct nvshm_rpc_datum_out req_data[] = {
 		NVSHM_RPC_OUT_UINT(&mode),
-		NVSHM_RPC_OUT_UINT(&bw),
+		NVSHM_RPC_OUT_UINT(&iso_bw),
 		NVSHM_RPC_OUT_UINT(&lt),
 		NVSHM_RPC_OUT_UINT(&margin),
 		NVSHM_RPC_OUT_UINT(&freq_floor),
 		NVSHM_RPC_OUT_UINT(&flags),
+		NVSHM_RPC_OUT_SINT(&ll_bw),
+		NVSHM_RPC_OUT_SINT(&r_bw),
+		NVSHM_RPC_OUT_SINT(&w_bw),
 	};
+	u32 req_data_size = ARRAY_SIZE(req_data);
 	int rc;
+
+	/* Version 0 only expects the first 6 arguments */
+	if (version == 0)
+		req_data_size = 6;
 
 	/* Decode request */
 	if (nvshm_rpc_utils_decode_args(req, false, req_data,
-					ARRAY_SIZE(req_data)) < 0)
+					req_data_size) < 0)
 		return RPC_GARBAGE_ARGS;
 
 	/* Call */
-	rc = tegra_bbc_proxy_bw_request(proxy_dev, mode, bw, lt, margin);
+	rc = tegra_bbc_proxy_bw_request(proxy_dev, mode, iso_bw, lt, margin);
 	tegra_bb_set_emc_floor(tegra_bb, freq_floor, flags);
+	if (version == 0)
+		/* Tell proxy driver to use default values for LA. */
+		tegra_bbc_proxy_la_request(proxy_dev, -1, -1, -1);
+	else
+		tegra_bbc_proxy_la_request(proxy_dev, ll_bw, r_bw, w_bw);
+
 	tegra_bbc_proxy_set_rf_mode(proxy_dev, !(flags &
 						RSM_FLAGS_MODE_NOT_2G));
 
@@ -189,7 +206,7 @@ static nvshm_rpc_function_t procedures[] = {
 
 static struct nvshm_rpc_program program = {
 	.version_min = 0,
-	.version_max = 0,
+	.version_max = 1,
 	.procedures_size = ARRAY_SIZE(procedures),
 	.procedures = procedures,
 };
