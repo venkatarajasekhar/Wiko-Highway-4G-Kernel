@@ -158,7 +158,7 @@ static struct powergate_partition_info
 	[TEGRA_POWERGATE_MPE] = {
 		.name = "mpe",
 		.clk_info = {
-			[0] = { .clk_name = "msenc.cbus",
+			[0] = { .clk_name = "msenc",
 				.clk_type = CLK_AND_RST },
 		},
 	},
