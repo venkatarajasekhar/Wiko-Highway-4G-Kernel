@@ -96,7 +96,7 @@ struct nvshm_handle {
 	struct platform_device *tegra_bb;
 };
 
-extern inline struct nvshm_handle *nvshm_get_handle(void);
+extern struct nvshm_handle *nvshm_get_handle(void);
 
 extern int nvshm_tty_init(struct nvshm_handle *handle);
 extern void nvshm_tty_cleanup(void);
