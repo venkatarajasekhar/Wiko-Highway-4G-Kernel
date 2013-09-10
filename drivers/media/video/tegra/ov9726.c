@@ -1,7 +1,7 @@
 /*
  * ov9726.c - ov9726 sensor driver
  *
- * Copyright (c) 2011 - 2013, NVIDIA, All Rights Reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION. All Rights Reserved.
  *
  * Contributors:
  *	  Charlie Huang <chahuang@nvidia.com>
@@ -143,7 +143,7 @@ static struct ov9726_reg mode_1280x720[] = {
 	{0x3010, 0x01},
 	{0x460e, 0x00},
 
-	{0x5000, 0x00},
+	{0x5000, 0x06},
 	{0x5002, 0x00},
 	{0x3017, 0xd2},
 	{0x3018, 0x69},
@@ -234,7 +234,7 @@ static struct ov9726_reg mode_1280x800[] = {
 	{0x3010, 0x01},
 	{0x460e, 0x00},
 
-	{0x5000, 0x00},
+	{0x5000, 0x06},
 	{0x5002, 0x00},
 	{0x3017, 0xd2},
 	{0x3018, 0x69},
