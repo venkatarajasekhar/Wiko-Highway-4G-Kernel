@@ -1331,6 +1331,12 @@ static int utmi_phy_resume(struct tegra_usb_phy *phy)
 			DBG("USB_USBSTS[0x%x] USB_PORTSC[0x%x]\n",
 			readl(base + USB_USBSTS), readl(base + USB_PORTSC));
 		}
+		val = readl(base + USB_TXFILLTUNING);
+		if ((val & USB_FIFO_TXFILL_MASK) !=
+			USB_FIFO_TXFILL_THRES(0x10)) {
+			val = USB_FIFO_TXFILL_THRES(0x10);
+			writel(val, base + USB_TXFILLTUNING);
+		}
 	}
 
 	return status;
@@ -1981,12 +1987,6 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
 	phy->phy_clk_on = true;
 	phy->hw_accessible = true;
 
-	val = readl(base + USB_TXFILLTUNING);
-	if ((val & USB_FIFO_TXFILL_MASK) != USB_FIFO_TXFILL_THRES(0x10)) {
-		val = USB_FIFO_TXFILL_THRES(0x10);
-		writel(val, base + USB_TXFILLTUNING);
-	}
-
 	if (!readl(base + USB_ASYNCLISTADDR))
 		_usb_phy_init(phy);
 
@@ -1999,6 +1999,11 @@ static int uhsic_phy_power_on(struct tegra_usb_phy *phy)
 		phy->pmc_sleepwalk = false;
 	}
 
+	val = readl(base + USB_TXFILLTUNING);
+	if ((val & USB_FIFO_TXFILL_MASK) != USB_FIFO_TXFILL_THRES(0x10)) {
+		val = USB_FIFO_TXFILL_THRES(0x10);
+		writel(val, base + USB_TXFILLTUNING);
+	}
 	return 0;
 }
 
