@@ -162,6 +162,11 @@
 #define MAX_HOLD_CYCLES			16
 #define SPI_DEFAULT_SPEED		25000000
 
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+#define SPI_SPEED_TAP_DELAY_MARGIN 33000000
+#define SPI_DEFAULT_RX_TAP_DELAY 28
+#endif
+
 static const unsigned long spi_tegra_req_sels[] = {
 	TEGRA_DMA_REQ_SEL_SL2B1,
 	TEGRA_DMA_REQ_SEL_SL2B2,
@@ -796,10 +801,17 @@ static void spi_tegra_start_transfer(struct spi_device *spi,
 			u32 rx_tap_delay;
 			u32 tx_tap_delay;
 
+#ifdef CONFIG_ARCH_TEGRA_14x_SOC
+			if (cdata->rx_clk_tap_delay == 0) {
+				if (speed > SPI_SPEED_TAP_DELAY_MARGIN)
+					cdata->rx_clk_tap_delay =
+						SPI_DEFAULT_RX_TAP_DELAY;
+			}
+#endif
 			rx_tap_delay = min(cdata->rx_clk_tap_delay, 63);
 			tx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
 			command2_reg = SPI_TX_TAP_DELAY(tx_tap_delay) |
-					SPI_RX_TAP_DELAY(tx_tap_delay);
+					SPI_RX_TAP_DELAY(rx_tap_delay);
 			spi_tegra_writel(tspi, command2_reg, SPI_COMMAND2);
 		} else {
 			spi_tegra_writel(tspi, tspi->def_command2_reg, SPI_COMMAND2);
