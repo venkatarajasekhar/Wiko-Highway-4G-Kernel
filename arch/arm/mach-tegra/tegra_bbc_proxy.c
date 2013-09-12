@@ -187,6 +187,7 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 		goto done;
 	}
 
+	dev_dbg(dev, "bbc edp client registered\n");
 done:
 	mutex_unlock(&bbc->edp_lock);
 	return ret;
@@ -199,6 +200,9 @@ static int bbc_edp_request_unlocked(struct device *dev, u32 mode, u32 state,
 	int ret;
 	struct edp_client *c;
 	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "bbc edp request - state: %u threshold: %u mode: %u\n",
+			state, threshold, mode);
 
 	if (!bbc->edp_client_registered)
 		return -EINVAL;
@@ -331,6 +335,9 @@ static int bbc_bw_request_unlocked(struct device *dev, u32 mode, u32 bw,
 	u32 dvfs_latency;
 	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
 
+	dev_dbg(dev, "bbc iso request - bw: %u lt: %u margin: %u mode: %u\n",
+			bw, lt, margin, mode);
+
 	if (bw > MAX_ISO_BW_REQ)
 		return -EINVAL;
 
@@ -406,6 +413,9 @@ int tegra_bbc_proxy_la_request(struct device *dev, s32 bbcllr_la_bw,
 		bbcw_la_bw = (bbc->bw * BBCW_BW_PERCENTAGE) / 100;
 	if (tegra_set_latency_allowance(TEGRA_LA_BBCW, bbcw_la_bw / 1000))
 		return -EINVAL;
+
+	dev_dbg(dev, "bbc la request - llr_bw: %d r_bw: %d w_bw: %d",
+			bbcllr_la_bw, bbcr_la_bw, bbcw_la_bw);
 
 	return 0;
 }
@@ -514,18 +524,26 @@ int tegra_bbc_proxy_bw_register(struct device *dev, u32 bw)
 	bbc->isomgr_handle = tegra_isomgr_register(TEGRA_ISO_CLIENT_BBC_0,
 		bw, NULL, NULL);
 	ret = PTR_RET(bbc->isomgr_handle);
-	if (ret)
+	if (ret) {
 		dev_err(dev, "error registering bbc with isomgr\n");
+		goto done;
+	}
 
 	ret = tegra_isomgr_set_margin(TEGRA_ISO_CLIENT_BBC_0,
 		bw, true);
-	if (ret)
+	if (ret) {
 		dev_err(dev, "can't margin for bbc bw\n");
+		tegra_isomgr_unregister(bbc->isomgr_handle);
+		goto done;
+	}
 	else
 		bbc->margin = bw;
 
-	mutex_unlock(&bbc->iso_lock);
 
+	dev_dbg(dev, "bbc iso client registered\n");
+
+done:
+	mutex_unlock(&bbc->iso_lock);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_bbc_proxy_bw_register);
