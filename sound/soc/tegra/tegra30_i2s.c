@@ -1339,10 +1339,12 @@ int t14x_make_bt_voice_call_connections(struct codec_config *codec_info,
 
 	/* configure codec dam */
 	ret = configure_dam(codec_i2s, codec_info->channels,
-	   codec_info->rate, codec_info->bitsize, bb_info->channels,
+	   codec_info->rate, codec_info->bitsize, 1,
 	   bb_info->rate, bb_info->sample_size);
 	if (ret)
 		pr_info("%s:Failed to configure codec dam\n", __func__);
+
+	tegra30_dam_ch1_set_datasync(codec_i2s->dam_ifc, 1);
 
 	/* configure bb dam */
 	ret = configure_dam(bb_i2s, bb_info->channels,
@@ -1351,9 +1353,9 @@ int t14x_make_bt_voice_call_connections(struct codec_config *codec_info,
 	if (ret)
 		pr_info("%s:Failed to configure bbc dam\n", __func__);
 
-	tegra30_dam_set_acif_stereo_conv(bb_i2s->dam_ifc,
-			TEGRA30_DAM_CHIN0_SRC,
-			TEGRA30_CIF_STEREOCONV_AVG);
+	tegra30_dam_set_acif(bb_i2s->dam_ifc, TEGRA30_DAM_CHOUT,
+			bb_info->channels, bb_info->sample_size,
+			codec_info->channels, 32);
 
 	/* make ahub connections */
 
@@ -1453,6 +1455,12 @@ int t14x_break_bt_voice_call_connections(struct codec_config *codec_info,
 	tegra30_ahub_unset_rx_cif_source(TEGRA30_AHUB_RXCIF_DAM0_RX0
 				+ (bb_i2s->dam_ifc*2));
 
+	tegra30_dam_ch1_set_datasync(codec_i2s->dam_ifc, 0);
+
+	/* Soft reset DAM */
+	tegra30_dam_soft_reset(codec_i2s->dam_ifc);
+	tegra30_dam_soft_reset(bb_i2s->dam_ifc);
+
 	tegra30_dam_disable_clock(codec_i2s->dam_ifc);
 	tegra30_dam_disable_clock(bb_i2s->dam_ifc);
 
@@ -1547,9 +1555,9 @@ int t14x_make_voice_call_connections(struct codec_config *codec_info,
 
 	tegra30_dam_set_gain(codec_i2s->dam_ifc, TEGRA30_DAM_CHIN1, 0x1000);
 	tegra30_dam_set_acif(codec_i2s->dam_ifc, TEGRA30_DAM_CHIN1, 1,
-			codec_info->bitsize, 1, 32);
-	tegra30_dam_set_acif(codec_i2s->dam_ifc, TEGRA30_DAM_CHOUT, 2, 16,
-		1, 32);
+			bb_info->sample_size, 1, 32);
+	tegra30_dam_set_acif(codec_i2s->dam_ifc, TEGRA30_DAM_CHOUT,
+			2, codec_info->bitsize, 1, 32);
 	tegra30_dam_ch0_set_datasync(codec_i2s->dam_ifc, 2);
 	tegra30_dam_ch1_set_datasync(codec_i2s->dam_ifc, 0);
 
@@ -1648,6 +1656,12 @@ int t14x_break_voice_call_connections(struct codec_config *codec_info,
 
 	tegra30_ahub_unset_rx_cif_source(TEGRA30_AHUB_RXCIF_I2S0_RX0 +
 			codec_info->i2s_id);
+
+	tegra30_dam_ch0_set_datasync(codec_i2s->dam_ifc, 0);
+	tegra30_dam_ch1_set_datasync(codec_i2s->dam_ifc, 0);
+
+	/* Soft reset DAM */
+	tegra30_dam_soft_reset(codec_i2s->dam_ifc);
 
 	tegra30_dam_disable_clock(codec_i2s->dam_ifc);
 

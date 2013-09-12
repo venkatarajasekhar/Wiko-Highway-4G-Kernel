@@ -1070,6 +1070,29 @@ int tegra30_dam_set_acif_stereo_conv(int ifc, int chtype, int conv)
 	return 0;
 }
 
+int tegra30_dam_soft_reset(int ifc)
+{
+	int dcnt = 10;
+	u32 val;
+	struct tegra30_dam_context *dam = NULL;
+
+	dam =  dams_cont_info[ifc];
+	val = tegra30_dam_readl(dam, TEGRA30_DAM_CTRL);
+	val |= TEGRA30_DAM_CTRL_SOFT_RESET_ENABLE;
+	tegra30_dam_writel(dam, val, TEGRA30_DAM_CTRL);
+
+	while ((tegra30_dam_readl(dam, TEGRA30_DAM_CTRL) &
+			TEGRA30_DAM_CTRL_SOFT_RESET_ENABLE) && dcnt--)
+		udelay(100);
+
+	/* Restore reg_ctrl to ensure if a concurrent playback/capture
+	   session was active it continues after SOFT_RESET */
+	val &= ~TEGRA30_DAM_CTRL_SOFT_RESET_ENABLE;
+	tegra30_dam_writel(dam, val, TEGRA30_DAM_CTRL);
+
+	return (dcnt < 0) ? -ETIMEDOUT : 0;
+}
+
 static int __devinit tegra30_dam_probe(struct platform_device *pdev)
 {
 	struct resource *res,  *region;
