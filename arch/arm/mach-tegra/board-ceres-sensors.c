@@ -1000,7 +1000,7 @@ static int ceres_camera_init(void)
 	/* on atlantis FFD, only IMX135/AD5816/LM3565/IMX132 are
 	supported, auto-detection is not neccessary. */
 	if (board_info.board_id == BOARD_E1740) {
-		i2c_register_board_info(0, ceres_i2c_board_info_e1740,
+		i2c_register_board_info(2, ceres_i2c_board_info_e1740,
 			ARRAY_SIZE(ceres_i2c_board_info_e1740));
 		return 0;
 	}
@@ -1008,7 +1008,7 @@ static int ceres_camera_init(void)
 	/* on ceres FFD, only IMX135/AD5816/LM3565/IMX132 are
 	supported, auto-detection is not neccessary. */
 	if (board_info.board_id == BOARD_E1690) {
-		i2c_register_board_info(0, ceres_i2c_board_info_e1690,
+		i2c_register_board_info(2, ceres_i2c_board_info_e1690,
 			ARRAY_SIZE(ceres_i2c_board_info_e1690));
 		return 0;
 	}
