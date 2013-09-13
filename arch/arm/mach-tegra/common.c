@@ -1351,6 +1351,25 @@ static int parse_arg_pmic_wdt_disable(char *options)
 }
 __setup("watchdog=", parse_arg_pmic_wdt_disable);
 
+static bool tskin_shutdown_disable;
+bool is_tskin_shutdown_disabled(void)
+{
+	return tskin_shutdown_disable;
+}
+
+static int tegra_get_tskin_shutdown_info(char *options)
+{
+	/* tskin shutdown is disabled or not */
+	tskin_shutdown_disable = false;
+	if (!(strcmp(options, "enable")))
+		tskin_shutdown_disable = false;
+	else if (!(strcmp(options, "disable")))
+		tskin_shutdown_disable = true;
+
+	return 0;
+}
+__setup("tskin_shutdown=", tegra_get_tskin_shutdown_info);
+
 void tegra_get_board_info(struct board_info *bi)
 {
 #ifdef CONFIG_OF

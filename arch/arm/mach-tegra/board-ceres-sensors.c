@@ -1295,8 +1295,9 @@ static int __init ceres_skin_init(void)
 	int i;
 
 	if (of_machine_is_compatible("nvidia,ceres")) {
-		if (board_info.board_id == BOARD_E1690 &&
-				board_info.fab <= BOARD_FAB_B) {
+		if ((board_info.board_id == BOARD_E1690 &&
+			board_info.fab <= BOARD_FAB_B) ||
+				is_tskin_shutdown_disabled()) {
 			/* we effectively disabled the shutdown trip point */
 			for (i = 0; i < skin_data.num_trips; i++) {
 				if (strcmp(skin_data.trips[i].cdev_type,
@@ -1306,7 +1307,7 @@ static int __init ceres_skin_init(void)
 			}
 
 			if (i != skin_data.num_trips)
-				skin_data.trips[i].trip_temp = 120000;
+				skin_data.trips[i].trip_temp = 200000;
 		}
 
 		balanced_throttle_register(&skin_throttle, "skin-balanced");
