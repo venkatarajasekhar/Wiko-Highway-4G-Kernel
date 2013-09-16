@@ -59,6 +59,8 @@ struct max17048_chip {
 	/* battery capacity */
 	int soc;
 	/* State Of Charge */
+	int raw_soc;
+	/* Raw soc value read from register */
 	int status;
 	/* battery health */
 	int health;
@@ -246,6 +248,8 @@ static void max17048_get_soc(struct i2c_client *client)
 						/ pdata->soc_error_max_value;
 	}
 
+	chip->raw_soc = chip->soc;
+
 	if (chip->soc >= MAX17048_BATTERY_FULL && chip->charge_complete != 1)
 		chip->soc = MAX17048_BATTERY_FULL-1;
 
@@ -262,6 +266,12 @@ static void max17048_get_soc(struct i2c_client *client)
 		chip->health = POWER_SUPPLY_HEALTH_GOOD;
 		chip->capacity_level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
 	}
+}
+
+static int max17048_read_soc_raw_value(struct battery_gauge_dev *bg_dev)
+{
+	struct max17048_chip *chip = battery_gauge_get_drvdata(bg_dev);
+	return chip->raw_soc;
 }
 
 static uint16_t max17048_get_version(struct i2c_client *client)
@@ -637,6 +647,7 @@ static int max17048_update_battery_status(struct battery_gauge_dev *bg_dev,
 
 static struct battery_gauge_ops max17048_bg_ops = {
 	.update_battery_status = max17048_update_battery_status,
+	.get_soc_value = max17048_read_soc_raw_value,
 };
 
 static struct battery_gauge_info max17048_bgi = {
