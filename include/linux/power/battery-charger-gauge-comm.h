@@ -36,6 +36,7 @@ struct battery_charger_dev;
 struct battery_gauge_ops {
 	int (*update_battery_status)(struct battery_gauge_dev *bg_device,
 				enum battery_charger_status status);
+	int (*get_soc_value) (struct battery_gauge_dev *bg_device);
 };
 
 struct battery_charging_ops {

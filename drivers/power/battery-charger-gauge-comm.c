@@ -45,6 +45,7 @@ static LIST_HEAD(gauge_list);
 
 struct battery_charger_dev {
 	int				cell_id;
+	int				charging_restart_interval;
 	char				tz_name[THERMAL_NAME_LENGTH];
 	struct device			*parent_dev;
 	struct battery_charging_ops	*ops;
@@ -68,12 +69,48 @@ struct battery_gauge_dev {
 	struct thermal_zone_device	*battery_tz;
 };
 
+static int battery_charger_soc_get_value(struct battery_charger_dev *bc_dev)
+{
+	struct battery_gauge_dev *bg_dev;
+	int ret = -EINVAL;
+
+	if (!bc_dev) {
+		dev_err(bc_dev->parent_dev, "Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&charger_gauge_list_mutex);
+
+	list_for_each_entry(bg_dev, &gauge_list, list) {
+		if (bg_dev->cell_id != bc_dev->cell_id)
+			continue;
+		if (bg_dev->ops && bg_dev->ops->get_soc_value)
+			ret = bg_dev->ops->get_soc_value(bg_dev);
+	}
+
+	mutex_unlock(&charger_gauge_list_mutex);
+	return ret;
+}
+
 static void battery_charger_restart_charging_wq(struct work_struct *work)
 {
 	struct battery_charger_dev *bc_dev;
+	int battery_soc;
 
 	bc_dev = container_of(work, struct battery_charger_dev,
 					restart_charging_wq.work);
+
+	battery_soc = battery_charger_soc_get_value(bc_dev);
+
+	if (battery_soc >= 100) {
+		dev_info(bc_dev->parent_dev,
+			"Deferring charging restart as battery is full..\n");
+		schedule_delayed_work(&bc_dev->restart_charging_wq,
+				msecs_to_jiffies
+				(bc_dev->charging_restart_interval * HZ));
+		return;
+	}
+
 	if (!bc_dev->ops->restart_charging) {
 		dev_err(bc_dev->parent_dev,
 				"No callback for restart charging\n");
@@ -185,6 +222,9 @@ int battery_charging_restart(struct battery_charger_dev *bc_dev, int after_sec)
 			"No callback for restart charging\n");
 		return -EINVAL;
 	}
+
+	bc_dev->charging_restart_interval = after_sec;
+
 	schedule_delayed_work(&bc_dev->restart_charging_wq,
 			msecs_to_jiffies(after_sec * HZ));
 	return 0;
