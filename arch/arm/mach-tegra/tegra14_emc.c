@@ -1329,10 +1329,10 @@ static int find_matching_input(const struct tegra14_emc_table *table,
 	}
 
 #ifdef CONFIG_TEGRA_PLLM_SCALED
-		if (sel->input == pll_c) {
+		if (sel->input != scalable_pll) {
 			/* maybe overwritten in a loop - end up at max rate
-			   from pll_c */
-			emc->shared_bus_backup.input = pll_c;
+			   from fixed rate pll (pll_c or pll_p) */
+			emc->shared_bus_backup.input = sel->input;
 			emc->shared_bus_backup.bus_rate = table_rate;
 		}
 #endif
@@ -1391,8 +1391,12 @@ static int purge_emc_table(unsigned long max_rate)
 	int i;
 	int ret = 0;
 
-	if (emc->shared_bus_backup.input)
+	if (emc->shared_bus_backup.input) {
+		pr_info("tegra: found EMC DFS backup: rate %lu from %s\n",
+			emc->shared_bus_backup.bus_rate,
+			emc->shared_bus_backup.input->name);
 		return ret;
+	}
 
 	pr_warn("tegra: selected pll_m scaling option but no backup source:\n");
 	pr_warn("       removed not supported entries from the table:\n");
