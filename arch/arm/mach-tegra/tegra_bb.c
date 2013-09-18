@@ -881,6 +881,8 @@ static int tegra_bb_pm_notifier_event(struct notifier_block *this,
 		if (sts) {
 			if (!mem_req_soon)
 				clk_set_rate(bb->emc_clk, 0);
+			else
+				clk_set_rate(bb->emc_clk, bb->emc_min_freq);
 			clk_disable_unprepare(bb->emc_clk);
 		}
 		/* else, wait for IRQs to do the job */
