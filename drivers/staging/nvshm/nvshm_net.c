@@ -44,6 +44,7 @@ struct nvshm_net_line {
 	struct nvshm_channel *pchan; /* contains (struct net_device *)data */
 	int errno;
 	spinlock_t lock;
+	int stop_tx; /* stop tx when >= 0 */
 };
 
 struct nvshm_net_device {
@@ -185,14 +186,18 @@ void nvshm_netif_start_tx(struct nvshm_channel *chan)
 {
 	struct net_device *dev = (struct net_device *)chan->data;
 	struct nvshm_net_line *priv = netdev_priv(dev);
+	unsigned long f;
 
 	pr_debug("%s()\n", __func__);
 
 	if (!priv)
 		return;
 
+	spin_lock_irqsave(&priv->lock, f);
+	priv->stop_tx--;
 	/* Wake up queue */
 	netif_wake_queue(dev);
+	spin_unlock_irqrestore(&priv->lock, f);
 }
 
 static struct nvshm_if_operations nvshm_netif_ops = {
@@ -219,6 +224,7 @@ static int nvshm_netops_open(struct net_device *dev)
 			dev);
 		if (priv->pchan == NULL)
 			ret = -EINVAL;
+		priv->stop_tx = 0;
 	}
 	if (!ret)
 		priv->use++;
@@ -265,11 +271,21 @@ static int nvshm_netops_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 	int to_send = 0, remain;
 	int len;
 	char *data;
+	unsigned long f;
 
 	pr_debug("Transmit frame\n");
 	pr_debug("%s()\n", __func__);
 	if (!priv)
 		return -EINVAL;
+
+	/* Check first if TX is possible */
+	spin_lock_irqsave(&priv->lock, f);
+	if (priv->stop_tx > 0) {
+		netif_stop_queue(dev);
+		spin_unlock_irqrestore(&priv->lock, f);
+		return NETDEV_TX_BUSY;
+	}
+	spin_unlock_irqrestore(&priv->lock, f);
 
 	len = skb->len;
 	data = skb->data;
@@ -309,11 +325,13 @@ static int nvshm_netops_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 		}
 	}
 	if (nvshm_write(priv->pchan, list)) {
-		/* no more transmit possible - stop queue */
+
+		/* no more transmit possible - stop queue on next TX */
 		pr_warning("%s rate limit hit on channel %d\n",
 			   __func__, priv->nvshm_chan);
-		netif_stop_queue(dev);
-		return NETDEV_TX_BUSY;
+		spin_lock_irqsave(&priv->lock, f);
+		priv->stop_tx++;
+		spin_unlock_irqrestore(&priv->lock, f);
 	}
 
 	/* successfully written len data bytes */
