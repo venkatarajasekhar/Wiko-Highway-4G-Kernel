@@ -377,9 +377,6 @@ MAX77660_PDATA_INIT(LDO3, ldo3, 2800, 2800, NULL,
 MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL,
 		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(LDO4, ldo4_display_config0, 3000, 3000, NULL,
-		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
-
 MAX77660_PDATA_INIT(LDO5, ldo5, 1800, 1800, NULL,
 		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
 
@@ -1038,9 +1035,12 @@ int __init ceres_regulator_init(void)
 		return -1;
 	}
 
-	if (get_display_config() == 0)
-		max77660_reg_pdata[MAX77660_REGULATOR_ID_LDO4] =
-			&max77660_regulator_pdata_ldo4_display_config0;
+	if (get_display_config() == 0) {
+		max77660_regulator_idata_ldo4.consumer_supplies =
+			max77660_ldo4_display_config0_supply;
+		max77660_regulator_idata_ldo4.num_consumer_supplies =
+			ARRAY_SIZE(max77660_ldo4_display_config0_supply);
+	}
 
 	wdt_disable = is_pmic_wdt_disabled_at_boot();
 	if (wdt_disable) {
