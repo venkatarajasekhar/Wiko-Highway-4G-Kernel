@@ -549,7 +549,7 @@ static struct max77660_bcharger_platform_data max77660_bcharger_pdata = {
 	.wdt_timeout    = 32,
 	.max_term_vol_mV = 4300,
 	.temperature_poll_period_secs = 5,
-	.oc_thresh = OC_THRESH_3A0
+	.oc_thresh = OC_THRESH_4A0
 };
 
 static struct max77660_charger_platform_data max77660_charger_pdata = {
@@ -1494,7 +1494,7 @@ int __init ceres_soctherm_init(void)
 
 static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
-	.max = 17200
+	.max = 18500
 };
 
 void __init ceres_sysedp_init(void)
@@ -1536,8 +1536,8 @@ static unsigned int ceres_psydepl_states[] = {
 /* Temperature in deci-celcius */
 static struct psy_depletion_ibat_lut ceres_ibat_lut[] = {
 	{  600,  500 },
-	{  400, 3000 },
-	{    0, 3000 },
+	{  450, 4300 },
+	{    0, 4300 },
 	{ -300,    0 }
 };
 
@@ -1575,9 +1575,9 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.num_states = ARRAY_SIZE(ceres_psydepl_states),
 	.e0_index = 26,
 	.r_const = 141600,
-	.vsys_min = 3250000,
+	.vsys_min = 2900000,
 	.vcharge = 4200000,
-	.ibat_nom = 3000,
+	.ibat_nom = 4300,
 	.ibat_lut = ceres_ibat_lut,
 	.ocv_lut = ceres_ocv_lut,
 	.rbat_lut = ceres_rbat_lut
