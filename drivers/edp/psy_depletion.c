@@ -70,7 +70,7 @@ static int depl_psy_capacity(struct depl_driver *drv)
 	return val;
 }
 
-static unsigned int depl_psy_temp(struct depl_driver *drv)
+static int depl_psy_temp(struct depl_driver *drv)
 {
 	int val;
 	if (depl_psy_get_property(drv, POWER_SUPPLY_PROP_TEMP, &val))
@@ -142,7 +142,7 @@ static s64 depl_ibat_possible(struct depl_driver *drv, s64 ocv, s64 rbat)
 }
 
 /* Calc IBAT for a given temperature */
-static int depl_ibat(struct depl_driver *drv, unsigned int temp)
+static int depl_ibat(struct depl_driver *drv, int temp)
 {
 	struct psy_depletion_ibat_lut *p;
 	struct psy_depletion_ibat_lut *q;
