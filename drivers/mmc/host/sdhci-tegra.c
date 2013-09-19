@@ -48,6 +48,7 @@
 #include <mach/pinmux.h>
 #include <mach/pm_domains.h>
 #include <mach/clk.h>
+#include <mach/edp.h>
 #ifdef CONFIG_THERMAL
 #include <mach/thermal.h>
 #endif
@@ -141,6 +142,8 @@
 #define NVQUIRK_DFS_MAX_HIGH			BIT(20)
 #define NVQUIRK_AUTO_CALIBRATION_ALWAYS_ON	BIT(21)
 #define NVQUIRK_SECOND_LOW_FREQ_TUNING		BIT(22)
+
+static void edp_work_handler(struct work_struct *);
 
 #ifdef CONFIG_THERMAL
 static int sdhci_mmc_temperature[] = {40, 60};
@@ -364,6 +367,22 @@ struct tegra_freq_gov_data {
 	void			*data;
 };
 
+struct edp_schedule_time_params {
+	u8 edp_update_delay;
+};
+
+static struct edp_schedule_time_params edp_time_delay[3] = {
+	[MMC_TYPE_MMC] = {
+		.edp_update_delay = 50,
+	},
+	[MMC_TYPE_SDIO] = {
+		.edp_update_delay = 50,
+	},
+	[MMC_TYPE_SD] = {
+		.edp_update_delay = 50,
+	},
+};
+
 struct sdhci_tegra_sd_stats {
 	unsigned int data_crc_count;
 	unsigned int cmd_crc_count;
@@ -413,6 +432,12 @@ struct sdhci_tegra {
 	unsigned int tuning_freq_count;
 	unsigned int tuning_timeout_retries;
 	unsigned int tap_cmd;
+	/* EDP core module limit status */
+	bool edp_limit;
+	bool current_edp_limit;
+	struct delayed_work dw;
+	u8 edp_module_id;
+	u8 edp_update_delay;
 	/* Tuning status */
 	unsigned int tuning_status;
 	bool force_retune;
@@ -1129,6 +1154,7 @@ static irqreturn_t carddetect_irq(int irq, void *data)
 		 */
 		tegra_host->tuning_status = TUNING_STATUS_RETUNE;
 		tegra_host->force_retune = true;
+		cancel_delayed_work_sync(&tegra_host->dw);
 	}
 
 	tasklet_schedule(&sdhost->card_tasklet);
@@ -1156,6 +1182,31 @@ static int tegra_sdhci_8bit(struct sdhci_host *sdhci, int bus_width)
 	}
 	sdhci_writeb(sdhci, ctrl, SDHCI_HOST_CONTROL);
 	return 0;
+}
+
+static int sdhci_tegra_set_edp_module_limit(unsigned int instance, bool status)
+{
+	return tegra_core_edp_set_module_limited(instance, status);
+}
+
+static void edp_work_handler(struct work_struct *work)
+{
+	struct sdhci_tegra *tegra_host = container_of(work,
+			struct sdhci_tegra, dw.work);
+	int status;
+
+	if (!tegra_host)
+		return;
+	if (!tegra_host->current_edp_limit && (tegra_host->edp_limit == true)) {
+		status = sdhci_tegra_set_edp_module_limit(
+				tegra_host->edp_module_id, false);
+		if (status < 0)
+			pr_info("Setting core EDP module is failed\n");
+		tegra_host->edp_limit = false;
+	} else if (tegra_host->current_edp_limit) {
+		schedule_delayed_work(&tegra_host->dw,
+				msecs_to_jiffies(tegra_host->edp_update_delay));
+	}
 }
 
 /*
@@ -1298,7 +1349,9 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
 	struct platform_device *pdev = to_platform_device(mmc_dev(sdhci->mmc));
+	struct tegra_tuning_data *tuning_data;
 	u8 ctrl;
+	int ret;
 
 	pr_debug("%s %s %u enabled=%u\n", __func__,
 		mmc_hostname(sdhci->mmc), clock, tegra_host->clk_enabled);
@@ -1343,6 +1396,31 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		clk_disable_unprepare(pltfm_host->clk);
 		pm_runtime_put_sync(&pdev->dev);
 		tegra_host->clk_enabled = false;
+	}
+
+	tuning_data = sdhci_tegra_get_tuning_data(sdhci, clock);
+	if (tuning_data->freq_band == TUNING_MAX_FREQ && clock)
+		tegra_host->current_edp_limit = true;
+	else
+		tegra_host->current_edp_limit = false;
+
+	if (!sdhci->mmc->card)
+		return;
+
+	if (tegra_host->current_edp_limit == tegra_host->edp_limit)
+		return;
+
+	if (tegra_host->current_edp_limit) {
+		cancel_delayed_work_sync(&tegra_host->dw);
+		ret = sdhci_tegra_set_edp_module_limit(
+				tegra_host->edp_module_id, true);
+		if (ret < 0)
+			dev_err(mmc_dev(sdhci->mmc),
+				"Setting core EDP module is failed\n");
+		tegra_host->edp_limit = true;
+	} else {
+		schedule_delayed_work(&tegra_host->dw,
+			msecs_to_jiffies(tegra_host->edp_update_delay));
 	}
 }
 
@@ -2574,6 +2652,9 @@ static int tegra_sdhci_suspend(struct sdhci_host *sdhci)
 			dev_err(mmc_dev(sdhci->mmc),
 			"Regulators disable in suspend failed %d\n", err);
 	}
+
+	/* Cancel any pending edp work */
+	cancel_delayed_work_sync(&tegra_host->dw);
 	return err;
 }
 
@@ -3375,11 +3456,27 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 			host->edp_states[rc] = plat->edp_states[rc];
 
 	rc = sdhci_add_host(host);
-
-	device_create_file(&pdev->dev, &dev_attr_cmd_state);
-	sdhci_tegra_error_stats_debugfs(host);
 	if (rc)
 		goto err_add_host;
+
+
+	if (!strcmp(dev_name(mmc_dev(host->mmc)), "sdhci-tegra.3")) {
+		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC4;
+		tegra_host->edp_update_delay =
+			edp_time_delay[MMC_TYPE_MMC].edp_update_delay;
+	} else if (!strcmp(dev_name(mmc_dev(host->mmc)), "sdhci-tegra.2")) {
+		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC3;
+		tegra_host->edp_update_delay =
+			edp_time_delay[MMC_TYPE_SD].edp_update_delay;
+	} else if (!strcmp(dev_name(mmc_dev(host->mmc)), "sdhci-tegra.0")) {
+		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC1;
+		tegra_host->edp_update_delay =
+			edp_time_delay[MMC_TYPE_SDIO].edp_update_delay;
+	}
+
+	INIT_DELAYED_WORK(&tegra_host->dw, edp_work_handler);
+
+	device_create_file(&pdev->dev, &dev_attr_cmd_state);
 
 	if (gpio_is_valid(plat->cd_gpio)) {
 		rc = request_threaded_irq(gpio_to_irq(plat->cd_gpio), NULL,
