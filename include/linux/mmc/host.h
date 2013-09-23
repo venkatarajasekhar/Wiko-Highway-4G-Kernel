@@ -278,6 +278,7 @@ struct mmc_host {
 #define MMC_CAP2_PACKED_CMD	(MMC_CAP2_PACKED_RD | \
 				 MMC_CAP2_PACKED_WR)
 #define MMC_CAP2_FREQ_SCALING	(1 << 14)	/* Allow frequency scaling */
+#define MMC_CAP2_CLOCK_GATING	(1 << 15)	/* Enable Clock Gating support */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 	unsigned int        power_notify_type;
