@@ -1438,18 +1438,47 @@ static unsigned int ahci_fill_sg(struct ata_queued_cmd *qc, void *cmd_tbl)
 
 	VPRINTK("ENTER\n");
 
-	/*
-	 * Next, the S/G list.
-	 */
-	for_each_sg(qc->sg, sg, qc->n_elem, si) {
-		dma_addr_t addr = sg_dma_address(sg);
-		u32 sg_len = sg_dma_len(sg);
+#ifdef CONFIG_AHCI_READ_COPY_PATH
+	if (qc->scsicmd && qc->scsicmd->buf_ctxt.copy_path &&
+				qc->dma_dir == DMA_FROM_DEVICE) {
 
-		ahci_sg[si].addr = cpu_to_le32(addr & 0xffffffff);
-		ahci_sg[si].addr_hi = cpu_to_le32((addr >> 16) >> 16);
-		ahci_sg[si].flags_size = cpu_to_le32(sg_len - 1);
+		unsigned int offset = 0;
+
+		for_each_sg(qc->sg, sg, qc->n_elem, si) {
+			u32 sg_len = sg_dma_len(sg);
+			ahci_sg[si].addr =
+				cpu_to_le32((qc->scsicmd->buf_ctxt.buf_paddr +
+								offset));
+			ahci_sg[si].addr_hi = 0;
+			ahci_sg[si].flags_size = cpu_to_le32(sg_len - 1);
+			offset += sg_len;
+		}
+	} else {
+		/*
+		 * Next, the S/G list.
+		 */
+		for_each_sg(qc->sg, sg, qc->n_elem, si) {
+			dma_addr_t addr = sg_dma_address(sg);
+			u32 sg_len = sg_dma_len(sg);
+
+			ahci_sg[si].addr = cpu_to_le32(addr & 0xffffffff);
+			ahci_sg[si].addr_hi = cpu_to_le32((addr >> 16) >> 16);
+			ahci_sg[si].flags_size = cpu_to_le32(sg_len - 1);
+		}
 	}
+#else
+		/*
+		 * Next, the S/G list.
+		 */
+		for_each_sg(qc->sg, sg, qc->n_elem, si) {
+			dma_addr_t addr = sg_dma_address(sg);
+			u32 sg_len = sg_dma_len(sg);
 
+			ahci_sg[si].addr = cpu_to_le32(addr & 0xffffffff);
+			ahci_sg[si].addr_hi = cpu_to_le32((addr >> 16) >> 16);
+			ahci_sg[si].flags_size = cpu_to_le32(sg_len - 1);
+		}
+#endif
 	return si;
 }
 

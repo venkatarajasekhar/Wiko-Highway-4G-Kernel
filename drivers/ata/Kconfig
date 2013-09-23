@@ -100,6 +100,15 @@ config TEGRA_SATA_IDLE_POWERGATE
 
 	  If unsure, say N.
 
+config AHCI_READ_COPY_PATH
+	bool "AHCI_READ_COPY_PATH support"
+	depends on ARCH_TEGRA_3x_SOC && SATA_AHCI_TEGRA
+	default n
+	help
+	  This option provides read performance improvement for
+	  systems where cache operations are expensive by using
+	  coherent buffers for DMA from Serial ATA.
+
 config SATA_FSL
 	tristate "Freescale 3.0Gbps SATA support"
 	depends on FSL_SOC

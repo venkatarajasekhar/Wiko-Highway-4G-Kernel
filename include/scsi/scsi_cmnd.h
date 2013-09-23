@@ -51,6 +51,16 @@ struct scsi_pointer {
 	volatile int phase;
 };
 
+#ifdef CONFIG_AHCI_READ_COPY_PATH
+struct coherent_buf_ctxt {
+	char *buf_virt;
+	dma_addr_t buf_paddr;
+	unsigned int buf_len;
+	struct device *dev;
+	char copy_path;
+};
+#endif
+
 struct scsi_cmnd {
 	struct scsi_device *device;
 	struct list_head list;  /* scsi_cmnd participates in queue lists */
@@ -96,7 +106,7 @@ struct scsi_cmnd {
 
 	unsigned transfersize;	/* How much we are guaranteed to
 				   transfer with each SCSI transfer
-				   (ie, between disconnect / 
+				   (ie, between disconnect /
 				   reconnects.   Probably == sector
 				   size */
 
@@ -114,8 +124,8 @@ struct scsi_cmnd {
 	void (*scsi_done) (struct scsi_cmnd *);
 
 	/*
-	 * The following fields can be written to by the host specific code. 
-	 * Everything else should be left alone. 
+	 * The following fields can be written to by the host specific code.
+	 * Everything else should be left alone.
 	 */
 	struct scsi_pointer SCp;	/* Scratchpad used by some host adapters */
 
@@ -130,6 +140,9 @@ struct scsi_cmnd {
 	int result;		/* Status code from lower level driver */
 
 	unsigned char tag;	/* SCSI-II queued command tag */
+#ifdef CONFIG_AHCI_READ_COPY_PATH
+	struct coherent_buf_ctxt buf_ctxt;
+#endif
 };
 
 static inline struct scsi_driver *scsi_cmd_to_driver(struct scsi_cmnd *cmd)

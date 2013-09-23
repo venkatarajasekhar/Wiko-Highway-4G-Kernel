@@ -4538,10 +4538,16 @@ void ata_sg_clean(struct ata_queued_cmd *qc)
 	WARN_ON_ONCE(sg == NULL);
 
 	VPRINTK("unmapping %u sg elements\n", qc->n_elem);
-
+#ifdef CONFIG_AHCI_READ_COPY_PATH
+	if (!qc->scsicmd || !qc->scsicmd->buf_ctxt.copy_path ||
+					qc->dma_dir != DMA_FROM_DEVICE) {
+		if (qc->n_elem)
+			dma_unmap_sg(ap->dev, sg, qc->orig_n_elem, dir);
+	}
+#else
 	if (qc->n_elem)
 		dma_unmap_sg(ap->dev, sg, qc->orig_n_elem, dir);
-
+#endif
 	qc->flags &= ~ATA_QCFLAG_DMAMAP;
 	qc->sg = NULL;
 }
@@ -4650,13 +4656,59 @@ static int ata_sg_setup(struct ata_queued_cmd *qc)
 
 	VPRINTK("ENTER, ata%u\n", ap->print_id);
 
-	n_elem = dma_map_sg(ap->dev, qc->sg, qc->n_elem, qc->dma_dir);
-	if (n_elem < 1)
-		return -1;
+#ifdef CONFIG_AHCI_READ_COPY_PATH
+	if (qc->scsicmd  && qc->dma_dir == DMA_FROM_DEVICE) {
 
+		struct scatterlist *s;
+		int i;
+		/*
+		 * Allocate a coherent buffer for each sg desc
+		 * This buffer will come from CMA reserved area so
+		 * it is safe to assume it coherent even though double
+		 * liner mapping exist.
+		 * GFP_ATOMIC flag is important as it gives the buffer
+		 * from pre allocated pool and will save allocation/
+		 * caching overhead.
+		 */
+
+		qc->scsicmd->buf_ctxt.buf_virt =
+			dma_alloc_coherent(qc->ap->dev,
+					qc->nbytes,
+					&qc->scsicmd->buf_ctxt.buf_paddr,
+					GFP_ATOMIC);
+
+		if (unlikely(qc->scsicmd->buf_ctxt.buf_virt == NULL)) {
+			qc->scsicmd->buf_ctxt.copy_path = false;
+			goto fallback;
+		}
+
+		qc->scsicmd->buf_ctxt.buf_len = qc->nbytes;
+		qc->scsicmd->buf_ctxt.dev = qc->ap->dev;
+		qc->scsicmd->buf_ctxt.copy_path = true;
+
+		for_each_sg(qc->sg, s, qc->n_elem, i) {
+			s->dma_address =
+				pfn_to_dma(ap->dev, page_to_pfn(sg_page(s)))
+							+ s->offset;
+			s->dma_length = s->length;
+		}
+	} else {
+fallback:
+		n_elem = dma_map_sg(ap->dev, qc->sg, qc->n_elem, qc->dma_dir);
+		if (n_elem < 1)
+			return -1;
+		qc->n_elem = n_elem;
+	}
+#else
+		n_elem = dma_map_sg(ap->dev, qc->sg, qc->n_elem, qc->dma_dir);
+		if (n_elem < 1)
+			return -1;
+#endif
 	DPRINTK("%d sg elements mapped\n", n_elem);
 	qc->orig_n_elem = qc->n_elem;
+#ifndef CONFIG_AHCI_READ_COPY_PATH
 	qc->n_elem = n_elem;
+#endif
 	qc->flags |= ATA_QCFLAG_DMAMAP;
 
 	return 0;
