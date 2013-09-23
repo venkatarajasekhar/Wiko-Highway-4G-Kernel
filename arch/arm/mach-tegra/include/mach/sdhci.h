@@ -64,6 +64,7 @@ struct tegra_sdhci_platform_data {
 	unsigned int edp_states[SD_EDP_NUM_STATES];
 	bool cd_wakeup_incapable;
 	bool en_nominal_vcore_tuning;
+	bool en_clock_gating;
 };
 #ifdef CONFIG_THERMAL
 struct tegra_cooling_device *tegra_sdhci_edp_get_dev(int instance);

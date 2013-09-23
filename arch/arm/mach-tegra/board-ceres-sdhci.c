@@ -173,6 +173,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.ddr_clk_limit = 41000000,
 	.max_clk_limit = 136000000,
 	.edp_support = false,
+	.en_clock_gating = true,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
@@ -185,6 +186,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.max_clk_limit = 136000000,
 	.edp_support = true,
 	.edp_states = {1283, 0},
+	.en_clock_gating = true,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
@@ -203,6 +205,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.edp_support = true,
 	.edp_states = {855, 0},
 	.en_freq_scaling = true,
+	.en_clock_gating = true,
 };
 
 static struct platform_device tegra_sdhci_device0 = {
