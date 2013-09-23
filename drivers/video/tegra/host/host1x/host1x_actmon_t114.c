@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T114
  *
- * Copyright (c) 2012-2013, NVIDIA Corporation.
+ * Copyright (c) 2012-2013, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -74,7 +74,7 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	struct nvhost_master *host = actmon->host;
 	void __iomem *sync_regs = host->sync_aperture;
 	u32 val;
-	unsigned long timeout = jiffies + msecs_to_jiffies(25);
+	unsigned long timeout = jiffies + msecs_to_jiffies(50);
 
 	if (actmon->init == ACTMON_READY)
 		return 0;
