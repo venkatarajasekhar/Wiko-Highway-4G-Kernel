@@ -995,8 +995,35 @@ static struct i2c_board_info ceres_i2c_board_info_e1690[] = {
 	},
 };
 
+static struct i2c_board_info ceres_i2c_board_info_e1697[] = {
+	{
+		I2C_BOARD_INFO("imx091", 0x10),
+		.platform_data = &ceres_imx091_data,
+	},
+	{
+		I2C_BOARD_INFO("imx132", 0x36),
+		.platform_data = &ceres_imx132_data,
+	},
+	{
+		I2C_BOARD_INFO("ad5816", 0x0E),
+		.platform_data = &ceres_ad5816_pdata,
+	},
+	{
+		I2C_BOARD_INFO("lm3565", 0x30),
+		.platform_data = &atlantis_lm3565_pdata,
+	},
+};
+
 static int ceres_camera_init(void)
 {
+	/* on atlantis ERS, only IMX091/AD5816/LM3565/IMX132 are
+	supported, auto-detection is not neccessary. */
+	if (board_info.board_id == BOARD_E1670) {
+		i2c_register_board_info(2, ceres_i2c_board_info_e1697,
+			ARRAY_SIZE(ceres_i2c_board_info_e1697));
+		return 0;
+	}
+
 	/* on atlantis FFD, only IMX135/AD5816/LM3565/IMX132 are
 	supported, auto-detection is not neccessary. */
 	if (board_info.board_id == BOARD_E1740) {
