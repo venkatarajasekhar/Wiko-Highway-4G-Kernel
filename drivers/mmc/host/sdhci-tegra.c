@@ -3051,7 +3051,7 @@ static struct sdhci_tegra_soc_data soc_data_tegra14 = {
 		    NVQUIRK_ENABLE_HS200 |
 		    NVQUIRK_INFINITE_ERASE_TIMEOUT,
 	.parent_clk_list = {"pll_p", "pll_c"},
-	.tuning_freq_list = {81600000, 136000000, 200000000},
+	.tuning_freq_list = {81600000, 136000000, 204000000},
 };
 static const struct of_device_id sdhci_tegra_dt_match[] __devinitdata = {
 	{ .compatible = "nvidia,tegra148-sdhci", .data = &soc_data_tegra14 },
