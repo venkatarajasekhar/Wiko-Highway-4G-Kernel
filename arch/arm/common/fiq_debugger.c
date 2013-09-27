@@ -92,6 +92,7 @@ struct fiq_debugger_state {
 	struct fiq_debugger_ringbuf *tty_rbuf;
 	bool syslog_dumping;
 #endif
+	struct console *ram_console;
 
 	unsigned int last_irqs[NR_IRQS];
 	unsigned int last_local_timer_irqs[NR_CPUS];
@@ -250,11 +251,14 @@ static int debug_printf(void *cookie, const char *fmt, ...)
 	struct fiq_debugger_state *state = cookie;
 	char buf[256];
 	va_list ap;
+	int n;
 
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	n = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
+	if (NULL != state->ram_console)
+		state->ram_console->write(state->ram_console, buf, n);
 	debug_puts(state, buf);
 	return state->debug_abort;
 }
@@ -1219,6 +1223,7 @@ static int fiq_debugger_probe(struct platform_device *pdev)
 	struct fiq_debugger_state *state;
 	int fiq;
 	int uart_irq;
+	struct console *console;
 
 	if (pdev->id >= MAX_FIQ_DEBUGGER_PORTS)
 		return -EINVAL;
@@ -1350,6 +1355,12 @@ static int fiq_debugger_probe(struct platform_device *pdev)
 	register_console(&state->console);
 	fiq_debugger_tty_init_one(state);
 #endif
+	for_each_console(console)
+		if (0 == strcmp(console->name, "ram")) {
+			state->ram_console = console;
+			break;
+		}
+
 	return 0;
 
 err_register_irq:
