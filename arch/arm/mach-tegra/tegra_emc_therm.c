@@ -52,6 +52,11 @@ static void emc_mr4_poll(unsigned long nothing)
 	else
 		dram_temp = dram_temp_override;
 
+	if (IS_ERR_VALUE(dram_temp)) {
+		WARN(1, "Failed to read DRAM temp!\n");
+		goto reset;
+	}
+
 	if (prev_temp == dram_temp)
 		goto reset;
 
