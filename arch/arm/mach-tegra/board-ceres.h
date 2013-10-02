@@ -102,6 +102,9 @@ enum tegra_bb_type {
 	TEGRA_BB_I500SWD = 2,
 	TEGRA_BB_HSIC_HUB = 6,
 	TEGRA_BB_OEM4 = 7,
+	TEGRA_BB_INTEGRATED_DISABLED = 8, /* bbc core power on,
+					     no bbc mem regions,
+					     bbc held in reset */
 };
 
 

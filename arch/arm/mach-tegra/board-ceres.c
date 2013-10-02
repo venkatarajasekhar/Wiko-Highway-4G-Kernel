@@ -542,7 +542,6 @@ static struct platform_device *ceres_devices[] __initdata = {
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra11_se_device,
 #endif
-	&tegra_bbc_proxy_device,
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	&tegra_mipi_bif_device,
 #endif
@@ -1081,6 +1080,11 @@ static int __init ceres_touch_init(void)
 /* main (integrated) modem init */
 static void ceres_tegra_bb_init(void)
 {
+	int modem_id = tegra_get_modem_id();
+
+	if (modem_id == TEGRA_BB_INTEGRATED_DISABLED)
+		return;
+
 	pr_info("%s: registering tegra bb\n", __func__);
 	ceres_tegra_bb_data.bb_irq = INT_BB2AP_INT0;
 	ceres_tegra_bb_data.mem_req_soon = INT_BB2AP_MEM_REQ_SOON_INT;
@@ -1091,6 +1095,7 @@ static void ceres_tegra_bb_init(void)
 	else
 		ceres_tegra_bb_data.pll_voltage = 900000;
 
+	platform_device_register(&tegra_bbc_proxy_device);
 	platform_device_register(&ceres_tegra_bb_device);
 }
 #endif

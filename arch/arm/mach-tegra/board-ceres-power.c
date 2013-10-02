@@ -926,6 +926,7 @@ int __init ceres_regulator_init(void)
 	u32 pmc_ctrl;
 	int id;
 	bool wdt_disable;
+	int modem_id = tegra_get_modem_id();
 
 	tegra_get_board_info(&board_info);
 	pr_info("board_info: id:sku:fab:major:minor = 0x%04x:0x%04x:0x%02x:0x%02x:0x%02x\n",
@@ -1069,6 +1070,12 @@ int __init ceres_regulator_init(void)
 
 	if ((board_info.board_id == BOARD_E1680) && (board_info.fab >= BOARD_FAB_A04))
 		max77660_pdata.use_rcm_reset = true;
+
+	if (modem_id == TEGRA_BB_INTEGRATED_DISABLED) {
+		max77660_regulator_pdata_buck4.flags = 0;
+		max77660_regulator_idata_buck4.constraints.always_on = 1;
+		max77660_regulator_pdata_ldo8.flags = 0;
+	}
 
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
