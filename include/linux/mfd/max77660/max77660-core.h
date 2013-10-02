@@ -959,7 +959,7 @@ enum max77660_regulator_fps_src {
 #define max77660_rails(_name)		"max77660_"#_name
 
 /* SD Forced PWM Mode */
-#define SD_FORCED_PWM_MODE		0x20
+#define SD_FORCED_PWM_MODE		0x200
 
 /* SD Failling Slew Rate Active-Discharge Mode */
 #define SD_FSRADE_DISABLE		0x40
@@ -979,7 +979,7 @@ enum max77660_regulator_fps_src {
 			MAX77660_EXT_ENABLE_EN4 | MAX77660_EXT_ENABLE_EN5 | \
 			MAX77660_EXT_ENABLE_EN1FPS6)
 /* Disable DVFS */
-#define DISABLE_DVFS			0x10
+#define DISABLE_DVFS			0x400
 
 /* Tracking for LDO4 */
 #define LDO4_EN_TRACKING		0x100
