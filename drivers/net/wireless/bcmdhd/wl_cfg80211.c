@@ -4666,11 +4666,13 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 	u32 bw = WL_CHANSPEC_BW_20;
 
 	s32 err = BCME_OK;
+#ifndef P2P_GO_CHANSPEC_BW_20
 	s32 bw_cap = 0;
 	struct {
 		u32 band;
 		u32 bw_cap;
 	} param = {0, 0};
+#endif
 	struct wl_priv *wl = wiphy_priv(wiphy);
 
 	dev = ndev_to_wlc_ndev(dev, wl);
@@ -4678,7 +4680,7 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 	WL_ERR(("netdev_ifidx(%d), chan_type(%d) target channel(%d) \n",
 		dev->ifindex, channel_type, _chan));
 
-
+#ifndef P2P_GO_CHANSPEC_BW_20
 	if (chan->band == IEEE80211_BAND_5GHZ) {
 		param.band = WLC_BAND_5G;
 		err = wldev_iovar_getbuf(dev, "bw_cap", &param, sizeof(param),
@@ -4707,6 +4709,10 @@ wl_cfg80211_set_channel(struct wiphy *wiphy, struct net_device *dev,
 
 	} else if (chan->band == IEEE80211_BAND_2GHZ)
 		bw = WL_CHANSPEC_BW_20;
+#else
+	bw = WL_CHANSPEC_BW_20;
+#endif
+
 set_channel:
 	chspec = wf_channel2chspec(_chan, bw);
 	if (wf_chspec_valid(chspec)) {
