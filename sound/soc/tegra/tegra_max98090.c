@@ -907,9 +907,7 @@ static int tegra_max98090_jack_notifier(struct notifier_block *self,
 
 	switch (machine->jack_status) {
 	case SND_JACK_HEADPHONE:
-		/* For now force headset mic mode */
-		/* state = BIT_HEADSET_NO_MIC; */
-		state = BIT_HEADSET;
+		state = BIT_HEADSET_NO_MIC;
 		break;
 	case SND_JACK_HEADSET:
 		state = BIT_HEADSET;
