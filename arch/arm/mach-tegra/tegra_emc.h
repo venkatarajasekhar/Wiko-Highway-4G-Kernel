@@ -84,6 +84,7 @@ void tegra_init_dram_bit_map(const u32 *bit_map, int map_size);
 int tegra_emc_dsr_override(int override);
 void tegra_emc_set_swizzle_map(u32 *swizzle_r0, u32 *swizzle_r1,
 			       u32 update_mask);
+void tegra_mc_divider_update(struct clk *emc);
 #endif
 
 #ifdef CONFIG_PM_SLEEP

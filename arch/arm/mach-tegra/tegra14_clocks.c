@@ -4181,7 +4181,7 @@ static long tegra14_emc_clk_round_rate(struct clk *c, unsigned long rate)
 	return tegra14_emc_clk_round_updown(c, rate, true);
 }
 
-static inline void mc_divider_update(struct clk *emc)
+void tegra_mc_divider_update(struct clk *emc)
 {
 	emc->child_bus->div = (clk_readl(emc->reg) &
 			       PERIPH_CLK_SOURCE_EMC_MC_SAME) ? 1 : 2;
@@ -4224,7 +4224,6 @@ static int tegra14_emc_clk_set_rate(struct clk *c, unsigned long rate)
 	}
 	c->div = div_value;
 	c->mul = 2;
-	mc_divider_update(c);
 	return 0;
 }
 
@@ -4391,7 +4390,7 @@ static void tegra14_clk_emc_resume(struct clk *c, const u32 *ctx)
 	unsigned long old_rate = clk_get_rate_all_locked(c);
 
 	if (rate == old_rate) {
-		mc_divider_update(c); /* in case div changed at the same rate */
+		tegra_mc_divider_update(c); /* if div chnged at the same rate */
 		return;
 	}
 
@@ -4422,7 +4421,7 @@ static void tegra14_mc_clk_init(struct clk *c)
 		c->state = OFF;
 
 	c->parent->child_bus = c;
-	mc_divider_update(c->parent);
+	tegra_mc_divider_update(c->parent);
 	c->mul = 1;
 }
 

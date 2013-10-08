@@ -1096,6 +1096,7 @@ int tegra_emc_set_rate(unsigned long rate)
 		&tegra_emc_table[i] : &tegra_emc_table_derated[i];
 	if (dram_over_temp_state == DRAM_OVER_TEMP_THROTTLE)
 		pr_debug("[emc] Picked derated freq.\n");
+	tegra_mc_divider_update(emc);
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
 	emc_last_stats_update(i);
