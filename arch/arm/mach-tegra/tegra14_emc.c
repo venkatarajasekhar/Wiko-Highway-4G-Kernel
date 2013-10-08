@@ -1688,6 +1688,30 @@ int tegra_emc_get_dram_type(void)
 	return dram_type;
 }
 
+/*
+ * Update rank0 and rank1 swizzle maps based on the passed arrays of swizzle
+ * registers. @update_mask contains a mask of bits which specify which registers
+ * should be updated. Each bit corresponds to both ranks. Bit 0 corresponds to
+ * register offset 0, bit 1, register offset 1, etc.
+ */
+void tegra_emc_set_swizzle_map(u32 *swizzle_r0, u32 *swizzle_r1,
+			       u32 update_mask)
+{
+	int i;
+
+	for (i = 0; i < 5; i++) {
+		if (!(update_mask & (1 << i)))
+			continue;
+
+		emc_writel(swizzle_r0[i],
+			   EMC_SWIZZLE_RANK0_BYTE_CFG + (i * 4));
+		emc_writel(swizzle_r1[i],
+			   EMC_SWIZZLE_RANK1_BYTE_CFG + (i * 4));
+	}
+
+	emc_timing_update();
+}
+
 static int emc_read_mrr(int dev, int addr)
 {
 	int ret;

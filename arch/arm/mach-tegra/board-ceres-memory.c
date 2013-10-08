@@ -10480,6 +10480,7 @@ static struct tegra14_emc_pdata atlantis_emc_pdata = {
 int __init ceres_emc_init(void)
 {
 	struct board_info bi;
+	u32 update, swizzle_map[5] = { 0x1 };
 
 	tegra_get_board_info(&bi);
 
@@ -10519,6 +10520,34 @@ int __init ceres_emc_init(void)
 	platform_device_register(&tegra_emc_device);
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	tegra14_emc_init();
+
+	/*
+	 * Some T148 boards requires an update to the swizzling registers
+	 * that control byte0 of the DDRIOs.
+	 */
+	switch (bi.board_id) {
+	case BOARD_E1680:
+		if (bi.fab <= 3) {
+			pr_info("EMC swizzle pattern: Ceres <= A03.\n");
+			swizzle_map[1] = 0x50127436;
+		} else {
+			pr_info("EMC swizzle pattern: Ceres >= A04.\n");
+			swizzle_map[1] = 0x60127534;
+		}
+		update = 1;
+		break;
+	case BOARD_E1681:
+	case BOARD_E1690:
+		pr_info("EMC swizzle pattern: Ceres <= A03.\n");
+		swizzle_map[1] = 0x50127436;
+		update = 1;
+		break;
+	default:
+		update = 0;
+	}
+	if (update)
+		tegra_emc_set_swizzle_map(swizzle_map, swizzle_map, 0x3);
+
 #endif
 	return 0;
 }
