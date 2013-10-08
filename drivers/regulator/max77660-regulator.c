@@ -451,8 +451,8 @@ static int max77660_regulator_enable(struct regulator_dev *rdev)
 	if (reg->external_flags & MAX77660_EXTERNAL_ENABLE)
 		return 0;
 
-	/* ES 1.1 suggest to keep BUCK3 and BUCK5 in GLPM */
-	if (max77660_is_es_1_1(reg->dev))
+	/* ES 1.1 and 1.2 suggest to keep BUCK3 and BUCK5 in GLPM */
+	if (max77660_is_es_1_1_or_1_2(reg->dev))
 		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO1 ||
@@ -746,8 +746,8 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK7)
 			pdata->flags |= SD_FORCED_PWM_MODE;
 
-	/* ES 1.1 suggest to keep BUCK3, BUCK5, LDO1 and LDO14 in GLPM */
-	if (max77660_is_es_1_1(reg->dev))
+	/* ES 1.1 and 1.2 suggest to keep BUCK3/5 and LDO1/14 in GLPM */
+	if (max77660_is_es_1_1_or_1_2(reg->dev))
 		if (reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK3 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_BUCK5 ||
 			reg->rinfo->id == MAX77660_REGULATOR_ID_LDO1 ||
@@ -774,9 +774,11 @@ static int max77660_regulator_preinit(struct max77660_regulator *reg)
 		} else if ((reg->rinfo->id >= MAX77660_REGULATOR_ID_BUCK6) &&
 			(reg->rinfo->id <= MAX77660_REGULATOR_ID_BUCK7)) {
 			mask |= MAX77660_BUCK6_7_CNFG_FPWM_MASK;
-			/* ES 1.1 suggest to remove all BUCKS from FPWM */
+			/* ES 1.1 and 1.2 suggest to remove all BUCKS
+			 * from FPWM mode.
+			 */
 			if ((pdata->flags & SD_FORCED_PWM_MODE) &&
-					!(max77660_is_es_1_1(reg->dev)))
+					!(max77660_is_es_1_1_or_1_2(reg->dev)))
 				val |= MAX77660_BUCK6_7_CNFG_FPWM_MASK;
 		}
 
