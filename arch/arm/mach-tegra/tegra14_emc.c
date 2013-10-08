@@ -1746,22 +1746,42 @@ static int emc_read_mrr(int dev, int addr)
 	return val;
 }
 
+/*
+ * Poll MR4 N times. It has been observed that the DRAM is glitchy and as such
+ * requries multiple tries to be sure that the value read back is correct.
+ */
 int tegra_emc_get_dram_temperature(void)
 {
-	int mr4;
+	int mr4 = 0, mr4_prev, i = 0;
 	unsigned long flags;
 
 	spin_lock_irqsave(&emc_access_lock, flags);
 
-	mr4 = emc_read_mrr(0, 4);
-	if (IS_ERR_VALUE(mr4)) {
-		spin_unlock_irqrestore(&emc_access_lock, flags);
-		return mr4;
+	/* Once we hit two consecutive reads that return the same value we
+	 * assume things are good. */
+	do {
+		mr4_prev = mr4;
+		mr4 = emc_read_mrr(0, 4);
+		if (IS_ERR_VALUE(mr4)) {
+			spin_unlock_irqrestore(&emc_access_lock, flags);
+			return mr4;
+		}
+
+		i++;
+	} while ((i < 2 || mr4 != mr4_prev) && i < 10);
+
+	/*
+	 * Highly unlikely but possible that we could not get a good read.
+	 * Hardcapping attempts at 10 seems like it should be more than enough.
+	 */
+	if (mr4 != mr4_prev) {
+		pr_err("emc: Failed to read MR4!\n");
+		return -ENODATA;
 	}
+
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
-	mr4 = (mr4 & LPDDR2_MR4_TEMP_MASK) >> LPDDR2_MR4_TEMP_SHIFT;
-	return mr4;
+	return (mr4 & LPDDR2_MR4_TEMP_MASK) >> LPDDR2_MR4_TEMP_SHIFT;
 }
 
 int tegra_emc_dsr_override(int override)
