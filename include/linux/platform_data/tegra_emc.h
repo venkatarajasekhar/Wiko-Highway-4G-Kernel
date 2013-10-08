@@ -143,6 +143,8 @@ struct tegra14_emc_pdata {
 	int num_tables;
 	struct tegra14_emc_table *tables;
 	struct tegra14_emc_table *tables_derated;
+	struct tegra14_emc_table *tables_low_latency;
+	struct tegra14_emc_table *tables_low_latency_derated;
 };
 
 #endif

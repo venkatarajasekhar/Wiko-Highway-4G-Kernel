@@ -274,6 +274,8 @@ static int clkchange_delay = 100;
 
 static const struct tegra14_emc_table *tegra_emc_table;
 static const struct tegra14_emc_table *tegra_emc_table_derated;
+static const struct tegra14_emc_table *tegra_emc_table_ll;
+static const struct tegra14_emc_table *tegra_emc_table_ll_der;
 static int tegra_emc_table_size;
 
 static u32 dram_dev_num;
@@ -1334,30 +1336,43 @@ static int find_matching_input(const struct tegra14_emc_table *table,
 	return 0;
 }
 
+static int emc_core_millivolts[MAX_DVFS_FREQS];
+static int emc_core_millivolts_ll[MAX_DVFS_FREQS];
+
 static void adjust_emc_dvfs_table(const struct tegra14_emc_table *table,
+				  const struct tegra14_emc_table *table_ll,
 				  int table_size)
 {
-	int i, j;
+	int i, j, mv, mv_ll;
 	unsigned long rate;
 
-	for (i = 0; i < MAX_DVFS_FREQS; i++) {
-		int mv = emc->dvfs->millivolts[i];
-		if (!mv)
-			break;
+	BUG_ON(table_size > MAX_DVFS_FREQS);
 
-		/* For each dvfs voltage find maximum supported rate;
-		   use 1MHz placeholder if not found */
-		for (rate = 1000, j = 0; j < table_size; j++) {
-			if (tegra_emc_clk_sel[j].input == NULL)
-				continue;	/* invalid entry */
+	for (i = 0, j = 0; j < table_size; j++) {
+		if (tegra_emc_clk_sel[j].input == NULL)
+			continue;	/* invalid entry */
 
-			if ((mv >= table[j].emc_min_mv) &&
-			    (rate < table[j].rate))
-				rate = table[j].rate;
+		rate = table[j].rate * 1000;
+		mv = table[j].emc_min_mv;
+		mv_ll = table_ll[j].emc_min_mv;
+
+		if ((i == 0) || (mv > emc_core_millivolts[i-1]) ||
+		    (mv_ll > emc_core_millivolts_ll[i-1])) {
+			/* advance: either regular or ll voltage increased -
+			   assure the same set of dvfs freqs in both modes */
+			emc->dvfs->freqs[i] = rate;
+			emc_core_millivolts[i] = mv;
+			emc_core_millivolts_ll[i] = mv_ll;
+			i++;
+		} else {
+			/* squash: voltage has not increased */
+			emc->dvfs->freqs[i-1] = rate;
 		}
-		/* Table entries specify rate in kHz */
-		emc->dvfs->freqs[i] = rate * 1000;
 	}
+
+	emc->dvfs->peak_millivolts = emc_core_millivolts_ll;
+	emc->dvfs->millivolts = emc_core_millivolts;
+	emc->dvfs->num_freqs = i;
 }
 
 #ifdef CONFIG_TEGRA_PLLM_SCALED
@@ -1398,6 +1413,8 @@ static int purge_emc_table(unsigned long max_rate)
 
 static int init_emc_table(const struct tegra14_emc_table *table,
 			  const struct tegra14_emc_table *table_der,
+			  const struct tegra14_emc_table *table_ll,
+			  const struct tegra14_emc_table *table_ll_der,
 			  int table_size)
 {
 	int i, mv;
@@ -1456,14 +1473,50 @@ static int init_emc_table(const struct tegra14_emc_table *table,
 	}
 	pr_info("tegra: emc: Derated table is valid.\n");
 
+	/*
+	 * Low latency and regular tables must match, excluding EMC:MC ratio
+	 * and voltage.
+	 */
+	if (WARN(!table_ll, "tegra: emc: Missing low latency tables!\n"))
+		return -EINVAL;
+	for (i = 0; i < tegra_emc_table_size; i++) {
+		if (table[i].rate        != table_ll[i].rate ||
+		    table[i].rev         != table_ll[i].rev ||
+		    table[i].emc_min_mv  > table_ll[i].emc_min_mv ||
+		    (table[i].src_sel_reg & (~EMC_CLK_MC_SAME_FREQ)) !=
+		    (table_ll[i].src_sel_reg & (~EMC_CLK_MC_SAME_FREQ))) {
+			pr_err("tegra: emc: Low latency table mismatch.\n");
+			return -EINVAL;
+		}
+	}
+	pr_info("tegra: emc: Low latency table is valid.\n");
+
+	/* Check that the low latency derated and non-derated tables match. */
+	if (WARN(!table_ll_der, "tegra: emc: Missing LL derated tables!\n"))
+		return -EINVAL;
+	for (i = 0; i < tegra_emc_table_size; i++) {
+		if (table_ll[i].rate        != table_ll_der[i].rate ||
+		    table_ll[i].rev         != table_ll_der[i].rev ||
+		    table_ll[i].emc_min_mv  != table_ll_der[i].emc_min_mv ||
+		    table_ll[i].src_sel_reg != table_ll_der[i].src_sel_reg) {
+			pr_err("tegra: emc: LL derated table mismatch.\n");
+			return -EINVAL;
+		}
+	}
+	pr_info("tegra: emc: LL derated table is valid.\n");
+
 	/* Match EMC source/divider settings with table entries */
 	for (i = 0; i < tegra_emc_table_size; i++) {
 		unsigned long table_rate = table[i].rate;
 
-		/* Skip "no-rate" entry, or entry violating ascending order */
-		if (!table_rate ||
-		    (i && (table_rate <= table[i-1].rate)))
-			continue;
+		/* Stop: "no-rate" entry, or entry violating ascending order */
+		if (!table_rate || (i && ((table_rate <= table[i-1].rate) ||
+		     (table[i].emc_min_mv < table[i-1].emc_min_mv) ||
+		     (table_ll[i].emc_min_mv < table_ll[i-1].emc_min_mv)))) {
+			pr_warn("tegra: EMC rate entry %lu is not ascending\n",
+				table_rate);
+			break;
+		}
 
 		BUG_ON(table[i].rev != table[0].rev);
 
@@ -1495,7 +1548,6 @@ static int init_emc_table(const struct tegra14_emc_table *table,
 	}
 
 	tegra_emc_table = table;
-	tegra_emc_table_derated = table_der;
 
 	/*
 	 * Purge rates that cannot be reached because table does not specify
@@ -1508,8 +1560,8 @@ static int init_emc_table(const struct tegra14_emc_table *table,
 	tegra_init_max_rate(emc, max_rate * 1000);
 
 	if (emc->dvfs) {
-		adjust_emc_dvfs_table(tegra_emc_table, tegra_emc_table_size);
-		mv = tegra_dvfs_predict_millivolts(emc, max_rate * 1000);
+		adjust_emc_dvfs_table(table, table_ll, tegra_emc_table_size);
+		mv = tegra_dvfs_predict_peak_millivolts(emc, max_rate * 1000);
 		if ((mv <= 0) || (mv > emc->dvfs->max_millivolts)) {
 			tegra_emc_table = NULL;
 			pr_err("tegra: invalid EMC DFS table: maximum rate %lu"
@@ -1518,7 +1570,9 @@ static int init_emc_table(const struct tegra14_emc_table *table,
 			return -ENODATA;
 		}
 	}
-
+	tegra_emc_table_derated = table_der;
+	tegra_emc_table_ll = table_ll;
+	tegra_emc_table_ll_der = table_ll_der;
 	pr_info("tegra: validated EMC DFS table\n");
 
 	/* Configure clock change mode according to dram type */
@@ -1641,7 +1695,8 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 #endif
 
 	return init_emc_table(pdata->tables, pdata->tables_derated,
-			      pdata->num_tables);
+		pdata->tables_low_latency, pdata->tables_low_latency_derated,
+		pdata->num_tables);
 }
 
 static struct platform_driver tegra14_emc_driver = {
@@ -1958,6 +2013,15 @@ static int emc_table_info_show(struct seq_file *s, void *data)
 		seq_printf(s, "    %lu\n", tegra_emc_table[i].rate);
 	}
 
+	seq_printf(s, "derated table: %s\n", tegra_emc_table_derated ==
+		   tegra_emc_table ? "mapped to regular" : "installed");
+	seq_printf(s, "low latency table: %s\n", tegra_emc_table_ll ==
+		   tegra_emc_table ? "mapped to regular" : "installed");
+	seq_printf(s, "low latency derated table: %s\n",
+		   tegra_emc_table_ll_der == tegra_emc_table_ll ?
+		   "mapped to low latency" :
+		   tegra_emc_table_ll_der == tegra_emc_table_derated ?
+		   "mapped to derated" : "installed");
 	return 0;
 }
 
