@@ -268,6 +268,7 @@ static struct emc_sel tegra_emc_clk_sel[TEGRA_EMC_TABLE_MAX_SIZE];
 static struct tegra14_emc_table start_timing;
 static const struct tegra14_emc_table *emc_timing;
 static unsigned long dram_over_temp_state = DRAM_OVER_TEMP_NONE;
+static bool emc_ll_mode;
 
 static ktime_t clkchange_time;
 static int clkchange_delay = 100;
@@ -1034,6 +1035,16 @@ static inline void emc_get_timing(struct tegra14_emc_table *timing)
 	timing->rate = clk_get_rate_locked(emc) / 1000;
 }
 
+static const struct tegra14_emc_table *emc_get_table(
+	unsigned long over_temp_state, bool ll_mode)
+{
+	if (over_temp_state == DRAM_OVER_TEMP_THROTTLE)
+		return ll_mode ?
+			tegra_emc_table_ll_der : tegra_emc_table_derated;
+	else
+		return ll_mode ? tegra_emc_table_ll : tegra_emc_table;
+}
+
 /* The EMC registers have shadow registers. When the EMC clock is updated
  * in the clock controller, the shadow registers are copied to the active
  * registers, allowing glitchless memory bus frequency changes.
@@ -1046,6 +1057,7 @@ int tegra_emc_set_rate(unsigned long rate)
 	int i;
 	u32 clk_setting;
 	const struct tegra14_emc_table *last_timing;
+	const struct tegra14_emc_table *current_table;
 	unsigned long flags;
 	s64 last_change_delay;
 
@@ -1076,8 +1088,6 @@ int tegra_emc_set_rate(unsigned long rate)
 	else
 		last_timing = emc_timing;
 
-	clk_setting = tegra_emc_clk_sel[i].value;
-
 	if (!timekeeping_suspended) {
 		last_change_delay = ktime_us_delta(ktime_get(), clkchange_time);
 		if ((last_change_delay >= 0) &&
@@ -1087,15 +1097,12 @@ int tegra_emc_set_rate(unsigned long rate)
 
 	spin_lock_irqsave(&emc_access_lock, flags);
 	/* Pick from the EMC tables based on the status of the over temp state
-	   flag. */
-	emc_set_clock(dram_over_temp_state != DRAM_OVER_TEMP_THROTTLE ?
-		      &tegra_emc_table[i] : &tegra_emc_table_derated[i],
-		      last_timing, clk_setting);
+	   and low latency mode */
+	current_table = emc_get_table(dram_over_temp_state, emc_ll_mode);
+	clk_setting = current_table[i].src_sel_reg;
+	emc_set_clock(&current_table[i], last_timing, clk_setting);
 	clkchange_time = timekeeping_suspended ? clkchange_time : ktime_get();
-	emc_timing = dram_over_temp_state != DRAM_OVER_TEMP_THROTTLE ?
-		&tegra_emc_table[i] : &tegra_emc_table_derated[i];
-	if (dram_over_temp_state == DRAM_OVER_TEMP_THROTTLE)
-		pr_debug("[emc] Picked derated freq.\n");
+	emc_timing = &current_table[i];
 	tegra_mc_divider_update(emc);
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
@@ -1917,6 +1924,8 @@ int tegra_emc_set_over_temp_state(unsigned long state)
 {
 	int offset;
 	unsigned long flags;
+	const struct tegra14_emc_table *current_table;
+	const struct tegra14_emc_table *new_table;
 
 	if (dram_type != DRAM_TYPE_LPDDR2 || !emc_timing)
 		return -ENODEV;
@@ -1935,30 +1944,94 @@ int tegra_emc_set_over_temp_state(unsigned long state)
 	 * settings.
 	 */
 	spin_lock_irqsave(&emc_access_lock, flags);
-	if (state == DRAM_OVER_TEMP_THROTTLE) {
-		dram_over_temp_state = state;
-		offset = emc_timing - tegra_emc_table;
-		emc_set_clock(emc_timing, &tegra_emc_table_derated[offset],
-			      tegra_emc_clk_sel[offset].value |
+	current_table = emc_get_table(dram_over_temp_state, emc_ll_mode);
+	new_table = emc_get_table(state, emc_ll_mode);
+	dram_over_temp_state = state;
+
+	if (current_table != new_table) {
+		offset = emc_timing - current_table;
+		emc_set_clock(&new_table[offset], emc_timing,
+			      new_table[offset].src_sel_reg |
 			      EMC_CLK_FORCE_CC_TRIGGER);
-		emc_timing = &tegra_emc_table_derated[offset];
-	} else if (dram_over_temp_state == DRAM_OVER_TEMP_THROTTLE) {
-		dram_over_temp_state = state;
-		offset = emc_timing - tegra_emc_table_derated;
-		emc_set_clock(emc_timing, &tegra_emc_table[offset],
-			      tegra_emc_clk_sel[offset].value |
-			      EMC_CLK_FORCE_CC_TRIGGER);
-		emc_timing = &tegra_emc_table[offset];
+		emc_timing = &new_table[offset];
+		tegra_mc_divider_update(emc);
 	} else {
 		set_over_temp_timing(emc_timing, state);
 		emc_timing_update();
 		if (state != DRAM_OVER_TEMP_NONE)
 			emc_writel(EMC_REF_FORCE_CMD, EMC_REF);
-		dram_over_temp_state = state;
 	}
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
+	pr_debug("[emc] %s: temp_state: %lu ll_mode: %d - selected %s table\n",
+		 __func__, dram_over_temp_state, emc_ll_mode,
+		 new_table == tegra_emc_table ? "regular" :
+		 new_table == tegra_emc_table_derated ? "derated" :
+		 new_table == tegra_emc_table_ll ? "ll" : "ll derated");
+
 	return 0;
+}
+
+int tegra_emc_set_low_latency_mode(bool ll_mode)
+{
+	int offset, ret = 0;
+	unsigned long flags, acces_flags;
+	const struct tegra14_emc_table *current_table;
+	const struct tegra14_emc_table *new_table;
+	struct dvfs *emc_dvfs = emc->dvfs;
+
+	if (!emc_timing)
+		return -ENODEV;
+
+	clk_lock_save(emc, &flags);
+
+	if (emc_ll_mode == ll_mode)
+		goto _out;
+
+	if (tegra_emc_table == tegra_emc_table_ll) {
+		ret = -ENOSYS;
+		pr_info_once("%s: emc low latency table not installed\n",
+			     __func__);
+		goto _out;
+	}
+
+	if (ll_mode && emc_dvfs) {
+		ret = tegra_dvfs_voltages_set(emc_dvfs, emc_core_millivolts_ll);
+		if (ret) {
+			tegra_dvfs_voltages_set(emc_dvfs, emc_core_millivolts);
+			pr_err("%s: failed to raise low latency mode voltage\n",
+			       __func__);
+			goto _out;
+		}
+	}
+
+	spin_lock_irqsave(&emc_access_lock, acces_flags);
+	current_table = emc_get_table(dram_over_temp_state, emc_ll_mode);
+	new_table = emc_get_table(dram_over_temp_state, ll_mode);
+	emc_ll_mode = ll_mode;
+
+	if (current_table != new_table) {
+		offset = emc_timing - current_table;
+		emc_set_clock(&new_table[offset], emc_timing,
+			      new_table[offset].src_sel_reg |
+			      EMC_CLK_FORCE_CC_TRIGGER);
+		emc_timing = &new_table[offset];
+		tegra_mc_divider_update(emc);
+	}
+	spin_unlock_irqrestore(&emc_access_lock, acces_flags);
+
+	if (!ll_mode && emc_dvfs)
+		tegra_dvfs_voltages_set(emc_dvfs, emc_core_millivolts);
+
+
+	pr_debug("[emc] %s: temp_state: %lu ll_mode: %d - selected %s table\n",
+		 __func__, dram_over_temp_state, emc_ll_mode,
+		 new_table == tegra_emc_table ? "regular" :
+		 new_table == tegra_emc_table_derated ? "derated" :
+		 new_table == tegra_emc_table_ll ? "ll" : "ll derated");
+_out:
+	clk_unlock_restore(emc, &flags);
+	return ret;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -2058,6 +2131,17 @@ static int over_temp_state_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(over_temp_state_fops, over_temp_state_get,
 			over_temp_state_set, "%llu\n");
 
+static int ll_mode_get(void *data, u64 *val)
+{
+	*val = emc_ll_mode;
+	return 0;
+}
+static int ll_mode_set(void *data, u64 val)
+{
+	return tegra_emc_set_low_latency_mode(val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(ll_mode_fops, ll_mode_get, ll_mode_set, "%llu\n");
+
 static int efficiency_get(void *data, u64 *val)
 {
 	*val = tegra_emc_bw_efficiency;
@@ -2122,6 +2206,10 @@ static int __init tegra_emc_debug_init(void)
 
 	if (!debugfs_create_file("over_temp_state", S_IRUGO | S_IWUSR,
 				 emc_debugfs_root, NULL, &over_temp_state_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("low_latency_mode", S_IRUGO | S_IWUSR,
+				 emc_debugfs_root, NULL, &ll_mode_fops))
 		goto err_out;
 
 	if (!debugfs_create_file("efficiency", S_IRUGO | S_IWUSR,
