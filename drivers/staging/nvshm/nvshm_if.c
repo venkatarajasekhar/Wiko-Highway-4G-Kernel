@@ -76,10 +76,12 @@ int nvshm_write(struct nvshm_channel *handle, struct nvshm_iobuf *iob)
 	list = iob;
 	while (list) {
 		count++;
+		list->chan = handle->index;
 		leaf = list->sg_next;
 		while (leaf) {
 			count++;
 			leaf = NVSHM_B2A(priv, leaf);
+			leaf->chan = handle->index;
 			leaf = leaf->sg_next;
 		}
 		list = list->next;
@@ -94,7 +96,6 @@ int nvshm_write(struct nvshm_channel *handle, struct nvshm_iobuf *iob)
 		ret = 1;
 	}
 
-	iob->chan = handle->index;
 	iob->qnext = NULL;
 	nvshm_queue_put(priv, iob);
 	nvshm_generate_ipc(priv);
