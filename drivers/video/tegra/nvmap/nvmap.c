@@ -55,10 +55,9 @@ static int map_iovmm_area(struct nvmap_handle *h)
 					  h->pgalloc.area->iovm_start,
 					  h->pgalloc.pages,
 					  h->size >> PAGE_SHIFT);
-	if (err) {
-		tegra_iommu_zap_vm(h->pgalloc.area);
+	if (err)
 		return err;
-	}
+
 	h->pgalloc.dirty = false;
 	return 0;
 }
