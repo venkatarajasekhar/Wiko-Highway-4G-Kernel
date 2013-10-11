@@ -54,79 +54,76 @@ struct nvshm_tty_device {
 	int nlines;
 	struct workqueue_struct *tty_wq;
 	struct work_struct tty_worker;
-	struct nvshm_tty_line line[NVSHM_MAX_CHANNELS];
+	/* line[] array of up to NVSHM_MAX_CHANNELS */
+	struct nvshm_tty_line *line;
 };
 
 static struct nvshm_tty_device tty_dev;
 
-static void nvshm_tty_rx_rewrite_line(int i)
+static void nvshm_tty_rx_rewrite_line(struct nvshm_tty_line *line)
 {
-	struct nvshm_iobuf *list;
+	struct nvshm_iobuf *ioblist;
 	struct tty_struct *tty;
 	int len;
 
-	tty = tty_port_tty_get(&tty_dev.line[i].port);
-
+	BUG_ON(line == NULL);
+	tty = tty_port_tty_get(&line->port);
 	if (!tty)
 		return;
 
-	spin_lock(&tty_dev.line[i].lock);
-	while (tty_dev.line[i].io_queue_head) {
-		list = tty_dev.line[i].io_queue_head;
-		spin_unlock(&tty_dev.line[i].lock);
+	spin_lock(&line->lock);
+	while (line->io_queue_head) {
+		ioblist = line->io_queue_head;
+		spin_unlock(&line->lock);
 		len = tty_insert_flip_string(tty,
-					     NVSHM_B2A(tty_dev.handle,
-						       list->npduData)
-					     + list->dataOffset,
-					     list->length);
+			NVSHM_B2A(tty_dev.handle, ioblist->npduData)
+				+ ioblist->dataOffset,
+			ioblist->length);
 		tty_flip_buffer_push(tty);
-		if (len < list->length) {
-			list->dataOffset += len;
-			list->length -= len;
+		if (len < ioblist->length) {
+			ioblist->dataOffset += len;
+			ioblist->length -= len;
 			tty_kref_put(tty);
 			return;
 		}
-		spin_lock(&tty_dev.line[i].lock);
-		if (list->sg_next) {
+		spin_lock(&line->lock);
+		if (ioblist->sg_next) {
 			/* Propagate ->next to the sg_next fragment
 			   do not forget to move tail also */
-			if (tty_dev.line[i].io_queue_head !=
-			    tty_dev.line[i].io_queue_tail) {
-				tty_dev.line[i].io_queue_head =
+			if (line->io_queue_head != line->io_queue_tail) {
+				line->io_queue_head =
 					NVSHM_B2A(tty_dev.handle,
-						  list->sg_next);
-				tty_dev.line[i].io_queue_head->next =
-					list->next;
+						  ioblist->sg_next);
+				line->io_queue_head->next = ioblist->next;
 			} else {
-				tty_dev.line[i].io_queue_head =
+				line->io_queue_head =
 					NVSHM_B2A(tty_dev.handle,
-						  list->sg_next);
-				tty_dev.line[i].io_queue_tail =
-					tty_dev.line[i].io_queue_head;
-				BUG_ON(list->next);
+						ioblist->sg_next);
+				line->io_queue_tail = line->io_queue_head;
+				BUG_ON(ioblist->next);
 			}
 		} else {
-			if (list->next) {
-				if (tty_dev.line[i].io_queue_head !=
-				    tty_dev.line[i].io_queue_tail) {
-					tty_dev.line[i].io_queue_head =
+			if (ioblist->next) {
+				if (line->io_queue_head !=
+					line->io_queue_tail) {
+					line->io_queue_head =
 						NVSHM_B2A(tty_dev.handle,
-							  list->next);
+							ioblist->next);
 				} else {
-					tty_dev.line[i].io_queue_head =
+					line->io_queue_head =
 						NVSHM_B2A(tty_dev.handle,
-							  list->next);
-					tty_dev.line[i].io_queue_tail =
-						tty_dev.line[i].io_queue_head;
+							ioblist->next);
+					line->io_queue_tail =
+						line->io_queue_head;
 				}
 			} else {
-				tty_dev.line[i].io_queue_tail = NULL;
-				tty_dev.line[i].io_queue_head = NULL;
+				line->io_queue_tail = NULL;
+				line->io_queue_head = NULL;
 			}
 		}
-		nvshm_iobuf_free((struct nvshm_iobuf *)list);
+		nvshm_iobuf_free((struct nvshm_iobuf *)ioblist);
 	}
-	spin_unlock(&tty_dev.line[i].lock);
+	spin_unlock(&line->lock);
 	tty_kref_put(tty);
 }
 
@@ -134,9 +131,11 @@ static void nvshm_tty_rx_rewrite_line(int i)
 static void nvshm_tty_rx_rewrite(struct work_struct *work)
 {
 	int i;
+	struct nvshm_tty_device *ttydev =
+		container_of(work, struct nvshm_tty_device, tty_worker);
 
-	for (i = 0; i < tty_dev.nlines; i++)
-		nvshm_tty_rx_rewrite_line(i);
+	for (i = 0; i < ttydev->nlines; i++)
+		nvshm_tty_rx_rewrite_line(&ttydev->line[i]);
 }
 
 /*
@@ -144,8 +143,7 @@ static void nvshm_tty_rx_rewrite(struct work_struct *work)
  * NVSHM has received data insert it in FIFO and wake up
  * tty writer workqueue
  */
-void nvshm_tty_rx_event(struct nvshm_channel *chan,
-			struct nvshm_iobuf *iob)
+void nvshm_tty_rx_event(struct nvshm_channel *chan, struct nvshm_iobuf *iob)
 {
 	struct nvshm_tty_line *line = chan->data;
 
@@ -158,16 +156,14 @@ void nvshm_tty_rx_event(struct nvshm_channel *chan,
 	spin_lock(&line->lock);
 
 	/* Queue into FIFO */
-	if (line->io_queue_tail) {
-		line->io_queue_tail->next =
-			NVSHM_A2B(tty_dev.handle, iob);
-	} else {
+	if (line->io_queue_tail)
+		line->io_queue_tail->next = NVSHM_A2B(tty_dev.handle, iob);
+	else {
 		if (line->io_queue_head) {
 			line->io_queue_head->next =
 				NVSHM_A2B(tty_dev.handle, iob);
-		} else {
+		} else
 			line->io_queue_head = iob;
-		}
 	}
 	line->io_queue_tail = iob;
 	spin_unlock(&line->lock);
@@ -238,22 +234,23 @@ static int nvshm_tty_write_room(struct tty_struct *tty)
 static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 			   int len)
 {
-	struct nvshm_iobuf *iob, *leaf = NULL, *list = NULL;
-	int to_send = 0, remain, i, ret;
+	struct nvshm_iobuf *iob, *leaf = NULL, *ioblist = NULL;
+	int to_send = 0, remain, ret;
+	struct nvshm_tty_line *line;
 
 	if (!tty_dev.up)
 		return -EIO;
 
 	remain = len;
-	i = tty->index;
+	line = tty->driver_data;
 	while (remain) {
 		to_send = remain < MAX_OUTPUT_SIZE ? remain : MAX_OUTPUT_SIZE;
-		iob = nvshm_iobuf_alloc(tty_dev.line[i].pchan, to_send);
+		iob = nvshm_iobuf_alloc(line->pchan, to_send);
 		if (!iob) {
-			if (tty_dev.line[i].errno) {
+			if (line->errno) {
 				pr_err("%s iobuf alloc failed\n", __func__);
-				if (list)
-					nvshm_iobuf_free_cluster(list);
+				if (ioblist)
+					nvshm_iobuf_free_cluster(ioblist);
 				return -ENOMEM;
 			} else {
 				pr_err("%s: Xoff condition\n", __func__);
@@ -262,7 +259,7 @@ static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 		}
 
 		iob->length = to_send;
-		iob->chan = tty_dev.line[i].pchan->index;
+		iob->chan = line->pchan->index;
 		remain -= to_send;
 		memcpy(NVSHM_B2A(tty_dev.handle,
 				 iob->npduData +
@@ -271,14 +268,14 @@ static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 		       to_send);
 		buf += to_send;
 
-		if (!list) {
-			leaf = list = iob;
+		if (!ioblist) {
+			leaf = ioblist = iob;
 		} else {
 			leaf->sg_next = NVSHM_A2B(tty_dev.handle, iob);
 			leaf = iob;
 		}
 	}
-	ret = nvshm_write(tty_dev.line[i].pchan, list);
+	ret = nvshm_write(line->pchan, ioblist);
 
 	if (ret == 1)
 		tty_throttle(tty);
@@ -309,7 +306,7 @@ static int nvshm_tty_carrier_raised(struct tty_port *tport)
 
 static int  nvshm_tty_activate(struct tty_port *tport, struct tty_struct *tty)
 {
-	int i;
+	struct nvshm_tty_line *line;
 
 	/* Set TTY flags */
 	set_bit(TTY_IO_ERROR, &tty->flags);
@@ -317,13 +314,12 @@ static int  nvshm_tty_activate(struct tty_port *tport, struct tty_struct *tty)
 	set_bit(TTY_DO_WRITE_WAKEUP, &tty->flags);
 	tty->low_latency = 1;
 
-	i = tty->index;
-	pr_debug("%s line %d\n", __func__, i);
-	tty_dev.line[i].pchan =
-		nvshm_open_channel(tty_dev.line[i].nvshm_chan,
+	line = &tty_dev.line[tty->index];
+	pr_debug("%s line %d\n", __func__, tty->index);
+	line->pchan = nvshm_open_channel(line->nvshm_chan,
 				   &nvshm_tty_ops,
-				   &tty_dev.line[i]);
-	if (!tty_dev.line[i].pchan) {
+				   line);
+	if (!line->pchan) {
 		pr_err("%s fail to open SHM chan\n", __func__);
 		return -EIO;
 	}
@@ -334,7 +330,7 @@ static int  nvshm_tty_activate(struct tty_port *tport, struct tty_struct *tty)
 static void  nvshm_tty_shutdown(struct tty_port *tport)
 {
 	struct nvshm_tty_line *line =
-			container_of(tport, struct nvshm_tty_line, port);
+		container_of(tport, struct nvshm_tty_line, port);
 
 	if (line) {
 		pr_debug("%s\n", __func__);
@@ -373,7 +369,8 @@ static const struct tty_port_operations nvshm_tty_port_ops = {
 
 int nvshm_tty_init(struct nvshm_handle *handle)
 {
-	int ret, chan;
+	struct nvshm_tty_line *line;
+	int ret, chan, count;
 
 	pr_debug("%s\n", __func__);
 
@@ -410,14 +407,33 @@ int nvshm_tty_init(struct nvshm_handle *handle)
 
 	tty_dev.handle = handle;
 
+	/* calculate number of lines for tty and allocate line[] array */
+	count = 0;
 	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
 		if ((handle->chan[chan].map.type == NVSHM_CHAN_TTY)
 			|| (handle->chan[chan].map.type == NVSHM_CHAN_LOG)) {
+			count++;
+		}
+	}
+	line = kzalloc(sizeof(struct nvshm_tty_line) * count, GFP_KERNEL);
+	tty_dev.line = line;
+	if (!line) {
+		tty_unregister_driver(tty_dev.tty_driver);
+		put_tty_driver(tty_dev.tty_driver);
+		return -ENOMEM;
+	}
+
+	/* map nvshm channels to tty lines */
+	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+		if ((handle->chan[chan].map.type == NVSHM_CHAN_TTY)
+			|| (handle->chan[chan].map.type == NVSHM_CHAN_LOG)) {
+			BUG_ON(tty_dev.nlines >= count);
 			tty_dev.line[tty_dev.nlines].nvshm_chan = chan;
 			tty_dev.nlines++;
 		}
 	}
 
+	/* register as tty for each tty line */
 	for (chan = 0; chan < tty_dev.nlines; chan++) {
 		pr_debug("%s: register tty#%d cha %d\n",
 			 __func__, chan, tty_dev.line[chan].nvshm_chan);
@@ -452,6 +468,7 @@ void nvshm_tty_cleanup(void)
 	}
 	destroy_workqueue(tty_dev.tty_wq);
 	tty_unregister_driver(tty_dev.tty_driver);
+	kfree(tty_dev.line);
 	put_tty_driver(tty_dev.tty_driver);
 }
 
