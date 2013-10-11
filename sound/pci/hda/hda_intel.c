@@ -2738,7 +2738,9 @@ static int azx_halt(struct notifier_block *nb, unsigned long event, void *buf)
 #endif
 
 	snd_hda_bus_reboot_notify(chip->bus);
+#if !defined(CONFIG_SND_HDA_PLATFORM_NVIDIA_TEGRA)
 	azx_stop_chip(chip);
+#endif
 
 #if defined(CONFIG_SND_HDA_PLATFORM_DRIVER) && \
 	defined(CONFIG_SND_HDA_POWER_SAVE)
