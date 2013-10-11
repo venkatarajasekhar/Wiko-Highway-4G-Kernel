@@ -897,19 +897,14 @@ static int tegra_max98090_jack_notifier(struct notifier_block *self,
 	struct tegra_max98090 *machine = snd_soc_card_get_drvdata(card);
 	enum headset_state state = BIT_NO_HEADSET;
 
-	if (jack == &tegra_max98090_hp_jack) {
-		machine->jack_status &= ~SND_JACK_HEADPHONE;
-		machine->jack_status |= (action & SND_JACK_HEADPHONE);
-	} else {
-		machine->jack_status &= ~SND_JACK_MICROPHONE;
-		machine->jack_status |= (action & SND_JACK_MICROPHONE);
-	}
+	if (jack == &tegra_max98090_hp_jack)
+		machine->jack_status = action;
+	else
+		return NOTIFY_OK;
 
 	switch (machine->jack_status) {
 	case SND_JACK_HEADPHONE:
-		/* For now force headset mic mode */
-		/* state = BIT_HEADSET_NO_MIC; */
-		state = BIT_HEADSET;
+		state = BIT_HEADSET_NO_MIC;
 		break;
 	case SND_JACK_HEADSET:
 		state = BIT_HEADSET;
