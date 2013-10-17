@@ -36,8 +36,7 @@
  * @param x : address to convert
  * @return : void * pointer in cached kernel space
  */
-#define NVSHM_B2A(h, x) ((void *)(x) + ((int)(h)->ipc_base_virt) \
-			 - NVSHM_IPC_BB_BASE)
+#define NVSHM_B2A(h, addr)  ((void *)addr + (int)h->ipc_bb2ap)
 
 /**
  * NVSHM_A2B convert from AP kernel space (cached) to Baseband address space
@@ -48,8 +47,7 @@
  * @param x : address to convert
  * @return : void * pointer in BB memory space
  */
-#define NVSHM_A2B(h, x) ((void *)(x) - ((int)(h)->ipc_base_virt) \
-			 + NVSHM_IPC_BB_BASE)
+#define NVSHM_A2B(h, addr)  ((void *)addr - (int)h->ipc_bb2ap)
 
 /**
 * Payload start address in AP virtual memory space

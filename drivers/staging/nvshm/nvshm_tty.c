@@ -45,12 +45,12 @@ struct nvshm_tty_line {
 	struct nvshm_channel *pchan;
 	int errno;
 	spinlock_t lock;
+	int ipc_bb2ap;
 };
 
 struct nvshm_tty_device {
 	int up;
 	struct tty_driver *tty_driver;
-	struct nvshm_handle *handle;
 	int nlines;
 	struct workqueue_struct *tty_wq;
 	struct work_struct tty_worker;
@@ -76,7 +76,7 @@ static void nvshm_tty_rx_rewrite_line(struct nvshm_tty_line *line)
 		ioblist = line->io_queue_head;
 		spin_unlock(&line->lock);
 		len = tty_insert_flip_string(tty,
-			NVSHM_B2A(tty_dev.handle, ioblist->npduData)
+			NVSHM_B2A(line, ioblist->npduData)
 				+ ioblist->dataOffset,
 			ioblist->length);
 		tty_flip_buffer_push(tty);
@@ -92,13 +92,11 @@ static void nvshm_tty_rx_rewrite_line(struct nvshm_tty_line *line)
 			   do not forget to move tail also */
 			if (line->io_queue_head != line->io_queue_tail) {
 				line->io_queue_head =
-					NVSHM_B2A(tty_dev.handle,
-						  ioblist->sg_next);
+					NVSHM_B2A(line, ioblist->sg_next);
 				line->io_queue_head->next = ioblist->next;
 			} else {
 				line->io_queue_head =
-					NVSHM_B2A(tty_dev.handle,
-						ioblist->sg_next);
+					NVSHM_B2A(line, ioblist->sg_next);
 				line->io_queue_tail = line->io_queue_head;
 				BUG_ON(ioblist->next);
 			}
@@ -107,12 +105,10 @@ static void nvshm_tty_rx_rewrite_line(struct nvshm_tty_line *line)
 				if (line->io_queue_head !=
 					line->io_queue_tail) {
 					line->io_queue_head =
-						NVSHM_B2A(tty_dev.handle,
-							ioblist->next);
+						NVSHM_B2A(line, ioblist->next);
 				} else {
 					line->io_queue_head =
-						NVSHM_B2A(tty_dev.handle,
-							ioblist->next);
+						NVSHM_B2A(line, ioblist->next);
 					line->io_queue_tail =
 						line->io_queue_head;
 				}
@@ -157,12 +153,11 @@ void nvshm_tty_rx_event(struct nvshm_channel *chan, struct nvshm_iobuf *iob)
 
 	/* Queue into FIFO */
 	if (line->io_queue_tail)
-		line->io_queue_tail->next = NVSHM_A2B(tty_dev.handle, iob);
+		line->io_queue_tail->next = NVSHM_A2B(line, iob);
 	else {
-		if (line->io_queue_head) {
-			line->io_queue_head->next =
-				NVSHM_A2B(tty_dev.handle, iob);
-		} else
+		if (line->io_queue_head)
+			line->io_queue_head->next = NVSHM_A2B(line, iob);
+		else
 			line->io_queue_head = iob;
 	}
 	line->io_queue_tail = iob;
@@ -261,9 +256,7 @@ static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 		iob->length = to_send;
 		iob->chan = line->pchan->index;
 		remain -= to_send;
-		memcpy(NVSHM_B2A(tty_dev.handle,
-				 iob->npduData +
-				 iob->dataOffset),
+		memcpy(NVSHM_B2A(line, iob->npduData + iob->dataOffset),
 		       buf,
 		       to_send);
 		buf += to_send;
@@ -271,7 +264,7 @@ static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 		if (!ioblist) {
 			leaf = ioblist = iob;
 		} else {
-			leaf->sg_next = NVSHM_A2B(tty_dev.handle, iob);
+			leaf->sg_next = NVSHM_A2B(line, iob);
 			leaf = iob;
 		}
 	}
@@ -376,10 +369,19 @@ int nvshm_tty_init(struct nvshm_handle *handle)
 
 	memset(&tty_dev, 0, sizeof(tty_dev));
 
+	/* calculate number of lines for tty */
+	count = 0;
+	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+		if ((handle->chan[chan].map.type == NVSHM_CHAN_TTY)
+			|| (handle->chan[chan].map.type == NVSHM_CHAN_LOG)) {
+			count++;
+		}
+	}
+
 	tty_dev.tty_wq = create_singlethread_workqueue("NVSHM_tty");
 	INIT_WORK(&tty_dev.tty_worker, nvshm_tty_rx_rewrite);
 
-	tty_dev.tty_driver = alloc_tty_driver(NVSHM_MAX_CHANNELS);
+	tty_dev.tty_driver = alloc_tty_driver(count);
 
 	if (tty_dev.tty_driver == NULL)
 		return -ENOMEM;
@@ -405,16 +407,7 @@ int nvshm_tty_init(struct nvshm_handle *handle)
 
 	ret = tty_register_driver(tty_dev.tty_driver);
 
-	tty_dev.handle = handle;
-
-	/* calculate number of lines for tty and allocate line[] array */
-	count = 0;
-	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
-		if ((handle->chan[chan].map.type == NVSHM_CHAN_TTY)
-			|| (handle->chan[chan].map.type == NVSHM_CHAN_LOG)) {
-			count++;
-		}
-	}
+	/* allocate line[] array */
 	line = kzalloc(sizeof(struct nvshm_tty_line) * count, GFP_KERNEL);
 	tty_dev.line = line;
 	if (!line) {
@@ -429,6 +422,8 @@ int nvshm_tty_init(struct nvshm_handle *handle)
 			|| (handle->chan[chan].map.type == NVSHM_CHAN_LOG)) {
 			BUG_ON(tty_dev.nlines >= count);
 			tty_dev.line[tty_dev.nlines].nvshm_chan = chan;
+			tty_dev.line[tty_dev.nlines].ipc_bb2ap =
+				handle->ipc_bb2ap;
 			tty_dev.nlines++;
 		}
 	}
@@ -437,10 +432,11 @@ int nvshm_tty_init(struct nvshm_handle *handle)
 	for (chan = 0; chan < tty_dev.nlines; chan++) {
 		pr_debug("%s: register tty#%d cha %d\n",
 			 __func__, chan, tty_dev.line[chan].nvshm_chan);
-		spin_lock_init(&tty_dev.line[tty_dev.nlines].lock);
+		spin_lock_init(&tty_dev.line[chan].lock);
 		tty_port_init(&tty_dev.line[chan].port);
 		tty_dev.line[chan].port.ops = &nvshm_tty_port_ops;
 		tty_register_device(tty_dev.tty_driver, chan, 0);
+		handle->ifdev[chan] = &tty_dev.line[chan].port;
 	}
 
 	tty_dev.up = NVSHM_TTY_UP;

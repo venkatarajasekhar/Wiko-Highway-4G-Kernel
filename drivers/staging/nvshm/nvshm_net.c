@@ -45,16 +45,8 @@ struct nvshm_net_line {
 	int errno;
 	spinlock_t lock;
 	int stop_tx; /* stop tx when >= 0 */
+	int ipc_bb2ap;
 };
-
-struct nvshm_net_device {
-	struct nvshm_handle *handle;
-	struct nvshm_net_line *line[NVSHM_MAX_CHANNELS];
-	int nlines;
-};
-
-static struct nvshm_net_device netdev;
-
 
 /* rx_event() is called when a packet of data is received.
  * The receiver should consume all iobuf in the given list.
@@ -82,7 +74,7 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 	}
 
 	ap_next = iobuf;
-	bb_next = NVSHM_A2B(netdev.handle, iobuf);
+	bb_next = NVSHM_A2B(priv, iobuf);
 	while (bb_next) {
 		datagram_len = 0;
 		ap_iob = ap_next;
@@ -90,7 +82,7 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 		while (bb_iob) {
 			datagram_len += ap_iob->length;
 			bb_iob = ap_iob->sg_next;
-			ap_iob = NVSHM_B2A(netdev.handle, bb_iob);
+			ap_iob = NVSHM_B2A(priv, bb_iob);
 		}
 		if (datagram_len > dev->mtu) {
 			pr_err("%s: MTU %d>%d\n", __func__,
@@ -99,7 +91,7 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 			/* move to next datagram - drop current one */
 			ap_iob = ap_next;
 			bb_next = ap_next->next;
-			ap_next = NVSHM_B2A(netdev.handle, bb_next);
+			ap_next = NVSHM_B2A(priv, bb_next);
 			/* Break ->next chain before free */
 			ap_iob->next = NULL;
 			nvshm_iobuf_free_cluster(ap_iob);
@@ -122,15 +114,15 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 		ap_iob = ap_next;
 		bb_iob = bb_next;
 		bb_next = ap_next->next;
-		ap_next = NVSHM_B2A(netdev.handle, bb_next);
+		ap_next = NVSHM_B2A(priv, bb_next);
 		while (bb_iob) {
-			src = NVSHM_B2A(netdev.handle, ap_iob->npduData)
+			src = NVSHM_B2A(priv, ap_iob->npduData)
 			      + ap_iob->dataOffset;
 			memcpy(dst, src, ap_iob->length);
 			dst += ap_iob->length;
 			bb_iob = ap_iob->sg_next;
 			nvshm_iobuf_free(ap_iob);
-			ap_iob = NVSHM_B2A(netdev.handle, bb_iob);
+			ap_iob = NVSHM_B2A(priv, bb_iob);
 		}
 		/* deliver skb to netif */
 		skb->dev = dev;
@@ -310,22 +302,20 @@ static int nvshm_netops_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 		iob->length = to_send;
 		remain -= to_send;
 
-		memcpy(NVSHM_B2A(netdev.handle,
-				 iob->npduData + iob->dataOffset),
+		memcpy(NVSHM_B2A(priv, iob->npduData + iob->dataOffset),
 		       data,
 		       to_send);
 
 		data += to_send;
 
-		if (!list) {
+		if (!list)
 			leaf = list = iob;
-		} else {
-			leaf->sg_next = NVSHM_A2B(netdev.handle, iob);
+		else {
+			leaf->sg_next = NVSHM_A2B(priv, iob);
 			leaf = iob;
 		}
 	}
 	if (nvshm_write(priv->pchan, list)) {
-
 		/* no more transmit possible - stop queue on next TX */
 		pr_warning("%s rate limit hit on channel %d\n",
 			   __func__, priv->nvshm_chan);
@@ -407,73 +397,88 @@ static void nvshm_nwif_init_dev(struct net_device *dev)
 	dev->flags |= IFF_POINTOPOINT | IFF_NOARP;
 }
 
-int nvshm_net_init(struct nvshm_handle *handle)
+struct net_device *nvshm_net_create(struct nvshm_handle *handle, int chan,
+	int index)
 {
 	struct net_device *dev;
-	int chan;
-	int ret = 0;
-	struct nvshm_net_line *priv;
+	struct nvshm_net_line *line;
+	int sts = 0;
 
-	pr_debug("%s()\n", __func__);
-	memset(&netdev, 0, sizeof(netdev));
-	netdev.handle = handle;
+	pr_debug("Register %s%d on [%d]\n",
+		NVSHM_NETIF_PREFIX, index, chan);
 
-	/* check nvshm_channels[] for net devices */
-	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+	dev = alloc_netdev(sizeof(struct nvshm_net_line),
+		NVSHM_NETIF_PREFIX"%d", nvshm_nwif_init_dev);
+	if (!dev)
+		return NULL;
 
-		if (handle->chan[chan].map.type == NVSHM_CHAN_NET) {
-			pr_debug("Registering %s%d\n",
-				NVSHM_NETIF_PREFIX,
-				netdev.nlines);
-			dev =  alloc_netdev(sizeof(struct nvshm_net_line),
-				NVSHM_NETIF_PREFIX"%d",
-				nvshm_nwif_init_dev);
-			if (!dev)
-				goto err_exit;
+	dev->base_addr = index;
+	line = netdev_priv(dev);
+	line->net = dev;
+	line->ipc_bb2ap = handle->ipc_bb2ap;
+	line->nvshm_chan = chan;
+	spin_lock_init(&line->lock);
 
-			dev->base_addr = netdev.nlines;
-
-			priv = netdev_priv(dev);
-			netdev.line[netdev.nlines] = priv;
-			netdev.line[netdev.nlines]->net = dev;
-			priv->nvshm_chan = chan;
-			spin_lock_init(&priv->lock);
-
-			ret = register_netdev(dev);
-			if (ret) {
-				pr_err("Error %i registering %s%d device\n",
-					ret,
-					NVSHM_NETIF_PREFIX,
-					netdev.nlines);
-				goto err_exit;
-			}
-
-			netdev.nlines++;
-		}
+	sts = register_netdev(dev);
+	if (sts) {
+		pr_err("Error %i registering %s%d device\n", sts,
+			NVSHM_NETIF_PREFIX, index);
+		free_netdev(dev);
+		return NULL;
 	}
-
-	return ret;
-
-err_exit:
-	nvshm_net_cleanup();
-	return ret;
+	return dev;
 }
 
-void nvshm_net_cleanup(void)
+int nvshm_net_remove(struct net_device *dev)
+{
+	struct nvshm_net_line *line;
+
+	if (!dev)
+		return -EINVAL;
+
+	line = netdev_priv(dev);
+	if (!line)
+		return -EINVAL;
+
+	if (!line->net)
+		return -EINVAL;
+
+	pr_debug("%s free %s%d on [%d]\n", __func__, NVSHM_NETIF_PREFIX,
+		(int)line->net->base_addr, line->nvshm_chan);
+
+	unregister_netdev(line->net);
+	free_netdev(line->net);
+	line->net = NULL;
+	return 0;
+}
+
+int nvshm_net_init(struct nvshm_handle *handle)
+{
+	int chan;
+	int net_count;
+
+	pr_debug("%s()\n", __func__);
+
+	net_count = 0;
+	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+		if (handle->chan[chan].map.type == NVSHM_CHAN_NET) {
+			handle->ifdev[chan] =
+				nvshm_net_create(handle, chan, net_count);
+			net_count++;
+		}
+	}
+	return 0;
+}
+
+void nvshm_net_cleanup(struct nvshm_handle *handle)
 {
 	int chan;
 
 	pr_debug("%s()\n", __func__);
 
-	for (chan = 0; chan < netdev.nlines; chan++) {
-		if (netdev.line[chan]->net) {
-			pr_debug("%s free %s%d\n",
-				__func__,
-				NVSHM_NETIF_PREFIX,
-				chan);
-			unregister_netdev(netdev.line[chan]->net);
-			free_netdev(netdev.line[chan]->net);
-		}
+	for (chan = 0; chan < NVSHM_MAX_CHANNELS; chan++) {
+		if (handle->chan[chan].map.type == NVSHM_CHAN_NET)
+			nvshm_net_remove(handle->ifdev[chan]);
 	}
 }
 

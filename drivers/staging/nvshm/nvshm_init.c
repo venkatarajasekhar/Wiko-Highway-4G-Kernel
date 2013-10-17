@@ -56,6 +56,7 @@ static int nvshm_probe(struct platform_device *pdev)
 	wake_lock_init(&handle->dl_lock, WAKE_LOCK_SUSPEND, "SHM-DL");
 
 	handle->ipc_base_virt = pdata->ipc_base_virt;
+	handle->ipc_bb2ap = (int)(handle->ipc_base_virt) - NVSHM_IPC_BB_BASE;
 	handle->ipc_size = pdata->ipc_size;
 
 	handle->mb_base_virt = pdata->mb_base_virt;
@@ -125,6 +126,7 @@ static void __exit nvshm_exit(void)
 	struct nvshm_handle *handle = nvshm_get_handle();
 	pr_debug("%s\n", __func__);
 	nvshm_tty_cleanup();
+	nvshm_net_cleanup(handle);
 	nvshm_unregister_ipc(handle);
 	wake_lock_destroy(&handle->dl_lock);
 	wake_lock_destroy(&handle->ul_lock);
