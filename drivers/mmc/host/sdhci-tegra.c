@@ -238,6 +238,7 @@ struct sdhci_thermal sdhci_td[] = {
 #define TUNING_FREQ_COUNT	3
 #define TUNING_VOLTAGES_COUNT	3
 #define TUNING_RETRIES	1
+#define TUNING_CMD_TIMEOUT_RETRIES	10
 #define DFS_FREQ_COUNT	2
 
 /* Tuning core voltage requirements */
@@ -410,6 +411,7 @@ struct sdhci_tegra {
 	unsigned int tuning_bsize;
 	/* Num of tuning freqs selected */
 	unsigned int tuning_freq_count;
+	unsigned int tuning_timeout_retries;
 	unsigned int tap_cmd;
 	/* Tuning status */
 	unsigned int tuning_status;
@@ -1945,9 +1947,16 @@ static int sdhci_tegra_issue_tuning_cmd(struct sdhci_host *sdhci)
 		err = 0;
 		sdhci->tuning_done = 1;
 	} else {
-		tegra_sdhci_reset(sdhci, SDHCI_RESET_CMD);
-		tegra_sdhci_reset(sdhci, SDHCI_RESET_DATA);
-		err = -EIO;
+		if (!timeout) {
+			tegra_host->tuning_timeout_retries--;
+			if (!tegra_host->tuning_timeout_retries)
+				err = -ENOMEDIUM;
+				goto out;
+		} else {
+			tegra_sdhci_reset(sdhci, SDHCI_RESET_CMD);
+			tegra_sdhci_reset(sdhci, SDHCI_RESET_DATA);
+			err = -EIO;
+		}
 	}
 
 	if (sdhci->tuning_done) {
@@ -1977,6 +1986,8 @@ static int sdhci_tegra_scan_tap_values(struct sdhci_host *sdhci,
 
 		/* Run frequency tuning */
 		err = sdhci_tegra_issue_tuning_cmd(sdhci);
+		if (err == -ENOMEDIUM)
+			return err;
 		if (err && retry) {
 			retry--;
 			continue;
@@ -2013,6 +2024,10 @@ static int sdhci_tegra_get_tap_window_data(struct sdhci_host *sdhci,
 	/* Get the partial window data */
 	tap_value = 0;
 	tap_value = sdhci_tegra_scan_tap_values(sdhci, tap_value, false);
+	if (tap_value < 0) {
+		err = tap_value;
+		goto out;
+	}
 	if (!tap_value) {
 		tap_data->abandon_partial_win = true;
 		tap_data->partial_win = 0;
@@ -2038,6 +2053,10 @@ static int sdhci_tegra_get_tap_window_data(struct sdhci_host *sdhci,
 		/* Get the full window start */
 		tap_value++;
 		tap_value = sdhci_tegra_scan_tap_values(sdhci, tap_value, true);
+		if (tap_value < 0) {
+			err = tap_value;
+			goto out;
+		}
 		if (tap_value > MAX_TAP_VALUES) {
 			/* All tap values exhausted. No full window */
 			tap_data->abandon_full_win = true;
@@ -2058,6 +2077,10 @@ static int sdhci_tegra_get_tap_window_data(struct sdhci_host *sdhci,
 		tap_value++;
 		tap_value = sdhci_tegra_scan_tap_values(sdhci,
 				tap_value, false);
+		if (tap_value < 0) {
+			err = tap_value;
+			goto out;
+		}
 		tap_data->full_win_end = tap_value - 1;
 		if (tap_value > MAX_TAP_VALUES)
 			tap_data->full_win_end = MAX_TAP_VALUES;
@@ -2416,6 +2439,7 @@ static int sdhci_tegra_execute_tuning(struct sdhci_host *sdhci, u32 opcode)
 		tegra_host->tuning_bsize = MMC_TUNING_BLOCK_SIZE_BUS_WIDTH_4;
 	else
 		return -EINVAL;
+	tegra_host->tuning_timeout_retries = TUNING_CMD_TIMEOUT_RETRIES;
 
 	pr_err("%s: Starting freq tuning\n", mmc_hostname(sdhci->mmc));
 	mutex_lock(&tuning_mutex);
