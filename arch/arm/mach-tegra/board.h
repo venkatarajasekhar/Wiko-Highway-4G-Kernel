@@ -29,10 +29,6 @@
 #include <linux/power_supply.h>
 #include <linux/memory.h>
 
-#ifdef CONFIG_TEGRA_NVDUMPER
-#define NVDUMPER_RESERVED_SIZE 4096UL
-#endif
-
 #define ADD_FIXED_VOLTAGE_REG(_name)	(&_name##_fixed_voltage_device)
 
 /* Macro for defining fixed voltage regulator */
@@ -149,7 +145,8 @@ extern unsigned long tegra_wb0_params_instances;
 extern unsigned long tegra_wb0_params_block_size;
 #endif
 #ifdef CONFIG_TEGRA_NVDUMPER
-extern unsigned long nvdumper_reserved;
+extern unsigned long tegra_nvdumper_start;
+extern unsigned long tegra_nvdumper_size;
 #endif
 extern bool tegra_lp0_vec_relocate;
 extern unsigned long tegra_grhost_aperture;

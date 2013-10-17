@@ -130,7 +130,8 @@ unsigned long tegra_wb0_params_block_size;
 #endif
 
 #ifdef CONFIG_TEGRA_NVDUMPER
-unsigned long nvdumper_reserved;
+unsigned long tegra_nvdumper_start;
+unsigned long tegra_nvdumper_size;
 #endif
 #ifdef CONFIG_TEGRA_USE_SECURE_KERNEL
 unsigned long tegra_tzram_start;
@@ -993,7 +994,13 @@ static int __init tegra_nvdumper_arg(char *options)
 {
 	char *p = options;
 
-	nvdumper_reserved = memparse(p, &p);
+	tegra_nvdumper_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_nvdumper_start = memparse(p + 1, &p);
+	if (!tegra_nvdumper_size || !tegra_nvdumper_start) {
+		tegra_nvdumper_size = 0;
+		tegra_nvdumper_start = 0;
+	}
 	return 0;
 }
 early_param("nvdumper_reserved", tegra_nvdumper_arg);
@@ -1823,11 +1830,14 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 		tegra_lp0_vec_relocate = true;
 
 #ifdef CONFIG_TEGRA_NVDUMPER
-	if (nvdumper_reserved) {
-		if (memblock_reserve(nvdumper_reserved, NVDUMPER_RESERVED_SIZE)) {
+	if (tegra_nvdumper_size &&
+		   (tegra_nvdumper_start < memblock_end_of_DRAM())) {
+		if (memblock_reserve(tegra_nvdumper_start,
+					tegra_nvdumper_size)) {
 			pr_err("Failed to reserve nvdumper page %08lx@%08lx\n",
-			       nvdumper_reserved, NVDUMPER_RESERVED_SIZE);
-			nvdumper_reserved = 0;
+			       tegra_nvdumper_size, tegra_nvdumper_start);
+			tegra_nvdumper_start = 0;
+			tegra_nvdumper_size = 0;
 		}
 	}
 #endif
@@ -1920,10 +1930,10 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	}
 
 #ifdef CONFIG_TEGRA_NVDUMPER
-	if (nvdumper_reserved) {
+	if (tegra_nvdumper_size) {
 		pr_info("Nvdumper:               %08lx - %08lx\n",
-			nvdumper_reserved,
-			nvdumper_reserved + NVDUMPER_RESERVED_SIZE - 1);
+			tegra_nvdumper_start,
+			tegra_nvdumper_start + tegra_nvdumper_size - 1);
 	}
 #endif
 
