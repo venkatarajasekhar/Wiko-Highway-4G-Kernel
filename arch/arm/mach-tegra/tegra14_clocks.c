@@ -425,6 +425,8 @@ static void cpu_lp_backup_boost_end(unsigned long rate, unsigned int start);
 
 static bool detach_shared_bus;
 module_param(detach_shared_bus, bool, 0644);
+static bool disable_lp_boost;
+module_param(disable_lp_boost, bool, 0644);
 
 static int use_dfll;
 
@@ -4292,7 +4294,7 @@ static int tegra14_clk_emc_bus_update(struct clk *bus)
 	unsigned long cpu_rate = ULONG_MAX;
 	int ret, status = -EPERM;
 
-	if (is_lp_cluster())
+	if (is_lp_cluster() && !disable_lp_boost)
 		status = cpu_lp_backup_boost_begin(&cpu_rate, &seqcnt);
 	ret = emc_bus_update(bus);
 	if (!status)
