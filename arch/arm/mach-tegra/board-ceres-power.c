@@ -760,6 +760,7 @@ static void lp8755_regulator_init(void)
  *  E1690(CERES FFD): CPU_VDD is from Buck2 of Max 77660
  *  E1680(CERES)    : For SKU 1001 CPU_VDD is from Buck2 of Max 77660
  *		      For SKU 1000 CPU_VDD is from LP8755LME
+ *  E1683(CERES)    : Same as E1680 A04
  *  E1740(ATLANTIS FFD) : CPU_VDD is from SMPS12 of TPS80036
  *  E1670(ATLANTIS) : For SKU 100 CPU_VDD is from SMPS12 of TPS80036
  *		      For SKU 120 CPU_VDD is from LP8755LME	     */
@@ -863,7 +864,8 @@ int tegra_get_cvb_alignment_uV(void)
 
 	tegra_get_board_info(&board_info);
 	if ((board_info.board_id == BOARD_E1690) ||
-	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001))
+	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001) ||
+	    (board_info.board_id == BOARD_E1683 && board_info.sku == 1001))
 		return 6250;
 	else
 		return 10000;
@@ -884,6 +886,7 @@ void tegra_set_vdd_cpu_ramp_rate(void)
 
 	tegra_get_board_info(&board_info);
 	if ((board_info.board_id == BOARD_E1680 && board_info.sku == 1000) ||
+	   (board_info.board_id == BOARD_E1683 && board_info.sku == 1000) ||
 		(board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
 		if (workqueue != NULL)
 			queue_work(workqueue, &lp8755_work);
@@ -897,7 +900,8 @@ static int __init ceres_cl_dvfs_init(void)
 
 	tegra_get_board_info(&board_info);
 	if ((board_info.board_id == BOARD_E1690) ||
-	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001)) {
+	    (board_info.board_id == BOARD_E1680 && board_info.sku == 1001) ||
+	    (board_info.board_id == BOARD_E1683 && board_info.sku == 1001)) {
 		max77660_vdd_cpu_fill_reg_map();
 		tegra_cl_dvfs_device.dev.platform_data =
 					&ceres_cl_dvfs_max77660_vdd_cpu_data;
@@ -935,6 +939,7 @@ int __init ceres_regulator_init(void)
 		board_info.minor_revision);
 
 	if ((board_info.board_id == BOARD_E1680 && board_info.sku == 1000) ||
+	    (board_info.board_id == BOARD_E1683 && board_info.sku == 1000) ||
 		(board_info.board_id == BOARD_E1670 && board_info.sku == 120)) {
 		workqueue = create_singlethread_workqueue("lp8755_wq");
 		if (!workqueue)
@@ -961,6 +966,7 @@ int __init ceres_regulator_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1683:
 	case BOARD_E1671:
 		max77660_pinctrl_pdata[MAX77660_PINS_GPIO1].pullup_dn_normal =
 					MAX77660_PIN_PULL_UP;
@@ -996,7 +1002,8 @@ int __init ceres_regulator_init(void)
 			lp8755_regulator_init();
 		}
 
-		if (board_info.board_id == BOARD_E1680 &&
+		if (((board_info.board_id == BOARD_E1680) ||
+		     (board_info.board_id == BOARD_E1683)) &&
 			(tegra_get_modem_config() & BIT(0))) {
 			/*
 			 * When bit0 is set it indicates that BB_PWR_REQ is
@@ -1068,7 +1075,9 @@ int __init ceres_regulator_init(void)
 					ARRAY_SIZE(max77660_buck3_a02_supply);
 	}
 
-	if ((board_info.board_id == BOARD_E1680) && (board_info.fab >= BOARD_FAB_A04))
+	if (((board_info.board_id == BOARD_E1680) &&
+	    (board_info.fab >= BOARD_FAB_A04)) ||
+	    (board_info.board_id == BOARD_E1683))
 		max77660_pdata.use_rcm_reset = true;
 
 	if (modem_id == TEGRA_BB_INTEGRATED_DISABLED) {
@@ -1278,7 +1287,8 @@ int __init ceres_suspend_init(void)
 
 	tegra_get_board_info(&board_info);
 #ifdef CONFIG_TEGRA_LP1_LOW_COREVOLTAGE
-	if (board_info.board_id == BOARD_E1680) {
+	if ((board_info.board_id == BOARD_E1680) ||
+	    (board_info.board_id == BOARD_E1683)) {
 		if (board_info.sku == 1000)
 			ceres_suspend_data.core_reg_addr = 0x47;
 	} else {

@@ -487,8 +487,9 @@ void ceres_set_hotplug_gpio(void)
 		 (board_info.board_id == BOARD_E1740)) {
 		hdmi_hpd_gpio = (PALMAS_TEGRA_GPIO_BASE + PALMAS_GPIO14);
 	} else if ((board_info.fab > BOARD_FAB_A00) ||
-		(board_info.board_id == BOARD_E1690)) {
-		hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);
+		(board_info.board_id == BOARD_E1690) ||
+		(board_info.board_id == BOARD_E1683)) {
+			hdmi_hpd_gpio = (MAX77660_GPIO_BASE + MAX77660_GPIO1);
 	}
 
 	pdata->default_out->hotplug_gpio = hdmi_hpd_gpio;

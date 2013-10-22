@@ -1179,7 +1179,7 @@ int __init ceres_pmon_init(void)
 			 * so register only those if board is E1740
 			 */
 			register_devices_E1740();
-		} else {
+	} else {
 		/* register devices common to ceres/atlantis ERS */
 		i2c_register_board_info(1, ceres_i2c2_board_info,
 			ARRAY_SIZE(ceres_i2c2_board_info));
@@ -1189,7 +1189,7 @@ int __init ceres_pmon_init(void)
 			ARRAY_SIZE(ceres_i2c2_0_ina219_board_info));
 
 		if ((bi.board_id == BOARD_E1670) ||
-					(bi.board_id == BOARD_E1671)) {
+		    (bi.board_id == BOARD_E1671)) {
 			/* register devices specific to Atlantis-ERS */
 			if (bi.fab >= BOARD_FAB_A02)
 				register_devices_E1670_A02();
@@ -1197,7 +1197,8 @@ int __init ceres_pmon_init(void)
 				register_devices_E1670();
 		} else {
 			/* register devices specific to Ceres-ERS */
-			if (bi.fab >= BOARD_FAB_A03)
+			if ((bi.fab >= BOARD_FAB_A03) ||
+			    (bi.board_id == BOARD_E1683))
 				register_devices_E1680_A03();
 			else
 				register_devices_E1680();

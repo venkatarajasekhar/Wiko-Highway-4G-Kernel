@@ -568,6 +568,7 @@ static void ceres_audio_init(void)
 
 	if ((board_info.board_id == BOARD_E1680) ||
 		(board_info.board_id == BOARD_E1681) ||
+		(board_info.board_id == BOARD_E1683) ||
 		(board_info.board_id == BOARD_E1690)) {
 		i2c_register_board_info(5, &max97236_board_info, 1);
 		i2c_register_board_info(5, &max98090_board_info, 1);
@@ -720,6 +721,7 @@ static void ceres_usb_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1683:
 		/* Device cable is detected through PMU Interrupt */
 		tegra_otg_pdata.vbus_extcon_dev_name = "max77660-extcon";
 
@@ -937,7 +939,9 @@ static void ceres_i2c_init(void)
 	tegra14_i2c_device5.dev.platform_data = &ceres_i2c5_platform_data;
 	tegra14_i2c_device6.dev.platform_data = &ceres_i2c6_platform_data;
 
-	if ((board_info.board_id == BOARD_E1680) && (board_info.fab >= BOARD_FAB_A04))
+	if (((board_info.board_id == BOARD_E1680) &&
+	     (board_info.fab >= BOARD_FAB_A04)) ||
+	     (board_info.board_id == BOARD_E1683))
 		ceres_i2c5_platform_data.bit_banging_xfer_after_shutdown = true;
 
 	platform_device_register(&tegra14_i2c_device6);
@@ -1117,6 +1121,7 @@ static void __init sysedp_psydepl_init(void)
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
+	case BOARD_E1683:
 		ceres_sysedp_psydepl_init();
 		break;
 	case BOARD_E1670:

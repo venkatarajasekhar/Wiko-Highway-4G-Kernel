@@ -416,6 +416,7 @@ static int __init dsi_l_720p_5_register_bl_dev(void)
 		break;
 	case BOARD_E1680: /* Ceres ERS */
 	case BOARD_E1681: /* Ceres DSC Socket */
+	case BOARD_E1683: /* Ceres E1683 */
 		dsi_l_720p_5_max8831_bl_data.edp_states =
 			dsi_l_ceres_edp_states;
 		dsi_l_720p_5_max8831_bl_data.edp_brightness =

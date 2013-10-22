@@ -10502,6 +10502,7 @@ int __init ceres_emc_init(void)
 		break;
 
 	case BOARD_E1680:
+	case BOARD_E1683:
 	case BOARD_E1690:
 		if (tegra_get_memory_type() == 0) {
 			pr_info("Loading Ceres EMC tables.\n");
@@ -10549,6 +10550,10 @@ int __init ceres_emc_init(void)
 	case BOARD_E1690:
 		pr_info("EMC swizzle pattern: Ceres <= A03.\n");
 		swizzle_map[1] = 0x50127436;
+		update = 1;
+		break;
+	case BOARD_E1683:
+		swizzle_map[1] = 0x60127534;
 		update = 1;
 		break;
 	default:

@@ -918,7 +918,8 @@ static int tegra_common_suspend(void)
 		memcpy(tegra_lp1_register_core_lowvolt(), &lp1_core_lowvolt, 4);
 		lp0_core_lowvolt |= pdata->core_reg_addr;
 		memcpy(tegra_lp0_register_core_lowvolt(), &lp0_core_lowvolt, 4);
-		if (board_info.board_id == BOARD_E1680) {
+		if ((board_info.board_id == BOARD_E1680) ||
+			(board_info.board_id == BOARD_E1683)) {
 			reg = (pdata->pmuslave_addr << 24) |
 				(pdata->lp1_core_volt_high << 16) |
 				(pdata->lp1_core_volt_low << 8) |

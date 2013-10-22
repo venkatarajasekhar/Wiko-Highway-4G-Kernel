@@ -418,6 +418,7 @@ static int __init dsi_s_1080p_5_register_bl_dev(void)
 		break;
 	case BOARD_E1680: /* Ceres ERS */
 	case BOARD_E1681: /* Ceres DSC Socket */
+	case BOARD_E1683: /* Ceres E1683 */
 	case BOARD_E1690: /* Ceres FFD */
 		dsi_s_1080p_5_max8831_bl_data.edp_states =
 			dsi_s_ceres_edp_states;
