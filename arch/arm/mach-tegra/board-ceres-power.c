@@ -170,6 +170,7 @@ static struct regulator_consumer_supply max77660_ldo4_supply[] = {
 static struct regulator_consumer_supply max77660_ldo4_display_config0_supply[] = {
 	 REGULATOR_SUPPLY("avdd", "spi2.0"),
 	 REGULATOR_SUPPLY("vin", "2-004a"),
+	 REGULATOR_SUPPLY("vin", "2-0030"),
 };
 
 static struct regulator_consumer_supply max77660_ldo5_supply[] = {
@@ -268,6 +269,7 @@ static struct regulator_consumer_supply max77660_sw2_supply[] = {
 	REGULATOR_SUPPLY("vdd_i2c", "2-000e"),
 	REGULATOR_SUPPLY("vdd_i2c", "2-000c"),
 	REGULATOR_SUPPLY("vdd", "2-004a"),
+	REGULATOR_SUPPLY("vi2c", "2-0030"),
 	REGULATOR_SUPPLY("dovdd", "2-0010"),
 };
 
