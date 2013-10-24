@@ -55,8 +55,8 @@ void nvshm_close_channel(struct nvshm_channel *handle)
 	   the IPC */
 
 	spin_lock(&priv->lock);
+	/* Clear ops but not data as it may be used for cleanup */
 	priv->chan[handle->index].ops = NULL;
-	priv->chan[handle->index].data = NULL;
 	spin_unlock(&priv->lock);
 }
 
