@@ -1551,7 +1551,12 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	struct resource *regs, *regs2, *window;
 	struct device *dev = &pdev->dev;
 	int i, err = 0;
-	u32 as_linear_map = 0;
+	/*
+	 * FIXME: Currently statically SYSTEM_PROTECTED(i == 1) is set
+	 * to have linear mapping, but this should be dynamically
+	 * configured via pdata.
+	 */
+	u32 as_linear_map = BIT(1);
 
 	if (smmu_handle)
 		return -EIO;
@@ -1709,6 +1714,7 @@ static int tegra_smmu_device_notifier(struct notifier_block *nb,
 {
 	struct dma_iommu_mapping *map;
 	struct device *dev = _dev;
+	u64 swgid;
 
 	switch (event) {
 	case BUS_NOTIFY_BIND_DRIVER:
@@ -1721,7 +1727,14 @@ static int tegra_smmu_device_notifier(struct notifier_block *nb,
 			break;
 		}
 
-		map = tegra_smmu_get_map(dev, tegra_smmu_of_get_swgids(dev));
+		swgid = tegra_smmu_of_get_swgids(dev);
+		if (swgid == ~0) {
+			swgid = tegra_smmu_fixup_swgids(dev);
+			if (swgid == ~0)
+				break;
+		}
+
+		map = tegra_smmu_get_map(dev, swgid);
 		if (!map)
 			break;
 
@@ -1730,6 +1743,11 @@ static int tegra_smmu_device_notifier(struct notifier_block *nb,
 			dev_err(dev, "Failed to attach %s\n", dev_name(dev));
 			break;
 		}
+
+		/* Set PPCS to use IOVA linear forcely for perf */
+		if (swgid & SWGID(PPCS))
+			set_dma_ops(dev, NULL);
+
 		dev_dbg(dev, "Attached %s to map %p\n", dev_name(dev), map);
 		break;
 	case BUS_NOTIFY_DEL_DEVICE:
