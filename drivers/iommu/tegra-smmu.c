@@ -830,8 +830,11 @@ static size_t __smmu_iommu_unmap_pages(struct smmu_as *as, dma_addr_t iova,
 		if (pte) {
 			unsigned int *rest = &as->pte_count[pdn];
 			size_t bytes = sizeof(*pte) * count;
+			int i;
 
-			memset(pte, 0, bytes);
+			for (i = 0; i < count; i++)
+				*(pte + i) = _PTE_VACANT(pdn + i);
+
 			FLUSH_CPU_DCACHE(pte, page, bytes);
 
 			*rest -= count;
