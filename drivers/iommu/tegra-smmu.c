@@ -172,17 +172,28 @@ enum {
 
 #define _PDE_ATTR	(_READABLE | _WRITABLE | _NONSECURE)
 #define _PDE_ATTR_N	(_PDE_ATTR | _PDE_NEXT)
-#define _PDE_VACANT(pdn)	(0)
 
 #define _PTE_ATTR	(_READABLE | _WRITABLE | _NONSECURE)
-#define _PTE_VACANT(addr)	(0)
 
-#ifdef	CONFIG_TEGRA_IOMMU_SMMU_LINEAR
-#undef	_PDE_VACANT
-#undef	_PTE_VACANT
-#define	_PDE_VACANT(pdn)	(((pdn) << 10) | _PDE_ATTR)
-#define	_PTE_VACANT(addr)	(((addr) >> SMMU_PAGE_SHIFT) | _PTE_ATTR)
-#endif
+static u32 pde_vacant_linear(int pdn)
+{
+	return (pdn << 10) | _PDE_ATTR;
+}
+
+static u32 pte_vacant_linear(dma_addr_t iova)
+{
+	return (iova >> SMMU_PAGE_SHIFT) | _PTE_ATTR;
+}
+
+static u32 pde_vacant_default(int pdn)
+{
+	return 0;
+}
+
+static u32 pte_vacant_default(dma_addr_t iova)
+{
+	return 0;
+}
 
 #define SMMU_MK_PDIR(page, attr)	\
 		((page_to_phys(page) >> SMMU_PDIR_SHIFT) | (attr))
@@ -233,6 +244,9 @@ struct smmu_as {
 	unsigned long		pde_attr;
 	unsigned long		pte_attr;
 	unsigned int		*pte_count;
+
+	u32 (*pde_vacant)(int);
+	u32 (*pte_vacant)(dma_addr_t);
 
 	struct list_head	client;
 	spinlock_t		client_lock; /* for client list */
@@ -542,12 +556,12 @@ static void free_ptbl(struct smmu_as *as, dma_addr_t iova, bool flush)
 	unsigned long pdn = SMMU_ADDR_TO_PDN(iova);
 	unsigned long *pdir = (unsigned long *)page_address(as->pdir_page);
 
-	if (pdir[pdn] != _PDE_VACANT(pdn)) {
+	if (pdir[pdn] != as->pde_vacant(pdn)) {
 		dev_dbg(as->smmu->dev, "pdn: %lx\n", pdn);
 
 		ClearPageReserved(SMMU_EX_PTBL_PAGE(pdir[pdn]));
 		__free_page(SMMU_EX_PTBL_PAGE(pdir[pdn]));
-		pdir[pdn] = _PDE_VACANT(pdn);
+		pdir[pdn] = as->pde_vacant(pdn);
 		FLUSH_CPU_DCACHE(&pdir[pdn], as->pdir_page, sizeof pdir[pdn]);
 		if (!flush)
 			return;
@@ -667,7 +681,7 @@ static struct page *alloc_ptbl(struct smmu_as *as, dma_addr_t iova, bool flush)
 	SetPageReserved(page);
 	ptbl = (unsigned long *)page_address(page);
 	for (i = 0; i < SMMU_PTBL_COUNT; i++) {
-		ptbl[i] = _PTE_VACANT(addr);
+		ptbl[i] = as->pte_vacant(addr);
 		addr += SMMU_PAGE_SIZE;
 	}
 
@@ -694,7 +708,7 @@ static unsigned long *locate_pte(struct smmu_as *as,
 	unsigned long *pdir = page_address(as->pdir_page);
 	unsigned long *ptbl;
 
-	if (pdir[pdn] != _PDE_VACANT(pdn)) {
+	if (pdir[pdn] != as->pde_vacant(pdn)) {
 		/* Mapped entry table already exists */
 		*ptbl_page_p = SMMU_EX_PTBL_PAGE(pdir[pdn]);
 	} else if (!allocate) {
@@ -773,7 +787,8 @@ static int alloc_pdir(struct smmu_as *as)
 	pdir = page_address(as->pdir_page);
 
 	for (pdn = 0; pdn < SMMU_PDIR_COUNT; pdn++)
-		pdir[pdn] = _PDE_VACANT(pdn);
+		pdir[pdn] = as->pde_vacant(pdn);
+
 	FLUSH_CPU_DCACHE(pdir, as->pdir_page, SMMU_PDIR_SIZE);
 	val = SMMU_PTC_FLUSH_TYPE_ADR | VA_PAGE_TO_PA(pdir, as->pdir_page);
 	smmu_write(smmu, val, SMMU_PTC_FLUSH);
@@ -833,7 +848,7 @@ static size_t __smmu_iommu_unmap_pages(struct smmu_as *as, dma_addr_t iova,
 			int i;
 
 			for (i = 0; i < count; i++)
-				*(pte + i) = _PTE_VACANT(pdn + i);
+				*(pte + i) = as->pte_vacant(pdn + i);
 
 			FLUSH_CPU_DCACHE(pte, page, bytes);
 
@@ -862,7 +877,7 @@ static size_t __smmu_iommu_unmap_largepage(struct smmu_as *as, dma_addr_t iova)
 	unsigned long pdn = SMMU_ADDR_TO_PDN(iova);
 	unsigned long *pdir = (unsigned long *)page_address(as->pdir_page);
 
-	pdir[pdn] = _PDE_VACANT(pdn);
+	pdir[pdn] = as->pde_vacant(pdn);
 	FLUSH_CPU_DCACHE(&pdir[pdn], as->pdir_page, sizeof pdir[pdn]);
 	flush_ptc_and_tlb(as->smmu, as, iova, &pdir[pdn], as->pdir_page, 1);
 	return SZ_4M;
@@ -880,7 +895,7 @@ static int __smmu_iommu_map_pfn(struct smmu_as *as, dma_addr_t iova,
 	if (WARN_ON(!pte))
 		return -ENOMEM;
 
-	if (*pte == _PTE_VACANT(iova))
+	if (*pte == as->pte_vacant(iova))
 		(*count)++;
 	*pte = SMMU_PFN_TO_PTE(pfn, as->pte_attr);
 	FLUSH_CPU_DCACHE(pte, page, sizeof(*pte));
@@ -903,7 +918,7 @@ static int __smmu_iommu_map_largepage(struct smmu_as *as, dma_addr_t iova,
 	unsigned long pdn = SMMU_ADDR_TO_PDN(iova);
 	unsigned long *pdir = (unsigned long *)page_address(as->pdir_page);
 
-	if (pdir[pdn] != _PDE_VACANT(pdn))
+	if (pdir[pdn] != as->pde_vacant(pdn))
 		return -EINVAL;
 
 	pdir[pdn] = SMMU_ADDR_TO_PDN(pa) << 10 | _PDE_ATTR;
@@ -964,7 +979,7 @@ static int smmu_iommu_map_pages(struct iommu_domain *domain, unsigned long iova,
 		unsigned long *pte;
 		int i;
 
-		if (pdir[pdn] == _PDE_VACANT(pdn)) {
+		if (pdir[pdn] == as->pde_vacant(pdn)) {
 			tbl_page = alloc_ptbl(as, iova, !flush_all);
 			if (!tbl_page) {
 				err = -ENOMEM;
@@ -982,7 +997,7 @@ static int smmu_iommu_map_pages(struct iommu_domain *domain, unsigned long iova,
 		for (i = 0; i < count; i++) {
 			pte = &ptbl[ptn + i];
 
-			if (*pte == _PTE_VACANT(iova + i * PAGE_SIZE))
+			if (*pte == as->pte_vacant(iova + i * PAGE_SIZE))
 				(*rest)++;
 
 			*pte = SMMU_PFN_TO_PTE(page_to_pfn(pages[i]),
@@ -1040,7 +1055,7 @@ static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 					   len >> PAGE_SHIFT);
 			int i;
 
-			if (pdir[pdn] != _PDE_VACANT(pdn)) {
+			if (pdir[pdn] != as->pde_vacant(pdn)) {
 				tbl_page = SMMU_EX_PTBL_PAGE(pdir[pdn]);
 			} else {
 				tbl_page = alloc_ptbl(as, iova, !flush_all);
@@ -1056,7 +1071,7 @@ static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			ptbl = page_address(tbl_page);
 			for (i = 0; i < num; i++) {
 				pte = &ptbl[ptn + i];
-				if (*pte == _PTE_VACANT(iova)) {
+				if (*pte == as->pte_vacant(iova)) {
 					unsigned int *rest;
 
 					rest = &as->pte_count[pdn];
@@ -1536,6 +1551,7 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	struct resource *regs, *regs2, *window;
 	struct device *dev = &pdev->dev;
 	int i, err = 0;
+	u32 as_linear_map = 0;
 
 	if (smmu_handle)
 		return -EIO;
@@ -1600,6 +1616,14 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 		as->pdir_attr = _PDIR_ATTR;
 		as->pde_attr = _PDE_ATTR;
 		as->pte_attr = _PTE_ATTR;
+
+		if (as_linear_map & BIT(i)) {
+			as->pde_vacant = pde_vacant_linear;
+			as->pte_vacant = pte_vacant_linear;
+		} else {
+			as->pde_vacant = pde_vacant_default;
+			as->pte_vacant = pte_vacant_default;
+		}
 
 		spin_lock_init(&as->lock);
 		spin_lock_init(&as->client_lock);
