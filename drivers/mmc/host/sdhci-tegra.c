@@ -369,17 +369,21 @@ struct tegra_freq_gov_data {
 
 struct edp_schedule_time_params {
 	u8 edp_update_delay;
+	bool edp_enabled;
 };
 
 static struct edp_schedule_time_params edp_time_delay[3] = {
 	[MMC_TYPE_MMC] = {
 		.edp_update_delay = 50,
+		.edp_enabled = false,
 	},
 	[MMC_TYPE_SDIO] = {
 		.edp_update_delay = 50,
+		.edp_enabled = false,
 	},
 	[MMC_TYPE_SD] = {
 		.edp_update_delay = 50,
+		.edp_enabled = true,
 	},
 };
 
@@ -438,6 +442,7 @@ struct sdhci_tegra {
 	struct delayed_work dw;
 	u8 edp_module_id;
 	u8 edp_update_delay;
+	bool edp_cap_enabled;
 	/* Tuning status */
 	unsigned int tuning_status;
 	bool force_retune;
@@ -1397,6 +1402,9 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		pm_runtime_put_sync(&pdev->dev);
 		tegra_host->clk_enabled = false;
 	}
+
+	if (!tegra_host->edp_cap_enabled)
+		return;
 
 	tuning_data = sdhci_tegra_get_tuning_data(sdhci, clock);
 	if (tuning_data->freq_band == TUNING_MAX_FREQ && clock)
@@ -3464,14 +3472,20 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC4;
 		tegra_host->edp_update_delay =
 			edp_time_delay[MMC_TYPE_MMC].edp_update_delay;
+		tegra_host->edp_cap_enabled =
+			edp_time_delay[MMC_TYPE_MMC].edp_enabled;
 	} else if (!strcmp(dev_name(mmc_dev(host->mmc)), "sdhci-tegra.2")) {
 		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC3;
 		tegra_host->edp_update_delay =
 			edp_time_delay[MMC_TYPE_SD].edp_update_delay;
+		tegra_host->edp_cap_enabled =
+			edp_time_delay[MMC_TYPE_SD].edp_enabled;
 	} else if (!strcmp(dev_name(mmc_dev(host->mmc)), "sdhci-tegra.0")) {
 		tegra_host->edp_module_id = TEGRA_CORE_EDP_MODULE_ID_SDMMC1;
 		tegra_host->edp_update_delay =
 			edp_time_delay[MMC_TYPE_SDIO].edp_update_delay;
+		tegra_host->edp_cap_enabled =
+			edp_time_delay[MMC_TYPE_SDIO].edp_enabled;
 	}
 
 	INIT_DELAYED_WORK(&tegra_host->dw, edp_work_handler);
