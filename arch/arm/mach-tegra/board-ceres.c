@@ -893,7 +893,7 @@ static void __init ceres_uart_init(void)
 }
 
 static struct tegra_i2c_platform_data ceres_i2c1_platform_data = {
-	.bus_clk_rate	= 100000,
+	.bus_clk_rate	= 400000,
 	.scl_gpio	= TEGRA_GPIO_I2C1_SCL,
 	.sda_gpio	= TEGRA_GPIO_I2C1_SDA,
 	.is_clkon_always = true,
