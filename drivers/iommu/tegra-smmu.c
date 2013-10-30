@@ -324,7 +324,7 @@ static u64 tegra_smmu_of_get_swgids(struct device *dev)
 
 	prop = of_get_property(dev->of_node, propname, &bytes);
 	if (!prop || !bytes)
-		return 0;
+		return ~0;
 
 	for (i = 0; i < bytes / sizeof(u32); i++, prop++)
 		swgids |= 1ULL << be32_to_cpup(prop);
@@ -1164,9 +1164,9 @@ static int smmu_iommu_attach_dev(struct iommu_domain *domain,
 	int err;
 
 	map = tegra_smmu_of_get_swgids(dev);
-	if (!map) {
+	if (map == ~0) {
 		map = tegra_smmu_fixup_swgids(dev);
-		if (!map)
+		if (map == ~0)
 			return -EINVAL;
 	}
 

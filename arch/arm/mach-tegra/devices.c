@@ -1974,7 +1974,7 @@ u64 tegra_smmu_fixup_swgids(struct device *dev)
 		table++;
 	}
 
-	return 0;
+	return ~0;
 }
 
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
