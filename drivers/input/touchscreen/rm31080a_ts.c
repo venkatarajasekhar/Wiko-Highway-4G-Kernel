@@ -1574,8 +1574,10 @@ static irqreturn_t rm_tch_irq(int irq, void *handle)
 	trace_touchscreen_raydium_irq("Raydium_interrupt");
 #ifdef NV_ENABLE_CPU_BOOST
 	if (g_stCtrl.bfPowerMode &&
-			(g_stTs.u8ScanModeState == RM_SCAN_IDLE_MODE))
+			(g_stTs.u8ScanModeState == RM_SCAN_IDLE_MODE)) {
 		input_event(g_input_dev, EV_MSC, MSC_ACTIVITY, 1);
+		trace_touchscreen_raydium_irq("Raydium_input_cfboost");
+	}
 #endif
 
 	if (g_stTs.bInitFinish && g_stTs.bIsSuspended == false) {
