@@ -249,6 +249,7 @@ static int nvshm_tty_write(struct tty_struct *tty, const unsigned char *buf,
 				return -ENOMEM;
 			} else {
 				pr_err("%s: Xoff condition\n", __func__);
+				tty_throttle(tty);
 				return 0;
 			}
 		}
