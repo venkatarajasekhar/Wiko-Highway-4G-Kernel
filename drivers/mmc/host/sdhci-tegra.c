@@ -2477,8 +2477,7 @@ static u8 sdhci_tegra_run_tuning(struct sdhci_host *sdhci,
 	return retuning_req;
 }
 
-static int sdhci_tegra_verify_best_tap(struct sdhci_host *sdhci,
-	u8 freq_band)
+static int sdhci_tegra_verify_best_tap(struct sdhci_host *sdhci)
 {
 	struct tegra_tuning_data *tuning_data;
 	unsigned int best_tap_value = 0;
@@ -2504,7 +2503,6 @@ static int sdhci_tegra_execute_tuning(struct sdhci_host *sdhci, u32 opcode)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct sdhci_tegra *tegra_host = pltfm_host->priv;
 	struct tegra_tuning_data *tuning_data;
-	unsigned int freq_band;
 	int err;
 	u16 ctrl_2;
 	u32 ier;
@@ -2553,15 +2551,18 @@ static int sdhci_tegra_execute_tuning(struct sdhci_host *sdhci, u32 opcode)
 	 * previous best tap value verification failed, force retuning.
 	 */
 	if (tegra_host->tuning_status == TUNING_STATUS_DONE) {
-		freq_band = sdhci_tegra_get_freq_point(sdhci);
-		dev_info(mmc_dev(sdhci->mmc),
-			"Tuning already done. Setting tuned tap value %d\n",
-			tegra_host->tuning_data[freq_band].best_tap_value);
-		err = sdhci_tegra_verify_best_tap(sdhci, freq_band);
+		err = sdhci_tegra_verify_best_tap(sdhci);
 		if (err)
 			force_retuning = true;
-		else
+		else {
+			tuning_data = sdhci_tegra_get_tuning_data(sdhci,
+					sdhci->max_clk);
+			dev_info(mmc_dev(sdhci->mmc),
+				"Tuning already done." \
+				"Setting tuned tap value %d\n",
+				tuning_data->best_tap_value);
 			goto out;
+		}
 	}
 
 	if (tegra_host->force_retune == true) {
@@ -2593,8 +2594,7 @@ static int sdhci_tegra_execute_tuning(struct sdhci_host *sdhci, u32 opcode)
 		/* Dump the tuning data */
 		sdhci_tegra_dump_tuning_data(sdhci);
 
-		err = sdhci_tegra_verify_best_tap(sdhci,
-				tuning_data->freq_band);
+		err = sdhci_tegra_verify_best_tap(sdhci);
 		if (!err && !set_retuning) {
 			tuning_data->tuning_done = true;
 			tegra_host->tuning_status |= TUNING_STATUS_DONE;
