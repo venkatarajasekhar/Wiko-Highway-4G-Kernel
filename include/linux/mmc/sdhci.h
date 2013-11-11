@@ -2,7 +2,7 @@
  *  linux/include/linux/mmc/sdhci.h - Secure Digital Host Controller Interface
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
- *  Copyright (c) 2013, NVIDIA CORPORATION. All Rights Reserved.
+ *  Copyright (c) 2013-2014, NVIDIA CORPORATION. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,8 +103,8 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_NO_CALC_MAX_DISCARD_TO		(1<<4)
 /* Controller needs a dummy write after INT_CLK_EN for clock to be stable */
 #define SDHCI_QUIRK2_INT_CLK_STABLE_REQ_DUMMY_REG_WRITE	(1<<5)
-/* sdio delayed clock gate */
-#define SDHCI_QUIRK2_SDIO_DELAYED_CLK_GATE		(1<<6)
+/* delayed clock gate */
+#define SDHCI_QUIRK2_DELAYED_CLK_GATE			(1<<6)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
