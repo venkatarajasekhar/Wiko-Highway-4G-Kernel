@@ -422,9 +422,13 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 	local_irq_save(irq_flags);
 
 	if (is_idle_task(current))
-		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_START);
+		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_START,
+					    current_cluster,
+					    target_cluster);
 	else
-		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_START);
+		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_START,
+				    current_cluster,
+				    target_cluster);
 
 	if (current_cluster != target_cluster && !timekeeping_suspended) {
 		ktime_t now = ktime_get();
@@ -476,9 +480,13 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 	}
 
 	if (is_idle_task(current))
-		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_DONE);
+		trace_nvcpu_cluster_rcuidle(NVPOWER_CPU_CLUSTER_DONE,
+					    current_cluster,
+					    target_cluster);
 	else
-		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_DONE);
+		trace_nvcpu_cluster(NVPOWER_CPU_CLUSTER_DONE,
+				    current_cluster,
+				    target_cluster);
 
 	local_irq_restore(irq_flags);
 
