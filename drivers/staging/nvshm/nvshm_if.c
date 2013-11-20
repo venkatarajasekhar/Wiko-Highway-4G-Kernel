@@ -103,9 +103,8 @@ int nvshm_write(struct nvshm_channel *handle, struct nvshm_iobuf *iob)
 	return ret;
 }
 
-/* Defered to nvshm_wq because it can be called from atomic context */
 void nvshm_start_tx(struct nvshm_channel *handle)
 {
-	struct nvshm_handle *priv = nvshm_get_handle();
-	queue_work(priv->nvshm_wq, &handle->start_tx_work);
+	if (handle->ops)
+		handle->ops->start_tx(handle);
 }

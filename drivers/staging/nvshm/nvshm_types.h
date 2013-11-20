@@ -40,9 +40,9 @@
 
 #define NVSHM_AP_POOL_ID (128) /* IOPOOL ID - use 128-255 for AP */
 
-#define NVSHM_RATE_LIMIT_TTY (128)
+#define NVSHM_RATE_LIMIT_TTY (256)
 #define NVSHM_RATE_LIMIT_LOG (256)
-#define NVSHM_RATE_LIMIT_NET (512)
+#define NVSHM_RATE_LIMIT_NET (768)
 #define NVSHM_RATE_LIMIT_RPC (128)
 #define NVSHM_RATE_LIMIT_TRESHOLD (16)
 
@@ -169,7 +169,6 @@ struct nvshm_channel {
 	void *data;
 	int rate_counter;
 	int xoff;
-	struct work_struct start_tx_work;
 };
 
 
