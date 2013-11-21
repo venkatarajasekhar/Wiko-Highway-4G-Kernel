@@ -401,6 +401,8 @@ struct sdhci_tegra {
 	const struct tegra_sdhci_platform_data *plat;
 	struct sdhci_tegra_soc_data *soc_data;
 	bool	clk_enabled;
+	/* ensure atomic set clock calls */
+	struct mutex		set_clock_mutex;
 	struct regulator *vdd_io_reg;
 	struct regulator *vdd_slot_reg;
 	struct regulator *vcore_reg;
@@ -1356,9 +1358,9 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 	u8 ctrl;
 	int ret;
 
+	mutex_lock(&tegra_host->set_clock_mutex);
 	pr_debug("%s %s %u enabled=%u\n", __func__,
 		mmc_hostname(sdhci->mmc), clock, tegra_host->clk_enabled);
-
 	if (clock) {
 		if (!tegra_host->clk_enabled) {
 			pm_runtime_get_sync(&pdev->dev);
@@ -1402,6 +1404,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *sdhci, unsigned int clock)
 		sdhci->is_clk_on = tegra_host->clk_enabled;
 		pm_runtime_put_sync(&pdev->dev);
 	}
+	mutex_unlock(&tegra_host->set_clock_mutex);
 
 	if (!tegra_host->edp_cap_enabled)
 		return;
@@ -3399,6 +3402,8 @@ static int __devinit sdhci_tegra_probe(struct platform_device *pdev)
 	pltfm_host->priv = tegra_host;
 	tegra_host->clk_enabled = true;
 	host->is_clk_on = tegra_host->clk_enabled;
+	mutex_init(&tegra_host->set_clock_mutex);
+
 	tegra_host->max_clk_limit = plat->max_clk_limit;
 	tegra_host->ddr_clk_limit = plat->ddr_clk_limit;
 	tegra_host->instance = pdev->id;
