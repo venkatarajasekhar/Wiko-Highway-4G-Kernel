@@ -1792,8 +1792,8 @@ static struct tegra14_emc_table atlantis_e1670_elpida_edf8132a1mc_table[] = {
 
 static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		12750,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -1893,7 +1893,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000000c, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x000d000c, /* EMC_MRS_WAIT_CNT */
 			0x000d000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -1942,7 +1942,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -1952,8 +1952,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		51000,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -2053,7 +2053,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000013, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x0033000c, /* EMC_MRS_WAIT_CNT */
 			0x0033000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2102,7 +2102,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -2112,8 +2112,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		102000,     /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -2213,7 +2213,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000025, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x0066000c, /* EMC_MRS_WAIT_CNT */
 			0x0066000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2262,7 +2262,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -2272,8 +2272,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		204000,     /* SDRAM frequency */
 		825,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -2373,7 +2373,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000004a, /* EMC_ZCAL_WAIT_CNT */
+			0x00000017, /* EMC_ZCAL_WAIT_CNT */
 			0x00cc000d, /* EMC_MRS_WAIT_CNT */
 			0x00cc000d, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2422,7 +2422,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00ff00c8, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000017, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -2432,8 +2432,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		326400,     /* SDRAM frequency */
 		850,        /* min voltage */
 		"pllm_out0", /* clock source id */
@@ -2533,7 +2533,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000076, /* EMC_ZCAL_WAIT_CNT */
+			0x00000022, /* EMC_ZCAL_WAIT_CNT */
 			0x0147000e, /* EMC_MRS_WAIT_CNT */
 			0x0147000e, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2582,7 +2582,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00ff007d, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000022, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
@@ -2592,8 +2592,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		408000,     /* SDRAM frequency */
 		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -2693,7 +2693,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000093, /* EMC_ZCAL_WAIT_CNT */
+			0x00000029, /* EMC_ZCAL_WAIT_CNT */
 			0x01980011, /* EMC_MRS_WAIT_CNT */
 			0x01980011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2742,7 +2742,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00d30064, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00d300d3, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000029, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
@@ -2752,8 +2752,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		518400,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -2853,7 +2853,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x000000bb, /* EMC_ZCAL_WAIT_CNT */
+			0x00000033, /* EMC_ZCAL_WAIT_CNT */
 			0x02070011, /* EMC_MRS_WAIT_CNT */
 			0x02070011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -2902,7 +2902,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00a6004e, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00a600a6, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000033, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
@@ -2912,8 +2912,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		652800,     /* SDRAM frequency */
 		1000,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -3013,7 +3013,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x000000ec, /* EMC_ZCAL_WAIT_CNT */
+			0x0000003f, /* EMC_ZCAL_WAIT_CNT */
 			0x028d0013, /* EMC_MRS_WAIT_CNT */
 			0x028d0013, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3062,7 +3062,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x0084003e, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00840084, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000003f, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
@@ -3072,8 +3072,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		768000,     /* SDRAM frequency */
 		1050,       /* min voltage */
 		"pllc_ud",  /* clock source id */
@@ -3173,7 +3173,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000115, /* EMC_ZCAL_WAIT_CNT */
+			0x0000004a, /* EMC_ZCAL_WAIT_CNT */
 			0x03000016, /* EMC_MRS_WAIT_CNT */
 			0x03000016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3222,7 +3222,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00700035, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00700070, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000004a, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
@@ -3232,8 +3232,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		787200,     /* SDRAM frequency */
 		1050,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -3333,7 +3333,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000011c, /* EMC_ZCAL_WAIT_CNT */
+			0x0000004b, /* EMC_ZCAL_WAIT_CNT */
 			0x03140016, /* EMC_MRS_WAIT_CNT */
 			0x03140016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3382,7 +3382,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x006d0033, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x006d006d, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000004b, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
@@ -3392,8 +3392,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15",      /* DVFS table version */
 		844800,     /* SDRAM frequency */
 		1100,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -3493,7 +3493,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000131, /* EMC_ZCAL_WAIT_CNT */
+			0x00000051, /* EMC_ZCAL_WAIT_CNT */
 			0x034d0016, /* EMC_MRS_WAIT_CNT */
 			0x034d0016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3542,7 +3542,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 			0x00660030, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00660066, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000051, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000131, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3f00084, /* EMC_CFG */
 		0x20060249, /* EMC_CFG_DIG_DLL */
@@ -3555,8 +3555,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table[] = {
 
 static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		12750,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -3656,7 +3656,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000000c, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x000d000c, /* EMC_MRS_WAIT_CNT */
 			0x000d000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3705,7 +3705,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -3715,8 +3715,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		51000,      /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -3816,7 +3816,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000013, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x0033000c, /* EMC_MRS_WAIT_CNT */
 			0x0033000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -3865,7 +3865,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -3875,8 +3875,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		102000,     /* SDRAM frequency */
 		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -3976,7 +3976,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000025, /* EMC_ZCAL_WAIT_CNT */
+			0x00000010, /* EMC_ZCAL_WAIT_CNT */
 			0x0066000c, /* EMC_MRS_WAIT_CNT */
 			0x0066000c, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4025,7 +4025,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000010, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -4035,8 +4035,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		204000,     /* SDRAM frequency */
 		825,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -4136,7 +4136,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000004a, /* EMC_ZCAL_WAIT_CNT */
+			0x00000017, /* EMC_ZCAL_WAIT_CNT */
 			0x00cc000d, /* EMC_MRS_WAIT_CNT */
 			0x00cc000d, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4185,7 +4185,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00ff00c8, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000017, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
@@ -4195,8 +4195,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		326400,     /* SDRAM frequency */
 		850,        /* min voltage */
 		"pllm_out0", /* clock source id */
@@ -4296,7 +4296,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000076, /* EMC_ZCAL_WAIT_CNT */
+			0x00000022, /* EMC_ZCAL_WAIT_CNT */
 			0x0147000e, /* EMC_MRS_WAIT_CNT */
 			0x0147000e, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4345,7 +4345,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00ff007d, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00ff00ff, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000022, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
@@ -4355,8 +4355,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		408000,     /* SDRAM frequency */
 		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
@@ -4456,7 +4456,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000093, /* EMC_ZCAL_WAIT_CNT */
+			0x00000029, /* EMC_ZCAL_WAIT_CNT */
 			0x01980011, /* EMC_MRS_WAIT_CNT */
 			0x01980011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4505,7 +4505,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00d30064, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00d300d3, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000029, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
@@ -4515,8 +4515,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		518400,     /* SDRAM frequency */
 		950,        /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -4616,7 +4616,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x000000bb, /* EMC_ZCAL_WAIT_CNT */
+			0x00000033, /* EMC_ZCAL_WAIT_CNT */
 			0x02070011, /* EMC_MRS_WAIT_CNT */
 			0x02070011, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4665,7 +4665,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00a6004e, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00a600a6, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000033, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
@@ -4675,8 +4675,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		652800,     /* SDRAM frequency */
 		1000,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -4776,7 +4776,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000120, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x000000ec, /* EMC_ZCAL_WAIT_CNT */
+			0x0000003f, /* EMC_ZCAL_WAIT_CNT */
 			0x028d0013, /* EMC_MRS_WAIT_CNT */
 			0x028d0013, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4825,7 +4825,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x0084003e, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00840084, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000003f, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
@@ -4835,8 +4835,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		768000,     /* SDRAM frequency */
 		1050,       /* min voltage */
 		"pllc_ud",  /* clock source id */
@@ -4936,7 +4936,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000115, /* EMC_ZCAL_WAIT_CNT */
+			0x0000004a, /* EMC_ZCAL_WAIT_CNT */
 			0x03000016, /* EMC_MRS_WAIT_CNT */
 			0x03000016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -4985,7 +4985,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00700035, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00700070, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000004a, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
@@ -4995,8 +4995,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		787200,     /* SDRAM frequency */
 		1050,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -5096,7 +5096,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x0000011c, /* EMC_ZCAL_WAIT_CNT */
+			0x0000004b, /* EMC_ZCAL_WAIT_CNT */
 			0x03140016, /* EMC_MRS_WAIT_CNT */
 			0x03140016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -5145,7 +5145,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x006d0033, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x006d006d, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x0000004b, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
@@ -5155,8 +5155,8 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,       /* Rev 5.2.9 */
-		"D14",      /* DVFS table version */
+		0x52,       /* Rev 5.3.8.d */
+		"D15_derating", /* DVFS table version */
 		844800,     /* SDRAM frequency */
 		1100,       /* min voltage */
 		"pllm_ud",  /* clock source id */
@@ -5256,7 +5256,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x02000110, /* EMC_FBIO_SPARE */
 			0x00000802, /* EMC_CTT_TERM_CTRL */
 			0x00064000, /* EMC_ZCAL_INTERVAL */
-			0x00000131, /* EMC_ZCAL_WAIT_CNT */
+			0x00000051, /* EMC_ZCAL_WAIT_CNT */
 			0x034d0016, /* EMC_MRS_WAIT_CNT */
 			0x034d0016, /* EMC_MRS_WAIT_CNT2 */
 			0x00000000, /* EMC_AUTO_CAL_CONFIG2 */
@@ -5305,7 +5305,7 @@ static struct tegra14_emc_table ceres_e1680_elpida_edf8132a1mc_table_der[] = {
 			0x00660030, /* MC_LATENCY_ALLOWANCE_EPP_0 */
 			0x00660066, /* MC_LATENCY_ALLOWANCE_EPP_1 */
 		},
-		0x00000051, /* EMC_ZCAL_WAIT_CNT after clock change */
+		0x00000131, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
 		0xf3f00084, /* EMC_CFG */
 		0x20060249, /* EMC_CFG_DIG_DLL */
