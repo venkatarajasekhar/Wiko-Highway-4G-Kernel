@@ -36,6 +36,9 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
+#ifdef CONFIG_LOCKUP_DETECTOR
+#include <linux/nmi.h>
+#endif
 #ifdef CONFIG_TEGRA_FIQ_DEBUGGER
 #include <mach/irqs.h>
 #endif
@@ -156,8 +159,11 @@ static inline void tegra_wdt_ping(struct tegra_wdt *wdt)
 	writel(WDT_CMD_START_COUNTER, wdt->wdt_source + WDT_CMD);
 #if defined(CONFIG_TEGRA_USE_SECURE_KERNEL) && \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) && defined(CONFIG_FIQ_DEBUGGER)
-	/* Comment out to test FIQ debugger */
-	writel(WDT_CMD_START_COUNTER, wdt->wdt_avp_source + WDT_CMD);
+#ifdef CONFIG_LOCKUP_DETECTOR
+	if (!watchdog_get_lockup_state())
+#endif
+		/* Comment out to test FIQ debugger */
+		writel(WDT_CMD_START_COUNTER, wdt->wdt_avp_source + WDT_CMD);
 #endif
 }
 
