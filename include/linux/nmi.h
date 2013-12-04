@@ -1,4 +1,17 @@
 /*
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/*
  *  linux/include/linux/nmi.h
  */
 #ifndef LINUX_NMI_H
@@ -9,7 +22,7 @@
 
 /**
  * touch_nmi_watchdog - restart NMI watchdog timeout.
- * 
+ *
  * If the architecture supports the NMI watchdog, touch_nmi_watchdog()
  * may be used to reset the timeout - for code which intentionally
  * disables interrupts for a long time. This call is stateless.
@@ -51,6 +64,7 @@ extern int watchdog_thresh;
 struct ctl_table;
 extern int proc_dowatchdog(struct ctl_table *, int ,
 			   void __user *, size_t *, loff_t *);
+extern int watchdog_get_lockup_state(void);
 #endif
 
 #endif

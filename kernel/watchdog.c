@@ -9,6 +9,19 @@
  * to those contributors as well.
  */
 
+ /*
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
 #define pr_fmt(fmt) "NMI watchdog: " fmt
 
 #include <linux/mm.h>
@@ -41,6 +54,9 @@ static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts);
 static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
 static DEFINE_PER_CPU(struct perf_event *, watchdog_ev);
 #endif
+
+static __read_mostly int soft_lockup_detected;
+static __read_mostly int hard_lockup_detected;
 
 /* boot commands */
 /*
@@ -89,6 +105,11 @@ static int __init nosoftlockup_setup(char *str)
 }
 __setup("nosoftlockup", nosoftlockup_setup);
 /*  */
+
+int watchdog_get_lockup_state(void)
+{
+	return (soft_lockup_detected << 8) || hard_lockup_detected;
+}
 
 /*
  * Hard-lockup warnings should be triggered after just a few seconds. Soft-
@@ -231,6 +252,8 @@ static void watchdog_overflow_callback(struct perf_event *event,
 	if (is_hardlockup()) {
 		int this_cpu = smp_processor_id();
 
+		hard_lockup_detected = 1;
+
 		/* only print hardlockups once */
 		if (__this_cpu_read(hard_watchdog_warn) == true)
 			return;
@@ -295,6 +318,8 @@ static enum hrtimer_restart watchdog_timer_fn(struct hrtimer *hrtimer)
 		/* only warn once */
 		if (__this_cpu_read(soft_watchdog_warn) == true)
 			return HRTIMER_RESTART;
+
+		soft_lockup_detected = 1;
 
 		printk(KERN_EMERG "BUG: soft lockup - CPU#%d stuck for %us! [%s:%d]\n",
 			smp_processor_id(), duration,
