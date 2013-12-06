@@ -83,8 +83,8 @@ static __initdata struct tegra_clk_init_table m2601_clk_init_table[] = {
 	{ "nor",		"pll_p",	102000000,	true},
 	{ "uarta",		"pll_p",	480000000,	true},
 	{ "uartb",		"pll_p",	480000000,	true},
-	{ "uartc",		"pll_p",	480000000,	true},
 	{ "uartd",		"pll_p",	480000000,	true},
+	{ "uarte",		"pll_p",	480000000,	true},
 	{ "sdmmc2",		"pll_p",	52000000,	true},
 	{ "sbc2",		"pll_m",	100000000,	true},
 	{ "sbc3",		"pll_m",	100000000,	true},
@@ -180,9 +180,9 @@ static void m2601_i2c_init(void)
 
 static struct platform_device *m2601_uart_devices[] __initdata = {
 	&tegra_uarta_device,
-	&tegra_uartb_device,
-	&tegra_uartd_device,
-	&tegra_uarte_device,
+	&debug_uartb_device,
+	&debug_uartd_device,
+	&debug_uarte_device,
 };
 static struct clk *debug_uart_clk;
 
@@ -192,6 +192,9 @@ static void __init uart_debug_init(void)
 	pr_info("Selecting UARTA as the debug console\n");
 	m2601_uart_devices[0] = &debug_uarta_device;
 	debug_uart_clk = clk_get_sys("serial8250.0", "uarta");
+	debug_uartb_device.id = PLAT8250_DEV_PLATFORM1;
+	debug_uartd_device.id = PLAT8250_DEV_PLATFORM2;
+	debug_uarte_device.id = PLAT8250_DEV_FOURPORT;
 }
 
 static void __init m2601_uart_init(void)
