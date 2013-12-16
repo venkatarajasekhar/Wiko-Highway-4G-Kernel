@@ -3,7 +3,7 @@
  * Max77660 mfd driver (I2C bus access)
  *
  * Copyright 2011 Maxim Integrated Products, Inc.
- * Copyright (C) 2011-2012 NVIDIA Corporation
+ * Copyright (c) 2011-2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -260,6 +260,7 @@ static void max77660_power_off(void)
 	max77660_reg_write(chip->dev, MAX77660_PWR_SLAVE,
 			MAX77660_REG_GLOBAL_CFG0,
 			GLBLCNFG0_SFT_OFF_OFFRST_MASK);
+	do { } while (1);
 }
 
 static void max77660_power_reset(void)
@@ -276,6 +277,7 @@ static void max77660_power_reset(void)
 	 */
 	max77660_reg_write(chip->dev, MAX77660_PWR_SLAVE,
 			MAX77660_REG_GLOBAL_CFG0, 1);
+	do { } while (1);
 }
 
 static int max77660_32kclk_init(struct max77660_chip *chip,
