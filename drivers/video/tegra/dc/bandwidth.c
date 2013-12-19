@@ -305,7 +305,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 		dc->bw_kbps = dc->new_bw_kbps;
 	}
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *w = &dc->windows[i];
 
 		if (use_new || w->bandwidth != w->new_bandwidth)
@@ -320,23 +320,19 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 	unsigned long new_rate;
 	struct tegra_dc_win *windows[DC_N_WINDOWS];
 	unsigned i;
-	unsigned len;
 
 	if (!use_dynamic_emc)
 		return 0;
 
-	for (i = 0, len = 0; i < DC_N_WINDOWS; i++) {
-		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
-		if (win)
-			windows[len++] = win;
-	}
+	for (i = 0; i < DC_N_WINDOWS; i++)
+		windows[i] = &dc->windows[i];
 #ifdef CONFIG_TEGRA_ISOMGR
-	new_rate = tegra_dc_get_bandwidth(windows, len);
+	new_rate = tegra_dc_get_bandwidth(windows, DC_N_WINDOWS);
 #else
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;
 	else
-		new_rate = tegra_dc_get_bandwidth(windows, len);
+		new_rate = tegra_dc_get_bandwidth(windows, DC_N_WINDOWS);
 #endif
 
 	dc->new_bw_kbps = new_rate;

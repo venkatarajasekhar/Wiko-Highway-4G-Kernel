@@ -82,10 +82,8 @@ void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win)
 
 static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
 {
-	struct tegra_dc_win *win = tegra_dc_get_window(dc, win_idx);
+	struct tegra_dc_win *win = &dc->windows[win_idx];
 
-	if (!win)
-		return -EINVAL;
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
@@ -124,7 +122,7 @@ int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int fboveride)
 	if (win_idx > -1)
 		return tegra_dc_update_winlut(dc, win_idx, fboveride);
 
-	for_each_set_bit(win_idx, &dc->valid_windows, DC_N_WINDOWS) {
+	for (win_idx = 0; win_idx < DC_N_WINDOWS; win_idx++) {
 		int err = tegra_dc_update_winlut(dc, win_idx, fboveride);
 		if (err)
 			return err;
