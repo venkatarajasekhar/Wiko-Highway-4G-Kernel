@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (C) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -41,6 +41,7 @@ void tegra_periph_reset_assert(struct clk *c);
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate);
 int tegra_dvfs_override_core_voltage(struct clk *c, int override_mv);
+int tegra_dvfs_set_fmax_at_vmin(struct clk *c, unsigned long f_max, int v_min);
 unsigned long clk_get_rate_all_locked(struct clk *c);
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
