@@ -5,7 +5,7 @@
  * Author:
  *	Colin Cross <ccross@google.com>
  *
- * Copyright (c) 2010-2013 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2014 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -219,7 +219,6 @@ void tegra_dvfs_rail_off(struct dvfs_rail *rail, ktime_t now);
 void tegra_dvfs_rail_on(struct dvfs_rail *rail, ktime_t now);
 void tegra_dvfs_rail_pause(struct dvfs_rail *rail, ktime_t delta, bool on);
 struct dvfs_rail *tegra_dvfs_get_rail_by_name(const char *reg_id);
-int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate);
 int tegra_dvfs_predict_peak_millivolts(struct clk *c, unsigned long rate);
 int tegra_dvfs_predict_millivolts_pll(struct clk *c, unsigned long rate);
 int tegra_dvfs_predict_millivolts_dfll(struct clk *c, unsigned long rate);
