@@ -4,7 +4,7 @@
  * Copyright (C) 2009 Palm, Inc.
  * Author: Yvonne Yip <y@palm.com>
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -65,6 +65,7 @@ struct tegra_sdhci_platform_data {
 	bool cd_wakeup_incapable;
 	bool en_nominal_vcore_tuning;
 	bool en_clock_gating;
+	u32 cpu_speedo;
 };
 #ifdef CONFIG_THERMAL
 struct tegra_cooling_device *tegra_sdhci_edp_get_dev(int instance);
