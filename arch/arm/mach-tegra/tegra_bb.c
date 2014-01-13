@@ -32,6 +32,7 @@
 #include <linux/clk.h>
 #include <linux/suspend.h>
 #include <linux/pm_runtime.h>
+#include <linux/kthread.h>
 
 #include <mach/clk.h>
 #include <mach/iomap.h>
@@ -140,8 +141,9 @@ struct tegra_bb {
 	struct sysfs_dirent *sd;
 	struct nvshm_platform_data nvshm_pdata;
 	struct platform_device nvshm_device;
-	struct workqueue_struct *workqueue;
-	struct work_struct work;
+	struct task_struct *bbc_pm_thread;
+	atomic_t state_for_thread;
+	wait_queue_head_t emc_wait_q;
 	struct clk *emc_clk;
 	struct device *proxy_dev;
 	struct notifier_block pm_notifier;
@@ -234,20 +236,27 @@ void tegra_bb_generate_ipc(struct platform_device *pdev)
 	}
 #else
 	{
+		unsigned int prev_state = 0;
+
 		/* Do we need to restore BB MC frequency floor? */
 		spin_lock_irqsave(&bb->lock, irq_flags);
 		if (bb->current_state == BBC_REMOVE_FLOOR) {
-			/* Yes => add work to workqueue */
+			/* Yes => add work to kernel thread */
 			pr_debug("%s Request BBC floor", __func__);
 			bb->next_state = BBC_SET_FLOOR;
 			/* set flag to let work know that we have a
 			   pending request to signal BB on UL IPC */
 			bb->send_ul_flag = true;
-			queue_work(bb->workqueue, &bb->work);
+			prev_state = atomic_xchg(&bb->state_for_thread,
+								 BBC_SET_FLOOR);
+			wake_up(&(bb->emc_wait_q));
 		}
 		if (!bb->send_ul_flag)
 			tegra_bb_set_ap2bb_int0();
 		spin_unlock_irqrestore(&bb->lock, irq_flags);
+		if (prev_state)
+			pr_debug("previous state[%u] will be skipped in %s\n",
+					 prev_state, __func__);
 	}
 #endif
 }
@@ -567,6 +576,7 @@ int tegra_bb_set_reset(struct device *dev, int value)
 
 	/* reset is active low - sysfs interface assume reset is active high */
 	if (value) {
+		unsigned int prev_state;
 		writel(1 << AP2BB_RESET_SHIFT | 1 << AP2BB_MEM_STS_SHIFT,
 			pmc + PMC_IPC_CLEAR_0);
 
@@ -579,7 +589,12 @@ int tegra_bb_set_reset(struct device *dev, int value)
 		}
 
 		bb->next_state = BBC_REMOVE_FLOOR;
-		queue_work(bb->workqueue, &bb->work);
+		prev_state = atomic_xchg(&bb->state_for_thread,
+							 BBC_REMOVE_FLOOR);
+		wake_up(&(bb->emc_wait_q));
+		if (prev_state)
+			pr_debug("previous state[%u] will be skipped in %s\n",
+					 prev_state, __func__);
 	} else {
 		/* power on bbc rails */
 		if (bb->vdd_bb_core && bb->vdd_bb_pll &&
@@ -709,9 +724,15 @@ static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 	}
 
 	if (sts == TEGRA_BB_BOOT_RESTART_FW_REQ) {
+		unsigned int prev_state;
 		pr_debug("%s: boot_restart_fw_req\n", __func__);
 		bb->next_state = BBC_CRASHDUMP_FLOOR;
-		queue_work(bb->workqueue, &bb->work);
+		prev_state = atomic_xchg(&bb->state_for_thread,
+							 BBC_CRASHDUMP_FLOOR);
+		wake_up(&(bb->emc_wait_q));
+		if (prev_state)
+			pr_debug("previous state[%u] will be skipped in %s\n",
+					 prev_state, __func__);
 	}
 
 	bb->status = sts;
@@ -727,10 +748,15 @@ static irqreturn_t tegra_bb_mem_req_soon(int irq, void *data)
 	spin_lock(&bb->lock);
 	fc_sts = readl(fctrl + FLOW_IPC_STS_0);
 	if (fc_sts & (0x8 << AP2BB_MSC_STS_SHIFT)) {
-
+		unsigned int prev_state;
 		irq_set_irq_type(bb->mem_req_soon, IRQF_TRIGGER_RISING);
 		bb->next_state = BBC_SET_FLOOR;
-		queue_work(bb->workqueue, &bb->work);
+		prev_state = atomic_xchg(&bb->state_for_thread,
+							 BBC_SET_FLOOR);
+		wake_up(&(bb->emc_wait_q));
+		if (prev_state)
+			pr_debug("previous state[%u] will be skipped in %s\n",
+					 prev_state, __func__);
 	}
 	spin_unlock(&bb->lock);
 
@@ -817,8 +843,14 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 	}
 
 	if (!mem_req_soon) {
+		unsigned int prev_state;
 		bb->next_state = BBC_REMOVE_FLOOR;
-		queue_work(bb->workqueue, &bb->work);
+		prev_state = atomic_xchg(&bb->state_for_thread,
+							 BBC_REMOVE_FLOOR);
+		wake_up(&(bb->emc_wait_q));
+		if (prev_state)
+			pr_debug("previous state[%u] will be skipped in %s\n",
+					 prev_state, __func__);
 	} else
 		pr_debug("%s: mem_req 0 but mem_req_soon 1\n", __func__);
 
@@ -828,9 +860,8 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void tegra_bb_emc_dvfs(struct work_struct *work)
+static void tegra_bb_set_emc(struct tegra_bb *bb)
 {
-	struct tegra_bb *bb = container_of(work, struct tegra_bb, work);
 	unsigned long flags;
 
 	if (!bb)
@@ -940,6 +971,25 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 	return;
 }
 
+static int tegra_bb_emc_dvfs_thread(void *arg)
+{
+	struct tegra_bb *bb = (struct tegra_bb *)arg;
+
+	if (!bb) {
+		pr_err("Invalid tegra_bb !!!\n");
+		return -1;
+	}
+
+	while (!kthread_should_stop()) {
+		wait_event(bb->emc_wait_q,
+				   atomic_read(&bb->state_for_thread));
+		if (atomic_xchg(&bb->state_for_thread, 0))
+			tegra_bb_set_emc(bb);
+	}
+	pr_info("tegra_bb_emc_dvfs_thread exit!!\n");
+	return 0;
+}
+
 void tegra_bb_set_emc_floor(struct device *dev, unsigned long freq, u32 flags)
 {
 	struct tegra_bb *bb = dev_get_drvdata(dev);
@@ -1020,6 +1070,10 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	unsigned int size, bbc_mem_regions_0;
 	struct clk *c;
 	unsigned int mb_size = SZ_4K + SZ_128K; /* config + stats */
+	int ret_th_run = 0;
+	struct sched_param sch_param = {
+		.sched_priority = MAX_RT_PRIO - 1
+	};
 
 	if (!pdev) {
 		pr_err("%s platform device is NULL!\n", __func__);
@@ -1042,6 +1096,19 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&bb->lock);
+	atomic_set(&bb->state_for_thread, 0);
+	init_waitqueue_head(&(bb->emc_wait_q));
+	bb->bbc_pm_thread = kthread_run(tegra_bb_emc_dvfs_thread, bb, "bbc-pm");
+	if (IS_ERR(bb->bbc_pm_thread)) {
+		ret_th_run = PTR_ERR(bb->bbc_pm_thread);
+		pr_err("cannot run kthread!\n");
+		return ret_th_run;
+	}
+
+	sched_setscheduler(bb->bbc_pm_thread,
+					   SCHED_FIFO,
+					   &sch_param);
+	pr_info("run kthread for bb_emc_dvfs_thread\n");
 
 	/* Private region */
 	bbc_mem_regions_0 = readl(tegra_mc + MC_BBC_MEM_REGIONS_0_OFFSET);
@@ -1250,14 +1317,6 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		kfree(bb);
 		return -ENOENT;
 	}
-
-	bb->workqueue = alloc_workqueue("bbc-pm", WQ_HIGHPRI, 1);
-	if (!bb->workqueue) {
-		dev_err(&pdev->dev, "failed to create workqueue\n");
-		kfree(bb);
-		return -ENOMEM;
-	}
-	INIT_WORK(&bb->work, tegra_bb_emc_dvfs);
 
 	bb->emc_min_freq = BBC_MC_MIN_FREQ;
 	bb->emc_flags = EMC_DSR;
