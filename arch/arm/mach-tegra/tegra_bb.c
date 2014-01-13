@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra_bb.c
  *
- * Copyright (C) 2012-2013 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2012-2014 NVIDIA Corporation. All rights reserved.
  *
  *
  * This software is licensed under the terms of the GNU General Public
@@ -819,7 +819,6 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		if (bb->emc_flags & EMC_LL)
 			tegra_emc_request_low_latency_mode(true);
-		clk_set_rate(bb->emc_clk, bb->emc_min_freq);
 		pr_debug("bbc setting floor to %luMHz\n",
 						bb->emc_min_freq/1000000);
 
@@ -847,8 +846,6 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 		if (bb->emc_flags & EMC_DSR)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
 
-		if (bb->is_suspending != true)
-			clk_set_rate(bb->emc_clk, 0);
 		clk_disable_unprepare(bb->emc_clk);
 		pr_debug("bbc removing emc floor\n");
 
@@ -960,10 +957,7 @@ static int tegra_bb_pm_notifier_event(struct notifier_block *this,
 		bb->is_suspending = false;
 
 		if (sts) {
-			if (!mem_req_soon)
-				clk_set_rate(bb->emc_clk, 0);
-			else
-				clk_set_rate(bb->emc_clk, bb->emc_min_freq);
+			clk_set_rate(bb->emc_clk, bb->emc_min_freq);
 			clk_disable_unprepare(bb->emc_clk);
 		}
 		/* else, wait for IRQs to do the job */
