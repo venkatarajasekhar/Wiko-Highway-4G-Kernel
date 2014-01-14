@@ -125,7 +125,7 @@ struct tegra_bb {
 	char ipc_serial[NVSHM_SERIAL_BYTE_SIZE];
 	unsigned int irq;
 	unsigned int mem_req_soon;
-	enum bbc_pm_state state, prev_state;
+	enum bbc_pm_state next_state, current_state;
 	struct regulator *vdd_bb_core;
 	struct regulator *vdd_bb_pll;
 	unsigned int pll_voltage;
@@ -143,6 +143,7 @@ struct tegra_bb {
 	struct device *proxy_dev;
 	struct notifier_block pm_notifier;
 	bool is_suspending;
+	bool send_ul_flag;
 };
 
 
@@ -182,6 +183,14 @@ static void tegra_bb_clear_ap2bb_int1(void)
 	writel(1 << AP2BB_INT1_STS_SHIFT, fctrl + FLOW_IPC_CLR_0);
 }
 
+static void tegra_bb_set_ap2bb_int0(void)
+{
+	void __iomem *flow = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
+
+	/* set AP2BB INT0 */
+	writel(1 << AP2BB_INT0_STS_SHIFT, flow + FLOW_IPC_SET_0);
+}
+
 void tegra_bb_register_ipc(struct platform_device *pdev,
 			   void (*cb)(void *data), void *cb_data)
 {
@@ -199,9 +208,7 @@ EXPORT_SYMBOL_GPL(tegra_bb_register_ipc);
 void tegra_bb_generate_ipc(struct platform_device *pdev)
 {
 	struct tegra_bb *bb = platform_get_drvdata(pdev);
-#ifndef CONFIG_TEGRA_BASEBAND_SIMU
-	void __iomem *flow = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
-#endif
+	unsigned long irq_flags;
 
 	if (!bb) {
 		dev_err(&pdev->dev, "%s tegra_bb not found!\n", __func__);
@@ -224,7 +231,20 @@ void tegra_bb_generate_ipc(struct platform_device *pdev)
 	}
 #else
 	{
-		writel(1 << AP2BB_INT0_STS_SHIFT, flow + FLOW_IPC_SET_0);
+		/* Do we need to restore BB MC frequency floor? */
+		spin_lock_irqsave(&bb->lock, irq_flags);
+		if (bb->current_state == BBC_REMOVE_FLOOR) {
+			/* Yes => add work to workqueue */
+			pr_debug("%s Request BBC floor", __func__);
+			bb->next_state = BBC_SET_FLOOR;
+			/* set flag to let work know that we have a
+			   pending request to signal BB on UL IPC */
+			bb->send_ul_flag = true;
+			queue_work(bb->workqueue, &bb->work);
+		}
+		if (!bb->send_ul_flag)
+			tegra_bb_set_ap2bb_int0();
+		spin_unlock_irqrestore(&bb->lock, irq_flags);
 	}
 #endif
 }
@@ -555,7 +575,7 @@ int tegra_bb_set_reset(struct device *dev, int value)
 			regulator_status = false;
 		}
 
-		bb->state = BBC_REMOVE_FLOOR;
+		bb->next_state = BBC_REMOVE_FLOOR;
 		queue_work(bb->workqueue, &bb->work);
 	} else {
 		/* power on bbc rails */
@@ -687,7 +707,7 @@ static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 
 	if (sts == TEGRA_BB_BOOT_RESTART_FW_REQ) {
 		pr_debug("%s: boot_restart_fw_req\n", __func__);
-		bb->state = BBC_CRASHDUMP_FLOOR;
+		bb->next_state = BBC_CRASHDUMP_FLOOR;
 		queue_work(bb->workqueue, &bb->work);
 	}
 
@@ -706,7 +726,7 @@ static irqreturn_t tegra_bb_mem_req_soon(int irq, void *data)
 	if (fc_sts & (0x8 << AP2BB_MSC_STS_SHIFT)) {
 
 		irq_set_irq_type(bb->mem_req_soon, IRQF_TRIGGER_RISING);
-		bb->state = BBC_SET_FLOOR;
+		bb->next_state = BBC_SET_FLOOR;
 		queue_work(bb->workqueue, &bb->work);
 	}
 	spin_unlock(&bb->lock);
@@ -784,7 +804,7 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 
 	if (!mem_req_soon) {
 		tegra_bb_disable_pmc_wake();
-		bb->state = BBC_REMOVE_FLOOR;
+		bb->next_state = BBC_REMOVE_FLOOR;
 		queue_work(bb->workqueue, &bb->work);
 	} else
 		pr_debug("%s: mem_req 0 but mem_req_soon 1\n", __func__);
@@ -802,14 +822,13 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 		return;
 
 	spin_lock_irqsave(&bb->lock, flags);
-	if (bb->prev_state == bb->state) {
+	if (bb->current_state == bb->next_state) {
 		spin_unlock_irqrestore(&bb->lock, flags);
 		return;
 	}
 
-	switch (bb->state) {
+	switch (bb->next_state) {
 	case BBC_SET_FLOOR:
-		bb->prev_state = bb->state;
 		spin_unlock_irqrestore(&bb->lock, flags);
 
 		pm_runtime_get_sync(bb->dev);
@@ -827,14 +846,25 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 
 		/* reenable pmc_wake_det irq */
 		tegra_bb_enable_pmc_wake();
+
+		spin_lock_irqsave(&bb->lock, flags);
+		if (bb->send_ul_flag) {
+			tegra_bb_set_ap2bb_int0();
+			pr_debug("bbc floor applied\n");
+			bb->send_ul_flag = false;
+		}
+		/* update current state, now that BB floor
+		   is in place */
+		bb->current_state = BBC_SET_FLOOR;
+		spin_unlock_irqrestore(&bb->lock, flags);
 		return;
 	case BBC_REMOVE_FLOOR:
 		/* discard erroneous request */
-		if (bb->prev_state != BBC_SET_FLOOR) {
+		if (bb->current_state != BBC_SET_FLOOR) {
 			spin_unlock_irqrestore(&bb->lock, flags);
 			return;
 		}
-		bb->prev_state = bb->state;
+		bb->current_state = bb->next_state;
 		spin_unlock_irqrestore(&bb->lock, flags);
 
 		/* remove iso bandwitdh request from bbc */
@@ -863,7 +893,7 @@ static void tegra_bb_emc_dvfs(struct work_struct *work)
 		pr_info("%s: bbc crash detected, set EMC to max (current=%lu Hz)\n",
 			__func__, clk_get_rate(bb->emc_clk));
 
-		if (bb->prev_state != BBC_SET_FLOOR) {
+		if (bb->current_state != BBC_SET_FLOOR) {
 			pm_runtime_get_sync(bb->dev);
 			clk_prepare_enable(bb->emc_clk);
 		}
@@ -1251,6 +1281,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 	tegra_bb_clear_ap2bb_int1();
 #endif
 	bb->is_suspending = false;
+	bb->send_ul_flag = false;
 
 	dev_set_drvdata(&pdev->dev, bb);
 	return 0;
