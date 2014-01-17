@@ -1473,6 +1473,14 @@ static int max97236_i2c_remove(struct i2c_client *client)
 static int max97236_pm_suspend(struct device *dev)
 {
 	struct max97236_priv *max97236 = dev_get_drvdata(dev);
+	struct snd_soc_codec *codec = max97236->codec;
+	struct snd_soc_card *card = codec->card;
+	struct snd_soc_dai_link *dai_link = card->dai_link;
+	int i = 0;
+
+	for (i = 0; i < card->num_links; i++)
+		if (card->dai_link[i].ignore_suspend)
+			return 0;
 
 	if (pm_delay_enable) {
 		pr_info("%s: enter, setting extclk to %d\n", __func__,
@@ -1507,6 +1515,14 @@ static int max97236_pm_suspend(struct device *dev)
 static int max97236_pm_resume(struct device *dev)
 {
 	struct max97236_priv *max97236 = dev_get_drvdata(dev);
+	struct snd_soc_codec *codec = max97236->codec;
+	struct snd_soc_card *card = codec->card;
+	struct snd_soc_dai_link *dai_link = card->dai_link;
+	int i = 0;
+
+	for (i = 0; i < card->num_links; i++)
+		if (card->dai_link[i].ignore_suspend)
+			return 0;
 
 	if (pm_delay_enable) {
 		pr_info("%s: enter, setting extclk to %d\n",
