@@ -3,7 +3,7 @@
  *
  * Declarations for power state transition code
  *
- * Copyright (c) 2010-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,6 +95,7 @@
 #define PMC_IPC_CLR_MEM_STS		(1 << 5)
 
 /* PMC register to program mem_req->0 interrupt for LP1BB */
+#define PMC_WAKE_MASK			0xc
 #define PMC_WAKE_STATUS			0x14
 
 #define PMC_WAKE2_MASK			0x160
