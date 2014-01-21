@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@
 
 #define TE_SHMEM_FNAME_SZ	SZ_64
 #define TE_SHMEM_DATA_SZ	SZ_128K
-#define TE_FS_READY_BIT		1
 
 struct te_file_req_shmem {
 	char	file_name[TE_SHMEM_FNAME_SZ];
@@ -45,7 +44,6 @@ static struct list_head req_list;
 static DECLARE_COMPLETION(req_ready);
 static DECLARE_COMPLETION(req_complete);
 static unsigned long secure_error;
-static unsigned long fs_ready;
 
 static void indicate_complete(unsigned long ret)
 {
@@ -63,11 +61,8 @@ int te_handle_fs_ioctl(struct file *file, unsigned int ioctl_num,
 
 		ptr_user_req = (struct te_file_req *)ioctl_param;
 
-		set_bit(TE_FS_READY_BIT, &fs_ready);
-
 		/* wait for a new request */
 		if (wait_for_completion_interruptible(&req_ready)) {
-			clear_bit(TE_FS_READY_BIT, &fs_ready);
 			return -ENODATA;
 		}
 
@@ -148,12 +143,6 @@ static void _te_fs_file_operation(const char *name, void *buf, int len,
 	struct te_file_req *new_req;
 	struct te_file_req_node *req_node;
 
-	if (!test_and_clear_bit(TE_FS_READY_BIT, &fs_ready)) {
-		pr_err("%s: daemon not loaded yet\n", __func__);
-		secure_error = OTE_ERROR_NO_DATA;
-		goto fail;
-	}
-
 	BUG_ON(!name);
 
 	if (type == OTE_FILE_REQ_READ || type == OTE_FILE_REQ_WRITE)
@@ -186,7 +175,6 @@ static void _te_fs_file_operation(const char *name, void *buf, int len,
 
 	kfree(new_req);
 
-fail:
 	/* signal completion to the secure world */
 	indicate_complete(secure_error);
 }
