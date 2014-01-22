@@ -231,12 +231,12 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 		if (ret < 0)
 			return ret;
 
-		/* Set TOPOFF to 10 min */
+		/* Set TOPOFF to 0 min */
 		ret = max77660_reg_write(chip->parent,
 				MAX77660_CHG_SLAVE,
 				MAX77660_CHARGER_TOPOFF,
 				MAX77660_ITOPOFF_200MA |
-				MAX77660_TOPOFFT_10MIN);
+				MAX77660_TOPOFFT_0MIN);
 		if (ret < 0)
 			return ret;
 		/* MBATREG to 4.2V */
