@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * Description:
  * High-speed USB device controller driver.
@@ -1139,7 +1139,7 @@ static int tegra_ep_dequeue(struct usb_ep *_ep, struct usb_request *_req)
 	/* Enable EP */
 out:
 	/* Touch the registers if cable is connected and phy is on */
-	if (udc->vbus_active) {
+	if (udc->vbus_active && ep->desc) {
 		epctrl = udc_readl(udc, EP_CONTROL_REG_OFFSET + (ep_num * 4));
 		if (ep_is_in(ep))
 			epctrl |= EPCTRL_TX_ENABLE;
