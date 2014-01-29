@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra14_dvfs.c
  *
- * Copyright (c) 2012-2013 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -307,9 +307,9 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("sbc2",   -1, -1, 1, KHZ,        33000,  33000,  33000,  33000,  30000,  30000,  50000,  50000,  50000,  50000,  50000),
 	CORE_DVFS("sbc3",   -1, -1, 1, KHZ,        33000,  33000,  33000,  33000,  30000,  30000,  50000,  50000,  50000,  50000,  50000),
 
-	OVRRD_DVFS("sdmmc1", -1, -1, 1, KHZ,       51000,  51000,  51000,  51000,  81000,  81000,  81000, 136000, 136000, 136000, 204000),
-	OVRRD_DVFS("sdmmc3", -1, -1, 1, KHZ,       51000,  51000,  51000,  51000,  81000,  81000,  81000, 136000, 136000, 136000, 204000),
-	OVRRD_DVFS("sdmmc4", -1, -1, 1, KHZ,       51000,  51000,  51000,  51000,  81000,  81000,  81000, 136000, 136000, 136000, 192000),
+	OVRRD_DVFS("sdmmc1", -1, -1, 1, KHZ,           1,      1,      1,      1,  81000,  81000,  81000, 136000, 136000, 136000, 204000),
+	OVRRD_DVFS("sdmmc3", -1, -1, 1, KHZ,           1,      1,      1,      1,  81000,  81000,  81000, 136000, 136000, 136000, 204000),
+	OVRRD_DVFS("sdmmc4", -1, -1, 1, KHZ,           1,      1,      1,      1,  81000,  81000,  81000, 136000, 136000, 136000, 192000),
 
 	/*
 	 * The clock rate for the display controllers that determines the
