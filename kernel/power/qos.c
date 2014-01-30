@@ -25,6 +25,7 @@
  * pointer or exits the pm_qos_object will get an opportunity to clean up.
  *
  * Mark Gross <mgross@linux.intel.com>
+ * Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -157,6 +158,18 @@ static struct pm_qos_object cpu_freq_max_pm_qos = {
 	.name = "cpu_freq_max",
 };
 
+static BLOCKING_NOTIFIER_HEAD(emc_freq_min_notifier);
+static struct pm_qos_constraints emc_freq_min_constraints = {
+	.list = PLIST_HEAD_INIT(emc_freq_min_constraints.list),
+	.target_value = PM_QOS_EMC_FREQ_MIN_DEFAULT_VALUE,
+	.default_value = PM_QOS_EMC_FREQ_MIN_DEFAULT_VALUE,
+	.type = PM_QOS_MAX,
+	.notifiers = &emc_freq_min_notifier,
+};
+static struct pm_qos_object emc_freq_min_pm_qos = {
+	.constraints = &emc_freq_min_constraints,
+	.name = "emc_freq_min",
+};
 
 static struct pm_qos_object *pm_qos_array[] = {
 	&null_pm_qos,
@@ -166,7 +179,8 @@ static struct pm_qos_object *pm_qos_array[] = {
 	&min_online_cpus_pm_qos,
 	&max_online_cpus_pm_qos,
 	&cpu_freq_min_pm_qos,
-	&cpu_freq_max_pm_qos
+	&cpu_freq_max_pm_qos,
+	&emc_freq_min_pm_qos
 };
 
 static ssize_t pm_qos_power_write(struct file *filp, const char __user *buf,

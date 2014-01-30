@@ -3,6 +3,7 @@
 /* interface for the pm_qos_power infrastructure of the linux kernel.
  *
  * Mark Gross <mgross@linux.intel.com>
+ * Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
  */
 #include <linux/plist.h>
 #include <linux/notifier.h>
@@ -19,6 +20,7 @@ enum {
 	PM_QOS_MAX_ONLINE_CPUS,
 	PM_QOS_CPU_FREQ_MIN,
 	PM_QOS_CPU_FREQ_MAX,
+	PM_QOS_EMC_FREQ_MIN,
 
 	/* insert new class ID */
 
@@ -34,6 +36,8 @@ enum {
 #define PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE	LONG_MAX
 #define PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE	0
 #define PM_QOS_CPU_FREQ_MAX_DEFAULT_VALUE	LONG_MAX
+#define PM_QOS_EMC_FREQ_MIN_DEFAULT_VALUE   0
+#define PM_QOS_EMC_FREQ_MAX_DEFAULT_VALUE   LONG_MAX
 #define PM_QOS_DEV_LAT_DEFAULT_VALUE		0
 
 struct pm_qos_request {
