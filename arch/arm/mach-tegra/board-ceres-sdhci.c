@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-ceres-sdhci.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,9 @@
 #include "board-atlantis.h"
 #include "tegra-board-id.h"
 #include "dvfs.h"
+#include "fuse.h"
+
+#define FUSE_CORE_SPEEDO_0	0x134
 
 #define CERES_WLAN_PWR  TEGRA_GPIO_PL7
 #define CERES_WLAN_WOW  TEGRA_GPIO_PO2
@@ -195,7 +198,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.power_gpio = -1,
 	.is_8bit = 1,
 	.tap_delay = 0x3,
-	.trim_delay = 0xA,
+	.trim_delay = 0x3,
 	.max_clk_limit = 136000000,
 	.ddr_trim_delay = 0,
 	.mmc_data = {
@@ -337,6 +340,7 @@ int __init ceres_sdhci_init(void)
 	int nominal_core_mv;
 	int min_vcore_override_mv;
 	int boot_vcore_mv;
+	int speedo;
 
 	nominal_core_mv =
 		tegra_dvfs_rail_get_nominal_millivolts(tegra_core_rail);
@@ -371,6 +375,11 @@ int __init ceres_sdhci_init(void)
 		tegra_sdhci_platform_data2.en_freq_scaling = true;
 		tegra_sdhci_platform_data0.max_clk_limit = 136000000;
 	}
+
+	speedo = tegra_fuse_readl(FUSE_CORE_SPEEDO_0);
+	tegra_sdhci_platform_data0.cpu_speedo = speedo;
+	tegra_sdhci_platform_data2.cpu_speedo = speedo;
+	tegra_sdhci_platform_data3.cpu_speedo = speedo;
 
 	platform_device_register(&tegra_sdhci_device3);
 	platform_device_register(&tegra_sdhci_device2);
