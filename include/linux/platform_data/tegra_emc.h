@@ -147,4 +147,24 @@ struct tegra14_emc_pdata {
 	struct tegra14_emc_table *tables_low_latency_derated;
 };
 
+#ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
+enum tegra14_emc_table_group {
+
+	EDF8132A1MC_EMC_TABLE_GROUP = 0,
+	EDF8132A3MC_EMC_TABLE_GROUP,
+	K4E8E304ED_EMC_TABLE_GROUP,
+	SL440_EDF8132A1MC_EMC_TABLE_GROUP,
+	SL440_EDF8132A3MC_EMC_TABLE_GROUP,
+	SL440_EDB8132B3PH_EMC_TABLE_GROUP,
+	SL440_K4E8E304ED_EMC_TABLE_GROUP,
+
+	NUM_EMC_TABLE_GROUPS,
+};
+
+struct tegra14_emc_multi_pdata {
+	int num_emc_pdata;
+	struct tegra14_emc_pdata *emc_pdata[NUM_EMC_TABLE_GROUPS];
+};
+#endif
+
 #endif

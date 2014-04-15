@@ -65,6 +65,10 @@ struct tegra_fb_info {
 /* palette array used by the fbcon */
 static u32 pseudo_palette[16];
 
+//edit by Magnum 2013-12-25
+extern int synaptics_tinno_suspend(void);
+extern int synaptics_tinno_resume(void);
+
 static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 			      struct fb_info *info)
 {
@@ -156,7 +160,8 @@ static int tegra_fb_set_par(struct fb_info *info)
 
 		memcpy(&tegra_fb->mode, &m, sizeof(tegra_fb->mode));
 
-		info->mode = (struct fb_videomode *)&tegra_fb->mode;
+		info->mode = (struct fb_videomode *)
+			fb_find_nearest_mode(&m, &info->modelist);
 		if (!info->mode) {
 			dev_warn(&tegra_fb->ndev->dev, "can't match video mode\n");
 			info->mode = old_mode;

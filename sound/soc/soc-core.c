@@ -5,6 +5,7 @@
  * Copyright 2005 Openedhand Ltd.
  * Copyright (C) 2010 Slimlogic Ltd.
  * Copyright (C) 2010 Texas Instruments Inc.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *         with code, comments and ideas from :-
@@ -40,7 +41,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/initval.h>
-
+#include <linux/wakelock.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/asoc.h>
 
@@ -1627,12 +1628,74 @@ static void snd_soc_instantiate_cards(void)
 	list_for_each_entry(card, &card_list, list)
 		snd_soc_instantiate_card(card);
 }
+/* headset key feature   WJ  22/11/13 */
+static struct platform_driver soc_driver;
+#define CALL_IDLE 0
+#define CALL_RINGING 1
+#define CALL_ACTIVE 2
+int call_status=0;
+struct wake_lock call_lock;
+static ssize_t snd_soc_store_call_state(struct device_driver *ddri, const char *buf, size_t count)
+{
+    //int state;
+//	int error;
+	
+	if (sscanf(buf, "%u", &call_status) != 1) {
+			printk("[max97236]: Invalid values\n");
+			return -EINVAL;
+		}
+	switch(call_status)
+    {
+        case CALL_IDLE :
+                  if(wake_lock_active(&call_lock)){
+			wake_unlock(&call_lock);
+                        printk("[max97236]===unlock=call=====\n");
+                    }
+		    printk("[max97236]accdet call: Idle state!\n");
+     		break;
+            
+		case CALL_RINGING :
+                        if(0==wake_lock_active(&call_lock)){
+                                printk("[max97236]===lock=call=====\n");
+			        wake_lock(&call_lock);
+                        }
+			printk("[max97236]accdet call: ringing state!\n");
+			break;
 
+		case CALL_ACTIVE :
+                        if(0==wake_lock_active(&call_lock)){
+                            printk("[max97236]===lock=call=====\n");
+			    wake_lock(&call_lock);
+                        }
+			printk("[max97236]accdet call: active or hold state!\n");	
+			//return button_status;
+			break;
+            
+		default:
+                    if(wake_lock_active(&call_lock)){
+                        printk("[max97236]===unlock=call=====\n");
+			wake_unlock(&call_lock);
+                    }
+   		    printk("[max97236]accdet call : Invalid values\n");
+            break;
+  }
+	
+
+	return count;
+}
+
+static ssize_t snd_soc_show_call_state(struct device_driver *ddri, char *buf)
+{
+	return sprintf(buf, "%d", call_status);
+}
+
+static DRIVER_ATTR(snd_soc_call_state,      0664, snd_soc_show_call_state,        snd_soc_store_call_state);
+/* headset key feature   WJ  22/11/13 */
 /* probes a new socdev */
 static int soc_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	int ret = 0;
+	int ret = 0,err = 0;
 
 	/*
 	 * no card, so machine driver should be registering card
@@ -1640,6 +1703,7 @@ static int soc_probe(struct platform_device *pdev)
 	 */
 	if (!card)
 		return -EINVAL;
+	wake_lock_init(&call_lock , WAKE_LOCK_SUSPEND, "call wake lock" );
 
 	dev_warn(&pdev->dev,
 		 "ASoC machine %s should use snd_soc_register_card()\n",
@@ -1647,7 +1711,6 @@ static int soc_probe(struct platform_device *pdev)
 
 	/* Bodge while we unpick instantiation */
 	card->dev = &pdev->dev;
-
 	ret = snd_soc_register_card(card);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Failed to register card\n");
@@ -1693,6 +1756,7 @@ static int soc_remove(struct platform_device *pdev)
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
 	snd_soc_unregister_card(card);
+        wake_lock_destroy(&call_lock);
 	return 0;
 }
 
@@ -3676,6 +3740,9 @@ EXPORT_SYMBOL_GPL(snd_soc_of_parse_audio_routing);
 
 static int __init snd_soc_init(void)
 {
+/* headset key feature   WJ  22/11/13 */
+	int err;
+/* headset key feature   WJ  22/11/13 */
 #ifdef CONFIG_DEBUG_FS
 	snd_soc_debugfs_root = debugfs_create_dir("asoc", NULL);
 	if (IS_ERR(snd_soc_debugfs_root) || !snd_soc_debugfs_root) {
@@ -3697,8 +3764,19 @@ static int __init snd_soc_init(void)
 #endif
 
 	snd_soc_util_init();
+/* headset key feature   WJ  22/11/13 */
+	platform_driver_register(&soc_driver);
 
-	return platform_driver_register(&soc_driver);
+        printk("[soc_driver]:driver_create_file_call_state \n");
+	err = driver_create_file(&soc_driver.driver,&driver_attr_snd_soc_call_state);
+
+	if (err) {
+        	printk(KERN_WARNING "uvesafb: failed to register "
+        			"attributes\n");
+        	err = 0;
+        }
+        return err;
+/* headset key feature   WJ  22/11/13 */
 }
 module_init(snd_soc_init);
 

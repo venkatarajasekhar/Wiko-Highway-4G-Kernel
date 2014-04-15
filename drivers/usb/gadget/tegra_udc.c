@@ -1381,21 +1381,22 @@ static int tegra_usb_set_charging_current(struct tegra_udc *udc)
 	case CONNECT_TYPE_SDP:
 		if (udc->current_limit > 2)
 			dev_info(dev, "connected to SDP\n");
-		max_ua = min(udc->current_limit * 1000,
-				USB_CHARGING_SDP_CURRENT_LIMIT_UA);
+		//max_ua = min(udc->current_limit * 1000,
+		//		USB_CHARGING_SDP_CURRENT_LIMIT_UA);
+		max_ua = USB_CHARGING_SDP_CURRENT_LIMIT_UA;
 		break;
 	case CONNECT_TYPE_DCP:
 		dev_info(dev, "connected to DCP(wall charger)\n");
 		max_ua = USB_CHARGING_DCP_CURRENT_LIMIT_UA;
 		break;
 	case CONNECT_TYPE_CDP:
-		dev_info(dev, "connected to CDP(1.5A)\n");
+		dev_info(dev, "connected to CDP(1.5A) current_limit =%d\n",udc->current_limit );
 		/*
 		 * if current is more than VBUS suspend current, we draw CDP
 		 * allowed maximum current (override SDP max current which is
 		 * set by the upper level driver).
 		 */
-		if (udc->current_limit > 2)
+		if (udc->current_limit == 0 || udc->current_limit > 2)
 			max_ua = USB_CHARGING_CDP_CURRENT_LIMIT_UA;
 		else
 			max_ua = udc->current_limit * 1000;
@@ -1488,6 +1489,12 @@ static int tegra_detect_cable_type(struct tegra_udc *udc)
 		(udc->connect_type != CONNECT_TYPE_CDP))
 		tegra_usb_set_charging_current(udc);
 
+	if (udc->connect_type == CONNECT_TYPE_SDP)
+		tegra_usb_set_charging_current(udc);
+//Wayne add, War for handling CDP
+	if (udc->connect_type == CONNECT_TYPE_CDP)
+	  tegra_usb_set_charging_current(udc);
+	
 	return 0;
 }
 
@@ -1570,6 +1577,7 @@ static int tegra_vbus_draw(struct usb_gadget *gadget, unsigned mA)
 static int tegra_pullup(struct usb_gadget *gadget, int is_on)
 {
 	struct tegra_udc *udc;
+	unsigned long flags;
 	u32 tmp;
 	DBG("%s(%d) BEGIN\n", __func__, __LINE__);
 
@@ -1579,6 +1587,7 @@ static int tegra_pullup(struct usb_gadget *gadget, int is_on)
 			OTG_STATE_B_PERIPHERAL)
 			return 0;
 
+	spin_lock_irqsave(&udc->lock, flags);
 	/* set interrupt latency to 125 uS (1 uFrame) */
 	tmp = udc_readl(udc, USB_CMD_REG_OFFSET);
 	tmp &= ~USB_CMD_ITC;
@@ -1597,8 +1606,11 @@ static int tegra_pullup(struct usb_gadget *gadget, int is_on)
 		if (udc->connect_type == CONNECT_TYPE_SDP)
 			schedule_delayed_work(&udc->non_std_charger_work,
 				msecs_to_jiffies(NON_STD_CHARGER_DET_TIME_MS));
-	} else
+	} else {
+		__cancel_delayed_work(&udc->non_std_charger_work);
 		udc_writel(udc, (tmp & ~USB_CMD_RUN_STOP), USB_CMD_REG_OFFSET);
+	}
+	spin_unlock_irqrestore(&udc->lock, flags);
 
 	DBG("%s(%d) END\n", __func__, __LINE__);
 	return 0;

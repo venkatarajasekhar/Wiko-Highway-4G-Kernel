@@ -39,6 +39,14 @@
 #include "dvfs.h"
 #include "board.h"
 #include "tegra14_emc.h"
+#include "fuse.h"
+
+#ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
+#define EMC_MRS_EDF8132A1MC	0x1B000003
+#define EMC_MRS_EDF8132A3MC	0x1B000203
+#define EMC_MRS_EDB8132B3PH	0x18000003
+#define EMC_MRS_K4E8E304ED	0x1F000301
+#endif
 
 #ifdef CONFIG_TEGRA_EMC_SCALING_ENABLE
 static bool emc_enable = true;
@@ -172,6 +180,8 @@ static struct emc_iso_usage tegra14_lpddr3_emc_iso_usage[] = {
 #define TEGRA_MC_EMEM_ADR_CFG_DEV	0x58
 #define TEGRA_EMEM_DEV_DEVSIZE_SHIFT	16
 #define TEGRA_EMEM_DEV_DEVSIZE_MASK	0xF
+
+#define MR_REVISION_ID1_MASK		0xFF
 
 enum {
 	DLL_CHANGE_NONE = 0,
@@ -410,6 +420,8 @@ static void __iomem *emc1_base = IO_ADDRESS(TEGRA_EMC1_BASE);
 static void __iomem *mc_base = IO_ADDRESS(TEGRA_MC_BASE);
 static void __iomem *clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 static void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+
+static int emc_read_mrr(int dev, int addr);
 
 static inline void emc_writel(u32 val, unsigned long addr)
 {
@@ -1801,9 +1813,17 @@ module_param_cb(pasr_enable, &tegra14_pasr_enable_ops, &pasr_enable, 0644);
 
 static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 {
-	struct tegra14_emc_pdata *pdata;
 	struct resource *res;
 	u32 padctrl;
+#ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
+	int emc_mrs = 0;
+	int sku = tegra_sku_id;
+	enum tegra14_emc_table_group emc_table_group;
+	struct tegra14_emc_multi_pdata *pdata;
+#else
+	struct tegra14_emc_pdata *pdata;
+#endif
+	struct tegra14_emc_pdata *emc_pdata;
 
 	pasr_enable = 0;
 
@@ -1826,9 +1846,42 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 	emc_writel(padctrl, EMC_XM2CMDPADCTRL);
 #endif
 
-	return init_emc_table(pdata->tables, pdata->tables_derated,
-		pdata->tables_low_latency, pdata->tables_low_latency_derated,
-		pdata->num_tables);
+#ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
+//	emc_mrs = emc_read_mrr(0, 5);
+	emc_mrs = ((emc_read_mrr(0,5) & 0xFF) << 0)  |
+		  ((emc_read_mrr(0,6) & 0xFF) << 8)  |
+		  ((emc_read_mrr(0,7) & 0xFF) << 16) |
+		  ((emc_read_mrr(0,8) & 0xFF) << 24);
+		  
+	if (emc_mrs == EMC_MRS_EDF8132A1MC && sku == 0x3)
+		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_EDF8132A1MC && sku == 0x3)
+		emc_table_group = EDF8132A3MC_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_K4E8E304ED && sku == 0x3)
+		emc_table_group = K4E8E304ED_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_EDF8132A1MC && sku == 0x7)
+		emc_table_group = SL440_EDF8132A1MC_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_EDF8132A3MC && sku == 0x7)
+		emc_table_group = SL440_EDF8132A3MC_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_EDB8132B3PH && sku == 0x7)
+		emc_table_group = SL440_EDB8132B3PH_EMC_TABLE_GROUP;
+	else if (emc_mrs == EMC_MRS_K4E8E304ED && sku == 0x3)
+		emc_table_group = SL440_K4E8E304ED_EMC_TABLE_GROUP;
+	else
+		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP;
+
+       pr_info("%s: emc_mrs = 0x%08X, sku = 0x%02X, emc_table_group = 0x%02X\n",
+               __func__, emc_mrs, sku, emc_table_group);	emc_pdata = pdata->emc_pdata[emc_table_group];
+
+#else
+	emc_pdata = pdata;
+#endif
+
+	return init_emc_table(emc_pdata->tables,
+			emc_pdata->tables_derated,
+			emc_pdata->tables_low_latency,
+			emc_pdata->tables_low_latency_derated,
+			emc_pdata->num_tables);
 }
 
 static struct platform_driver tegra14_emc_driver = {

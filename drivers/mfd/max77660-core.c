@@ -23,7 +23,8 @@
 #include <linux/delay.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
-
+#include <linux/reboot.h>
+#include "../../arch/arm/mach-tegra/common.h"
 #include <linux/mfd/max77660/max77660-core.h>
 
 
@@ -257,11 +258,37 @@ static void max77660_power_off(void)
 	 * ES1.0 errata suggest that in place of doing read modify write,
 	 * write direct valid value.
 	 */
+/*
 	max77660_reg_write(chip->dev, MAX77660_PWR_SLAVE,
 			MAX77660_REG_GLOBAL_CFG0,
 			GLBLCNFG0_SFT_OFF_OFFRST_MASK);
+*/
+	poweroff = 1;
+	dev_info(chip->dev, "%s: Shutdown has been replace with forced reboot\n",
+		__func__);
+	kernel_restart(NULL);
 	do { } while (1);
 }
+
+void max77660_power_forceoff(void)
+{
+	struct max77660_chip *chip = max77660_chip;
+
+	if (!chip)
+		return;
+
+	dev_info(chip->dev, "%s: Global shutdown\n", __func__);
+	/*
+	 * ES1.0 errata suggest that in place of doing read modify write,
+	 * write direct valid value.
+	 */
+
+	max77660_reg_write(chip->dev, MAX77660_PWR_SLAVE,
+			MAX77660_REG_GLOBAL_CFG0,
+			GLBLCNFG0_SFT_OFF_SYSRST_MASK);
+
+}
+EXPORT_SYMBOL_GPL(max77660_power_forceoff);
 
 static void max77660_power_reset(void)
 {
@@ -419,6 +446,14 @@ static bool rd_wr_reg_power(struct device *dev, unsigned int reg)
 
 static bool volatile_reg_power(struct device *dev, unsigned int reg)
 {
+	if ((reg >= MAX77660_REG_BUCK1_VOUT) &&
+	    (reg <= MAX77660_REG_BUCK7_VOUT)) {
+		struct max77660_chip *chip = dev_get_drvdata(dev);
+		if (test_bit(reg - MAX77660_REG_BUCK1_VOUT,
+			     chip->volatile_buck_vsel))
+			return true;
+	}
+
 	switch (reg) {
 		case MAX77660_REG_CNFG_FPS_AP_OFF ... MAX77660_REG_BUCK_PWR_MODE2:
 		case MAX77660_REG_LDO_PWR_MODE1 ... MAX77660_REG_SW5_CNFG:

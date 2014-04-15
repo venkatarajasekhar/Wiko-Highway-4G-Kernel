@@ -608,6 +608,7 @@
 #define MAX77660_ITOPOFF_200MA			0x03
 #define MAX77660_TOPOFFT_0MIN			0x00
 #define MAX77660_TOPOFFT_10MIN			0x20
+#define MAX77660_TOPOFFT_60MIN			0xC0
 #define MAX77660_IFST2P8_MASK			0x10
 #define MAX77660_IFST2P8_SHIFT			4
 #define MAX77660_TOPOFFTSHLD_MASK		0x0C
@@ -618,6 +619,8 @@
 #define MAX77660_CHARGER_BATREGCTRL		0x67
 #define MAX77660_MBATREG_4200MV			0x16
 #define MAX77660_MBATREG_4050MV			0x10
+#define MAX77660_MBATREG_4250MV			0x18
+#define MAX77660_MBATREG_4150MV			0x14
 
 #define MAX77660_CHARGER_DCCRNT			0x68
 #define MAX77660_DCLIMIT_1A			0x20
@@ -819,6 +822,8 @@ struct max77660_chip {
 
 	struct i2c_client *clients[MAX77660_NUM_SLAVES];
 	struct regmap *rmap[MAX77660_NUM_SLAVES];
+	DECLARE_BITMAP(volatile_buck_vsel,
+		       MAX77660_REG_BUCK7_VOUT - MAX77660_REG_BUCK1_VOUT + 1);
 
 	struct max77660_platform_data *pdata;
 
@@ -979,6 +984,9 @@ enum max77660_regulator_fps_src {
 			MAX77660_EXT_ENABLE_EN2 | MAX77660_EXT_ENABLE_EN3 | \
 			MAX77660_EXT_ENABLE_EN4 | MAX77660_EXT_ENABLE_EN5 | \
 			MAX77660_EXT_ENABLE_EN1FPS6)
+
+#define MAX77660_EXT_ENABLE_SUSPEND_ONLY	BIT(16)
+
 /* Disable DVFS */
 #define DISABLE_DVFS			0x400
 
@@ -1004,6 +1012,7 @@ struct max77660_regulator_platform_data {
 	struct max77660_regulator_fps_cfg *fps_cfgs;
 
 	unsigned int flags;
+	bool vsel_volatile;
 };
 
 /*
@@ -1297,6 +1306,7 @@ struct max77660_platform_data {
 
 	int system_watchdog_timeout;
 	int system_watchdog_reset_timeout;
+	bool system_watchdog_timeout_shutdown;
 	bool led_disable;
 	struct max77660_pwm_dvfs_init_data dvfs_pd;
 };
@@ -1396,6 +1406,17 @@ static inline int max77660_is_es_1_1_or_1_2(struct device *dev)
 		return true;
 	return false;
 }
+
+static inline int max77660_is_es_1_2(struct device *dev)
+{
+	int minor, major;
+
+	max77660_get_es_version(dev->parent, &major, &minor);
+	if ((major == 1) && (minor == 2))
+		return true;
+	return false;
+}
+
 
 #define MAX77660_GPADC_IIO_MAP(chan, _consumer, _comsumer_channel_name) \
 {									\

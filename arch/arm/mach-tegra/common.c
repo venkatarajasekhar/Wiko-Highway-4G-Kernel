@@ -81,6 +81,7 @@
 #define   RECOVERY_MODE	BIT(31)
 #define   BOOTLOADER_MODE	BIT(30)
 #define   FORCED_RECOVERY_MODE	BIT(1)
+#define   POWEROFF_MODE  BIT(7)
 
 #define AHB_GIZMO_USB		0x1c
 #define AHB_GIZMO_USB2		0x78
@@ -137,6 +138,7 @@ unsigned long tegra_nvdumper_size;
 unsigned long tegra_tzram_start;
 unsigned long tegra_tzram_size;
 #endif
+unsigned int poweroff = 0;
 bool tegra_lp0_vec_relocate;
 unsigned long tegra_grhost_aperture = ~0ul;
 static   bool is_tegra_debug_uart_hsport;
@@ -220,11 +222,17 @@ void tegra_assert_system_reset(char mode, const char *cmd)
 			reg |= FORCED_RECOVERY_MODE;
 		else
 			reg &= ~(BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE);
+		pr_info("Restarting system, cmd=%s ", cmd);
 	}
 	else {
+		pr_info("Restarting system, cmd=NULL ");
 		/* Clearing SCRATCH0 31:30:1 on default reboot */
-		reg &= ~(BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE);
+		reg &= ~(BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE
+				| POWEROFF_MODE);
+		if (poweroff)  //ljs move; poweroff, except cmd != null
+			reg |= POWEROFF_MODE;
 	}
+	pr_info("reg=0x%lx \n", reg);
 	writel_relaxed(reg, reset + PMC_SCRATCH0);
 	if (!cmd && pm_power_reset) {
 		pm_power_reset();
@@ -248,6 +256,9 @@ static int emc_max_dvfs;
 static unsigned int memory_type;
 static int usb_port_owner_info;
 static int pmic_rst_reason;
+//Ivan added
+static int tinno_boot_mode;
+static int bootloader_fg_status;
 
 /* WARNING: There is implicit client of pllp_out3 like i2c, uart, dsi
  * and so this clock (pllp_out3) should never be disabled.
@@ -688,6 +699,9 @@ static void __init tegra_ramrepair_init(void)
 	if (tegra_spare_fuse(10) | tegra_spare_fuse(11)) {
 #endif
 		u32 reg;
+
+		pr_info("%s: fuse_bit_10 = %d, fuse_bit_11 = %d\n", __func__,
+		  tegra_spare_fuse(10), tegra_spare_fuse(11));
 		reg = readl(FLOW_CTRL_RAM_REPAIR);
 		reg &= ~FLOW_CTRL_RAM_REPAIR_BYPASS_EN;
 		writel(reg, FLOW_CTRL_RAM_REPAIR);
@@ -1258,6 +1272,24 @@ static int __init tegra_memory_type(char *options)
 }
 __setup("memtype=", tegra_memory_type);
 
+static bool androidboot_mode_charger;
+
+bool get_androidboot_mode_charger(void)
+{
+        //return androidboot_mode_charger;
+		if(tegra_get_bootmode_id() == 8) return true;
+		else return false;
+}
+static int __init tegra_androidboot_mode(char *options)
+{
+        if (!strcmp(options, "charger"))
+                androidboot_mode_charger = true;
+        else
+                androidboot_mode_charger = false;
+        return 1;
+}
+__setup("androidboot.mode=", tegra_androidboot_mode);
+
 static int __init tegra_debug_uartport(char *info)
 {
 	char *p = info;
@@ -1387,8 +1419,25 @@ void tegra_get_board_info(struct board_info *bi)
 	struct device_node *board_info;
 	u32 prop_val;
 	int err;
+#endif
 
-	board_info = of_find_node_by_path("/chosen/board_info");
+// Ivan
+#ifdef CONFIG_MACH_S8515
+	memset(bi, 0, sizeof(*bi));
+	bi->board_id = 0x690;
+	bi->sku = 0x3e9;		//Ivan 1001
+	bi->fab = 0x2;
+	bi->major_revision = 0x44;
+	bi->minor_revision = 0x6;
+	system_serial_high = (bi->board_id << 16) | bi->sku;
+	system_serial_low = (bi->fab << 24) |
+	(bi->major_revision << 16) | (bi->minor_revision << 8);
+	return;
+#endif    
+
+#ifdef CONFIG_OF
+	board_info = of_find_node_by_path("/chosen/board_info");	
+	
 	if (!IS_ERR_OR_NULL(board_info)) {
 		memset(bi, 0, sizeof(*bi));
 
@@ -1653,6 +1702,40 @@ static int __init tegra_pmic_rst_reason(char *id)
 }
 
 __setup("pmic_rst_reason=", tegra_pmic_rst_reason);
+
+
+int tegra_get_bootloader_fg_status(void)
+{
+	return bootloader_fg_status;
+}
+
+static int __init tegra_bl_fg_status(char *id)
+{
+	char *p = id;
+	bootloader_fg_status = memparse(p, &p);
+	return 1;
+}
+
+__setup("fg_status=", tegra_bl_fg_status);
+
+//Ivan added
+static int __init tegra_bootmode_id(char *id)
+{
+	char *p = id;
+
+	if (get_option(&p, &tinno_boot_mode) != 1)
+		return 0;
+	return 1;
+}
+
+int tegra_get_bootmode_id(void)
+{
+	return tinno_boot_mode;
+}
+
+EXPORT_SYMBOL(tegra_get_bootmode_id);
+
+__setup("androidboot.tn_bootmode=", tegra_bootmode_id);
 
 /*
  * Tegra has a protected aperture that prevents access by most non-CPU

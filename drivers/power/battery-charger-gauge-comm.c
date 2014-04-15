@@ -34,12 +34,12 @@
 #include <linux/power/battery-charger-gauge-comm.h>
 #include <linux/wakelock.h>
 
-#define JETI_TEMP_COLD		0
+#define JETI_TEMP_COLD		-13   //0
 #define JETI_TEMP_COOL		10
 #define JETI_TEMP_WARM		45
 #define JETI_TEMP_HOT		60
 
-static DEFINE_MUTEX(charger_gauge_list_mutex);
+DEFINE_MUTEX(charger_gauge_list_mutex);
 static LIST_HEAD(charger_list);
 static LIST_HEAD(gauge_list);
 
@@ -158,10 +158,10 @@ static void battery_charger_thermal_monitor_wq(struct work_struct *work)
 
 	if (temperature <= JETI_TEMP_COLD || temperature >= JETI_TEMP_HOT) {
 		charger_enable_state = false;
-	} else if (temperature <= JETI_TEMP_COOL ||
-				temperature >= JETI_TEMP_WARM) {
-		charger_current_half = true;
-		battery_thersold_voltage = 4100;
+	//} else if (temperature <= JETI_TEMP_COOL ||
+	//			temperature >= JETI_TEMP_WARM) {
+		//charger_current_half = true;   //ljs remove, bc test requirements
+		//battery_thersold_voltage = 4100;   //ljs remove, bc 4100mV not charge full
 	}
 
 	if (bc_dev->ops->thermal_configure)
@@ -196,7 +196,7 @@ int battery_charger_thermal_stop_monitoring(
 		return -EINVAL;
 
 	bc_dev->start_monitoring = false;
-	cancel_delayed_work(&bc_dev->poll_temp_monitor_wq);
+	cancel_delayed_work_sync(&bc_dev->poll_temp_monitor_wq);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(battery_charger_thermal_stop_monitoring);
@@ -418,3 +418,25 @@ void battery_gauge_set_drvdata(struct battery_gauge_dev *bg_dev, void *data)
 		bg_dev->drv_data = data;
 }
 EXPORT_SYMBOL_GPL(battery_gauge_set_drvdata);
+
+int battery_set_charging(struct battery_gauge_dev *bg_dev,
+	bool enable)
+{
+	struct battery_charger_dev *node;
+	int ret = -EINVAL;
+
+	if (!bg_dev) {
+		dev_err(bg_dev->parent_dev, "Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	list_for_each_entry(node, &charger_list, list) {
+		if (node->cell_id != bg_dev->cell_id)
+			continue;
+		if (node->ops && node->ops->set_charging)
+			ret = node->ops->set_charging(node, enable);
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(battery_set_charging);

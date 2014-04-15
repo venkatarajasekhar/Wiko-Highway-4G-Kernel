@@ -33,12 +33,13 @@
 #include <linux/suspend.h>
 #include <linux/pm_runtime.h>
 #include <linux/kthread.h>
+#include <linux/pm_qos.h>
 
 #include <mach/clk.h>
 #include <mach/iomap.h>
 #include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
-#include <mach/pm_domains.h>
+#include <mach/tegra_bbc_power.h>
 #include <linux/platform_data/nvshm.h>
 
 #include "clock.h"
@@ -46,6 +47,7 @@
 #include "tegra_emc.h"
 #include "pm.h"
 
+extern void tegra_pd_add_device(struct device *dev);
 /* BB mailbox offset */
 #define TEGRA_BB_REG_MAILBOX (0x0)
 /* BB mailbox return code (MOSD) offset */
@@ -101,8 +103,13 @@
 #define MC_BBC_MEM_REGIONS_0_IPC_BASE_MASK   (0x1FF)
 #define MC_BBC_MEM_REGIONS_0_IPC_BASE_SHIFT  (19)
 
+#define BBC_CPU_MIN_FREQ		(310000) /* 310MHz */
+#define BBC_CRASHDUMP_CPU_MIN_FREQ	(1400000) /* 1.4GHz */
+
 #define MEM_REQ_DET_HIGH	true
 #define MEM_REQ_DET_LOW		false
+
+static struct pm_qos_request bb_cpufreq_min_req;
 
 enum bbc_pm_state {
 	BBC_REMOVE_FLOOR = 1,
@@ -125,6 +132,7 @@ struct tegra_bb {
 	unsigned long ipc_size;
 	unsigned long ipc_irq;
 	unsigned long emc_min_freq;
+	unsigned long cpu_min_freq;
 	u32 emc_flags;
 	char ipc_serial[NVSHM_SERIAL_BYTE_SIZE];
 	unsigned int irq;
@@ -148,9 +156,17 @@ struct tegra_bb {
 	struct device *proxy_dev;
 	struct notifier_block pm_notifier;
 	bool is_suspending;
+	long t[3]; /* tracing bb emc floor latency */
 	bool send_ul_flag;
 };
 
+#define SET_FLOOR_GUARD_TIME	100
+#define MAX_SMALL_STAT_TIME	300	/* 300ms */
+#define SMALL_STAT_STEP 5
+unsigned int bb_emc_set_s_stats[MAX_SMALL_STAT_TIME/SMALL_STAT_STEP];
+unsigned int bb_emc_set_l_stats[32];
+static int max_emc_set_latency;
+static void dump_emc_set_stats(void);
 
 static int tegra_bb_open(struct inode *inode, struct file *filp);
 static int tegra_bb_map(struct file *filp, struct vm_area_struct *vma);
@@ -214,6 +230,7 @@ void tegra_bb_generate_ipc(struct platform_device *pdev)
 {
 	struct tegra_bb *bb = platform_get_drvdata(pdev);
 	unsigned long irq_flags;
+	unsigned int prev_state = 0;
 
 	if (!bb) {
 		dev_err(&pdev->dev, "%s tegra_bb not found!\n", __func__);
@@ -236,8 +253,6 @@ void tegra_bb_generate_ipc(struct platform_device *pdev)
 	}
 #else
 	{
-		unsigned int prev_state = 0;
-
 		/* Do we need to restore BB MC frequency floor? */
 		spin_lock_irqsave(&bb->lock, irq_flags);
 		if ((bb->current_state == BBC_REMOVE_FLOOR) &&
@@ -251,13 +266,13 @@ void tegra_bb_generate_ipc(struct platform_device *pdev)
 			prev_state = atomic_xchg(&bb->state_for_thread,
 								 BBC_SET_FLOOR);
 			wake_up(&(bb->emc_wait_q));
+			if (prev_state)
+				pr_info("previous state[%u] will be skipped in %s\n",
+						prev_state, __func__);
 		}
 		if (!bb->send_ul_flag)
 			tegra_bb_set_ap2bb_int0();
 		spin_unlock_irqrestore(&bb->lock, irq_flags);
-		if (prev_state)
-			pr_debug("previous state[%u] will be skipped in %s\n",
-					 prev_state, __func__);
 	}
 #endif
 }
@@ -576,6 +591,7 @@ int tegra_bb_set_reset(struct device *dev, int value)
 	static bool regulator_status;
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	struct tegra_bb *bb = dev_get_drvdata(dev);
+	unsigned int prev_state = 0;
 
 	if (!bb) {
 		dev_err(dev, "%s tegra_bb not found!\n", __func__);
@@ -589,7 +605,6 @@ int tegra_bb_set_reset(struct device *dev, int value)
 
 	/* reset is active low - sysfs interface assume reset is active high */
 	if (value) {
-		unsigned int prev_state;
 		writel(1 << AP2BB_RESET_SHIFT | 1 << AP2BB_MEM_STS_SHIFT,
 			pmc + PMC_IPC_CLEAR_0);
 
@@ -606,8 +621,8 @@ int tegra_bb_set_reset(struct device *dev, int value)
 							 BBC_REMOVE_FLOOR);
 		wake_up(&(bb->emc_wait_q));
 		if (prev_state)
-			pr_debug("previous state[%u] will be skipped in %s\n",
-					 prev_state, __func__);
+			pr_info("previous state[%u] will be skipped in %s\n",
+					prev_state, __func__);
 	} else {
 		/* power on bbc rails */
 		if (bb->vdd_bb_core && bb->vdd_bb_pll &&
@@ -709,6 +724,7 @@ static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 	void __iomem *fctrl = IO_ADDRESS(TEGRA_FLOW_CTRL_BASE);
 	unsigned long irq_flags;
 	int sts;
+	unsigned int prev_state = 0;
 
 	disable_irq_nosync(irq);
 #ifdef CONFIG_PM
@@ -737,15 +753,14 @@ static irqreturn_t tegra_bb_isr_handler(int irq, void *data)
 	}
 
 	if (sts == TEGRA_BB_BOOT_RESTART_FW_REQ) {
-		unsigned int prev_state;
 		pr_debug("%s: boot_restart_fw_req\n", __func__);
 		bb->next_state = BBC_CRASHDUMP_FLOOR;
 		prev_state = atomic_xchg(&bb->state_for_thread,
 							 BBC_CRASHDUMP_FLOOR);
 		wake_up(&(bb->emc_wait_q));
 		if (prev_state)
-			pr_debug("previous state[%u] will be skipped in %s\n",
-					 prev_state, __func__);
+			pr_info("previous state[%u] will be skipped in %s\n",
+					prev_state, __func__);
 	}
 
 	bb->status = sts;
@@ -757,6 +772,7 @@ static irqreturn_t tegra_bb_mem_req_soon(int irq, void *data)
 	struct tegra_bb *bb = (struct tegra_bb *)data;
 	unsigned int prev_state;
 
+	bb->t[0] = jiffies;
 	spin_lock(&bb->lock);
 
 	tegra_bb_disable_mem_req_soon();
@@ -765,9 +781,8 @@ static irqreturn_t tegra_bb_mem_req_soon(int irq, void *data)
 						 BBC_SET_FLOOR);
 	wake_up(&(bb->emc_wait_q));
 	if (prev_state)
-		pr_debug("previous state[%u] will be skipped in %s\n",
-				 prev_state, __func__);
-
+		pr_info("previous state[%u] will be skipped in %s\n",
+				prev_state, __func__);
 	spin_unlock(&bb->lock);
 
 	return IRQ_HANDLED;
@@ -834,6 +849,7 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 	static void __iomem *tert_ictlr = IO_ADDRESS(TEGRA_TERTIARY_ICTLR_BASE);
 	u32 lic, sts;
 	int mem_req_soon, mem_req;
+	unsigned int prev_state = 0;
 
 	spin_lock(&bb->lock);
 	sts = readl(pmc + PMC_IPC_STS_0);
@@ -873,9 +889,16 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 static void tegra_bb_set_emc(struct tegra_bb *bb)
 {
 	unsigned long flags;
+	static long diff0, diff;
+	static int cnt;
 
 	if (!bb)
 		return;
+
+	if (bb->next_state == BBC_SET_FLOOR) {
+		bb->t[1] = jiffies;
+		diff0 = (bb->t[1] - bb->t[0]) * 1000 / HZ;
+	}
 
 	spin_lock_irqsave(&bb->lock, flags);
 	if (bb->current_state == bb->next_state) {
@@ -887,6 +910,10 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 	case BBC_SET_FLOOR:
 		spin_unlock_irqrestore(&bb->lock, flags);
 
+		bb->cpu_min_freq = BBC_CPU_MIN_FREQ;
+		pm_qos_update_request(&bb_cpufreq_min_req,
+			bb->cpu_min_freq);
+
 		pm_runtime_get_sync(bb->dev);
 		/* going from 0 to high */
 		clk_prepare_enable(bb->emc_clk);
@@ -894,7 +921,24 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		if (bb->emc_flags & EMC_LL)
 			tegra_emc_request_low_latency_mode(true);
-		pr_debug("bbc setting floor to %luMHz\n",
+
+		bb->t[2] = jiffies;
+
+		pm_qos_update_request(&bb_cpufreq_min_req,
+			PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE);
+
+		diff = (bb->t[2] - bb->t[0]) * 1000 / HZ;
+		if (diff >= 0) {
+			if (diff < MAX_SMALL_STAT_TIME)
+				bb_emc_set_s_stats[diff/SMALL_STAT_STEP]++;
+			bb_emc_set_l_stats[fls(diff)]++;
+			max_emc_set_latency = (diff > max_emc_set_latency) ? diff : max_emc_set_latency;
+		}
+		if (diff > SET_FLOOR_GUARD_TIME) {
+			pr_info("bbc setting floor latency: %ld ms (irq2entry: %ld ms) (cnt:%d)\n",
+				diff, diff0, cnt++);
+		}
+		pr_info("bbc setting floor to %luMHz\n",
 						bb->emc_min_freq/1000000);
 
 		/* restore iso bw request*/
@@ -914,6 +958,10 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		/* update current state, now that BB floor
 		   is in place */
 		bb->current_state = BBC_SET_FLOOR;
+
+		/* let BB know we have set its floor */
+		bbc_power_emc_floor_set(1);
+
 		spin_unlock_irqrestore(&bb->lock, flags);
 		return;
 	case BBC_REMOVE_FLOOR:
@@ -923,6 +971,8 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 			return;
 		}
 		bb->current_state = bb->next_state;
+		/* let BB know we are removing its floor */
+		bbc_power_emc_floor_set(0);
 		spin_unlock_irqrestore(&bb->lock, flags);
 
 		/* remove iso bandwitdh request from bbc */
@@ -962,6 +1012,12 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		clk_set_rate(bb->emc_clk, BBC_MC_MAX_FREQ);
 
+		/* Boost CPU freq. */
+		bb->cpu_min_freq = BBC_CRASHDUMP_CPU_MIN_FREQ;
+		pm_qos_update_request(&bb_cpufreq_min_req,
+			bb->cpu_min_freq);
+
+
 		/* request enough iso bw for crash handling */
 		tegra_bbc_proxy_bw_request(bb->proxy_dev, 0, BBC_ISO_CRASH_BW,
 						1000, BBC_ISO_MARGIN_BW);
@@ -972,6 +1028,8 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		/* request a high enough power budget for crash handling */
 		tegra_bbc_proxy_edp_request(bb->proxy_dev, 0, BBC_EDP_E0_INDEX,
 						BBC_EDP_E0_THRESHOLD);
+
+		dump_emc_set_stats();
 
 		return;
 	default:
@@ -1105,6 +1163,9 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		kfree(bb);
 		return -ENOMEM;
 	}
+
+	pm_qos_add_request(&bb_cpufreq_min_req, PM_QOS_CPU_FREQ_MIN,
+		PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE);
 
 	spin_lock_init(&bb->lock);
 	atomic_set(&bb->state_for_thread, 0);
@@ -1532,6 +1593,83 @@ static int lp0active_transitions_get(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(lp0active_fops, lp0active_transitions_get,
 		lp0active_transitions_set, "%lld\n");
 
+int bb_emc_set_stats_show(struct seq_file *s, void *data)
+{
+	int bin, total;
+
+	seq_printf(s, "\n");
+	seq_printf(s, "BBC_SET_FLOOR delay    count\n");
+	seq_printf(s, "-------------------------------\n");
+	for (bin = 0; bin < (MAX_SMALL_STAT_TIME/SMALL_STAT_STEP); bin++) {
+		if (bb_emc_set_s_stats[bin] == 0)
+			continue;
+		seq_printf(s, "%6u - %6u ms: %8u\n",
+			bin * SMALL_STAT_STEP, (bin+1) * SMALL_STAT_STEP - 1,
+			bb_emc_set_s_stats[bin]);
+	}
+	seq_printf(s, "-------------------------------\n");
+	total = 0;
+	for (bin = 0; bin < 32; bin++) {
+		if (bb_emc_set_l_stats[bin] == 0)
+			continue;
+		seq_printf(s, "%6u - %6u ms: %8u\n",
+			1 << (bin - 1), 1 << bin,
+			bb_emc_set_l_stats[bin]);
+		total += bb_emc_set_l_stats[bin];
+	}
+	seq_printf(s, "-------------------------------\n");
+	seq_printf(s, "%18s: %8u ms\n", "max latency", max_emc_set_latency);
+	seq_printf(s, "-------------------------------\n");
+	seq_printf(s, "%18s: %8u\n", "TOTAL", total);
+	seq_printf(s, "\n");
+
+	return 0;
+}
+
+static void dump_emc_set_stats(void)
+{
+	int bin, total;
+
+	pr_info("\n");
+	pr_info("BBC_SET_FLOOR delay    count\n");
+	pr_info("-------------------------------\n");
+	for (bin = 0; bin < (MAX_SMALL_STAT_TIME/SMALL_STAT_STEP); bin++) {
+		if (bb_emc_set_s_stats[bin] == 0)
+			continue;
+		pr_info("%6u - %6u ms: %8u\n",
+			bin * SMALL_STAT_STEP, (bin+1) * SMALL_STAT_STEP - 1,
+			bb_emc_set_s_stats[bin]);
+	}
+	pr_info("-------------------------------\n");
+	total = 0;
+	for (bin = 0; bin < 32; bin++) {
+		if (bb_emc_set_l_stats[bin] == 0)
+			continue;
+		pr_info("%6u - %6u ms: %8u\n",
+			1 << (bin - 1), 1 << bin,
+			bb_emc_set_l_stats[bin]);
+		total += bb_emc_set_l_stats[bin];
+	}
+	pr_info("-------------------------------\n");
+	pr_info("%18s: %8u ms\n", "max latency", max_emc_set_latency);
+	pr_info("-------------------------------\n");
+	pr_info("%18s: %8u\n", "TOTAL", total);
+	pr_info("\n");
+}
+
+static int bb_emc_set_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, bb_emc_set_stats_show,
+				inode->i_private);
+}
+
+static const struct file_operations bb_emc_set_stats_fops = {
+	.open		= bb_emc_set_stats_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int __init tegra_bb_debug_init(void)
 {
 	struct dentry *d;
@@ -1547,6 +1685,11 @@ static int __init tegra_bb_debug_init(void)
 
 	d = debugfs_create_file("lp0active_transitions", S_IWUSR | S_IRUGO,
 			bb_debugfs_root, NULL, &lp0active_fops);
+	if (!d)
+		goto err;
+
+	d = debugfs_create_file("bb_emc_set_stats", S_IRUGO,
+			bb_debugfs_root, NULL, &bb_emc_set_stats_fops);
 	if (!d)
 		goto err;
 

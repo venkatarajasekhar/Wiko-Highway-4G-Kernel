@@ -1509,8 +1509,7 @@ static int max98090_micinput_event(struct snd_soc_dapm_widget *w,
 	else
 		val = (val & M98090_MIC_PA2EN_MASK) >> M98090_MIC_PA2EN_SHIFT;
 
-
-	if (val >= 1) {
+	if (val > 1) {
 		if (w->reg == M98090_REG_10_LVL_MIC1)
 			max98090->mic1pre = val - 1; /* Update for volatile */
 		else
@@ -1860,12 +1859,14 @@ static const struct snd_soc_dapm_widget max98090_dapm_widgets[] = {
 
 	SND_SOC_DAPM_MUX_E("MIC1 Mux", SND_SOC_NOPM,
 		0, 0, &max98090_mic1_mux,
-		max98090_mic1_mux_event,
+//NV		max98090_mic1_mux_event,
+		NULL,
 		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_MUX_E("MIC2 Mux", SND_SOC_NOPM,
 		0, 0, &max98090_mic2_mux,
-		max98090_mic2_mux_event,
+//NV		max98090_mic2_mux_event,
+		NULL,
 		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_PGA_E("MIC1 Input", M98090_REG_10_LVL_MIC1,
@@ -2497,16 +2498,17 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 			}
 		}
 
-		if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+//Ivan
+//		if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
 			/*
 			 * Set to normal bias level.
 			 */
 			snd_soc_update_bits(codec, M98090_REG_12_MIC_BIAS,
-				M98090_MBVSEL_MASK, M98090_MBVSEL_2V4);
+				M98090_MBVSEL_MASK, M98090_MBVSEL_2V55);
 
 			snd_soc_update_bits(codec, M98090_REG_3E_PWR_EN_IN,
 				M98090_PWR_MBEN_MASK, M98090_PWR_MBEN_MASK);
-		}
+//		}
 		break;
 
 	case SND_SOC_BIAS_PREPARE:
