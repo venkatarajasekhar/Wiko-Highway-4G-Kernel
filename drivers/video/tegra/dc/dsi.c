@@ -50,7 +50,9 @@
 #include "mipi_cal.h"
 
 //Magnum 2014-1-27 
+#ifdef CONFIG_MACH_S8515
 #define TINNO_ESD_CHECK
+#endif   
 #ifdef TINNO_ESD_CHECK
 #include <linux/backlight.h>
 #include "../../../arch/arm/mach-tegra/gpio-names.h"

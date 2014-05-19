@@ -341,6 +341,16 @@ config MACH_S8515
        help
          Support for TINNO S8515 Development platform
 
+config MACH_S9321
+       bool "S9321 board"
+       depends on ARCH_TEGRA_14x_SOC
+       select MACH_HAS_SND_SOC_TEGRA_MAX98090 if SND_SOC
+       select MACH_HAS_SND_SOC_TEGRA_TLV320AIC325X if SND_SOC
+       select MACH_HAS_SND_SOC_TEGRA_DMIC_REV1 if SND_SOC
+
+       help
+         Support for TINNO S9321 Development platform
+
 config MACH_CARDHU
        bool "Cardhu board"
        depends on ARCH_TEGRA_3x_SOC

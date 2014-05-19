@@ -77,6 +77,29 @@
 #define MASK_2BIT 0x03
 #define MASK_1BIT 0x01
 
+#ifdef CONFIG_MACH_S9321  //LIUJ20140519RELE1342ADD 
+//edit by Magnum 2013-11-06
+#define CUSTOM_MAX_WIDTH (1080)
+#define CUSTOM_MAX_HEIGHT (1920)
+#define TPD_HAVE_BUTTON
+#define TPD_KEY_COUNT           3
+#define TPD_KEYS                { KEY_MENU, KEY_HOMEPAGE, KEY_BACK}
+
+
+//#define TPD_YMAX        (1360)
+#define TPD_YMAX        (CUSTOM_MAX_HEIGHT+80)
+#define TPD_Y_OFFSET		30
+
+#define TPD_B1_FP	0		//Button 1 pad space
+#define TPD_B1_W		CUSTOM_MAX_WIDTH/3	//Button 1 Width
+#define TPD_B2_FP	0		//Button 2 pad space
+#define TPD_B2_W		CUSTOM_MAX_WIDTH/3		//Button 2 Width
+#define TPD_B3_FP	0		//Button 3 pad space
+#define TPD_B3_W		CUSTOM_MAX_WIDTH/3		//Button 3 Width
+#endif
+
+
+#ifdef CONFIG_MACH_S8515
 //edit by Magnum 2013-11-06
 #define CUSTOM_MAX_WIDTH (720)
 #define CUSTOM_MAX_HEIGHT (1280)
@@ -94,6 +117,7 @@
 #define TPD_B2_W		240		//Button 2 Width
 #define TPD_B3_FP	0		//Button 3 pad space
 #define TPD_B3_W		240		//Button 3 Width
+#endif
 
 
 #define TPD_BUTTON1_X_CENTER	(TPD_B1_FP + TPD_B1_W/2)

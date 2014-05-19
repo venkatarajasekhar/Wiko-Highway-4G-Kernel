@@ -28,7 +28,12 @@
 #include <linux/input/synaptics_dsx.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
+#ifdef CONFIG_MACH_S8515
 #include "board-s8515.h"
+#endif   
+#ifdef CONFIG_MACH_S9321
+#include "board-s9321.h"
+#endif   
 
 #define TM_SAMPLE1_ADDR 0x72 >> 1
 #define TM_SAMPLE1_ATTN 130

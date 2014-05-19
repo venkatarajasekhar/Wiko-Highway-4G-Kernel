@@ -28,6 +28,7 @@
 #include <linux/leds.h>
 #include <linux/ioport.h>
 #include <linux/lm3528.h>
+#include "devices.h"
 
 #include "gpio-names.h"
 #include "board-panel.h"
@@ -36,6 +37,7 @@
 #define DSI_PANEL_RESET         1
 
 #define DC_CTRL_MODE            TEGRA_DC_OUT_CONTINUOUS_MODE
+#define BOOTLOADER_BL_INTENSITY 77
 
 static struct regulator *vdd_lcd_s_1v8;
 static struct regulator *vdd_sys_bl_3v7;
@@ -43,6 +45,9 @@ static struct regulator *vdd_sys_bl_3v7;
 static bool dsi_s_1080p_5_reg_requested;
 static bool dsi_s_1080p_5_gpio_requested;
 static bool is_bl_powered;
+static u16 vdd_lcd_5v_en;
+
+static struct platform_device *disp_device;
 
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu dsi_s_1080p_5_cmu = {
@@ -283,6 +288,43 @@ static tegra_dc_bl_output dsi_s_1080p_5_lm3528_bl_response_curve = {
 	254, 254, 254, 254, 255, 255, 255, 255
 };
 
+static tegra_dc_bl_output temp_bl_output_measured = {
+	0, 16, 16, 16, 16, 16, 16, 16,
+	16, 16, 16, 16, 16, 16, 16, 17,
+	18, 19, 20, 20, 21, 22, 24, 25,
+	26, 27, 28, 29, 30, 31, 33, 34,
+	35, 36, 37, 38, 39, 41, 42, 43,
+	44, 45, 46, 46, 47, 48, 49, 50,
+	50, 51, 52, 53, 53, 54, 55, 55,
+	56, 57, 57, 58, 58, 59, 60, 61,
+	62, 63, 64, 65, 65, 66, 67, 68,
+	68, 69, 70, 70, 71, 72, 73, 73,
+	74, 75, 76, 77, 77, 78, 79, 80,
+	81, 82, 83, 84, 85, 86, 87, 87,
+	88, 89, 90, 91, 92, 93, 94, 94,
+	95, 95, 96, 97, 97, 98, 99, 99,
+	100, 101, 101, 102, 103, 103, 104, 105,
+	105, 106, 107, 108, 108, 109, 110, 111,
+	111, 112, 113, 114, 115, 115, 116, 117,
+	118, 119, 120, 121, 121, 122, 123, 124,
+	125, 126, 126, 127, 128, 129, 130, 131,
+	132, 133, 134, 134, 135, 136, 137, 138,
+	139, 140, 141, 143, 144, 145, 146, 147,
+	148, 149, 151, 152, 153, 154, 155, 156,
+	157, 158, 159, 160, 161, 163, 164, 165,
+	166, 167, 169, 170, 171, 172, 173, 175,
+	176, 177, 179, 180, 182, 183, 185, 186,
+	187, 189, 190, 191, 193, 194, 195, 197,
+	198, 199, 200, 202, 203, 204, 205, 207,
+	208, 209, 210, 212, 213, 214, 215, 216,
+	218, 219, 220, 221, 222, 223, 225, 226,
+	227, 228, 229, 231, 232, 233, 234, 235,
+	237, 238, 239, 241, 242, 244, 245, 246,
+	248, 249, 250, 251, 252, 253, 254, 255,
+};
+
+static p_tegra_dc_bl_output bl_output;
+
 static p_tegra_dc_bl_output dsi_s_1080p_5_bl_response_curve;
 
 static int __maybe_unused dsi_s_1080p_5_bl_notify(struct device *unused,
@@ -400,6 +442,84 @@ static unsigned int dsi_s_atlantis_edp_brightness[] = {
 	255, 230, 204, 170, 140, 128, 102, 77, 51, 10, 0
 };
 
+#if 1
+static int s_1080p_5_backlight_notify(struct device *unused, int brightness)
+{
+	int cur_sd_brightness = atomic_read(&sd_brightness);
+
+	/* SD brightness is a percentage, 8-bit value. */
+	brightness = (brightness * cur_sd_brightness) / 255;
+
+	/* Apply any backlight response curve */
+	if (brightness > 255)
+		pr_info("Error: Brightness > 255!\n");
+	else
+		brightness = bl_output[brightness];
+
+	return brightness;
+}
+
+static int __maybe_unused s_1080p_5_check_fb(struct device *dev,
+					     struct fb_info *info)
+{
+	return info->device == &disp_device->dev;
+}
+
+
+static struct platform_pwm_backlight_data external_pwm_disp1_backlight_data = {
+	.pwm_id		= 0,
+	.max_brightness = 255,
+//	.dft_brightness = 77,
+//	.pwm_period_ns  = 1000000,
+	.dft_brightness	= BOOTLOADER_BL_INTENSITY,
+	.pwm_period_ns	= 100000,	
+	.notify		= s_1080p_5_backlight_notify,
+	.pwm_gpio	= TEGRA_GPIO_PG2,
+	/* Only toggle backlight on fb blank notifications for disp1 */
+	.check_fb	= s_1080p_5_check_fb,
+};
+
+static struct platform_device external_pwm_disp1_backlight_device = {
+	.name	= "pwm-backlight",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &external_pwm_disp1_backlight_data,
+	},
+};
+
+static struct platform_device *s_1080p_5_bl_devices[]  = {
+	&external_pwm_disp1_backlight_device,
+};
+
+#endif
+
+static struct platform_device *s_1080p_5_gfx_devices[] __initdata = {
+	&tegra_pwfm0_device,
+};
+
+static int __init dsi_s_1080p_5_register_bl_dev(void)
+{
+	dsi_s_1080p_5_max8831_bl_data.edp_states =
+		dsi_s_ceres_edp_states;
+	dsi_s_1080p_5_max8831_bl_data.edp_brightness =
+			dsi_s_ceres_edp_brightness;
+		dsi_s_1080p_5_bl_response_curve =
+				dsi_s_1080p_5_max8831_bl_response_curve;	
+	bl_output = temp_bl_output_measured;
+
+	platform_add_devices(s_1080p_5_gfx_devices,
+		ARRAY_SIZE(s_1080p_5_gfx_devices));
+		
+	platform_add_devices(s_1080p_5_bl_devices,ARRAY_SIZE(s_1080p_5_bl_devices));
+
+/*
+	platform_add_devices(otm1283a_trgra_pwm_bl_devices,
+		ARRAY_SIZE(otm1283a_trgra_pwm_bl_devices));		
+*/
+	return 0;
+}
+
+#if 0
 static int __init dsi_s_1080p_5_register_bl_dev(void)
 {
 	struct i2c_board_info *bl_info;
@@ -443,6 +563,7 @@ static int __init dsi_s_1080p_5_register_bl_dev(void)
 
 	return i2c_register_board_info(1, bl_info, 1);
 }
+#endif
 
 struct tegra_dc_mode dsi_s_1080p_5_modes[] = {
 	/* 1080x1920@60Hz */
@@ -496,18 +617,27 @@ static int dsi_s_1080p_5_gpio_get(void)
 
 	if (dsi_s_1080p_5_gpio_requested)
 		return 0;
-
+	
+	vdd_lcd_5v_en = TEGRA_GPIO_PG3;
+	
+	err = gpio_request(vdd_lcd_5v_en, "panel 5v en");
+	if (err < 0) {
+		pr_err("panel 5v vdd en gpio request failed\n");
+		goto fail;
+	}
+	pr_err("panel 5v vdd en gpio request OK!\n");
+	
 	err = gpio_request(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, "panel rst");
 	if (err < 0) {
 		pr_err("panel reset gpio request failed\n");
 		goto fail;
 	}
 
-	err = gpio_request(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio,
-		"panel backlight");
+	//err = gpio_request(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio,
+	//	"panel backlight");
 	if (err < 0) {
 		pr_err("panel backlight gpio request failed\n");
-		goto fail;
+		//goto fail;
 	}
 
 
@@ -518,51 +648,6 @@ fail:
 	return err;
 }
 
-static int dsi_s_1080p_5_enable(struct device *dev)
-{
-	int err = 0;
-	err = dsi_s_1080p_5_reg_get();
-	if (err < 0) {
-		pr_err("dsi regulator get failed\n");
-		goto fail;
-	}
-
-	err = dsi_s_1080p_5_gpio_get();
-	if (err < 0) {
-		pr_err("dsi gpio request failed\n");
-		goto fail;
-	}
-	gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
-
-	if (vdd_lcd_s_1v8) {
-		err = regulator_enable(vdd_lcd_s_1v8);
-		if (err < 0) {
-			pr_err("vdd_lcd_1v8_s regulator enable failed\n");
-			goto fail;
-		}
-	}
-	usleep_range(3000, 5000);
-
-	if (vdd_sys_bl_3v7) {
-		err = regulator_enable(vdd_sys_bl_3v7);
-		if (err < 0) {
-			pr_err("vdd_sys_bl regulator enable failed\n");
-			goto fail;
-		}
-	}
-	gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 1);
-	mdelay(50);
-
-#if DSI_PANEL_RESET
-	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 1);
-	msleep(20);
-#endif
-	is_bl_powered = true;
-
-	return 0;
-fail:
-	return err;
-}
 
 static u8 panel_internal[] = {0x51, 0x0f, 0xff};
 
@@ -608,6 +693,55 @@ static struct tegra_dsi_out dsi_s_1080p_5_pdata = {
 	.n_suspend_cmd = ARRAY_SIZE(dsi_s_1080p_5_suspend_cmd),
 };
 
+static int dsi_s_1080p_5_enable(struct device *dev)
+{
+	int err = 0;
+	err = dsi_s_1080p_5_reg_get();
+	if (err < 0) {
+		pr_err("dsi regulator get failed\n");
+		goto fail;
+	}
+
+	err = dsi_s_1080p_5_gpio_get();
+	if (err < 0) {
+		pr_err("dsi gpio request failed\n");
+		goto fail;
+	}
+	gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
+
+	if (vdd_lcd_s_1v8) {
+		err = regulator_enable(vdd_lcd_s_1v8);
+		if (err < 0) {
+			pr_err("vdd_lcd_1v8_s regulator enable failed\n");
+			goto fail;
+		}
+	}
+	usleep_range(3000, 5000);
+
+	gpio_direction_output(vdd_lcd_5v_en, 1);
+	usleep_range(3000, 5000);
+
+	if (vdd_sys_bl_3v7) {
+		err = regulator_enable(vdd_sys_bl_3v7);
+		if (err < 0) {
+			pr_err("vdd_sys_bl regulator enable failed\n");
+			goto fail;
+		}
+	}
+	//gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 1);
+	mdelay(50);
+
+#if DSI_PANEL_RESET
+	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 1);
+	msleep(20);
+#endif
+	is_bl_powered = true;
+
+	return 0;
+fail:
+	return err;
+}
+
 static int dsi_s_1080p_5_disable(void)
 {
 	/* delay between sleep in and reset low */
@@ -616,7 +750,7 @@ static int dsi_s_1080p_5_disable(void)
 	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
 	usleep_range(3000, 5000);
 
-	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 0);
+	//gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 0);
 	if (vdd_sys_bl_3v7)
 		regulator_disable(vdd_sys_bl_3v7);
 	is_bl_powered = false;
@@ -625,11 +759,15 @@ static int dsi_s_1080p_5_disable(void)
 	if (vdd_lcd_s_1v8)
 		regulator_disable(vdd_lcd_s_1v8);
 
+	gpio_direction_output(vdd_lcd_5v_en, 0);
 	return 0;
 }
 
 static void dsi_s_1080p_5_dc_out_init(struct tegra_dc_out *dc)
 {
+	u16 init_count = sizeof(dsi_s_1080p_5_init_cmd)/sizeof(struct LCM_setting_table);
+	rebuild_tegra_lcm(dsi_s_1080p_5_init_cmd, &dsi_s_1080p_5_pdata,init_count);
+	
 	dc->dsi = &dsi_s_1080p_5_pdata;
 	dc->parent_clk = "pll_d_out0";
 	dc->modes = dsi_s_1080p_5_modes;
@@ -654,10 +792,13 @@ static void dsi_s_1080p_5_sd_settings_init
 	tegra_get_display_board_info(&bi);
 	tegra_get_board_info(&board_info);
 
+	settings->bl_device_name = "pwm-backlight";
+#if 0
 	if ((bi.board_id == BOARD_E1563) || (board_info.board_id == BOARD_E1740))
 		settings->bl_device_name = "lm3528_display_bl";
 	else
 		settings->bl_device_name = "max8831_display_bl";
+#endif
 }
 
 static void dsi_s_1080p_5_cmu_init(struct tegra_dc_platform_data *pdata)
@@ -665,11 +806,18 @@ static void dsi_s_1080p_5_cmu_init(struct tegra_dc_platform_data *pdata)
 	pdata->cmu = &dsi_s_1080p_5_cmu;
 }
 
+static void dsi_s_1080p_5_set_disp_device(
+	struct platform_device *ceres_display_device)
+{
+	disp_device = ceres_display_device;
+}
+
 struct tegra_panel __initdata dsi_s_1080p_5 = {
 	.init_sd_settings = dsi_s_1080p_5_sd_settings_init,
 	.init_dc_out = dsi_s_1080p_5_dc_out_init,
 	.init_fb_data = dsi_s_1080p_5_fb_data_init,
 	.register_bl_dev = dsi_s_1080p_5_register_bl_dev,
+	.set_disp_device = dsi_s_1080p_5_set_disp_device,		
 	.init_cmu_data = dsi_s_1080p_5_cmu_init,
 };
 EXPORT_SYMBOL(dsi_s_1080p_5);

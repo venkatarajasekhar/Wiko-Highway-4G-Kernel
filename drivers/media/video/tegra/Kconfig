@@ -218,3 +218,11 @@ config FLASH_SGM3780
         ---help---
           This is a driver for the Tinno Flash Device SGM3780
           for use with the tegra isp.
+config VIDEO_OV16825
+        tristate "OV16825 camera sensor support"
+        depends on I2C && ARCH_TEGRA
+        ---help---
+          This is a driver for
+          the OV16825 camera
+          sensor for use with
+          the tegra isp.

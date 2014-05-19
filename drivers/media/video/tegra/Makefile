@@ -41,3 +41,4 @@ obj-$(CONFIG_VIDEO_IMX179)	+= imx179.o
 obj-$(CONFIG_VIDEO_IMX179)	+= imx179_otp.o
 obj-$(CONFIG_VIDEO_DW9714A)	+= dw9714a.o
 obj-$(CONFIG_FLASH_SGM3780)	+= sgm3780.o
+obj-$(CONFIG_VIDEO_OV16825)	+= ov16825.o

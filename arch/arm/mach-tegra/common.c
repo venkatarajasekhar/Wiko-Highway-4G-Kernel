@@ -1433,7 +1433,19 @@ void tegra_get_board_info(struct board_info *bi)
 	system_serial_low = (bi->fab << 24) |
 	(bi->major_revision << 16) | (bi->minor_revision << 8);
 	return;
-#endif    
+#endif   
+#ifdef CONFIG_MACH_S9321
+	memset(bi, 0, sizeof(*bi));
+	bi->board_id = 0x690;
+	bi->sku = 0x3e9;		//Ivan 1001
+	bi->fab = 0x2;
+	bi->major_revision = 0x44;
+	bi->minor_revision = 0x6;
+	system_serial_high = (bi->board_id << 16) | bi->sku;
+	system_serial_low = (bi->fab << 24) |
+	(bi->major_revision << 16) | (bi->minor_revision << 8);
+	return;
+#endif  
 
 #ifdef CONFIG_OF
 	board_info = of_find_node_by_path("/chosen/board_info");	

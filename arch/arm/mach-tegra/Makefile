@@ -395,6 +395,24 @@ obj-${CONFIG_MACH_S8515}                += board-touch-synaptics-i2c.o
 obj-${CONFIG_MACH_S8515}                += panel-hx8394a-720p.o
 obj-${CONFIG_MACH_S8515}                += panel-otm1283a-720p.o
 
+obj-${CONFIG_MACH_S9321}                += board-s9321.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-kbc.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-sdhci.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-power.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-powermon.o
+obj-${CONFIG_MACH_S9321}                += board-atlantis-power.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-pinmux.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-sensors.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-panel.o
+obj-${CONFIG_MACH_S9321}                += board-s9321-memory.o
+obj-${CONFIG_MACH_S9321}                += panel-l-720p-5.o
+obj-${CONFIG_MACH_S9321}                += panel-j-720p-4-7.o
+obj-${CONFIG_MACH_S9321}                += panel-s-1080p-5.o
+obj-${CONFIG_MACH_S9321}                += panel-j-720p-4-7.o
+obj-${CONFIG_MACH_S9321}                += board-touch-synaptics-i2c.o
+obj-${CONFIG_MACH_S9321}                += panel-hx8394a-720p.o
+obj-${CONFIG_MACH_S9321}                += panel-otm1283a-720p.o
+
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
