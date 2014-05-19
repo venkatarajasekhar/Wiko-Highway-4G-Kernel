@@ -11418,7 +11418,7 @@ static struct tegra14_emc_table atlantis_e1670_lpddr2_table_ll_der[] = {
 #include "board-ceres-memory-sl440-edf8132a1mc.h"
 #include "board-ceres-memory-sl440-edf8132a3mc.h"
 #include "board-ceres-memory-sl440-edb8132b3ph.h"
-#include "board-ceres-memory-sl460-h9to18abjtmc.h"
+#include "board-ceres-memory-sl460-h9tq18abjtmc.h"
 static struct tegra14_emc_multi_pdata ceres_emc_multi_pdata = {
 	.num_emc_pdata = NUM_EMC_TABLE_GROUPS,
 	.emc_pdata[EDF8132A1MC_EMC_TABLE_GROUP] = &ceres_emc_edf8132a1mc_pdata,

@@ -17,7 +17,7 @@
  */
 
 static struct tegra14_emc_table
-	ceres_e1680_sl460_ceres_h9to18abjtmc_table[] = {
+	ceres_e1680_sl460_ceres_h9tq18abjtmc_table[] = {
 	{
 		0x52,       /* Rev 5.3.8.e */
 		"D00",      /* DVFS table version */
@@ -1621,7 +1621,7 @@ static struct tegra14_emc_table
 };
 
 static struct tegra14_emc_table
-	ceres_e1680_sl460_ceres_h9to18abjtmc_table_der[] = {
+	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_der[] = {
 	{
 		0x52,       /* Rev 5.3.8.e */
 		"D00",      /* DVFS table version */
@@ -3225,7 +3225,7 @@ static struct tegra14_emc_table
 };
 
 static struct tegra14_emc_table
-	ceres_e1680_sl460_ceres_h9to18abjtmc_table_ll[] = {
+	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll[] = {
 	{
 		0x52,       /* Rev 5.3.8.e */
 		"D00",      /* DVFS table version */
@@ -4829,7 +4829,7 @@ static struct tegra14_emc_table
 };
 
 static struct tegra14_emc_table
-	ceres_e1680_sl460_ceres_h9to18abjtmc_table_ll_der[] = {
+	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll_der[] = {
 	{
 		0x52,       /* Rev 5.3.8.e */
 		"D00",      /* DVFS table version */
@@ -6432,14 +6432,14 @@ static struct tegra14_emc_table
 	},
 };
 
-static struct tegra14_emc_pdata ceres_emc_sl460_h9to18abjtmc_pdata = {
-	.description = "ceres_e1680_sl460_ceres_h9to18abjtmc_tables",
-	.tables = ceres_e1680_sl460_ceres_h9to18abjtmc_table,
-	.tables_derated = ceres_e1680_sl460_ceres_h9to18abjtmc_table_der,
+static struct tegra14_emc_pdata ceres_emc_sl460_h9tq18abjtmc_pdata = {
+	.description = "ceres_e1680_sl460_ceres_h9tq18abjtmc_tables",
+	.tables = ceres_e1680_sl460_ceres_h9tq18abjtmc_table,
+	.tables_derated = ceres_e1680_sl460_ceres_h9tq18abjtmc_table_der,
 	.tables_low_latency =
-		ceres_e1680_sl460_ceres_h9to18abjtmc_table_ll,
+		ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll,
 	.tables_low_latency_derated =
-		ceres_e1680_sl460_ceres_h9to18abjtmc_table_ll_der,
-	.num_tables = ARRAY_SIZE(ceres_e1680_sl460_ceres_h9to18abjtmc_table),
+		ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll_der,
+	.num_tables = ARRAY_SIZE(ceres_e1680_sl460_ceres_h9tq18abjtmc_table),
 };
 
