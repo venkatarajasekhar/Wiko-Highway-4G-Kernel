@@ -91,17 +91,18 @@
 #define TEGRA_GPIO_EXT_MIC_EN	-1
 
 /* Invensense MPU Definitions */
-#define MPU_GYRO_NAME		"mpu9150"
+#define MPU_GYRO_NAME		"mpu6515"	//"mpu9250"
 
 #define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PM7
 
-#define MPU_GYRO_ADDR			0x69
+//Ivan 69 -> 68
+#define MPU_GYRO_ADDR			0x68
 #define MPU_GYRO_BUS_NUM		0
 #define MPU_GYRO_ORIENTATION		{ 0, 1, 0, -1, 0, 0, 0, 0, 1 }
 #define MPU_GYRO_ORIENTATION_E1680	{ -1, 0, 0, 0, -1, 0, 0, 0, 1 }
 #define MPU_COMPASS_NAME		"ak8963"
 #define MPU_COMPASS_IRQ_GPIO		0
-#define MPU_COMPASS_ADDR		0x0D
+#define MPU_COMPASS_ADDR		0x0E
 #define MPU_COMPASS_BUS_NUM		0
 #define MPU_COMPASS_ORIENTATION		{ 1, 0, 0, 0, -1, 0, 0, 0, -1 }
 //#define MPU_COMPASS_ORIENTATION_E1680	{ 0, -1, 0, -1, 0, 0, 0, 0, -1 }

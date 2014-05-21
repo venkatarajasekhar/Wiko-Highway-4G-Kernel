@@ -3,6 +3,8 @@
 #
 menu "Magnetometer sensors"
 
+source "drivers/staging/iio/magnetometer/inv_compass/Kconfig"
+
 config SENSORS_AK8975
 	tristate "Asahi Kasei AK8975 3-Axis Magnetometer"
 	depends on I2C
