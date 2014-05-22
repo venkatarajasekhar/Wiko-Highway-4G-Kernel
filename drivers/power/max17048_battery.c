@@ -728,6 +728,15 @@ static int max17048_initialize(struct max17048_chip *chip)
 	if (ret < 0)
 		return ret;
 
+//Ivan added battery config
+//Ivan	config = mdata->one_percent_alerts | config;
+      
+	ret = max17048_write_word(client, MAX17048_CONFIG,
+			((mdata->rcomp << 8) | config));		
+	if (ret < 0)
+		return ret;		
+//Ivan end
+	
 	ocv = max17048_read_word(client, MAX17048_OCV);
 	if (ocv < 0) {
 		dev_err(&client->dev, "%s: err %d\n", __func__, ocv);
@@ -749,7 +758,16 @@ static int max17048_initialize(struct max17048_chip *chip)
 	ret = max17048_write_word(client, MAX17048_VRESET, mdata->vreset);
 	if (ret < 0)
 		return ret;
+	
+	/* Voltage Alert configuration */
+	ret = max17048_write_word(client, MAX17048_VALRT, mdata->valert);
+	if (ret < 0)
+		return ret;
 
+	status = max17048_read_word(client, MAX17048_VALRT);
+//Ivan 01 or 09
+	printk("Ivan max17048_initialize valert[%x]\n",status );
+	
 	/* Lock model access */
 	ret = max17048_write_word(client, MAX17048_UNLOCK, 0x0000);
 	if (ret < 0)
@@ -788,7 +806,8 @@ static int max17048_initialize(struct max17048_chip *chip)
 	else if (mdata->bits == 18)
 		config = 32 - mdata->alert_threshold;
 
-	config = mdata->one_percent_alerts | config;
+//Ivan disable one percentage changes alert
+//Ivan	config = mdata->one_percent_alerts | config;
       
 	ret = max17048_write_word(client, MAX17048_CONFIG,
 			((mdata->rcomp << 8) | config));
