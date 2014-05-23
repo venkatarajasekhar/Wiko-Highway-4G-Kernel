@@ -65,4 +65,5 @@ obj-y					+= compass/
 obj-y					+= mpu/
 obj-y					+= pressure/
 obj-y					+= bma222e.o
+obj-y					+= apds993x.o
 
