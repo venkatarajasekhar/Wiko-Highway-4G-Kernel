@@ -73,7 +73,7 @@
 		.debounce_interval = 10,	\
 	}
 
-#if 1 //ljs s9321
+#if 0 //ljs s9321
 static struct gpio_keys_button ceres_int_keys[] = {
 	[0] = GPIO_KEY(KEY_HOME, PJ1, 0),
 	[1] = GPIO_KEY(KEY_MENU, PJ2, 0),
@@ -85,11 +85,10 @@ static struct gpio_keys_button ceres_int_keys[] = {
 };
 #else
 static struct gpio_keys_button ceres_int_keys[] = {
-	[0] = GPIO_HKEY(KEY_HOME, PJ1, 0),
-	[1] = GPIO_IKEY(KEY_POWER, CERES_POWER_ON_INT, 1, 100),
-	[2] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 1),
-	[3] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 1),
-	[4] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1500),
+	[0] = GPIO_IKEY(KEY_POWER, CERES_POWER_ON_INT, 1, 100),
+	[1] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 1),
+	[2] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 1),
+	[3] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1500),
 };
 #endif
 static int atlantis_wakeup_key(void)
@@ -128,10 +127,17 @@ int __init ceres_keys_init(void)
 
 	if ((bi.board_id == BOARD_E1670) || (bi.board_id == BOARD_E1680) ||
 		 (bi.board_id == BOARD_E1671) || (bi.board_id == BOARD_E1740)) {
+		 #if 0 //ljs s9321
 		ceres_int_keys[3].gpio = TEGRA_GPIO_PJ4;
 		ceres_int_keys[3].active_low = 1;
 		ceres_int_keys[3].debounce_interval = 30;
 		ceres_int_keys_pdata.wakeup_key	= atlantis_wakeup_key;
+#else
+		ceres_int_keys[0].gpio = TEGRA_GPIO_PJ4;
+		ceres_int_keys[0].active_low = 1;
+		ceres_int_keys[0].debounce_interval = 30;
+		ceres_int_keys_pdata.wakeup_key	= atlantis_wakeup_key;
+#endif
 	}
 
 	platform_device_register(&ceres_int_keys_device);

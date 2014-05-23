@@ -1823,6 +1823,17 @@ static struct i2c_board_info __initdata ak8963_mag_i2c1_board_info[] = {
 };
 #endif
 
+static struct i2c_board_info __initdata apds993x_i2c1_board_info[] = {
+	{
+		/* The actual BMP180 address is 0x77 but because this conflicts
+		 * with another device, this address is hacked so Linux will
+		 * call the driver.  The conflict is technically okay since the
+		 * BMP180 is behind the MPU.  Also, the BMP180 driver uses a
+		 * hard-coded address of 0x77 since it can't be changed anyway.
+		 */
+		I2C_BOARD_INFO("apds993x", 0x39),
+	},
+};
 
 static void mpuirq_init(void)
 {
@@ -1830,6 +1841,10 @@ static void mpuirq_init(void)
 	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
 	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
 	char *gyro_name = MPU_GYRO_NAME;
+
+
+	i2c_register_board_info(gyro_bus_num, apds993x_i2c1_board_info,
+		ARRAY_SIZE(apds993x_i2c1_board_info));
 
 //#if (CONFIG_INV_MPU == 1)
 #if 1
