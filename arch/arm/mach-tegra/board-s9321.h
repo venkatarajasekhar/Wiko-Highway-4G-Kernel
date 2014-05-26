@@ -94,6 +94,7 @@
 #define MPU_GYRO_NAME		"mpu6515"	//"mpu9250"
 
 #define MPU_GYRO_IRQ_GPIO	TEGRA_GPIO_PM7
+#define MPU_ALSPS_IRQ_GPIO	TEGRA_GPIO_PN0
 
 //Ivan 69 -> 68
 #define MPU_GYRO_ADDR			0x68

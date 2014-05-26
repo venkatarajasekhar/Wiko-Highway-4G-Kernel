@@ -544,7 +544,7 @@ static void apds993x_change_als_threshold(struct i2c_client *client)
 		}
 	}
 
-	printk("lux=%d ch0data=%d ch1data=%d again=%d als_reduce=%d\n", luxValue, ch0data, ch1data, apds993x_als_again_tb[data->als_again_index], data->als_reduce);
+//Ivan	printk("lux=%d ch0data=%d ch1data=%d again=%d als_reduce=%d\n", luxValue, ch0data, ch1data, apds993x_als_again_tb[data->als_again_index], data->als_reduce);
 	
 	// check PS under sunlight
 	if ( (data->ps_detection == 1) && (ch0data > (75*(1024*(256-apds993x_als_atime_tb[data->als_atime_index])))/100))	// PS was previously in far-to-near condition
@@ -668,7 +668,7 @@ static void apds993x_als_polling_work_handler(struct work_struct *work)
 		}
 	}
 	
-	printk("lux=%d ch0data=%d ch1data=%d pdata=%d delay=%d again=%d als_reduce=%d)\n", luxValue, ch0data, ch1data, pdata, data->als_poll_delay, apds993x_als_again_tb[data->als_again_index], data->als_reduce);
+//Ivan	printk("lux=%d ch0data=%d ch1data=%d pdata=%d delay=%d again=%d als_reduce=%d)\n", luxValue, ch0data, ch1data, pdata, data->als_poll_delay, apds993x_als_again_tb[data->als_again_index], data->als_reduce);
 
 	// check PS under sunlight
 	if ( (data->ps_detection == 1) && (ch0data > (75*(1024*(256-data->atime)))/100))	// PS was previously in far-to-near condition

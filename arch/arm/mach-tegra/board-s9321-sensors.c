@@ -48,6 +48,7 @@
 #include <media/lm3565.h>
 #include <media/dw9714a.h>
 #include <media/ov16825.h>
+#include <linux/apds993x.h>
 
 
 #include <linux/kernel.h>
@@ -1655,11 +1656,13 @@ static struct i2c_board_info __initdata ceres_i2c_board_info_max44005[] = {
 	},
 };
 
+#if 0
 static struct i2c_board_info __initdata ceres_i2c_board_info_ap3220[] = {
 	{
 		I2C_BOARD_INFO("ap3220", 0x1c),
 	},
 };
+#endif
 
 static struct i2c_board_info __initdata ceres_i2c_board_info_tcs3772[] = {
 	{
@@ -1742,7 +1745,16 @@ static struct mpu_platform_data mpu_compass_data_e1670 = {
 //	.config		= NVI_CONFIG_BOOT_MPU,
 };
 
+static struct apds993x_platform_data apds993x_data_e1680 = {
+	.irq		= 0, 	//TEGRA_GPIO_PN0
+};
 
+static struct i2c_board_info __initdata adps993x_i2c_board_info[] = {
+	{
+		I2C_BOARD_INFO("apds993x", 0x39),
+		.platform_data = &apds993x_data_e1680,
+	},
+};
 #if 0
 static struct mpu_platform_data ak8963_compass_data_e1680 = {
 	.int_config	= 0x10,
@@ -1823,17 +1835,6 @@ static struct i2c_board_info __initdata ak8963_mag_i2c1_board_info[] = {
 };
 #endif
 
-static struct i2c_board_info __initdata apds993x_i2c1_board_info[] = {
-	{
-		/* The actual BMP180 address is 0x77 but because this conflicts
-		 * with another device, this address is hacked so Linux will
-		 * call the driver.  The conflict is technically okay since the
-		 * BMP180 is behind the MPU.  Also, the BMP180 driver uses a
-		 * hard-coded address of 0x77 since it can't be changed anyway.
-		 */
-		I2C_BOARD_INFO("apds993x", 0x39),
-	},
-};
 
 static void mpuirq_init(void)
 {
@@ -1841,10 +1842,6 @@ static void mpuirq_init(void)
 	unsigned gyro_irq_gpio = MPU_GYRO_IRQ_GPIO;
 	unsigned gyro_bus_num = MPU_GYRO_BUS_NUM;
 	char *gyro_name = MPU_GYRO_NAME;
-
-
-	i2c_register_board_info(gyro_bus_num, apds993x_i2c1_board_info,
-		ARRAY_SIZE(apds993x_i2c1_board_info));
 
 //#if (CONFIG_INV_MPU == 1)
 #if 1
@@ -2096,9 +2093,12 @@ int __init ceres_sensors_init(void)
 
 	  if ((board_info.board_id != BOARD_E1670) &&
 		  (board_info.board_id != BOARD_E1740)) {
-	    
-		  //i2c_register_board_info(0, ceres_i2c_board_info_ap3220,
-		//		  ARRAY_SIZE(ceres_i2c_board_info_ap3220));	
+		    apds993x_data_e1680.irq = gpio_to_irq(MPU_ALSPS_IRQ_GPIO);
+		    printk("Ivan ALSPS irq = %d \n", apds993x_data_e1680.irq);
+//		    adps993x_i2c_board_info.platform_data = &apds993x_data_e1680;
+//		  adps993x_i2c_board_info.platform_data.irq = gpio_to_irq(MPU_ALSPS_IRQ_GPIO);
+		  i2c_register_board_info(0, adps993x_i2c_board_info,
+				  ARRAY_SIZE(adps993x_i2c_board_info));	
 
 		  if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY)
 			  i2c_register_board_info(0, max77660_fg_board_info, 1);
