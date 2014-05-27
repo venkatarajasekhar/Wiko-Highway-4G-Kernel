@@ -42,12 +42,14 @@ config VIDEO_OV14810
           
 config VIDEO_IMX179
         tristate "IMX179 camera sensor support"
+        default n
         depends on I2C && ARCH_TEGRA
         ---help---
           This is a driver for the IMX179 camera sensor, luis added
 
 config VIDEO_IMX179FF
         tristate "IMX179FF camera sensor support"
+        default n
         depends on I2C && ARCH_TEGRA
         ---help---
           This is a driver for the IMX179FF camera sensor, ljs added
