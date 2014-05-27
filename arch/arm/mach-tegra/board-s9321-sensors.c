@@ -1067,7 +1067,7 @@ static int pluto_imx179_power_off(struct nvc_regulator *vreg)
 static struct nvc_imager_cap imx179_cap = {
 	.identifier		= "IMX179",
 	.sensor_nvc_interface	= 3,
-	.pixel_types[0]		= 0x100,
+	.pixel_types[0]		= 0x102,
 	.orientation		= 0,
 	.direction		= 0,
 	.initial_clock_rate_khz	= 6000,
@@ -1638,7 +1638,7 @@ static int ceres_camera_init(void)
 		&ceres_pcl_pdata, sizeof(ceres_pcl_pdata));
 	platform_device_register(&ceres_camera_generic);
 
-	//platform_device_register(&tinno_flash_device);
+	platform_device_register(&tinno_flash_device);
 	//imx179_pdata.flash_dev = &tinno_flash_device.dev;
 
 	return 0;

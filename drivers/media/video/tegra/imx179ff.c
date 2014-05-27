@@ -77,7 +77,7 @@ static struct nvc_imager_cap imx179_dflt_cap = {
 	.v_sync_edge		= 0,
 	.mclk_on_vgp0		= 0,
 	.csi_port		= 0,
-	.data_lanes		= 2,
+	.data_lanes		= 4,
 	.virtual_channel_id	= 0,
 	.discontinuous_clk_mode	= 1,
 	.cil_threshold_settle	= 0x0,
@@ -157,7 +157,7 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	/*stand by*/
 	{0x0100, 0x00},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
-	{0x0101, 0x00},
+	{0x0101, 0x01},
 	{0x0202, 0x0C},
 	{0x0203, 0x19},
 	{0x0301, 0x0A},
@@ -238,7 +238,7 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 	/*stand by*/
 	{0x0100, 0x00},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
-	{0x0101, 0x00},
+	{0x0101, 0x01},
 	{0x0202, 0x06},
 	{0x0203, 0x0A},
 	{0x0301, 0x0A},
@@ -316,8 +316,7 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	/*stand by*/
 	{0x0100, 0x00},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
-	{0x0100,0x00},
-	{0x0101,0x00},
+	{0x0101,0x01},
 	{0x0202,0x05},
 	{0x0203,0x65},
 	{0x0301,0x0A},
