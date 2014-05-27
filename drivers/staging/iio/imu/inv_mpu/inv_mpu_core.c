@@ -807,8 +807,6 @@ static ssize_t _dmp_attr_store(struct device *dev,
 		st->batch.overflow_on = 0;
 		break;
 	case ATTR_DMP_SIX_Q_ON:
-//Ivan 
-		printk("MPU ATTR_DMP_SIX_Q_ON = %d! \n",data);		    
 		st->sensor[SENSOR_SIXQ].on = !!data;
 		break;
 	case ATTR_DMP_SIX_Q_RATE:
@@ -819,8 +817,6 @@ static ssize_t _dmp_attr_store(struct device *dev,
 		st->sensor[SENSOR_SIXQ].dur *= DMP_INTERVAL_INIT;
 		break;
 	case ATTR_DMP_LPQ_ON:
-//Ivan 
-		printk("MPU ATTR_DMP_LPQ_ON = %d! \n",data);	    	    
 		st->sensor[SENSOR_LPQ].on = !!data;
 		break;
 	case ATTR_DMP_LPQ_RATE:
@@ -831,8 +827,6 @@ static ssize_t _dmp_attr_store(struct device *dev,
 		st->sensor[SENSOR_LPQ].dur *= DMP_INTERVAL_INIT;
 		break;
 	case ATTR_DMP_PED_Q_ON:
-//Ivan 
-		printk("MPU ATTR_DMP_PED_Q_ON = %d! \n",data);		    
 		st->sensor[SENSOR_PEDQ].on = !!data;
 		break;
 	case ATTR_DMP_PED_Q_RATE:
@@ -843,8 +837,6 @@ static ssize_t _dmp_attr_store(struct device *dev,
 		st->sensor[SENSOR_PEDQ].dur *= DMP_INTERVAL_INIT;
 		break;
 	case ATTR_DMP_STEP_DETECTOR_ON:
-//Ivan 
-		printk("MPU ATTR_DMP_STEP_DETECTOR_ON = %d! \n",data);	    
 		st->sensor[SENSOR_STEP].on = !!data;
 		break;
 	default:
@@ -1684,7 +1676,7 @@ static ssize_t _attr_store(struct device *dev,
 		st->self_test.threshold = data;
 	case ATTR_GYRO_ENABLE:
 //Ivan 
-		printk("MPU ATTR_GYRO_ENABLE = %d! \n",data);
+		printk("MPU ATTR_GYRO_ENABLE! \n");
 		st->chip_config.gyro_enable = !!data;
 		break;
 	case ATTR_GYRO_FIFO_ENABLE:
@@ -1697,7 +1689,7 @@ static ssize_t _attr_store(struct device *dev,
 		break;
 	case ATTR_ACCEL_ENABLE:
 //Ivan 
-		printk("MPU ATTR_ACCEL_ENABLE = %d! \n",data);
+		printk("MPU ATTR_ACCEL_ENABLE! \n");
 		st->chip_config.accel_enable = !!data;
 		break;
 	case ATTR_ACCEL_FIFO_ENABLE:
@@ -1713,7 +1705,7 @@ static ssize_t _attr_store(struct device *dev,
 		break;
 	case ATTR_COMPASS_ENABLE:
 //Ivan 
-		printk("MPU ATTR_COMPASS_ENABLE = %d! \n",data);
+		printk("MPU ATTR_COMPASS_ENABLE! \n");
 	    
 		st->sensor[SENSOR_COMPASS].on = !!data;
 		break;
@@ -1730,7 +1722,6 @@ static ssize_t _attr_store(struct device *dev,
 		st->sensor[SENSOR_COMPASS].dur  *= DMP_INTERVAL_INIT;
 		break;
 	case ATTR_PRESSURE_ENABLE:
-		printk("MPU ATTR_PRESSURE_ENABLE = %d! \n",data);	    
 		st->sensor[SENSOR_PRESSURE].on = !!data;
 		break;
 	case ATTR_PRESSURE_RATE:
@@ -1871,7 +1862,6 @@ static ssize_t inv_master_enable_store(struct device *dev,
 	if (result)
 		return result;
 
-	printk("MPU inv_master_enable_store = %d \n", data);
 	mutex_lock(&indio_dev->mlock);
 	if (st->chip_config.enable == (!!data)) {
 		result = count;
