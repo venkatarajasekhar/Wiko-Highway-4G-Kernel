@@ -478,8 +478,6 @@ static void max17048_work(struct work_struct *work)
 	    g_soc_fifo_init = 1;
 	    for (loop = 0; loop < VSOC_LEN; loop ++)
 	      g_soc_fifo[loop] = chip->soc;
-	    for (loop = 0; loop < VCELL_LEN; loop ++)
-	      g_vcell_fifo[loop] = chip->vcell;	    
 	}
 //Ivan End
 //Ivan add new soc sample
@@ -746,7 +744,7 @@ static int max17048_initialize(struct max17048_chip *chip)
 	}
 	printk("max17048_initialize: ocv:%d\n",ocv);	
 	
-	if ((vcell + 650) > ocv /* && rcomp == 151*/)		//around 50mV
+	if ((vcell + 650) > ocv && rcomp == 151)		//around 50mV
 	{
 	  if (!(bl_status & 0x100)/* && (bl_status & 0x01)*/)	//reset and no charger
 	  {
