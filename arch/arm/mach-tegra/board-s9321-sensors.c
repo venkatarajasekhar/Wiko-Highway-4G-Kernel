@@ -981,9 +981,7 @@ static struct ov5648_platform_data ceres_ov5648_pdata = {
 
 
 static struct nvc_gpio_pdata imx179_gpio_pdata[] = {
-#if (CONFIG_S8515_PR_VERSION == 1)
 	{IMX179_GPIO_RESET,     CAM_RSTN_TINNO,         true, false},
-#endif
 	{IMX179_GPIO_PWDN,      CAM_PWDN_TINNO,         true, false},
 	{IMX179_GPIO_GP1,       CAM_CHOS_TINNO,         true, false }
 }; 
@@ -992,20 +990,16 @@ static struct nvc_gpio_pdata imx179_gpio_pdata[] = {
 static int pluto_imx179_power_on(struct nvc_regulator *vreg)
 {
 	int err;
+    printk("%s imx179 power up enter\n", __func__);
     
 	if (unlikely(WARN_ON(!vreg)))
 		return -EFAULT;
 	/* put front sensor into pwerdonw mode */
-	gpio_set_value(CAM_RSTN, 0);
 	gpio_set_value(CAM2_POWER_DWN_GPIO, 0);
-	gpio_set_value(CAM1_POWER_DWN_GPIO, 0);
 
 	tegra_pinmux_config_table(&mclk_enable, 1);
 
-	gpio_set_value(CAM_PWDN_TINNO, 0);
-#if (CONFIG_S8515_PR_VERSION == 1)
 	gpio_set_value(CAM_RSTN_TINNO, 0);
-#endif
 	gpio_set_value(CAM_CHOS_TINNO, 1);
 	usleep_range(10, 20);
 
@@ -1018,10 +1012,7 @@ static int pluto_imx179_power_on(struct nvc_regulator *vreg)
 		goto imx179_iovdd_fail;
 
 	usleep_range(1, 2);
-	gpio_set_value(CAM_PWDN_TINNO, 1);
-#if (CONFIG_S8515_PR_VERSION == 1)
 	gpio_set_value(CAM_RSTN_TINNO, 1);
-#endif
 	usleep_range(300, 350);
 
 	err = regulator_enable(vreg[IMX179_VREG_DVDD].vreg);
@@ -1034,12 +1025,7 @@ static int pluto_imx179_power_on(struct nvc_regulator *vreg)
 		goto imx179_dvdd_fail;
 
 	usleep_range(100, 110);
-	gpio_set_value(CAM_PWDN_TINNO, 1);
-#if (CONFIG_S8515_PR_VERSION == 1)
 	gpio_set_value(CAM_RSTN_TINNO, 1);
-#endif
-	gpio_set_value(CAM_RSTN, 1);
-	gpio_set_value(CAM1_POWER_DWN_GPIO, 1);
 	gpio_set_value(CAM2_POWER_DWN_GPIO, 1);
 	usleep_range(300, 350);
 
@@ -1068,7 +1054,6 @@ static int pluto_imx179_power_off(struct nvc_regulator *vreg)
 	tegra_pinmux_config_table(&mclk_disable, 1);
 
 	usleep_range(1, 2);
-	gpio_set_value(CAM_PWDN_TINNO, 0);
 	gpio_set_value(CAM_RSTN_TINNO, 0);
 	usleep_range(1, 2);
 
@@ -1098,21 +1083,20 @@ static struct nvc_imager_cap imx179_cap = {
 	.v_sync_edge		= 0,
 	.mclk_on_vgp0		= 0,
 	.csi_port		= 0,
-	.data_lanes		= 4,
+	.data_lanes		= 2,
 	.virtual_channel_id	= 0,
-	.discontinuous_clk_mode	= 0,
+	.discontinuous_clk_mode	= 1,
 	.cil_threshold_settle	= 0x0,
+	.preferred_mode_index	= 0,
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
-	.focuser_guid		= NVC_FOCUS_GUID(0),
-	.torch_guid		= NVC_TORCH_GUID(0),
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
 static unsigned imx179_estates[] = {300, 100, 2};
 
 static struct imx179_platform_data imx179_pdata = {
-	.num			= 0,
+	.num			= 1,
 	.sync			= 0,
 	.dev_name		= "camera",
 	.gpio_count		= ARRAY_SIZE(imx179_gpio_pdata),
@@ -1168,6 +1152,8 @@ static int generic_ov16825_power_on(
 	if (unlikely(!pw || !pw->avdd || !pw->dovdd || !pw->dvdd))
 		return -EFAULT;
 
+	gpio_set_value(CAM_CHOS_TINNO, 0);
+
 	if (size_gpio > OV16825_CUSTOMER_BOARD_GPIO) {
 		for (i = OV16825_CUSTOMER_BOARD_GPIO; i < size_gpio; i++)
 			gpio_set_value(gpio[i].gpio, gpio[i].active_high);
@@ -1194,7 +1180,7 @@ static int generic_ov16825_power_on(
 		goto ov12830_dovdd_fail;
 
 	err = regulator_set_voltage(pw->avdd, 2800000, 2800000);
-	err = regulator_enable(pw->avdd);
+	err |= regulator_enable(pw->avdd);
 	v = regulator_get_voltage(pw->avdd);
 	printk("luisov %s pw->avdd v %d\n", __func__, v);
 	if (unlikely(err))
@@ -1284,7 +1270,7 @@ static struct nvc_gpio_pdata ov16825_gpio_pdata[] = {
 	the data means:
 	list the number from +0, +1,	    GPIO number,		  state that should be set
 	*/
-	{ OV16825_CUSTOMER_BOARD_GPIO + 0,	TEGRA_GPIO_PS4, true, false  },
+	//{ OV16825_CUSTOMER_BOARD_GPIO + 0,	TEGRA_GPIO_PS4, true, false  },
 };
 
 static struct nvc_imager_cap ceres_ov16825_cap = {
@@ -1498,9 +1484,9 @@ static struct camera_module ceres_camera_module_info[] = {
 		.focuser = &ceres_i2c_board_info_dw9714a,
 		#endif
 	},
-	/*{  //s9321
+	{  //s9321
 		.sensor = &ceres_i2c_board_info_imx179,
-	},*/
+	},
 	#endif
 	{}
 };
@@ -1564,8 +1550,8 @@ static struct camera_module ceres_camera_module_infox[] = {
         .sensor = &ceres_i2c_board_info_imx179,
         .focuser = &ceres_i2c_board_info_dw9714a,
 	},
-	{
-		.sensor = &ceres_i2c_board_info_ov5648,
+	{  //s9321
+		.sensor = &ceres_i2c_board_info_imx179,
 	},
 
 	{}
@@ -1606,6 +1592,7 @@ static struct platform_device tinno_flash_device = {
 
 static int ceres_camera_init(void)
 {
+	int ret = 0;
 	/* on atlantis FFD, only IMX135/AD5816/LM3565/IMX132 are
 	supported, auto-detection is not neccessary. */
 
@@ -1637,6 +1624,13 @@ static int ceres_camera_init(void)
 	p = &ceres_pcl_pdata;
 	p = &ceres_i2c_board_info_imx179;
 	p = &tinno_flash_device;
+	p = &tinno_i2c_board_info_ov16825;
+	p = &ceres_i2c_board_info_dw9714a;
+	
+	ret = gpio_request(CAM_CHOS_TINNO, "gpio_shared_camera");
+	if (ret)
+		printk("%s cannot request %d, camera will not work\n", __func__, CAM_CHOS_TINNO);
+ 
 
 	//platform_device_add_data(&ceres_camera_generic,
 	//	&ceres_pcl_pdatax, sizeof(ceres_pcl_pdatax));
