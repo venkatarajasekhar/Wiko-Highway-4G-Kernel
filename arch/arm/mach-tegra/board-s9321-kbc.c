@@ -89,6 +89,7 @@ static struct gpio_keys_button ceres_int_keys[] = {
 	[1] = GPIO_KEY(KEY_VOLUMEUP, PJ6, 1),
 	[2] = GPIO_KEY(KEY_VOLUMEDOWN, PJ5, 1),
 	[3] = GPIO_IKEY(KEY_POWER, CERES_POWER_LONGPRESS_INT, 0, 1500),
+//Ivan	[4] = GPIO_KEY(KEY_WAKEUP, PJ1, 0),		//Low Battery Alert
 };
 #endif
 static int atlantis_wakeup_key(void)

@@ -34,6 +34,7 @@ struct max17048_platform_data {
 	struct max17048_battery_model *model_data;
 	int soc_error_max_value;
 	const char *tz_name;
+	int alert_irq;
 };
 #ifdef CONFIG_BATTERY_MAX17048
 extern void max17048_battery_status(int status);

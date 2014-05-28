@@ -82,6 +82,8 @@
 #define TEGRA_GPIO_INT_MIC_EN	-1
 #define TEGRA_GPIO_EXT_MIC_EN	-1
 
+#define MAX_BATTERY_ALERT_IRQ_GPIO	TEGRA_GPIO_PJ1
+
 /* Invensense MPU Definitions */
 #define MPU_GYRO_NAME		"mpu6515"	//"mpu9250"
 

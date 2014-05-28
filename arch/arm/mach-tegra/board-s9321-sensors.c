@@ -179,8 +179,9 @@ static struct nct1008_platform_data ceres_nct1008_pdata = {
 struct max17048_platform_data max17048_pdata = {
 	.model_data = &tinno_s8515_2000_ssv_3_55_max17048_battery,
 //Ivan	.tz_name = "battery-temp",
-	.tz_name = "generic-adc-thermal",	
+	.tz_name = "generic-adc-thermal",
 	.soc_error_max_value = 101,
+	.alert_irq = MAX_BATTERY_ALERT_IRQ_GPIO,
 };
 
 static struct i2c_board_info __initdata max77660_fg_board_info[] = {
@@ -2095,7 +2096,14 @@ int __init ceres_sensors_init(void)
 				  ARRAY_SIZE(adps993x_i2c_board_info));	
 
 		  if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY)
-			  i2c_register_board_info(0, max77660_fg_board_info, 1);
+		  {
+#ifdef MAX_BATTERY_ALERT_IRQ_GPIO
+			max17048_pdata.alert_irq = gpio_to_irq(MAX_BATTERY_ALERT_IRQ_GPIO);
+#else
+			max17048_pdata.alert_irq = 0;
+#endif
+		      i2c_register_board_info(0, max77660_fg_board_info, 1);
+		  }
 	  } else {
 		  i2c_register_board_info(0, ceres_i2c_board_info_tcs3772,
 				  ARRAY_SIZE(ceres_i2c_board_info_tcs3772));

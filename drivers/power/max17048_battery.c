@@ -26,6 +26,8 @@
 #include <linux/pm.h>
 #include <linux/jiffies.h>
 #include <linux/reboot.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
 
 #define MAX17048_VCELL		0x02
 #define MAX17048_SOC		0x04
@@ -76,6 +78,9 @@ static int g_soc_fifo_init = 0;
 static struct timeval g_charger_discon_time;
 static struct timeval g_previous_time;
 #endif
+
+static g_Batt_VL_IRQ_Count = 0;
+
 extern int tegra_get_bootloader_fg_status(void);
 
 //extern int get_tn_bat_test_count(void);
@@ -106,6 +111,7 @@ struct max17048_chip {
 	int charge_complete;
 	int is_recharged;
 	struct mutex mutex;
+	int irq;
 };
 struct max17048_chip *max17048_data;
 
@@ -459,8 +465,16 @@ static void max17048_work(struct work_struct *work)
 	int rcomp;
 	struct timeval now;
 	time_t diff;
+	uint16_t status;
 	
 	chip = container_of(work, struct max17048_chip, work.work);
+//Ivan added	
+	status = max17048_read_word(chip->client, MAX17048_STATUS);
+	printk("Ivan max17048_work Status[%x]\n",status >> 8 );
+	status = max17048_read_word(chip->client, MAX17048_CONFIG);
+	printk("Ivan max17048_work Config[%x]\n",status & 0xFF );
+
+//Ivan End
 	
 	max17048_get_vcell(chip->client);
 	max17048_get_soc(chip->client);
@@ -728,6 +742,11 @@ static int max17048_initialize(struct max17048_chip *chip)
 	if (ret < 0)
 		return ret;
 
+	/* Voltage Alert configuration */
+	ret = max17048_write_word(client, MAX17048_VALRT, mdata->valert);
+	if (ret < 0)
+		return ret;
+
 //Ivan added battery config
 //Ivan	config = mdata->one_percent_alerts | config;
       
@@ -735,6 +754,17 @@ static int max17048_initialize(struct max17048_chip *chip)
 			((mdata->rcomp << 8) | config));		
 	if (ret < 0)
 		return ret;		
+
+//Clear status register	
+	status = status & ~0x0100;
+	/* set EnVR as 1 */
+	ret = max17048_write_word(client, MAX17048_STATUS,
+			status);
+	if (ret < 0)
+		return ret;
+	
+	status = max17048_read_word(client, MAX17048_VALRT);
+	printk("Ivan max17048_initialize valert[%x]\n",status );
 //Ivan end
 	
 	ocv = max17048_read_word(client, MAX17048_OCV);
@@ -758,15 +788,6 @@ static int max17048_initialize(struct max17048_chip *chip)
 	ret = max17048_write_word(client, MAX17048_VRESET, mdata->vreset);
 	if (ret < 0)
 		return ret;
-	
-	/* Voltage Alert configuration */
-	ret = max17048_write_word(client, MAX17048_VALRT, mdata->valert);
-	if (ret < 0)
-		return ret;
-
-	status = max17048_read_word(client, MAX17048_VALRT);
-//Ivan 01 or 09
-	printk("Ivan max17048_initialize valert[%x]\n",status );
 	
 	/* Lock model access */
 	ret = max17048_write_word(client, MAX17048_UNLOCK, 0x0000);
@@ -993,6 +1014,39 @@ static ssize_t max17048_reg_show(struct device *dev, struct device_attribute *at
 
 }
 
+irqreturn_t max17048_irq_process(int irq, void *dev_id)
+{
+    struct max17048_chip *chip = (struct inv_mpu_state *)dev_id;
+    uint16_t status;
+   
+    printk("Ivan max17048_irq_process! \n");    
+//Ivan added	
+    status = max17048_read_word(chip->client, MAX17048_STATUS);
+    printk("Ivan max17048_irq_process Status[%x]\n",status >> 8 );
+    if (status & 0x0600)	//VL or VH
+    {
+	if (g_Batt_VL_IRQ_Count > 5)
+	{
+	    printk("Ivan Battery too low/hight (3.2V), force power off...\n");	    
+	    max77660_power_forceoff();	    
+	}
+	g_Batt_VL_IRQ_Count++;
+    }
+    status = max17048_read_word(chip->client, MAX17048_CONFIG);
+    printk("Ivan max17048_irq_process Config[%x]\n",status & 0xFF );
+    status &= 0xff00;
+    max17048_write_word(chip->client, MAX17048_CONFIG, status);
+//Ivan End    
+    mdelay(100);
+
+    return IRQ_HANDLED;
+}
+
+static irqreturn_t max17048_irq_handler(int irq, void *dev_id)
+{
+    printk("Ivan max17048_irq_handler! \n");
+    return IRQ_WAKE_THREAD;
+}
 
 static DEVICE_ATTR(readreg, S_IRUGO | S_IWUSR | S_IWGRP,
 		   max17048_reg_show, NULL);
@@ -1090,7 +1144,19 @@ static int __devinit max17048_probe(struct i2c_client *client,
 			ret);
 		goto bg_err;
 	}
-
+//Ivan added alert handler
+	printk("Ivan max17048 alert_irq = %d! \n", chip->pdata->alert_irq);    
+	chip->irq = chip->pdata->alert_irq;
+	if (chip->pdata->alert_irq != 0)
+	{
+	    if (request_threaded_irq(chip->pdata->alert_irq, max17048_irq_handler, max17048_irq_process,
+			IRQF_TRIGGER_FALLING | IRQF_SHARED, "max17048", chip))
+		printk("%s Could not allocate MAX17048 Alert IRQ !\n", __func__);
+	    else
+		ret = device_init_wakeup(&client->dev, 1);
+		disable_irq_wake(chip->irq);
+		disable_irq(chip->irq);
+	}
 	INIT_DELAYED_WORK_DEFERRABLE(&chip->work, max17048_work);
 	schedule_delayed_work(&chip->work, 0);
 	ret = max17048_sysfs_create(client);
@@ -1138,6 +1204,15 @@ static int max17048_suspend(struct device *dev)
 	int ret;
 
 	cancel_delayed_work_sync(&chip->work);
+//Ivan	
+	g_Batt_VL_IRQ_Count = 0;
+	
+	if (chip->irq != 0)
+	{
+	    enable_irq(chip->irq);
+	    enable_irq_wake(chip->irq);
+	}
+	printk("Ivan max17048_suspend! \n");
 	/*ret = max17048_write_word(chip->client, MAX17048_HIBRT, 0xffff);
 	if (ret < 0) {
 		dev_err(dev, "failed in entering hibernate mode\n");
@@ -1158,8 +1233,13 @@ static int max17048_resume(struct device *dev)
 		dev_err(dev, "failed in exiting hibernate mode\n");
 		return ret;
 	}*/
-
+	if (chip->irq != 0)
+	{
+	    disable_irq_wake(chip->irq);
+	    disable_irq(chip->irq);
+	}
 //Ivan	schedule_delayed_work(&chip->work, MAX17048_DELAY);
+	printk("Ivan max17048_resume! \n");
 	schedule_delayed_work(&chip->work, 0);
 	return 0;
 }

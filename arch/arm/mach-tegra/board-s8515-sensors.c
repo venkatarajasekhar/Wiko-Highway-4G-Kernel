@@ -1838,7 +1838,14 @@ int __init ceres_sensors_init(void)
 				  ARRAY_SIZE(ceres_i2c_board_info_ap3220));	
 
 		  if (get_power_supply_type() == POWER_SUPPLY_TYPE_BATTERY)
-			  i2c_register_board_info(0, max77660_fg_board_info, 1);
+		  {
+#ifdef MAX_BATTERY_ALERT_IRQ_GPIO
+			max17048_pdata.alert_irq = gpio_to_irq(MAX_BATTERY_ALERT_IRQ_GPIO);
+#else
+			max17048_pdata.alert_irq = 0;
+#endif
+		      i2c_register_board_info(0, max77660_fg_board_info, 1);
+		  }
 	  } else {
 		  i2c_register_board_info(0, ceres_i2c_board_info_tcs3772,
 				  ARRAY_SIZE(ceres_i2c_board_info_tcs3772));
