@@ -469,10 +469,10 @@ static void max17048_work(struct work_struct *work)
 	
 	chip = container_of(work, struct max17048_chip, work.work);
 //Ivan added	
-	status = max17048_read_word(chip->client, MAX17048_STATUS);
-	printk("Ivan max17048_work Status[%x]\n",status >> 8 );
-	status = max17048_read_word(chip->client, MAX17048_CONFIG);
-	printk("Ivan max17048_work Config[%x]\n",status & 0xFF );
+//	status = max17048_read_word(chip->client, MAX17048_STATUS);
+//	printk("Ivan max17048_work Status[%x]\n",status >> 8 );
+//	status = max17048_read_word(chip->client, MAX17048_CONFIG);
+//	printk("Ivan max17048_work Config[%x]\n",status & 0xFF );
 
 //Ivan End
 	
@@ -1158,7 +1158,8 @@ static int __devinit max17048_probe(struct i2c_client *client,
 		printk("%s Could not allocate MAX17048 Alert IRQ !\n", __func__);
 	    else
 		ret = device_init_wakeup(&client->dev, 1);
-		disable_irq_wake(chip->irq);
+	    
+//		disable_irq_wake(chip->irq);
 		disable_irq(chip->irq);
 	}
 	INIT_DELAYED_WORK_DEFERRABLE(&chip->work, max17048_work);
