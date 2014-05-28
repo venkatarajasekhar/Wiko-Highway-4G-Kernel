@@ -492,6 +492,8 @@ static void max17048_work(struct work_struct *work)
 	    g_soc_fifo_init = 1;
 	    for (loop = 0; loop < VSOC_LEN; loop ++)
 	      g_soc_fifo[loop] = chip->soc;
+	    for (loop = 0; loop < VCELL_LEN; loop ++)
+	      g_vcell_fifo[loop] = chip->vcell;	    
 	}
 //Ivan End
 //Ivan add new soc sample
@@ -764,7 +766,7 @@ static int max17048_initialize(struct max17048_chip *chip)
 		return ret;
 	
 	status = max17048_read_word(client, MAX17048_VALRT);
-	printk("Ivan max17048_initialize valert[%x]\n",status );
+	printk("Ivan max17048_initialize valert[%x] reading[%x]\n",mdata->valert, status );
 //Ivan end
 	
 	ocv = max17048_read_word(client, MAX17048_OCV);
@@ -774,7 +776,7 @@ static int max17048_initialize(struct max17048_chip *chip)
 	}
 	printk("max17048_initialize: ocv:%d\n",ocv);	
 	
-	if ((vcell + 650) > ocv && rcomp == 151)		//around 50mV
+	if ((vcell + 650) > ocv /* && rcomp == 151*/)		//around 50mV
 	{
 	  if (!(bl_status & 0x100)/* && (bl_status & 0x01)*/)	//reset and no charger
 	  {
@@ -1027,7 +1029,9 @@ irqreturn_t max17048_irq_process(int irq, void *dev_id)
     {
 	if (g_Batt_VL_IRQ_Count > 5)
 	{
-	    printk("Ivan Battery too low/hight (3.2V), force power off...\n");	    
+	    printk("Ivan Battery too low/hight (3.2V), force power off...\n");	
+//Ivan End    
+	    mdelay(200);
 	    max77660_power_forceoff();	    
 	}
 	g_Batt_VL_IRQ_Count++;
