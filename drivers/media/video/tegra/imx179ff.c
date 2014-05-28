@@ -145,8 +145,8 @@ static struct imx179_reg *test_patterns[] = {
 //13fps
 //experimental values
 //{250, 500}
-#define setting_3280x2464_test_addtion_frame	50
-#define setting_3280x2464_test_addtion_line		500
+#define setting_3280x2464_test_addtion_frame	0
+#define setting_3280x2464_test_addtion_line		0
 #define setting_3280x2464_frame_length (0x0c1d + setting_3280x2464_test_addtion_frame)
 #define setting_3280x2464_line_length (0x0d70 + setting_3280x2464_test_addtion_line)
 #define reg_0x0340_3280x2464_frame_length_hi_byte	(setting_3280x2464_frame_length >> 8)
@@ -165,8 +165,8 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x0305, 0x06},
 	{0x0309, 0x0A},
 	{0x030B, 0x01},
-	{0x030C, 0x00},
-	{0x030D, 0xc8},
+	{0x030C, 0x01},
+	{0x030D, 0x00},
 	{0x0340, reg_0x0340_3280x2464_frame_length_hi_byte},
 	{0x0341, reg_0x0341_3280x2464_frame_length_lo_byte},
 	{0x0342, reg_0x0342_3280x2464_line_length_hi_byte},
@@ -386,9 +386,9 @@ static struct imx179_mode_data imx179_3280x2464 = {
 		.res_y			= 2464,
 		.active_start_x		= 0,
 		.active_stary_y		= 0,
-		.peak_frame_rate	= 15000, /* / _INT2FLOAT_DIVISOR */
+		.peak_frame_rate	= 20000, /* / _INT2FLOAT_DIVISOR */
 		.pixel_aspect_ratio	= 1000, /* / _INT2FLOAT_DIVISOR */
-		.pll_multiplier		= 11000, /* / _INT2FLOAT_DIVISOR */
+		.pll_multiplier		= 15000, /* / _INT2FLOAT_DIVISOR */
 		.crop_mode		= NVC_IMAGER_CROPMODE_NONE,
 	},
 	.sensor_dnvc = {
@@ -417,8 +417,8 @@ static struct imx179_mode_data imx179_3280x2464 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0x64,
-		.pll_div		= 0x03,
+		.pll_mult		= 0xff,
+		.pll_div		= 0x06,
 	},
 	.p_mode_i2c			= imx179_3280x2464_i2c,
 };
