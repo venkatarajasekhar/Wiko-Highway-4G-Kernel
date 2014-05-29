@@ -268,11 +268,22 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 				MAX77660_TOPOFFT_60MIN);
 		if (ret < 0)
 			return ret;
+//		printk("Ivan CONFIG_MACH_S9321 = %d!!!\n",CONFIG_MACH_S9321);
+#if (CONFIG_MACH_S9321 == 1)
+		/* MBATREG to 4.2V */
+		ret = max77660_reg_write(chip->parent,
+				MAX77660_CHG_SLAVE,
+				MAX77660_CHARGER_BATREGCTRL,
+				MAX77660_MBATREG_4350MV);		//Ivan change to 4.15V MAX77660_MBATREG_4200MV	
+#pragma message("### use CONFIG_MACH_S9321 ###")		
+#else
 		/* MBATREG to 4.2V */
 		ret = max77660_reg_write(chip->parent,
 				MAX77660_CHG_SLAVE,
 				MAX77660_CHARGER_BATREGCTRL,
 				MAX77660_MBATREG_4200MV);		//Ivan change to 4.15V MAX77660_MBATREG_4200MV
+#pragma message("### use CONFIG_MACH_S8515 ###")				
+#endif		
 		if (ret < 0)
 			return ret;
 		/* set MBATREGMAX voltage */

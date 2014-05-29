@@ -154,8 +154,11 @@ static void battery_charger_thermal_monitor_wq(struct work_struct *work)
 	temperature = temperature / 1000;
 	charger_enable_state = true;
 	charger_current_half = false;
+#if (CONFIG_MACH_S9321 == 1)
+	battery_thersold_voltage = 4350;	
+#else	
 	battery_thersold_voltage = 4250;
-
+#endif
 	if (temperature <= JETI_TEMP_COLD || temperature >= JETI_TEMP_HOT) {
 		charger_enable_state = false;
 	//} else if (temperature <= JETI_TEMP_COOL ||
