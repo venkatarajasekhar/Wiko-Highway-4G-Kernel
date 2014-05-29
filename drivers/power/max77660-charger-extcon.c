@@ -1038,7 +1038,16 @@ static int max77660_charger_thermal_configure(
     ret = max77660_reg_read(chip->parent,
 		    MAX77660_CHG_SLAVE,
 		    MAX77660_CHARGER_CHGCTRL1, &jeitaStatus);
-	dev_info(chip->dev, "Battery CHGCTRL1[0x%x] \n", jeitaStatus);
+    
+    ret = max77660_reg_read(chip->parent,
+		    MAX77660_CHG_SLAVE,
+		    MAX77660_CHARGER_MBATREGMAX, &status1);
+
+    ret = max77660_reg_read(chip->parent,
+		    MAX77660_CHG_SLAVE,
+		    MAX77660_CHARGER_AICLCNTL, &status2);
+        
+	dev_info(chip->dev, "Battery CHGCTRL1[0x%x],MBATREGMAX[%x],AICLCNTL[%x] \n", jeitaStatus, status1, status2 );
   #endif
 
 	return 0;
@@ -1236,7 +1245,11 @@ static int __devinit max77660_chg_extcon_probe(struct platform_device *pdev)
 	if(bcharger_pdata->max_term_vol_mV)
 		charger->max_term_vol_mV = convert_to_reg(bcharger_pdata->max_term_vol_mV);
 	else
+#if (CONFIG_MACH_S9321 == 1)
+		charger->max_term_vol_mV = convert_to_reg(MAX77660_MBATREGMAX_4400MV);
+#else
 		charger->max_term_vol_mV = convert_to_reg(MAX77660_MBATREGMAX_4300MV);
+#endif
 
 	chg_extcon->battery_present = true;
 	charger->wdt_timeout = bcharger_pdata->wdt_timeout;

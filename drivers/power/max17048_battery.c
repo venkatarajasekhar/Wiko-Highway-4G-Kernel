@@ -50,10 +50,15 @@
 #define MAX17048_BATTERY_LOW	15
 #define MAX17048_VERSION_NO	0x11
 #define TOPOFF_TIME_COUNT 30
+#if (CONFIG_MACH_S9321 == 1)
+#define BATTERY_MAX_OCV 4350000
+#define BATTERY_RECHARGE_OCV 4300000
+#define BATTERY_RECHARGE_VCELL 4250
+#else
 #define BATTERY_MAX_OCV 4200000
 #define BATTERY_RECHARGE_OCV 4180000
 #define BATTERY_RECHARGE_VCELL 4175
-
+#endif
 extern void max77660_power_forceoff(void);
 //static int max_fg_w[128];
 //static uint8_t g_17048_fg_byte[128];
@@ -478,7 +483,6 @@ static void max17048_work(struct work_struct *work)
 	
 	max17048_get_vcell(chip->client);
 	max17048_get_soc(chip->client);
-	printk("MAX17048_FG:%6d,%6d,%6d,%6d,%6d\n",g_fg_record_time,chip->vcell,temp,chip->raw_soc,rcomp>>8);
 
 //Ivan added	
 	do_gettimeofday(&now);
@@ -522,6 +526,7 @@ static void max17048_work(struct work_struct *work)
 	g_fg_record_time+=20;
 	printk("\n");
 	printk("Ivan max17048_work vcell[%d], soc[%d], raw_soc[%d], temp[%d], rcomp[%d]\n",chip->vcell,chip->soc,chip->raw_soc,temp,rcomp>>8 );
+	printk("MAX17048_FG:%6d,%6d,%6d,%6d,%6d\n",g_fg_record_time,chip->vcell,temp,chip->raw_soc,rcomp>>8);
 	
 	schedule_delayed_work(&chip->work, MAX17048_DELAY);
 
