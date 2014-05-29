@@ -83,7 +83,7 @@ static struct nvc_imager_cap imx179_dflt_cap = {
 	.cil_threshold_settle	= 0x0,
 	.min_blank_time_width	= 16,
 	.min_blank_time_height	= 16,
-	.preferred_mode_index	= 2, //luis, this is different, 1080p 1
+	.preferred_mode_index	= 2,
 	.focuser_guid		= NVC_FOCUS_GUID(0),
 	.torch_guid		= NVC_TORCH_GUID(0),
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
@@ -137,36 +137,33 @@ static struct imx179_reg *test_patterns[] = {
 	tp_cbars_seq,
 	tp_checker_seq,
 };
+
+
 #if defined(HW_2_LANES) && HW_2_LANES
 
-
-
-
-//13fps
-//experimental values
-//{250, 500}
-#define setting_3280x2464_test_addtion_frame	0
-#define setting_3280x2464_test_addtion_line		0
-#define setting_3280x2464_frame_length (0x0c1d + setting_3280x2464_test_addtion_frame)
+#define setting_3280x2464_test_addtion_frame        0
+#define setting_3280x2464_test_addtion_line             0
+#define setting_3280x2464_frame_length (0x09ae + setting_3280x2464_test_addtion_frame)
 #define setting_3280x2464_line_length (0x0d70 + setting_3280x2464_test_addtion_line)
-#define reg_0x0340_3280x2464_frame_length_hi_byte	(setting_3280x2464_frame_length >> 8)
-#define reg_0x0341_3280x2464_frame_length_lo_byte	(setting_3280x2464_frame_length & 0xff)
-#define reg_0x0342_3280x2464_line_length_hi_byte	(setting_3280x2464_line_length >> 8)
-#define reg_0x0343_3280x2464_line_length_lo_byte	(setting_3280x2464_line_length & 0xff)
+#define reg_0x0340_3280x2464_frame_length_hi_byte    (setting_3280x2464_frame_length >> 8)
+#define reg_0x0341_3280x2464_frame_length_lo_byte    (setting_3280x2464_frame_length & 0xff)
+#define reg_0x0342_3280x2464_line_length_hi_byte        (setting_3280x2464_line_length >> 8)
+#define reg_0x0343_3280x2464_line_length_lo_byte        (setting_3280x2464_line_length & 0xff)
+
 static struct imx179_reg imx179_3280x2464_i2c[] = {
 	/*stand by*/
 	{0x0100, 0x00},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{0x0101, 0x01},
-	{0x0202, 0x0C},
-	{0x0203, 0x19},
+	{0x0202, 0x09},
+	{0x0203, 0xAA},
 	{0x0301, 0x0A},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x0A},
 	{0x030B, 0x01},
-	{0x030C, 0x01},
-	{0x030D, 0x00},
+	{0x030C, 0x00},
+	{0x030D, 0xDD},
 	{0x0340, reg_0x0340_3280x2464_frame_length_hi_byte},
 	{0x0341, reg_0x0341_3280x2464_frame_length_lo_byte},
 	{0x0342, reg_0x0342_3280x2464_line_length_hi_byte},
@@ -187,13 +184,13 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x0387, 0x01},
 	{0x0390, 0x00},
 	{0x0401, 0x00},
-	{0x0405, 0x10},
+	{0x0405, 0x14},
 	{0x3020, 0x10},
 	{0x3041, 0x15},
 	{0x3042, 0x87},
 	{0x3089, 0x4F},
 	{0x3309, 0x9A},
-	{0x3344, 0x67},
+	{0x3344, 0x6F},
 	{0x3345, 0x1F},
 	{0x3362, 0x0A},
 	{0x3363, 0x0A},
@@ -202,12 +199,12 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x3369, 0x00},
 	{0x3370, 0x7F},
 	{0x3371, 0x37},
-	{0x3372, 0x5F},
-	{0x3373, 0x37},
-	{0x3374, 0x37},
-	{0x3375, 0x3F},
-	{0x3376, 0xBF},
-	{0x3377, 0x3F},
+	{0x3372, 0x67},
+	{0x3373, 0x3F},
+	{0x3374, 0x3F},
+	{0x3375, 0x47},
+	{0x3376, 0xCF},
+	{0x3377, 0x47},
 	{0x33C8, 0x00},
 	{0x33D4, 0x0C},
 	{0x33D5, 0xD0},
@@ -216,16 +213,11 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 	{0x3302, 0x01},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
 
-
-
-//experimental values
-//{250, 500}
 #define setting_1640x1232_test_addtion_frame	0
 #define setting_1640x1232_test_addtion_line		0
 #define setting_1640x1232_frame_length (0x060e + setting_1640x1232_test_addtion_frame)
@@ -297,11 +289,13 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 	{0x3302, 0x01},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
+
+
+
 
 /* 30fps */
 #define setting_1920x1080_test_addtion_frame	0
@@ -417,7 +411,7 @@ static struct imx179_mode_data imx179_3280x2464 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0xff,
+		.pll_mult		= 0xdd,
 		.pll_div		= 0x06,
 	},
 	.p_mode_i2c			= imx179_3280x2464_i2c,
@@ -523,16 +517,16 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 
 	{0x0101, 0x00},
 	{0x0202, 0x09},
-	{0x0203, 0xAD},//0xCC
+	{0x0203, 0xAD},//0xCC MJ
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x05},
 	{0x030B, 0x01},
 	{0x030C, 0x00},
-	{0x030D, 0xA0},//0xA2
+	{0x030D, 0xA0},//0xA2 MJ
 	{0x0340, 0x09},
-	{0x0341, 0xB1},//0xD0
+	{0x0341, 0xB1},//0xD0 MJ
 	{0x0342, 0x0D},
 	{0x0343, 0x70},
 	{0x0344, 0x00},
@@ -580,7 +574,6 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
@@ -593,14 +586,14 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 
 	{0x0101, 0x00},
 	{0x0202, 0x09},
-	{0x0203, 0xAD},//0xCC
+	{0x0203, 0xAD},//0xCC MJ
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x05},
 	{0x030B, 0x01},
 	{0x030C, 0x00},
-	{0x030D, 0xA0},//0xA2
+	{0x030D, 0xA0},//0xA2 MJ
 	{0x0340, 0x09},
 	{0x0341, 0xB1},
 	{0x0342, 0x0D},
@@ -650,12 +643,10 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
-
 static struct imx179_reg imx179_1920x1080_i2c[] = {
 	/*stand by*/
 	{0x0100, 0x00},
@@ -663,14 +654,14 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 
 	{0x0101, 0x00},
 	{0x0202, 0x09},
-	{0x0203, 0xAD},//0xCC
+	{0x0203, 0xAD},
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x05},
 	{0x030B, 0x01},
 	{0x030C, 0x00},
-	{0x030D, 0xA0},//0xA2
+	{0x030D, 0xA0},
 	{0x0340, 0x09},
 	{0x0341, 0xB1},
 	{0x0342, 0x0D},
@@ -690,8 +681,8 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{0x0383, 0x01},
 	{0x0387, 0x01},
 	{0x0390, 0x00},
-	{0x0401, 0x02},//0x00
-	{0x0405, 0x1B},//0x10
+	{0x0401, 0x02},
+	{0x0405, 0x1B},
 	{0x3020, 0x10},
 	{0x3041, 0x15},
 	{0x3042, 0x87},
@@ -720,12 +711,10 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
-#endif
 #if 0
 static struct imx179_reg imx179_1280x720_i2c[] = {
 	/*stand by*/
@@ -734,16 +723,16 @@ static struct imx179_reg imx179_1280x720_i2c[] = {
 
 	{0x0101, 0x00},
 	{0x0202, 0x09},
-	{0x0203, 0xAD},//0xCC
+	{0x0203, 0xAD},//0xCC MJ
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x05},
 	{0x030B, 0x01},
 	{0x030C, 0x00},
-	{0x030D, 0xA0},//0xA2
+	{0x030D, 0xA0},//0xA2 MJ
 	{0x0340, 0x09},
-	{0x0341, 0xB1},//0xD0
+	{0x0341, 0xB1},//0xD0 MJ
 	{0x0342, 0x0D},
 	{0x0343, 0x70},
 	{0x0344, 0x01},
@@ -761,8 +750,8 @@ static struct imx179_reg imx179_1280x720_i2c[] = {
 	{0x0383, 0x01},
 	{0x0387, 0x01},
 	{0x0390, 0x01},
-	{0x0401, 0x02},//0x00
-	{0x0405, 0x00},//0x10
+	{0x0401, 0x02},//0x00 MJ
+	{0x0405, 0x00},//0x10 MJ
 	{0x3020, 0x10},
 	{0x3041, 0x15},
 	{0x3042, 0x87},
@@ -791,7 +780,6 @@ static struct imx179_reg imx179_1280x720_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
@@ -803,16 +791,16 @@ static struct imx179_reg imx179_640x480_i2c[] = {
 
 	{0x0101, 0x00},
 	{0x0202, 0x09},
-	{0x0203, 0xAD},//0xCC
+	{0x0203, 0xAD},//0xCC MJ
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0305, 0x06},
 	{0x0309, 0x05},
 	{0x030B, 0x01},
 	{0x030C, 0x00},
-	{0x030D, 0xA0},//0xA2
+	{0x030D, 0xA0},//0xA2 MJ
 	{0x0340, 0x09},
-	{0x0341, 0xB1},//0xD0
+	{0x0341, 0xB1},//0xD0 MJ
 	{0x0342, 0x0D},
 	{0x0343, 0x70},
 	{0x0344, 0x01},
@@ -830,8 +818,8 @@ static struct imx179_reg imx179_640x480_i2c[] = {
 	{0x0383, 0x01},
 	{0x0387, 0x01},
 	{0x0390, 0x02},
-	{0x0401, 0x02},//0x00
-	{0x0405, 0x00},//0x10
+	{0x0401, 0x02},//0x00 MJ
+	{0x0405, 0x00},//0x10 MJ
 	{0x3020, 0x10},
 	{0x3041, 0x15},
 	{0x3042, 0x87},
@@ -860,13 +848,11 @@ static struct imx179_reg imx179_640x480_i2c[] = {
 	{0x4100, 0x0E},
 	{0x4108, 0x01},
 	{0x4109, 0x7C},
-	//{0x0100, 0x01},
 
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
 #endif
-#if 0
 /* Each resolution requires the below data table setup and the corresponding
  * I2C data table.
  * If more NVC data is needed for the NVC driver, be sure and modify the
@@ -897,19 +883,19 @@ static struct imx179_mode_data imx179_3280x2464 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps       = 0,
+		.flush_count        = 0,
+		.init_intra_frame_skip  = 0,
+		.ss_intra_frame_skip    = 0,
+		.ss_frame_number    = 0,
 		.coarse_time		= 0x09AD,
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
 		.max_exposure_course	= 0xFFFC,
 		.diff_integration_time	= 110, /* / _INT2FLOAT_DIVISOR */
 		.line_length		= 0x0D70,
-		.frame_length		= 0x09B1,
-		.min_frame_length	= 0x09B1,
+		.frame_length		= 0x09D0,
+		.min_frame_length	= 0x09D0,
 		.max_frame_length	= 0xFFFF,
 		.min_gain		= 1, /* / _INT2FLOAT_DIVISOR */
 		.max_gain		= 16000, /* / _INT2FLOAT_DIVISOR */
@@ -940,11 +926,11 @@ static struct imx179_mode_data imx179_1640x1232 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps       = 0,
+		.flush_count        = 0,
+		.init_intra_frame_skip  = 0,
+		.ss_intra_frame_skip    = 0,
+		.ss_frame_number    = 0,
 		.coarse_time		= 0x09AD,
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
@@ -982,11 +968,11 @@ static struct imx179_mode_data imx179_1920x1080 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps       = 0,
+		.flush_count        = 0,
+		.init_intra_frame_skip  = 0,
+		.ss_intra_frame_skip    = 0,
+		.ss_frame_number    = 0,
 		.coarse_time		= 0x09AD,
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
@@ -1007,7 +993,6 @@ static struct imx179_mode_data imx179_1920x1080 = {
 	},
 	.p_mode_i2c			= imx179_1920x1080_i2c,
 };
-#endif
 #if 0
 static struct imx179_mode_data imx179_1280x720 = {
 	.sensor_mode = {
@@ -1026,19 +1011,19 @@ static struct imx179_mode_data imx179_1280x720 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 2,
 		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
-		.coarse_time		= 0x09AD,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
+		.coarse_time		= 0x09CC,
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
 		.max_exposure_course	= 0xFFFC,
 		.diff_integration_time	= 110, /* / _INT2FLOAT_DIVISOR */
 		.line_length		= 0x0D70,
-		.frame_length		= 0x09B1,
-		.min_frame_length	= 0x09B1,
+		.frame_length		= 0x09D0,
+		.min_frame_length	= 0x09D0,
 		.max_frame_length	= 0xFFFF,
 		.min_gain		= 1, /* / _INT2FLOAT_DIVISOR */
 		.max_gain		= 16000, /* / _INT2FLOAT_DIVISOR */
@@ -1046,7 +1031,7 @@ static struct imx179_mode_data imx179_1280x720 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0xA0,
+		.pll_mult		= 0xA2,
 		.pll_div		= 0x06,
 	},
 	.p_mode_i2c			= imx179_1280x720_i2c,
@@ -1068,19 +1053,19 @@ static struct imx179_mode_data imx179_640x480 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 2,
 		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
-		.coarse_time		= 0x09AD,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
+		.coarse_time		= 0x09CC,
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
 		.max_exposure_course	= 0xFFFC,
 		.diff_integration_time	= 110, /* / _INT2FLOAT_DIVISOR */
 		.line_length		= 0x0D70,
-		.frame_length		= 0x09B1,
-		.min_frame_length	= 0x09B1,
+		.frame_length		= 0x09D0,
+		.min_frame_length	= 0x09D0,
 		.max_frame_length	= 0xFFFF,
 		.min_gain		= 1, /* / _INT2FLOAT_DIVISOR */
 		.max_gain		= 16000, /* / _INT2FLOAT_DIVISOR */
@@ -1088,11 +1073,12 @@ static struct imx179_mode_data imx179_640x480 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0xA0,
+		.pll_mult		= 0xA2,
 		.pll_div		= 0x06,
 	},
 	.p_mode_i2c			= imx179_640x480_i2c,
 };
+#endif
 static struct imx179_mode_data *imx179_mode_table[] = {
 	&imx179_3280x2464,
 	&imx179_1640x1232,
@@ -2628,7 +2614,7 @@ static long imx179_ioctl(struct file *file,
 
 	case NVC_IOCTL_CAPS_RD:
 		dev_dbg(&info->i2c_client->dev, "%s CAPS_RD n=%d focuser GUID:%llx\n ",
-			__func__, sizeof(imx179_dflt_cap), info->cap->focuser_guid);
+			__func__, sizeof(imx179_dflt_cap), info->cap->focuser_guid );
 		data_ptr = info->cap;
 		if (copy_to_user((void __user *)arg,
 				 data_ptr,
