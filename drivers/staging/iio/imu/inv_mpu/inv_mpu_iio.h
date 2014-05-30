@@ -183,6 +183,10 @@
 #define DMP_MASK_TAP             0x3f
 #define DMP_MASK_DIS_ORIEN       0xC0
 #define DMP_DIS_ORIEN_SHIFT      6
+/* this is derived from 1000 divided by 50, which is the pedometer
+   running frequency */
+#define MS_PER_PED_TICKS         20
+
 
 #define BYTES_FOR_DMP            8
 #define BYTES_FOR_EVENTS         4
@@ -191,12 +195,12 @@
 #define MPU3050_FOOTER_SIZE      2
 #define FIFO_COUNT_BYTE          2
 #define FIFO_THRESHOLD           800
-#define FIFO_SIZE                800
+#define FIFO_SIZE                992
 #define HARDWARE_FIFO_SIZE       1024
 #define MAX_READ_SIZE            64
 #define POWER_UP_TIME            100
 #define SENSOR_UP_TIME           30
-#define REG_UP_TIME              5
+#define REG_UP_TIME              2
 #define INV_MPU_SAMPLE_RATE_CHANGE_STABLE 50
 #define MPU_MEM_BANK_SIZE        256
 #define SELF_TEST_GYRO_FULL_SCALE 250
@@ -278,7 +282,7 @@
 #define CRC_FIRMWARE_SEED        0
 #define SELF_TEST_SUCCESS        1
 #define MS_PER_DMP_TICK          20
-#define DMP_IMAGE_SIZE           2512
+#define DMP_IMAGE_SIZE           2950
 
 /* init parameters */
 #define INIT_FIFO_RATE           50
@@ -682,6 +686,7 @@ struct inv_mpu_slave;
  *  @sl_handle:         Handle to I2C port.
  *  @irq_dur_ns:        duration between each irq.
  *  @ts_counter:        time stamp counter.
+ *  @suspend_state:     state indicator suspend.
  *  @dmp_interval:      dmp interval. nomial value is 5 ms.
  *  @dmp_interval_accum: dmp interval accumlater.
  *  @diff_accumulater:  accumlator for the difference of nominal and actual.
@@ -746,6 +751,7 @@ struct inv_mpu_state {
 	void *sl_handle;
 	u32 irq_dur_ns;
 	u32 ts_counter;
+	bool suspend_state;
 	u32 dmp_interval;
 	s32 dmp_interval_accum;
 	s64 diff_accumulater;

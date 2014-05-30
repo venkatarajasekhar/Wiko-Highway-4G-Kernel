@@ -328,12 +328,8 @@ static int set_fifo_rate_reg(struct inv_mpu_state *st)
 	if (result)
 		return result;
 	result = inv_set_lpf(st, fifo_rate);
-	if (result)
-		return result;
-	/* wait for the sampling rate change to stabilize */
-	mdelay(INV_MPU_SAMPLE_RATE_CHANGE_STABLE);
 
-	return 0;
+	return result;
 }
 
 /*
@@ -1065,6 +1061,7 @@ static irqreturn_t inv_irq_handler(int irq, void *dev_id)
 {
 	struct inv_mpu_state *st = (struct inv_mpu_state *)dev_id;
 	u64 ts;
+
 	if (!st->chip_config.dmp_on) {
 		ts = get_time_ns();
 		kfifo_in_spinlocked(&st->timestamps, &ts, 1,
@@ -1406,6 +1403,7 @@ static int inv_parse_header(u16 hdr)
 		return SENSOR_INVALID;
 	}
 }
+#define FEATURE_IKR_PANIC 1
 
 static int inv_process_batchmode(struct inv_mpu_state *st)
 {
@@ -1417,12 +1415,30 @@ static int inv_process_batchmode(struct inv_mpu_state *st)
 	u64 t;
 	bool done_flag;
 
+#if FEATURE_IKR_PANIC
+	if (1024 <= st->fifo_count) {
+		if (1024 < st->fifo_count) {
+			pr_err("fifo_count over spec\n");
+			return 0;
+		}
+		inv_reset_ts(st, st->last_ts);
+		st->left_over_size = 0;
+	}
+#else
 	if (1024 == st->fifo_count) {
 		inv_reset_ts(st, st->last_ts);
 		st->left_over_size = 0;
 	}
+#endif
+
 	d = fifo_data;
 	if (st->left_over_size > 0) {
+#if FEATURE_IKR_PANIC
+		if (st->left_over_size > HEADERED_Q_BYTES) {
+			pr_err("left_over_size overflow 1\n");
+			st->left_over_size = HEADERED_Q_BYTES;
+		}
+#endif
 		dptr = d + st->left_over_size;
 		memcpy(d, st->left_over, st->left_over_size);
 	} else {
@@ -1450,16 +1466,16 @@ static int inv_process_batchmode(struct inv_mpu_state *st)
 		steps = (hdr & STEP_INDICATOR_MASK);
 		hdr &= (~STEP_INDICATOR_MASK);
 		sensor_ind = inv_parse_header(hdr);
-		/* incomplete packet */
-		if (target_bytes - (dptr - d) <
-					st->sensor[sensor_ind].sample_size) {
-			done_flag = true;
-			continue;
-		}
 		/* error packet */
 		if ((sensor_ind == SENSOR_INVALID) ||
 				(!st->sensor[sensor_ind].on)) {
 			dptr += HEADERED_NORMAL_BYTES;
+			continue;
+		}
+		/* incomplete packet */
+		if (target_bytes - (dptr - d) <
+					st->sensor[sensor_ind].sample_size) {
+			done_flag = true;
 			continue;
 		}
 		if (sensor_ind == SENSOR_STEP) {
@@ -1484,6 +1500,8 @@ static int inv_process_batchmode(struct inv_mpu_state *st)
 				if (!res)
 					inv_push_8bytes_buffer(st, hdr |
 							(!!steps), t, sen);
+			} else if (COMPASS_HDR_2 == hdr) {
+				inv_push_marker_to_buffer(st, hdr);
 			}
 			dptr += HEADERED_NORMAL_BYTES;
 			continue;
@@ -1518,8 +1536,15 @@ static int inv_process_batchmode(struct inv_mpu_state *st)
 	inv_adjust_sensor_ts(st, sensor_ind);
 	st->left_over_size = target_bytes - (dptr - d);
 
-	if (st->left_over_size)
+	if (st->left_over_size) {
+#if FEATURE_IKR_PANIC
+		if (st->left_over_size > HEADERED_Q_BYTES) {
+			pr_err("left_over_size overflow 2\n");
+			st->left_over_size = HEADERED_Q_BYTES;
+		}
+#endif
 		memcpy(st->left_over, dptr, st->left_over_size);
+	}
 
 	return 0;
 }
@@ -1574,6 +1599,8 @@ irqreturn_t inv_read_fifo(int irq, void *dev_id)
 	u64 pts1;
 
 #define DMP_MIN_RUN_TIME (37 * NSEC_PER_MSEC)
+	if (st->suspend_state)
+		return IRQ_HANDLED;
 	mutex_lock(&st->suspend_resume_lock);
 	mutex_lock(&indio_dev->mlock);
 	if (st->chip_config.dmp_on) {

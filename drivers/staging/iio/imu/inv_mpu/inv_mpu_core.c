@@ -455,6 +455,7 @@ static int inv_init_config(struct iio_dev *indio_dev)
 		st->self_test.samples = INIT_ST_SAMPLES;
 	st->self_test.threshold = INIT_ST_THRESHOLD;
 	st->batch.wake_fifo_on = true;
+	st->suspend_state = false;
 	if (INV_ITG3500 != st->chip_type) {
 		st->chip_config.accel_fs = INV_FS_02G;
 		result = inv_i2c_single_write(st, reg->accel_config,
@@ -1064,7 +1065,7 @@ static ssize_t inv_attr64_show(struct device *dev,
 		break;
 	case ATTR_DMP_PEDOMETER_TIME:
 		result = inv_get_pedometer_time(st, &ped);
-		tmp = st->ped.time + ped;
+		tmp = (u64)st->ped.time + ((u64)ped) * MS_PER_PED_TICKS;
 		break;
 	case ATTR_DMP_PEDOMETER_COUNTER:
 		tmp = st->ped.last_step_time;
@@ -3025,12 +3026,19 @@ static int inv_setup_suspend_batchmode(struct iio_dev *indio_dev, bool suspend)
 }
 
 #ifdef CONFIG_PM
+/*
+ * inv_mpu_resume(): resume method for this driver.
+ *    This method can be modified according to the request of different
+ *    customers. It basically undo everything suspend_noirq is doing
+ *    and recover the chip to what it was before suspend.
+ */
 static int inv_mpu_resume(struct device *dev)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(to_i2c_client(dev));
 	struct inv_mpu_state *st = iio_priv(indio_dev);
 	int result;
 
+	/* add code according to different request Start */
 	pr_debug("%s inv_mpu_resume\n", st->hw->name);
 	mutex_lock(&indio_dev->mlock);
 
@@ -3047,21 +3055,31 @@ static int inv_mpu_resume(struct device *dev)
 	} else if (st->chip_config.enable) {
 		result = st->set_power_state(st, true);
 	}
-
 	mutex_unlock(&indio_dev->mlock);
+	/* add code according to different request End */
+
 	mutex_unlock(&st->suspend_resume_lock);
 
 	return result;
 }
 
+/*
+ * inv_mpu_suspend(): suspend method for this driver.
+ *    This method can be modified according to the request of different
+ *    customers. If customer want some events, such as SMD to wake up the CPU,
+ *    then data interrupt should be disabled in this interrupt to avoid
+ *    unnecessary interrupts. If customer want pedometer running while CPU is
+ *    asleep, then pedometer should be turned on while pedometer interrupt
+ *    should be turned off.
+ */
 static int inv_mpu_suspend(struct device *dev)
 {
 	struct iio_dev *indio_dev = i2c_get_clientdata(to_i2c_client(dev));
 	struct inv_mpu_state *st = iio_priv(indio_dev);
 	int result;
 
+	/* add code according to different request Start */
 	pr_debug("%s inv_mpu_suspend\n", st->hw->name);
-	mutex_lock(&indio_dev->mlock);
 
 	result = 0;
 	if (st->chip_config.dmp_on && st->chip_config.enable) {
@@ -3082,14 +3100,18 @@ static int inv_mpu_suspend(struct device *dev)
 		/* in non DMP case, just turn off the power */
 		result |= st->set_power_state(st, false);
 	}
-
-	mutex_unlock(&indio_dev->mlock);
+	/* add code according to different request End */
+	st->suspend_state = true;
+	msleep(100);
 	mutex_lock(&st->suspend_resume_lock);
+	st->suspend_state = false;
 
-	return result;
+	return 0;
 }
+
 static const struct dev_pm_ops inv_mpu_pmops = {
-	SET_SYSTEM_SLEEP_PM_OPS(inv_mpu_suspend, inv_mpu_resume)
+	.suspend       = inv_mpu_suspend,
+	.resume        = inv_mpu_resume,
 };
 #define INV_MPU_PMOPS (&inv_mpu_pmops)
 #else
