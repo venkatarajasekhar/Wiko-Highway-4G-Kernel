@@ -1625,6 +1625,7 @@ static ssize_t _attr_store(struct device *dev,
 		result = st->slave_compass->set_scale(st, data);
 		break;
 	case ATTR_MOTION_LPA_ON:
+		printk("MPU ATTR_MOTION_LPA_ON = %d! \n",data);
 		if (INV_MPU6500 == st->chip_type) {
 			if (data)
 				/* enable and put in MPU6500 mode */
@@ -1677,7 +1678,7 @@ static ssize_t _attr_store(struct device *dev,
 		st->self_test.threshold = data;
 	case ATTR_GYRO_ENABLE:
 //Ivan 
-		printk("MPU ATTR_GYRO_ENABLE! \n");
+		printk("MPU ATTR_GYRO_ENABLE = %d! \n",data);
 		st->chip_config.gyro_enable = !!data;
 		break;
 	case ATTR_GYRO_FIFO_ENABLE:
@@ -1690,7 +1691,7 @@ static ssize_t _attr_store(struct device *dev,
 		break;
 	case ATTR_ACCEL_ENABLE:
 //Ivan 
-		printk("MPU ATTR_ACCEL_ENABLE! \n");
+		printk("MPU ATTR_ACCEL_ENABLE = %d! \n",data);
 		st->chip_config.accel_enable = !!data;
 		break;
 	case ATTR_ACCEL_FIFO_ENABLE:
@@ -1698,7 +1699,7 @@ static ssize_t _attr_store(struct device *dev,
 		break;
 	case ATTR_ACCEL_RATE:
 //Ivan 
-		printk("MPU ATTR_ACCEL_RATE! \n");
+		printk("MPU ATTR_ACCEL_RATE = %d! \n",data);
 	    
 		st->sensor[SENSOR_ACCEL].rate = data;
 		st->sensor[SENSOR_ACCEL].dur  = MPU_DEFAULT_DMP_FREQ / data;
@@ -1706,7 +1707,7 @@ static ssize_t _attr_store(struct device *dev,
 		break;
 	case ATTR_COMPASS_ENABLE:
 //Ivan 
-		printk("MPU ATTR_COMPASS_ENABLE! \n");
+		printk("MPU ATTR_COMPASS_ENABLE = %d! \n",data);
 	    
 		st->sensor[SENSOR_COMPASS].on = !!data;
 		break;
@@ -1723,6 +1724,7 @@ static ssize_t _attr_store(struct device *dev,
 		st->sensor[SENSOR_COMPASS].dur  *= DMP_INTERVAL_INIT;
 		break;
 	case ATTR_PRESSURE_ENABLE:
+		printk("MPU ATTR_PRESSURE_ENABLE = %d! \n",data);	    
 		st->sensor[SENSOR_PRESSURE].on = !!data;
 		break;
 	case ATTR_PRESSURE_RATE:
