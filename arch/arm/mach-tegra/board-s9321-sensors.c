@@ -1712,7 +1712,7 @@ static struct mpu_platform_data mpu9150_gyro_data_e1680 = {
         .sec_slave_type = SECONDARY_SLAVE_TYPE_COMPASS,
         .sec_slave_id   = COMPASS_ID_AK8963,
         .secondary_i2c_addr = 0x0E,
-        .secondary_orientation = MTMAT_TOP_CCW_270,		//MTMAT_TOP_CCW_270 ok? 
+        .secondary_orientation = MTMAT_TOP_CCW_0,		//MTMAT_TOP_CCW_270 ok? 
 };
 
 static struct mpu_platform_data mpu9150_gyro_data_e1670 = {
