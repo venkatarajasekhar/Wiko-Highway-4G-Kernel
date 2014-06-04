@@ -3005,19 +3005,6 @@ static int inv_setup_suspend_batchmode(struct iio_dev *indio_dev, bool suspend)
 		st->chip_config.enable &&
 		st->batch.on &&
 		(!st->chip_config.dmp_event_int_on)) {
-		if (!st->batch.wake_fifo_on) {
-			st->batch.overflow_on = suspend;
-			result = inv_i2c_single_write(st,
-					st->reg.user_ctrl, 0);
-			if (result)
-				return result;
-			result = inv_batchmode_setup(st);
-			if (result)
-				return result;
-			result = inv_reset_fifo(indio_dev);
-			if (result)
-				return result;
-		}
 		/* turn off data interrupt in suspend mode;turn on resume */
 		result = inv_set_interrupt_on_gesture_event(st, suspend);
 		if (result)
