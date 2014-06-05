@@ -1545,6 +1545,14 @@ struct max98090_priv {
 	unsigned int mic2pre;
 	unsigned int extmic_mux;
 	unsigned int sidetone;
+	int key_state;
+	int key_valid_flag;
+	struct delayed_work key_work;
 };
+
+#ifdef CONFIG_MACH_S9321
+extern int max98090_jack_detect(struct snd_soc_codec *codec,
+	struct snd_soc_jack *jack);
+#endif
 
 #endif

@@ -52,7 +52,9 @@
 #include <sound/soc.h>
 
 #include "../codecs/max98090.h"
+#ifndef CONFIG_MACH_S9321
 #include "../codecs/max97236.h"
+#endif
 
 #include "tegra_pcm.h"
 #include "tegra_asoc_utils.h"
@@ -73,8 +75,12 @@
 #define DAI_LINK_BTSCO		1
 #define DAI_LINK_VOICE_CALL	2
 #define DAI_LINK_BT_VOICE_CALL	3
+#ifndef CONFIG_MACH_S9321
 #define DAI_LINK_HIFI_MAX97236	4
-#define DAI_LINK_FM		5
+#define DAI_LINK_FM				5
+#else
+#define DAI_LINK_FM				4
+#endif
 
 const char *tegra_max98090_i2s_dai_name[TEGRA30_NR_I2S_IFC] = {
 	"tegra30-i2s.0",
@@ -1605,6 +1611,7 @@ static struct snd_soc_dai_link tegra_max98090_dai[] = {
 			.codec_dai_name = "dit-hifi",
 			.ops = &tegra_bt_voice_call_ops,
 		},
+#ifndef CONFIG_MACH_S9321
 	[DAI_LINK_HIFI_MAX97236] {
 		.name = "MAX97236",
 		.stream_name = "MAX97236 HIFI",
@@ -1613,6 +1620,7 @@ static struct snd_soc_dai_link tegra_max98090_dai[] = {
 		.codec_dai_name = "max97236-HiFi",
 		.ops = NULL,
 	},
+#endif
 	/* FM support*/
 	[DAI_LINK_FM] {
 		.name = "FM",
@@ -1648,6 +1656,10 @@ static int tegra_max98090_suspend_post(struct snd_soc_card *card)
 			tegra_asoc_utils_clk_disable(&machine->util_data);
 		}
 
+#ifdef CONFIG_MACH_S9321
+		if (machine->avdd_aud_reg)
+			regulator_disable(machine->avdd_aud_reg);
+#endif
 		if (machine->vdd_sw_1v8_reg)
 			regulator_disable(machine->vdd_sw_1v8_reg);
 	}
@@ -1682,6 +1694,10 @@ static int tegra_max98090_resume_pre(struct snd_soc_card *card)
 			tegra_asoc_utils_clk_enable(&machine->util_data);
 		}
 
+#ifdef CONFIG_MACH_S9321
+		if (machine->avdd_aud_reg)
+			regulator_enable(machine->avdd_aud_reg);
+#endif
 		if (machine->vdd_sw_1v8_reg)
 			regulator_enable(machine->vdd_sw_1v8_reg);
 	}
@@ -1720,6 +1736,7 @@ static int tegra_max98090_set_bias_level_post(struct snd_soc_card *card,
 	return 0 ;
 }
 
+#ifndef CONFIG_MACH_S9321
 static int tegra_late_probe(struct snd_soc_card *card)
 {
 	struct snd_soc_codec *codec236 =
@@ -1748,6 +1765,38 @@ static int tegra_late_probe(struct snd_soc_card *card)
 
 	return 0;
 }
+#else
+static int tegra_late_probe(struct snd_soc_card *card)
+{
+	struct snd_soc_codec *codec98090 =
+				card->rtd[DAI_LINK_HIFI].codec;
+	int ret;
+
+	ret = snd_soc_jack_new(codec98090,
+			"Headphone Jack",
+			SND_JACK_HEADSET | SND_JACK_LINEOUT | 0x7E00,
+			&tegra_max98090_hp_jack);
+	if (ret) {
+		dev_err(codec98090->dev, "snd_soc_jack_new returned %d\n", ret);
+		return ret;
+	}
+
+#ifdef CONFIG_SWITCH
+	snd_soc_jack_notifier_register(&tegra_max98090_hp_jack,
+			&tegra_max98090_jack_detect_nb);
+#else /*gpio based headset detection*/
+	snd_soc_jack_add_pins(&tegra_max98090_hp_jack,
+			ARRAY_SIZE(tegra_max98090_hs_jack_pins),
+			tegra_max98090_hs_jack_pins);
+#endif
+
+	max98090_jack_detect(codec98090, &tegra_max98090_hp_jack);
+
+	return 0;
+
+}
+
+#endif /* !CONFIG_MACH_S9321 */
 
 static struct snd_soc_card snd_soc_tegra_max98090 = {
 	.name = "tegra-max98090",
@@ -1870,8 +1919,10 @@ static __devinit int tegra_max98090_driver_probe(struct platform_device *pdev)
 	tegra_max98090_dai[DAI_LINK_HIFI].cpu_dai_name =
 	tegra_max98090_i2s_dai_name[machine->codec_info[HIFI_CODEC].i2s_id];
 
+#ifndef CONFIG_MACH_S9321
 	tegra_max98090_dai[DAI_LINK_HIFI_MAX97236].cpu_dai_name =
 	tegra_max98090_i2s_dai_name[machine->codec_info[HIFI_CODEC].i2s_id];
+#endif
 
 	tegra_max98090_dai[DAI_LINK_BTSCO].cpu_dai_name =
 	tegra_max98090_i2s_dai_name[machine->codec_info[BT_SCO].i2s_id];

@@ -285,7 +285,11 @@ static struct aic325x_pdata aic3256_codec_pdata = {
 static struct i2c_board_info __initdata max98090_board_info = {
 	I2C_BOARD_INFO("max98090", 0x10),
 	.platform_data = &ceres_max98090_pdata,
+#ifdef CONFIG_MACH_S9321
+	.irq		= AUD_INT,
+#else
 	.irq		= TEGRA_GPIO_CDC_IRQ,
+#endif
 };
 
 static struct i2c_board_info __initdata ceres_codec_aic325x_info = {
@@ -303,7 +307,11 @@ struct ahub_bbc1_config ahub_bbc1_pdata = {
 
 static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
+#ifndef CONFIG_MACH_S9321
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
+#else
+	.gpio_hp_det		= -1,
+#endif
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
@@ -313,8 +321,11 @@ static struct tegra_asoc_platform_data ceres_audio_max98090_pdata = {
 	.i2s_param[HIFI_CODEC]	= {
 		.audio_port_id	= 0,
 		.is_i2s_master	= 1,
-		//.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+#ifdef CONFIG_MACH_S9321
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+#else
 		.i2s_mode	= TEGRA_DAIFMT_I2S,//FM testing
+#endif
 		.sample_size	= 16,
 		.channels       = 2,
 		.bit_clk	= 1536000,
@@ -338,6 +349,7 @@ static struct platform_device ceres_audio_max98090_device = {
 	},
 };
 
+#ifndef CONFIG_MACH_S9321
 static struct max97236_pdata ceres_audio_max97236_pdata;
 
 static struct platform_device ceres_audio_max97236_device = {
@@ -347,6 +359,7 @@ static struct platform_device ceres_audio_max97236_device = {
 		.platform_data = &ceres_audio_max97236_pdata,
 	},
 };
+#endif	/* !CONFIG_MACH_S9321 */
 
 static struct tegra_asoc_platform_data ceres_audio_aic325x_pdata = {
 	.gpio_ldo1_en = TEGRA_GPIO_LDO1_EN,
@@ -507,7 +520,9 @@ static struct platform_device ceres_tegra_wakeup_monitor_device = {
 
 static struct platform_device *ceres_only_audio_devices[] __initdata = {
 	&ceres_audio_max98090_device,
+#ifndef CONFIG_MACH_S9321
 	&ceres_audio_max97236_device,
+#endif
 };
 
 static struct platform_device *atlantis_only_audio_devices[] __initdata = {
@@ -560,13 +575,16 @@ static struct platform_device *ceres_devices[] __initdata = {
 #endif
 };
 
+#ifndef CONFIG_MACH_S9321
 static struct i2c_board_info __initdata max97236_board_info = {
 	I2C_BOARD_INFO("max97236", 0x40),
 	.irq = TEGRA_GPIO_HP_DET,
 };
-
+#endif
 static void ceres_audio_init(void)
 {
+	int ret;
+
 	if ((board_info.board_id == BOARD_E1670) ||
 		(board_info.board_id == BOARD_E1671) ||
 		(board_info.board_id == BOARD_E1740)) {
@@ -580,7 +598,19 @@ static void ceres_audio_init(void)
 		(board_info.board_id == BOARD_E1681) ||
 		(board_info.board_id == BOARD_E1683) ||
 		(board_info.board_id == BOARD_E1690)) {
+#ifndef CONFIG_MACH_S9321
 		i2c_register_board_info(5, &max97236_board_info, 1);
+#else
+		struct max98090_pdata *pdata = max98090_board_info.platform_data;
+
+		ret = gpio_request(AUD_INT, "audio_int");
+		if (ret < 0)
+			pr_err("%s: gpio_request failed\n", __func__);
+
+		gpio_direction_input(AUD_INT);
+
+		pdata->irq = gpio_to_irq(AUD_INT);
+#endif
 		i2c_register_board_info(5, &max98090_board_info, 1);
 		platform_add_devices(ceres_only_audio_devices,
 			ARRAY_SIZE(ceres_only_audio_devices));

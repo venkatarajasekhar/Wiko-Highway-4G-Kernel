@@ -3,6 +3,8 @@
  *
  * Copyright 2011-2012 Maxim Integrated Products
  *
+ * Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -16,6 +18,9 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <sound/tlv.h>
+#ifdef CONFIG_MACH_S9321
+#include <sound/jack.h>
+#endif
 #include <sound/max98090.h>
 #include "max98090.h"
 
@@ -2498,6 +2503,18 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 			}
 		}
 
+#ifdef CONFIG_MACH_S9321
+		if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+			/*
+			 * Set to normal bias level.
+			 */
+			snd_soc_update_bits(codec, M98090_REG_12_MIC_BIAS,
+				M98090_MBVSEL_MASK, M98090_MBVSEL_2V4);
+
+			snd_soc_update_bits(codec, M98090_REG_3E_PWR_EN_IN,
+				M98090_PWR_MBEN_MASK, M98090_PWR_MBEN_MASK);
+		}
+#else
 //Ivan
 //		if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
 			/*
@@ -2509,6 +2526,7 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 			snd_soc_update_bits(codec, M98090_REG_3E_PWR_EN_IN,
 				M98090_PWR_MBEN_MASK, M98090_PWR_MBEN_MASK);
 //		}
+#endif
 		break;
 
 	case SND_SOC_BIAS_PREPARE:
@@ -2518,9 +2536,11 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_OFF:
 		snd_soc_update_bits(codec, M98090_REG_3E_PWR_EN_IN,
 			M98090_PWR_MBEN_MASK, 0);
+#ifdef CONFIG_MACH_S9321
 		/* Set internal pull-up to lowest power mode */
 		snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
 			M98090_JDWK_MASK, M98090_JDWK_MASK);
+#endif
 		codec->cache_sync = 1;
 		break;
 	}
@@ -2723,11 +2743,177 @@ static void max98090_dmic_switch(struct snd_soc_codec *codec, int state)
 			regval);
 }
 
+#ifdef CONFIG_MACH_S9321
+static void max98090_headset_button_event(struct snd_soc_codec *codec, int state)
+{
+	struct max98090_priv *max98090 = snd_soc_codec_get_drvdata(codec);
+
+	dev_info(codec->dev, "max98090_headset_button_event\n");
+
+	if (state)
+		snd_soc_jack_report(max98090->jack, SND_JACK_BTN_0, 0x7E00);
+	else
+		snd_soc_jack_report(max98090->jack, 0, 0x7E00);
+}
+
+static void max98090_key_work(struct work_struct *work)
+{
+	struct max98090_priv *max98090 = container_of(work,
+		struct max98090_priv,
+		key_work.work);
+
+	max98090->key_valid_flag = 1;
+}
+#else
 static void max98090_headset_button_event(struct snd_soc_codec *codec)
 {
 	dev_info(codec->dev, "max98090_headset_button_event\n");
 }
+#endif
 
+
+#ifdef CONFIG_MACH_S9321
+static void max98090_jack_work(struct work_struct *work)
+{
+	struct max98090_priv *max98090 = container_of(work,
+		struct max98090_priv,
+		jack_work.work);
+	struct snd_soc_codec *codec = max98090->codec;
+	int reg;
+
+	if (max98090->jack_state == M98090_JACK_STATE_NO_HEADSET) {
+
+		/* Strong pull up allows mic detection */
+		snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+			M98090_JDWK_MASK, 0);
+
+		msleep(400);
+
+		reg = snd_soc_read(codec, M98090_REG_02_JACK_STATUS);
+
+	} else {
+		reg = snd_soc_read(codec, M98090_REG_02_JACK_STATUS);
+	}
+
+	switch (reg & (M98090_LSNS_MASK | M98090_JKSNS_MASK)) {
+	case M98090_LSNS_MASK | M98090_JKSNS_MASK:
+		{
+			dev_info(codec->dev, "No Headset Detected\n");
+
+			max98090->jack_state = M98090_JACK_STATE_NO_HEADSET;
+			max98090->key_valid_flag = 0;
+
+			max98090_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+			/* Set internal pull-up to lowest power mode */
+			snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+				M98090_JDWK_MASK, M98090_JDWK_MASK);
+/*
+			snd_soc_dapm_disable_pin(&codec->dapm, "HPL");
+			snd_soc_dapm_disable_pin(&codec->dapm, "HPR");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "SPKL");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "SPKR");
+			snd_soc_dapm_disable_pin(&codec->dapm, "MIC1");
+			snd_soc_dapm_disable_pin(&codec->dapm, "MIC2");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "DMIC1");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "DMIC2");
+			max98090_dmic_switch(codec, 1);
+*/
+			snd_soc_jack_report(max98090->jack, 0,
+					0x7E00 | SND_JACK_HEADSET);
+			break;
+		}
+
+	case 0:
+		{
+			if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+				if (max98090->key_valid_flag
+						&& (max98090->key_state == 0)) {
+					max98090->key_state = 1;
+					max98090_headset_button_event(codec, 1);
+					dev_info(codec->dev,
+					"Headset Button Down Detected\n");
+				}
+				return;
+			}
+
+			/* Line is reported as Headphone */
+			/* Nokia Headset is reported as Headphone */
+			/* Mono Headphone is reported as Headphone */
+			dev_info(codec->dev, "Headphone Detected\n");
+
+			max98090->jack_state = M98090_JACK_STATE_HEADPHONE;
+
+			max98090_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+			/* Set internal pull-up to lowest power mode */
+			snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+				M98090_JDWK_MASK, M98090_JDWK_MASK);
+/*
+			snd_soc_dapm_disable_pin(&codec->dapm, "SPKL");
+			snd_soc_dapm_disable_pin(&codec->dapm, "SPKR");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "HPL");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "HPR");
+			snd_soc_dapm_disable_pin(&codec->dapm, "MIC1");
+			snd_soc_dapm_disable_pin(&codec->dapm, "MIC2");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "DMIC1");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "DMIC2");
+			max98090_dmic_switch(codec, 1);
+*/
+			snd_soc_jack_report(max98090->jack, SND_JACK_HEADPHONE,
+					SND_JACK_HEADSET);
+
+			break;
+		}
+
+	case M98090_JKSNS_MASK:
+		{
+			if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+				if (max98090->key_valid_flag
+						&& (max98090->key_state == 1)) {
+					dev_info(codec->dev,
+					"Headset Button Up Detected\n");
+					max98090->key_state = 0;
+					max98090_headset_button_event(codec, 0);
+				}
+
+				return;
+			}
+
+			dev_info(codec->dev, "Headset Detected\n");
+
+			schedule_delayed_work(&max98090->key_work,
+					msecs_to_jiffies(1000));
+
+			max98090->jack_state = M98090_JACK_STATE_HEADSET;
+
+			max98090_set_bias_level(codec, SND_SOC_BIAS_ON);
+			/* Set internal pull-up to lowest power mode */
+			snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+				M98090_JDWK_MASK, 0);
+/*
+			snd_soc_dapm_disable_pin(&codec->dapm, "SPKL");
+			snd_soc_dapm_disable_pin(&codec->dapm, "SPKR");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "HPL");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "HPR");
+			snd_soc_dapm_disable_pin(&codec->dapm, "DMIC1");
+			snd_soc_dapm_disable_pin(&codec->dapm, "DMIC2");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "MIC1");
+			snd_soc_dapm_force_enable_pin(&codec->dapm, "MIC2");
+			max98090_dmic_switch(codec, 0);
+*/
+			snd_soc_jack_report(max98090->jack, SND_JACK_HEADSET,
+					SND_JACK_HEADSET);
+			break;
+		}
+
+	default:
+		{
+			dev_info(codec->dev, "Unrecognized Jack Status\n");
+			break;
+		}
+	}
+}
+#else
 static void max98090_jack_work(struct work_struct *work)
 {
 	struct max98090_priv *max98090 = container_of(work,
@@ -2844,6 +3030,7 @@ static void max98090_jack_work(struct work_struct *work)
 		}
 	}
 }
+#endif
 
 static irqreturn_t max98090_interrupt(int irq, void *data)
 {
@@ -2882,6 +3069,9 @@ static irqreturn_t max98090_interrupt(int irq, void *data)
 
 		pm_wakeup_event(codec->dev, 100);
 
+#ifdef CONFIG_MACH_S9321
+		cancel_delayed_work(&max98090->jack_work);
+#endif
 		schedule_delayed_work(&max98090->jack_work,
 			msecs_to_jiffies(100));
 	}
@@ -3632,6 +3822,27 @@ static void max98090_handle_pdata(struct snd_soc_codec *codec)
 	}
 }
 
+#ifdef CONFIG_MACH_S9321
+int max98090_jack_detect(struct snd_soc_codec *codec,
+	struct snd_soc_jack *jack)
+{
+	struct max98090_priv *max98090 = snd_soc_codec_get_drvdata(codec);
+
+	dev_info(codec->dev, "%s enter\n", __func__);
+
+	if (jack) {
+		max98090->jack = jack;
+		max98090->jack_state = 0;
+		max98090->key_state = 0;
+		max98090->key_valid_flag = 0;
+		return 0;
+	}
+
+	return -1;
+}
+EXPORT_SYMBOL_GPL(max98090_jack_detect);
+#endif
+
 static int max98090_suspend(struct snd_soc_codec *codec)
 {
 	/* Note: All are taken care of by SHDN and VCM DAPM widgets */
@@ -3709,9 +3920,17 @@ static int max98090_probe(struct snd_soc_codec *codec)
 
 	INIT_DELAYED_WORK(&max98090->jack_work, max98090_jack_work);
 
+#ifdef CONFIG_MACH_S9321
+	INIT_DELAYED_WORK(&max98090->key_work, max98090_key_work);
+	/* Disable jack detection */
+	snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
+		M98090_JDEB_200MS);
+
+#else
 	/* Enable jack detection */
 	snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
 		M98090_JDETEN_MASK | M98090_JDEB_25MS);
+#endif
 
 	/* Register for interrupts */
 	if ((request_threaded_irq(pdata->irq, NULL,
@@ -3719,6 +3938,12 @@ static int max98090_probe(struct snd_soc_codec *codec)
 		"max98090_interrupt", codec)) < 0) {
 		dev_info(codec->dev, "request_irq failed\n");
 	}
+	
+#ifdef CONFIG_MACH_S9321
+	/* Enable jack detection */
+	snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
+		M98090_JDETEN_MASK | M98090_JDEB_200MS);
+#endif
 
 #ifdef MAX98090_HIGH_PERFORMANCE
 	/* High Performance */
