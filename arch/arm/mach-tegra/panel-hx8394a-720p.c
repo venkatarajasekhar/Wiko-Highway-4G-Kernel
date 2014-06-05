@@ -764,19 +764,9 @@ static int dsi_hx8394a_720p_gpio_get(void)
 *	turn off backlight before lcm_init when boot on
 *	excute just one time;
 *******************************************************/
-extern void tegra_dsi_enter_lp11(void);
-static int dsi_hx8394a_720p_enable(struct device *dev, int reset)
+static int dsi_hx8394a_720p_enable(struct device *dev)
 {
 	int err = 0;
-
-	if(reset) {
-#ifdef DSI_PANEL_RESET
-	gpio_direction_output(
-		dsi_hx8394a_720p_pdata.dsi_panel_rst_gpio, 1);
-	msleep(20);
-#endif
-	return err;
-	} else {
 
 	//printk("Ivan dsi_hx8394a_720p_enable\n");
 	printk("phil, hx8394a, init panel\n");
@@ -862,7 +852,13 @@ static int dsi_hx8394a_720p_enable(struct device *dev, int reset)
 	return 0;
 fail:
 	return err;
-	}
+}
+
+static int dsi_hx8394a_720p_hw_reset(struct device *dev)
+{
+	gpio_direction_output(
+		dsi_hx8394a_720p_pdata.dsi_panel_rst_gpio, 1);
+	return 0;
 }
 
 
@@ -952,6 +948,7 @@ static void dsi_hx8394a_720p_dc_out_init(struct tegra_dc_out *dc)
 	dc->modes = dsi_hx8394a_720p_modes;
 	dc->n_modes = ARRAY_SIZE(dsi_hx8394a_720p_modes);
 	dc->enable = dsi_hx8394a_720p_enable;
+	dc->hw_reset = dsi_hx8394a_720p_hw_reset;
 	dc->disable = dsi_hx8394a_720p_disable;
 	dc->width = 62;
 	dc->height = 110;

@@ -950,12 +950,10 @@ static void  turn_off_bl(void)
 	tobl = true;
 }
 
-static int dsi_otm1283a_720p_enable(struct device *dev, int reset)
+static int dsi_otm1283a_720p_enable(struct device *dev)
 {
 	int err = 0;
 
-	if(reset)
-	   return 0;
 
 	//printk("Ivan dsi_otm1283a_720p_enable\n");
 
@@ -1050,6 +1048,14 @@ fail:
 //Ivan static u8 s_ParaDisplayOn[] = {0x29};
 
 
+static int dsi_otm1283a_720p_hw_reset(struct device *dev)
+{
+	gpio_direction_output(
+		dsi_otm1283a_720p_pdata.dsi_panel_rst_gpio, 1);
+	return 0;
+}
+
+
 static int dsi_otm1283a_720p_disable(void)
 {
 	//printk("Ivan dsi_otm1283a_720p_disable\n");
@@ -1120,6 +1126,7 @@ static void dsi_otm1283a_720p_dc_out_init(struct tegra_dc_out *dc)
 	dc->modes = dsi_otm1283a_720p_modes;
 	dc->n_modes = ARRAY_SIZE(dsi_otm1283a_720p_modes);
 	dc->enable = dsi_otm1283a_720p_enable;
+	dc->hw_reset = dsi_otm1283a_720p_hw_reset;
 	dc->disable = dsi_otm1283a_720p_disable;
 	dc->width = 62;
 	dc->height = 110;

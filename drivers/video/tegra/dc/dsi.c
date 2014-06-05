@@ -3711,11 +3711,12 @@ static void _tegra_dc_dsi_enable(struct tegra_dc *dc)
 			goto fail;
 		}
 
-		mdelay(1);
-		if (dc->out->enable)
-			dc->out->enable(&dc->ndev->dev, 1);
-		mdelay(7);
-
+		
+		if (dc->out->hw_reset) {
+			mdelay(1);
+			dc->out->hw_reset(&dc->ndev->dev);
+			mdelay(7);
+		}
 		err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_init_cmd,
 						dsi->info.n_init_cmd);
 		if (err < 0) {
