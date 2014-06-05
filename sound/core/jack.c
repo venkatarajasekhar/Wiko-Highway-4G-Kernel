@@ -222,6 +222,7 @@ int snd_jack_set_key(struct snd_jack *jack, enum snd_jack_types type,
 }
 EXPORT_SYMBOL(snd_jack_set_key);
 
+#ifdef CONFIG_MACH_S8515
 /* headset key feature   WJ  22/11/13 */
 extern int call_status;
 extern bool is_sendkey_press(void);
@@ -243,6 +244,42 @@ static bool is_long_press(void)
        return index>DETECT_KEY_COUNT;
 }
 /* headset key feature   WJ  22/11/13 */
+static void jack_switch_key_state(int status, int mask)  //LIUJ20140605RELE1556ADDO
+{
+     switch_key_state(status, mask);
+}
+
+#else //CONFIG_MACH_S9321 //LIUJ20140605RELE1556MODY
+
+#define MAX98090_DETECT_KEY_COUNT DETECT_KEY_COUNT*2
+/* headset key feature   WJ  22/11/13 */   
+extern int call_status;
+extern bool max98090_is_sendkey_press(void);
+extern void max98090_switch_key_state(  int status, int mask);
+static bool is_long_press(void)
+{
+     int index = 0;
+    	bool current_status = false;
+    	while(index++ < MAX98090_DETECT_KEY_COUNT)
+    	{ 
+    		current_status = max98090_is_sendkey_press();
+    		if(!current_status)
+    		{
+    			break;
+    		}
+    		msleep(100);
+    	}
+        printk("[Jack]====== index = %d \n",index);
+       return index>MAX98090_DETECT_KEY_COUNT;
+}
+/* headset key feature   WJ  22/11/13 */
+static void jack_switch_key_state(int status, int mask)
+{
+     max98090_switch_key_state(status, mask);
+}
+#endif
+
+
 /**
  * snd_jack_report - Report the current status of a jack
  *
@@ -299,7 +336,7 @@ void snd_jack_report_mask(struct snd_jack *jack, int status,int mask)
                              printk("[Jack]short press remote button to accept call! status = %x\n",status);
                              input_report_key(jack->input_dev, KEY_SEND, status &SND_JACK_BTN_0);
                              input_report_key(jack->input_dev, KEY_SEND, 0);
-                             switch_key_state(0, 0x7e00);
+                             jack_switch_key_state(0, 0x7e00);
                         }
                 }else{
                              input_report_key(jack->input_dev, KEY_PLAYPAUSE, status &SND_JACK_BTN_0);

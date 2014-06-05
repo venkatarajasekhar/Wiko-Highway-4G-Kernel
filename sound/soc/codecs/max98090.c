@@ -2536,10 +2536,13 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_OFF:
 		snd_soc_update_bits(codec, M98090_REG_3E_PWR_EN_IN,
 			M98090_PWR_MBEN_MASK, 0);
+
 #ifdef CONFIG_MACH_S9321
-		/* Set internal pull-up to lowest power mode */
-		snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
-			M98090_JDWK_MASK, M98090_JDWK_MASK);
+		//if (max98090->jack_state == M98090_JACK_STATE_NO_HEADSET) {
+			/* Set internal pull-up to lowest power mode */
+			//snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+			//	M98090_JDWK_MASK, M98090_JDWK_MASK);
+		//}
 #endif
 		codec->cache_sync = 1;
 		break;
@@ -2744,11 +2747,25 @@ static void max98090_dmic_switch(struct snd_soc_codec *codec, int state)
 }
 
 #ifdef CONFIG_MACH_S9321
+struct max98090_priv *g_max98090;
+bool max98090_is_sendkey_press(void)
+{
+        return g_max98090->key_state == 1;
+}
+EXPORT_SYMBOL_GPL(max98090_is_sendkey_press);
+void max98090_switch_key_state( int status, int mask ){
+        g_max98090->jack->status &= ~mask;
+        g_max98090->jack->status |= status & mask;
+}
+EXPORT_SYMBOL_GPL(max98090_switch_key_state);
+
 static void max98090_headset_button_event(struct snd_soc_codec *codec, int state)
 {
 	struct max98090_priv *max98090 = snd_soc_codec_get_drvdata(codec);
 
-	dev_info(codec->dev, "max98090_headset_button_event\n");
+	g_max98090 = max98090;
+
+	dev_info(codec->dev, "max98090_headset_button_event state=%d\n", state);
 
 	if (state)
 		snd_soc_jack_report(max98090->jack, SND_JACK_BTN_0, 0x7E00);
