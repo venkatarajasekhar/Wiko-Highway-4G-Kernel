@@ -50,6 +50,24 @@ static bool is_in_initialized_mode;
 
 static struct platform_device *disp_device;
 
+static struct LCM_setting_table lcm_initialization_setting[] = {
+        {0xB0, 1, {0x04}},
+        {0x00, 0, {0x00}},
+        {0x00, 0, {0x00}},
+        {0xD6, 1, {0x01}},
+        {0x51, 2, {0x0f,0xff}},
+        {0x53, 1, {0x04}},
+        
+        {0x29,	0,{0x00}},
+        {REGFLAG_DELAY,130,{}},
+        {0x11,	0,{0x00}},
+        {REGFLAG_DELAY,50,{}},
+
+       
+};
+
+
+
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu dsi_s_1080p_5_cmu = {
 	/* lut1 maps sRGB to linear space. */
@@ -687,11 +705,11 @@ static struct tegra_dsi_out dsi_s_1080p_5_pdata = {
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
 
-	.dsi_init_cmd = dsi_s_1080p_5_init_cmd,
-	.n_init_cmd = ARRAY_SIZE(dsi_s_1080p_5_init_cmd),
+	//.dsi_init_cmd = dsi_s_1080p_5_init_cmd,
+	//.n_init_cmd = ARRAY_SIZE(dsi_s_1080p_5_init_cmd),
 
-	.dsi_suspend_cmd = dsi_s_1080p_5_suspend_cmd,
-	.n_suspend_cmd = ARRAY_SIZE(dsi_s_1080p_5_suspend_cmd),
+	//.dsi_suspend_cmd = dsi_s_1080p_5_suspend_cmd,
+	//.n_suspend_cmd = ARRAY_SIZE(dsi_s_1080p_5_suspend_cmd),
 };
 
 static int dsi_s_1080p_5_enable(struct device *dev)
@@ -768,8 +786,8 @@ static int dsi_s_1080p_5_disable(void)
 
 static void dsi_s_1080p_5_dc_out_init(struct tegra_dc_out *dc)
 {
-	u16 init_count = sizeof(dsi_s_1080p_5_init_cmd)/sizeof(struct LCM_setting_table);
-	rebuild_tegra_lcm(dsi_s_1080p_5_init_cmd, &dsi_s_1080p_5_pdata,init_count);
+	u16 init_count = sizeof(lcm_initialization_setting)/sizeof(struct LCM_setting_table);
+	rebuild_tegra_lcm(lcm_initialization_setting, &dsi_s_1080p_5_pdata,init_count);
 	
 	dc->dsi = &dsi_s_1080p_5_pdata;
 	dc->parent_clk = "pll_d_out0";
