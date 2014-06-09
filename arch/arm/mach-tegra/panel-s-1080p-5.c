@@ -46,6 +46,7 @@ static bool dsi_s_1080p_5_reg_requested;
 static bool dsi_s_1080p_5_gpio_requested;
 static bool is_bl_powered;
 static u16 vdd_lcd_5v_en;
+static bool is_in_initialized_mode;
 
 static struct platform_device *disp_device;
 
@@ -708,7 +709,8 @@ static int dsi_s_1080p_5_enable(struct device *dev)
 		pr_err("dsi gpio request failed\n");
 		goto fail;
 	}
-	gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
+	if (is_in_initialized_mode)
+		gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
 
 	if (vdd_lcd_s_1v8) {
 		err = regulator_enable(vdd_lcd_s_1v8);
@@ -737,7 +739,7 @@ static int dsi_s_1080p_5_enable(struct device *dev)
 	msleep(20);
 #endif
 	is_bl_powered = true;
-
+	is_in_initialized_mode = true;
 	return 0;
 fail:
 	return err;
@@ -777,7 +779,9 @@ static void dsi_s_1080p_5_dc_out_init(struct tegra_dc_out *dc)
 	dc->disable = dsi_s_1080p_5_disable;
 	dc->width = 62;
 	dc->height = 110;
-	dc->flags = DC_CTRL_MODE;
+	//dc->flags = DC_CTRL_MODE;
+	dc->flags = DC_CTRL_MODE | TEGRA_DC_OUT_INITIALIZED_MODE;
+	is_in_initialized_mode = false;
 }
 static void dsi_s_1080p_5_fb_data_init(struct tegra_fb_data *fb)
 {
