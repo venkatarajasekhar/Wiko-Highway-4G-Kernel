@@ -1864,7 +1864,7 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 	else if (emc_mrs == EMC_MRS_EDF8132A1MC && sku == 0x3)
 		emc_table_group = EDF8132A3MC_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_K4E8E304ED && sku == 0x3)
-		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP; //K4E8E304ED_EMC_TABLE_GROUP;
+		emc_table_group = K4E8E304ED_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_EDF8132A1MC && sku == 0x7)
 		emc_table_group = SL440_EDF8132A1MC_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_EDF8132A3MC && sku == 0x7)
@@ -1872,7 +1872,7 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 	else if (emc_mrs == EMC_MRS_EDB8132B3PH && sku == 0x7)
 		emc_table_group = SL440_EDB8132B3PH_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_K4E8E304ED && sku == 0x7)
-		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP; //SL440_K4E8E304ED_EMC_TABLE_GROUP;
+		emc_table_group = SL440_K4E8E304ED_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_H9TQ18ABJTMC && sku == 0x83)
 		emc_table_group = SL460_H9TQ18ABJTMC_EMC_TABLE_GROUP;
 	else
