@@ -3041,6 +3041,22 @@ static void ov16825_NVM_test(struct ov16825_info *info)
 	}
 }
 
+
+static struct i2c_driver ov16825_i2c_driver;
+int fuseid_ov16825_value[9] = {0};
+static ssize_t imx179_fuseid_show(struct device_driver *ddri, char *buf)
+{
+	return sprintf(buf, "%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x",
+		fuseid_ov16825_value[0], fuseid_ov16825_value[1], fuseid_ov16825_value[2], fuseid_ov16825_value[3], fuseid_ov16825_value[4],
+		fuseid_ov16825_value[5], fuseid_ov16825_value[6], fuseid_ov16825_value[7], fuseid_ov16825_value[8]);
+}
+static DRIVER_ATTR(fuseid, 0644, imx179_fuseid_show, NULL);
+static ssize_t ov16825_caminfo_show(struct device_driver *ddri, char *buf)
+{
+	return sprintf(buf, "%s","ov16825");
+}
+static DRIVER_ATTR(caminfo, 0644, ov16825_caminfo_show, NULL);
+
 static int ov16825_probe(
 	struct i2c_client *client,
 	const struct i2c_device_id *id)
@@ -3048,7 +3064,7 @@ static int ov16825_probe(
 	struct ov16825_info *info;
 	char dname[16];
 	unsigned long clock_probe_rate;
-	int err;
+	int err, i;
 
 
 	dev_dbg(&client->dev, "%s\n", __func__);
@@ -3126,6 +3142,17 @@ static int ov16825_probe(
 		return -ENODEV;
 	}
 
+        ov16825_pm_dev_wr(info, NVC_PWR_COMM);
+	ov16825_get_fuse_id(info);
+	ov16825_pm_dev_wr(info, NVC_PWR_OFF);
+	for (i = 0; i < info->fuse_id.size; i++)
+            fuseid_ov16825_value[i] = info->fuse_id.data[i];
+	err = driver_create_file(&ov16825_i2c_driver.driver, &driver_attr_fuseid);
+	if (err) {
+                printk("failed to register fuse id attributes\n");
+                err = 0;
+	}
+
 
 	info->mclk = devm_clk_get(&client->dev, info->pdata->clk_name);
 	if (info->mclk == NULL) {
@@ -3146,6 +3173,13 @@ static int ov16825_probe(
 			printk("nvidia %s cannot read device id \n", __func__);
 		ov16825_mclk_disable(info);
 	}
+
+        err = driver_create_file(&ov16825_i2c_driver.driver, &driver_attr_caminfo);
+	if (err) {
+                printk("failed to register caminfo attributes\n");
+                err = 0;
+	}
+        
 	printk("nvidia %s <--- do init i2c device check done \n", __func__);
 
 	ov16825_NVM_test(info);
