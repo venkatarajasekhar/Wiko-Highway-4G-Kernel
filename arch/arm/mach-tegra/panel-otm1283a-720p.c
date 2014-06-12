@@ -1022,7 +1022,7 @@ static int dsi_otm1283a_720p_enable(struct device *dev)
 
 	*/
 	
-#ifdef DSI_PANEL_RESET
+#if 0//def DSI_PANEL_RESET
 	gpio_direction_output(
 		dsi_otm1283a_720p_pdata.dsi_panel_rst_gpio, 1);	
 	msleep(20);
