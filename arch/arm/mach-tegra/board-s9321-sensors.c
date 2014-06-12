@@ -1068,7 +1068,7 @@ static int pluto_imx179_power_off(struct nvc_regulator *vreg)
 static struct nvc_imager_cap imx179_cap = {
 	.identifier		= "IMX179",
 	.sensor_nvc_interface	= 3,
-	.pixel_types[0]		= 0x102,
+	.pixel_types[0]		= 0x101,
 	.orientation		= 0,
 	.direction		= 0,
 	.initial_clock_rate_khz	= 6000,
