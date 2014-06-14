@@ -25,6 +25,7 @@
 #include "max98090.h"
 
 #include <linux/version.h>
+#include <linux/switch.h>                //add by wuhai
 
 #define DEBUG
 #define EXTMIC_METHOD
@@ -673,6 +674,12 @@ static const unsigned int max98090_rcv_lout_tlv[] = {
 	22, 27, TLV_DB_SCALE_ITEM(100, 100, 0),
 	28, 31, TLV_DB_SCALE_ITEM(650, 50, 0),
 };
+
+#ifdef CONFIG_SWITCH
+static struct switch_dev tegra_max98090_button_switch = {
+	.name = "linebtn",
+};
+#endif
 
 static int max98090_extmic_mux_set(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
@@ -2767,6 +2774,10 @@ static void max98090_headset_button_event(struct snd_soc_codec *codec, int state
 
 	dev_info(codec->dev, "max98090_headset_button_event state=%d\n", state);
 
+        #ifdef CONFIG_SWITCH
+        switch_set_state(&tegra_max98090_button_switch, state);
+        #endif
+
 	if (state)
 		snd_soc_jack_report(max98090->jack, SND_JACK_BTN_0, 0x7E00);
 	else
@@ -4045,6 +4056,13 @@ static int max98090_i2c_probe(struct i2c_client *i2c,
 			ARRAY_SIZE(max98090_dai));
 	if (ret < 0)
 		kfree(max98090);
+        #ifdef CONFIG_SWITCH
+	/* Add linebtn switch class support */         //add by wuhai 
+	ret = switch_dev_register(&tegra_max98090_button_switch);
+	if (ret < 0) {
+		dev_err(&i2c->dev, "not able to register switch device\n");
+	}
+        #endif
 	return ret;
 }
 
@@ -4052,6 +4070,9 @@ static int __devexit max98090_i2c_remove(struct i2c_client *client)
 {
 	snd_soc_unregister_codec(&client->dev);
 	kfree(i2c_get_clientdata(client));
+        #ifdef CONFIG_SWITCH
+        switch_dev_unregister(&tegra_max98090_button_switch);
+        #endif
 	return 0;
 }
 
