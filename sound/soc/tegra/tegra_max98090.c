@@ -1350,7 +1350,7 @@ static int tegra_max98090_jack_notifier(struct notifier_block *self,
 		state = BIT_NO_HEADSET;
 	}
 
-	if (action == jack->status)
+	if(action == (jack->status & (BIT_HEADSET | BIT_HEADSET_NO_MIC)))
 		switch_set_state(&tegra_max98090_headset_switch, state);
 
 	return NOTIFY_OK;

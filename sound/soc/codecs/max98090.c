@@ -2551,6 +2551,10 @@ static int max98090_set_bias_level(struct snd_soc_codec *codec,
 			//snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
 			//	M98090_JDWK_MASK, M98090_JDWK_MASK);
 		//}
+#else
+		/* Set internal pull-up to lowest power mode */
+		snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+			M98090_JDWK_MASK, M98090_JDWK_MASK);
 #endif
 		codec->cache_sync = 1;
 		break;
