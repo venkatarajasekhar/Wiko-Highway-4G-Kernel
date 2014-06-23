@@ -1305,7 +1305,11 @@ static struct nvc_imager_cap ceres_ov16825_cap = {
 	#else
 	.focuser_guid		= 0,
 	#endif
+	#if defined(CONFIG_FLASH_SGM3780)
+	.torch_guid		= NVC_TORCH_GUID(0),
+	#else
 	.torch_guid		= 0,
+	#endif
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
 
