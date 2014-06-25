@@ -2303,7 +2303,7 @@ static int dram_emc_name_get(void *data, char *val)
 {
 	if (emc_mrs_id == EMC_MRS_EDF8132A1MC && sku_id == 0x7)
 		*val = "Elpida";
-	else if (emc_mrs_id == EMC_MRS_K4E8E304ED && sku_id == 0x7)
+	else if (emc_mrs_id == EMC_MRS_K4E8E304ED && (sku_id == 0x7 || sku_id == 0x3))  //LIUJ201140504RELE1315ADDO support 460 cpu
 		*val = "Samsung";
 	else if (emc_mrs_id == EMC_MRS_H9TQ18ABJTMC && sku_id == 0x83)
 		*val = "Hynix";
