@@ -610,6 +610,8 @@ static void ceres_audio_init(void)
 		gpio_direction_input(AUD_INT);
 
 		pdata->irq = gpio_to_irq(AUD_INT);
+
+		pdata->liq = TEGRA_GPIO_HP_DET;
 #endif
 		i2c_register_board_info(5, &max98090_board_info, 1);
 		platform_add_devices(ceres_only_audio_devices,

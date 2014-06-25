@@ -1548,6 +1548,7 @@ struct max98090_priv {
 	int key_state;
 	int key_valid_flag;
 	struct delayed_work key_work;
+	int key_recheck_flag;
 };
 
 #ifdef CONFIG_MACH_S9321

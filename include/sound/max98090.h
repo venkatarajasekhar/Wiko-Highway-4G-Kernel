@@ -57,6 +57,10 @@ struct max98090_pdata {
 	unsigned int digmic_right_mode:1;
 	unsigned int digmic_3_mode:1;
 	unsigned int digmic_4_mode:1;
+
+#ifdef CONFIG_MACH_S9321
+	int liq;
+#endif
 };
 
 #endif

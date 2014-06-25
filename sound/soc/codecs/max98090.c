@@ -25,6 +25,8 @@
 #include "max98090.h"
 
 #include <linux/version.h>
+#include <linux/gpio.h>
+
 #include <linux/switch.h>                //add by wuhai
 
 #define DEBUG
@@ -2806,6 +2808,7 @@ static void max98090_headset_button_event(struct snd_soc_codec *codec)
 
 
 #ifdef CONFIG_MACH_S9321
+#define MICRECHECK 6
 static void max98090_jack_work(struct work_struct *work)
 {
 	struct max98090_priv *max98090 = container_of(work,
@@ -2831,6 +2834,7 @@ static void max98090_jack_work(struct work_struct *work)
 	switch (reg & (M98090_LSNS_MASK | M98090_JKSNS_MASK)) {
 	case M98090_LSNS_MASK | M98090_JKSNS_MASK:
 		{
+			max98090->key_recheck_flag = 0;
 			dev_info(codec->dev, "No Headset Detected\n");
 
 			max98090->jack_state = M98090_JACK_STATE_NO_HEADSET;
@@ -2875,12 +2879,27 @@ static void max98090_jack_work(struct work_struct *work)
 			/* Mono Headphone is reported as Headphone */
 			dev_info(codec->dev, "Headphone Detected\n");
 
+			if(max98090->key_recheck_flag < MICRECHECK) {
+				dev_info(codec->dev, "Headphone Recheck ... %d\n", max98090->key_recheck_flag);
+				cancel_delayed_work(&max98090->jack_work);
+				schedule_delayed_work(&max98090->jack_work,
+					msecs_to_jiffies(1000));
+				max98090->key_recheck_flag++;
+			}
+
+			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) return;
+
 			max98090->jack_state = M98090_JACK_STATE_HEADPHONE;
 
 			max98090_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+			if(max98090->key_recheck_flag >= MICRECHECK) {
 			/* Set internal pull-up to lowest power mode */
 			snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
 				M98090_JDWK_MASK, M98090_JDWK_MASK);
+			} else
+			/* Set internal pull-up to lowest power mode */
+			snd_soc_update_bits(codec, M98090_REG_3D_CFG_JACK,
+				M98090_JDWK_MASK, 0);
 /*
 			snd_soc_dapm_disable_pin(&codec->dapm, "SPKL");
 			snd_soc_dapm_disable_pin(&codec->dapm, "SPKR");
@@ -2900,6 +2919,7 @@ static void max98090_jack_work(struct work_struct *work)
 
 	case M98090_JKSNS_MASK:
 		{
+			max98090->key_recheck_flag = 0;
 			if (max98090->jack_state == M98090_JACK_STATE_HEADSET) {
 				if (max98090->key_valid_flag
 						&& (max98090->key_state == 1)) {
@@ -2916,6 +2936,8 @@ static void max98090_jack_work(struct work_struct *work)
 
 			schedule_delayed_work(&max98090->key_work,
 					msecs_to_jiffies(1000));
+
+			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) return;
 
 			max98090->jack_state = M98090_JACK_STATE_HEADSET;
 
