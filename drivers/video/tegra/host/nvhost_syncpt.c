@@ -118,7 +118,9 @@ u32 nvhost_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 {
 	u32 val;
 
+	nvhost_module_busy(syncpt_to_dev(sp)->dev);
 	val = syncpt_op().update_min(sp, id);
+	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	trace_nvhost_syncpt_update_min(id, val);
 
 	return val;

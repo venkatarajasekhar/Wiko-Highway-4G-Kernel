@@ -276,6 +276,8 @@
 #define SIM_SIM1_2_CNFG1_SIM1DBCNT_MASK (BIT(0) | BIT(1) | BIT(2) \
 				| BIT(3) | BIT(4) | BIT(5))
 #define SIM_SIM1_2_DBCNT        (0x10) /* COUNT=16, table 160 */
+#define SIM_SIM1_2_NMT_ENABLE  (0)
+#define SIM_SIM1_2_NMT_DISABLE (BIT(0) | BIT(1))
 
 #define MAX77660_ADCINT_DTRINT			BIT(1)
 #define MAX77660_ADCINT_DTFINT			BIT(2)

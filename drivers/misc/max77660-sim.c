@@ -1,7 +1,7 @@
 /*
  * MAXIM MAX77660 SIM driver
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  * Author: Shawn joo <sjoo@nvidia.com>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -119,7 +119,6 @@ static irqreturn_t max77660_sim_irq(int irq, void *data)
 		sysfs_notify(&sim->miscdev->kobj, NULL, "sim2_inserted");
 		dev_dbg(sim->dev, "sim2(%s)\n", sim2 ? "insert" : "removal");
 	}
-
 	return IRQ_HANDLED;
 }
 
@@ -132,10 +131,13 @@ static int __devinit max77660_sim_probe(struct platform_device *pdev)
 {
 	struct max77660_platform_data *pdata;
 	struct max77660_sim *sim;
-	int ret, val;
+	int ret, ret2, val;
 	int sim_irq;
 	struct max77660_sim_platform_data *sim_pdata;
 	struct platform_device *misc_pdev;
+
+	bool sim2 = 0;
+	u8 sim_val = 0, sim_val2 = 0;
 
 	pdata = dev_get_platdata(pdev->dev.parent);
 	if (!pdata) {
@@ -152,14 +154,23 @@ static int __devinit max77660_sim_probe(struct platform_device *pdev)
 	}
 
 	/* SIM interrupt mask */
-	/* WAR spurious SIM removals by masking interrupts */
 	ret = max77660_reg_write(pdev->dev.parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_SIM1NTM, 0x03);
+#ifdef CONFIG_SIM_MAX77660_HOTSWAP
+			MAX77660_REG_SIM1NTM, SIM_SIM1_2_NMT_ENABLE);
+#else
+	/* Mask hotswap interrupt */
+			MAX77660_REG_SIM1NTM, SIM_SIM1_2_NMT_DISABLE);
+#endif
 	if (ret < 0)
 		goto err_reg_access;
 
 	ret = max77660_reg_write(pdev->dev.parent, MAX77660_PWR_SLAVE,
-			MAX77660_REG_SIM2NTM, 0x03);
+#ifdef CONFIG_SIM_MAX77660_HOTSWAP
+			MAX77660_REG_SIM2NTM, SIM_SIM1_2_NMT_ENABLE);
+#else
+	/* Mask hotswap interrupt */
+			MAX77660_REG_SIM2NTM, SIM_SIM1_2_NMT_DISABLE);
+#endif
 	if (ret < 0)
 		goto err_reg_access;
 
@@ -213,6 +224,10 @@ static int __devinit max77660_sim_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err_reg_access;
 
+	/*unmask insert/removed interrupt  since S9321 need sim car hot plug*/
+	ret = max77660_reg_write(pdev->dev.parent, MAX77660_PWR_SLAVE,
+			MAX77660_REG_SIM2NTM, 0x00);
+
 	if (misc_register(&sim_miscdev) != 0) {
 		dev_err(&pdev->dev, "sim: cannot register miscdev\n");
 		return -ENODEV;
@@ -237,9 +252,25 @@ static int __devinit max77660_sim_probe(struct platform_device *pdev)
 	sim->dev = &pdev->dev;
 	sim->miscdev = sim_miscdev.this_device;
 	sim->sim_irq = sim_irq;
+
+	//need to ready sim card init status, since no interrupt reported
+	ret = max77660_reg_read(pdev->dev.parent, MAX77660_PWR_SLAVE,
+				MAX77660_REG_SIM2INT, &sim_val);
+	ret2 = max77660_reg_read(pdev->dev.parent, MAX77660_PWR_SLAVE,
+				MAX77660_REG_SIM2STAT, &sim_val2);
+	dev_err(&pdev->dev, "SIM2INT:%d, MAX77660_REG_SIM2STAT:%d\n", sim_val, sim_val2);
+	if (ret || ret2)
+		dev_err(&pdev->dev, "could not read sim card STAT&INT register\n");
+	if ( sim_val2 & BIT(0))
+		sim2 = true;
+	else if (!(sim_val2 & BIT(0)))
+		sim2 = false;
+	sim->sim2_insert = sim2;
+
 	platform_set_drvdata(pdev, sim);
 	misc_pdev = to_platform_device(sim_miscdev.this_device);
 	misc_pdev->dev.platform_data = sim;
+
 
 	ret = request_threaded_irq(sim_irq, NULL,  max77660_sim_irq,
 			IRQF_ONESHOT,

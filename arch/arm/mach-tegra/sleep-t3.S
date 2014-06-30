@@ -270,6 +270,17 @@ ENDPROC(tegra3_cpu_reset)
  * tegra3_tear_down_core in IRAM
  */
 ENTRY(tegra3_sleep_core_finish)
+#if 1
+	mov	r4, r0
+	adr	r0, str_p1
+	bl	printkk
+	b	1f
+str_p1:	.asciz	"Sleep:1(phil)\n"
+	.align
+
+1:
+	mov r0, r4
+#endif
 	mov	r4, r0
 	bl	tegra_flush_cache
 	mov	r0, r4

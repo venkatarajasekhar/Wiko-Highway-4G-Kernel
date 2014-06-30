@@ -322,7 +322,7 @@ static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
 };
 
 #define MAX77660_PDATA_INIT(_rid, _id, _min_uV, _max_uV, _supply_reg,	\
-		_ramp_delay, _always_on, _boot_on, _apply_uV,		\
+		_always_on, _boot_on, _apply_uV,			\
 		_fps_src, _fps_pu_period, _fps_pd_period, _flags)	\
 	static struct regulator_init_data max77660_regulator_idata_##_id = {   \
 		.supply_regulator = _supply_reg,			\
@@ -336,7 +336,6 @@ static struct max77660_regulator_fps_cfg max77660_fps_cfgs[] = {
 			.valid_ops_mask = (REGULATOR_CHANGE_MODE |	\
 					   REGULATOR_CHANGE_STATUS |	\
 					   REGULATOR_CHANGE_VOLTAGE),	\
-			.ramp_delay = _ramp_delay,			\
 			.always_on = _always_on || (_flags & DISABLE_DVFS), \
 			.boot_on = _boot_on,				\
 			.apply_uV = _apply_uV,				\
@@ -357,100 +356,118 @@ static struct max77660_regulator_platform_data max77660_regulator_pdata_##_id =\
 	}
 
 
-MAX77660_PDATA_INIT(BUCK1, buck1,  650, 1400, NULL, 0,
+MAX77660_PDATA_INIT(BUCK1, buck1,  650, 1400, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN1);
 
-MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL, 0,
+MAX77660_PDATA_INIT(BUCK2, buck2,  650, 1300, NULL,
 		1, 1, 0, FPS_SRC_DEF, 0, 0, MAX77660_EXT_ENABLE_EN2);
 
-MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL, 0,
+MAX77660_PDATA_INIT(BUCK3, buck3,  1200, 1200, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK4, buck4,  1100, 1100, NULL, 200000,
+MAX77660_PDATA_INIT(BUCK4, buck4,  1100, 1100, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN3);
 
-MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL, 0,
+MAX77660_PDATA_INIT(BUCK5, buck5,  1800, 1800, NULL,
 		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK6, buck6,  1700, 1800, NULL, 0,
+MAX77660_PDATA_INIT(BUCK6, buck6,  1700, 1800, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2800, NULL, 0,
+MAX77660_PDATA_INIT(BUCK7, buck7,  2650, 2800, NULL,
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(LDO1, ldo1, 800, 800, max77660_rails(buck3), 0,
+MAX77660_PDATA_INIT(LDO1, ldo1, 800, 800, max77660_rails(buck3),
 		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO2, ldo2, 2800, 2800, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO3, ldo3, 1200, 1200, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL, 0,
-		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO5, ldo5, 2800, 2800, NULL, 0,
-		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO6, ldo6, 1200, 1200, max77660_rails(buck5), 0,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO7, ldo7, 1050, 1050, max77660_rails(buck3), 0,
-		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO8, ldo8, 900, 1100, max77660_rails(buck3), 0,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN3);
-
-MAX77660_PDATA_INIT(LDO9, ldo9, 2800, 2800, NULL, 0,
-		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO10, ldo10, 1800, 1800, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO11, ldo11, 3300, 3300, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO12, ldo12, 1800, 3300, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO13, ldo13, 2850, 2850, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO14, ldo14, 2850, 2850, NULL, 0,
-		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO15, ldo15, 1800, 3000, NULL, 0,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO16, ldo16, 1800, 3000, NULL, 0,
-		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO17, ldo17, 1800, 1800, max77660_rails(buck7), 0,
-		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(LDO18, ldo18, 2700, 2700, NULL, 0,
-		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
-
-MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5), 0,
-		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
-
-//Ivan MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5), 0,
-//Ivan        0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 //luis
-//MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5), 0,
-//        0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
-MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5), 0,
-        0, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+#if 1
+MAX77660_PDATA_INIT(LDO2, ldo2, 2800, 2800, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#else
+MAX77660_PDATA_INIT(LDO2, ldo2, 2800, 2800, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#endif
 
-MAX77660_PDATA_INIT(SW3, sw3, 1800, 1800, max77660_rails(buck5), 0,
-		0, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+//luis
+#if 0
+MAX77660_PDATA_INIT(LDO3, ldo3, 2800, 2800, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#else
+MAX77660_PDATA_INIT(LDO3, ldo3, 1200, 1200, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#endif
 
-MAX77660_PDATA_INIT(SW4, sw4, 1100, 1100, max77660_rails(buck1), 0,
+MAX77660_PDATA_INIT(LDO4, ldo4, 3000, 3000, NULL,
+		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
+
+//luis
+#if 0
+MAX77660_PDATA_INIT(LDO5, ldo5, 1800, 1800, NULL,
+		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#else
+MAX77660_PDATA_INIT(LDO5, ldo5, 2800, 2800, NULL,
+		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+#endif
+
+MAX77660_PDATA_INIT(LDO6, ldo6, 1200, 1200, max77660_rails(buck5),
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
-MAX77660_PDATA_INIT(SW5, sw5, 1200, 1200, max77660_rails(buck3), 0,
+MAX77660_PDATA_INIT(LDO7, ldo7, 1050, 1050, max77660_rails(buck3),
+		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO8, ldo8, 900, 1100, max77660_rails(buck3),
+		0, 0, 0, FPS_SRC_DEF, -1, -1, MAX77660_EXT_ENABLE_EN3);
+
+MAX77660_PDATA_INIT(LDO9, ldo9, 2800, 2800, NULL,
+		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO10, ldo10, 1800, 1800, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO11, ldo11, 3300, 3300, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO12, ldo12, 1800, 3300, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO13, ldo13, 2850, 2850, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO14, ldo14, 2850, 2850, NULL,
+		0, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO15, ldo15, 1800, 3000, NULL,
+		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO16, ldo16, 1800, 3000, NULL,
+		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO17, ldo17, 1800, 1800, max77660_rails(buck7),
+		1, 1, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(LDO18, ldo18, 2700, 2700, NULL,
+		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
+		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+
+//luis
+#if 0
+MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5),
+		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
+#else
+MAX77660_PDATA_INIT(SW2, sw2, 1800, 1800, max77660_rails(buck5),
+		0, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+#endif
+
+MAX77660_PDATA_INIT(SW3, sw3, 1800, 1800, max77660_rails(buck5),
+		0, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(SW4, sw4, 1100, 1100, max77660_rails(buck1),
+		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
+
+MAX77660_PDATA_INIT(SW5, sw5, 1200, 1200, max77660_rails(buck3),
 		0, 0, 0, FPS_SRC_DEF, -1, -1, 0);
 
 #define MAX77660_REG(_id, _data) 	\
@@ -638,7 +655,11 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 			.detect_en = 1,
 			.batremove_en = 0,
 			.det_debouncecnt = 0x10,
+#ifdef CONFIG_SIM_MAX77660_HOTSWAP
+			.auto_pwrdn_en = 1,
+#else
 			.auto_pwrdn_en = 0,
+#endif
 			.inst_pol = 0,			//Ivan 1 -> 0
 			.sim_puen = 1,
 			.pwrdn_debouncecnt = 0x10,
@@ -647,8 +668,12 @@ struct max77660_sim_platform_data max77660_sim_pdata = {
 			.detect_en = 1,
 			.batremove_en = 0,
 			.det_debouncecnt = 0x10,
+#ifdef CONFIG_SIM_MAX77660_HOTSWAP
+			.auto_pwrdn_en = 1,
+#else
 			.auto_pwrdn_en = 0,
-			.inst_pol = 0,			//Ivan 1 -> 0
+#endif
+			.inst_pol = 0,
 			.sim_puen = 1,
 			.pwrdn_debouncecnt = 0x10,
 		},
@@ -693,9 +718,12 @@ static struct max77660_platform_data max77660_pdata = {
 
 	.flags	= 0x00,
 	.use_power_off	= true,
+#if !defined(CONFIG_TEGRA_FIQ_DEBUGGER)
 	.system_watchdog_timeout = 32,
+#else
+	.system_watchdog_timeout = 0,
+#endif
 	.system_watchdog_reset_timeout = 20,
-	.system_watchdog_timeout_shutdown = false,
 	.dvfs_pd = {
 		.en_pwm = true,
 		.step_voltage_uV = 25000,
@@ -992,6 +1020,10 @@ int __init ceres_regulator_init(void)
 	for (id = 0; id < MAX77660_REGULATOR_ID_NR; ++id)
 		max77660_pdata.regulator_pdata[id] = max77660_reg_pdata[id];
 
+	/* set ldo1 to 0.85v from 0.80v */
+	max77660_regulator_idata_ldo1.constraints.min_uV = 850000;
+	max77660_regulator_idata_ldo1.constraints.max_uV = 850000;
+
 	switch (board_info.board_id) {
 	case BOARD_E1680:
 	case BOARD_E1681:
@@ -1114,11 +1146,8 @@ int __init ceres_regulator_init(void)
 		max77660_regulator_idata_buck4.constraints.always_on = 1;
 		max77660_regulator_pdata_ldo8.flags = 0;
 	}
-
-	/* Set FPS_SRC to none of buck6, buck7, and sw5 */
-	max77660_regulator_pdata_buck6.fps_src = FPS_SRC_0;
-	max77660_regulator_pdata_buck7.fps_src = FPS_SRC_0;
-	max77660_regulator_pdata_sw5.fps_src = FPS_SRC_0;
+       /* Set FPS_SRC to none of sw5 */
+        max77660_regulator_pdata_sw5.fps_src = FPS_SRC_0;
 
 	i2c_register_board_info(4, max77660_regulators,
 				ARRAY_SIZE(max77660_regulators));
@@ -1575,6 +1604,12 @@ void __init ceres_sysedp_init(void)
 	WARN_ON(r);
 }
 
+/* change this table for battery usecase
+ * make sure the depletion will not occupy too
+ * much power that the edp update request stops executing
+ * and hang the system
+*/
+#if 0
 static unsigned int ceres_psydepl_states[] = {
 	9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
 	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600,
@@ -1584,6 +1619,17 @@ static unsigned int ceres_psydepl_states[] = {
 	1300, 1200, 1100, 1000,  900,  800,  700,  600,
 	 500,  400,  300,  200,  100,    0
 };
+#else
+static unsigned int ceres_psydepl_states[] = {
+	/* 9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
+	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600, */
+	5400, 5200, 5000, 4800, 4600, 4400, 4200, 4000,
+	3800, 3600, 3400, 3200, 3000, 2800, 2600, 2400,
+	2200, 2000, 1900, 1800, 1700, 1600, 1500, 1400,
+	1300, 1200, 1100, 1000,  900,  800,  700,  600,
+	 500,  400,  300,  200,  100,    0
+};
+#endif
 
 #if 0
 /* Temperature in deci-celcius */
@@ -1679,7 +1725,7 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.power_supply = "battery",
 	.states = ceres_psydepl_states,
 	.num_states = ARRAY_SIZE(ceres_psydepl_states),
-	.e0_index = 47,
+	.e0_index = ARRAY_SIZE(ceres_psydepl_states) - 7,
 	.r_const = 230000,
 	.vsys_min = 3250000,
 	.vcharge = 4200000,

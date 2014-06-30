@@ -621,6 +621,16 @@ config SIM_MAX77660
        If you say yes, SIM drv of Maxim MAX77660 will be enabled.
        It supports SIM Card detection and SIM configuration of Max77660.
 
+config SIM_MAX77660_HOTSWAP
+	bool "Enable SIM Hotswap on MAX77660"
+	default n
+	depends on SIM_MAX77660
+	---help---
+	If checked SIM hotswap support will be enabled.
+	Control also SIM auto power down feature.
+	Disable on hardware not supporting hotswap
+	detection to avoid false SIM removal
+
 config SIM_PALMAS
 	tristate "Palmas SIM driver"
 	depends on MFD_PALMAS

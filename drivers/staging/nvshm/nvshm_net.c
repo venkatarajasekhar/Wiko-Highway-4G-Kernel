@@ -84,19 +84,6 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 			bb_iob = ap_iob->sg_next;
 			ap_iob = NVSHM_B2A(priv, bb_iob);
 		}
-		if (datagram_len > dev->mtu) {
-			pr_err("%s: MTU %d>%d\n", __func__,
-			       dev->mtu, datagram_len);
-			priv->stats.rx_errors++;
-			/* move to next datagram - drop current one */
-			ap_iob = ap_next;
-			bb_next = ap_next->next;
-			ap_next = NVSHM_B2A(priv, bb_next);
-			/* Break ->next chain before free */
-			ap_iob->next = NULL;
-			nvshm_iobuf_free_cluster(ap_iob);
-			continue;
-		}
 		/* construct the skb */
 		skb = (struct sk_buff *) __netdev_alloc_skb(dev,
 							    datagram_len,
@@ -147,7 +134,7 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 		priv->stats.rx_packets++;
 		priv->stats.rx_bytes += datagram_len;
-		if (netif_rx(skb) == NET_RX_DROP)
+		if (netif_rx_ni(skb) == NET_RX_DROP)
 			pr_debug("%s() : dropped packet\n", __func__);
 	}
 }
@@ -156,6 +143,7 @@ void nvshm_netif_rx_event(struct nvshm_channel *chan,
 void nvshm_netif_error_event(struct nvshm_channel *chan,
 	enum nvshm_error_id error)
 {
+	unsigned long f;
 	struct net_device *dev = (struct net_device *)chan->data;
 	struct nvshm_net_line *priv = netdev_priv(dev);
 
@@ -167,9 +155,9 @@ void nvshm_netif_error_event(struct nvshm_channel *chan,
 
 	priv->errno = error;
 
-	spin_lock(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	priv->stats.tx_errors++;
-	spin_unlock(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 	pr_err("%s() : error on nvshm net interface!\n", __func__);
 }
 
@@ -202,6 +190,7 @@ static struct nvshm_if_operations nvshm_netif_ops = {
 /* called when ifconfig <if> up */
 static int nvshm_netops_open(struct net_device *dev)
 {
+	unsigned long f;
 	struct nvshm_net_line *priv = netdev_priv(dev);
 	int ret = 0;
 
@@ -209,7 +198,7 @@ static int nvshm_netops_open(struct net_device *dev)
 	if (!priv)
 		return -EINVAL;
 
-	spin_lock(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	if (!priv->use) {
 		priv->pchan = nvshm_open_channel(priv->nvshm_chan,
 			&nvshm_netif_ops,
@@ -220,7 +209,7 @@ static int nvshm_netops_open(struct net_device *dev)
 	}
 	if (!ret)
 		priv->use++;
-	spin_unlock(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 
 	/* Start if queue */
 	netif_start_queue(dev);
@@ -230,16 +219,17 @@ static int nvshm_netops_open(struct net_device *dev)
 /* called when ifconfig <if> down */
 static int nvshm_netops_close(struct net_device *dev)
 {
+	unsigned long f;
 	struct nvshm_net_line *priv = netdev_priv(dev);
 
 	pr_debug("%s()\n", __func__);
 	if (!priv)
 		return -EINVAL;
 
-	spin_lock(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	if (priv->use > 0)
 		priv->use--;
-	spin_unlock(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 
 	if (!priv->use) {
 		/* Cleanup if data are still present in io queue */
@@ -366,15 +356,16 @@ struct net_device_stats *nvshm_netops_get_stats(struct net_device *dev)
 
 static void nvshm_netops_tx_timeout(struct net_device *dev)
 {
+	unsigned long f;
 	struct nvshm_net_line *priv = netdev_priv(dev);
 
 	pr_debug("%s()\n", __func__);
 	if (!priv)
 		return;
 
-	spin_lock(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	priv->stats.tx_errors++;
-	spin_unlock(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 	netif_wake_queue(dev);
 }
 

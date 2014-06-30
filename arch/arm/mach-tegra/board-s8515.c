@@ -489,6 +489,11 @@ static struct platform_device tegra_bbc_proxy_device = {
 	},
 };
 
+static struct platform_device tegra_rtc_sysfs_device = {
+	.name = "tegra_rtc_sysfs",
+	.id = -1,
+};
+
 #if defined(CONFIG_TEGRA_WAKEUP_MONITOR)
 static struct tegra_wakeup_monitor_platform_data
 			ceres_tegra_wakeup_monitor_pdata = {
@@ -1202,6 +1207,7 @@ static void __init sysedp_psydepl_init(void)
 
 static void __init tegra_ceres_late_init(void)
 {
+	platform_device_register(&tegra_rtc_sysfs_device);
 	platform_device_register(&tegra_pinmux_device);
 	ceres_pinmux_init();
 #if defined(CONFIG_TEGRA_BASEBAND)
@@ -1226,7 +1232,11 @@ static void __init tegra_ceres_late_init(void)
 	ceres_sdhci_init();
 	platform_add_devices(ceres_devices, ARRAY_SIZE(ceres_devices));
 	tegra_ram_console_debug_init();
-	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_CPU, NULL, -1, -1);
+//Ivan Merged from NV 140624
+//	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_CPU, NULL, -1, -1);
+#ifdef CONFIG_TEGRA_FIQ_DEBUGGER
+	tegra_serial_debug_init(TEGRA_UARTA_BASE, INT_WDT_AVP, NULL, -1, -1);
+#endif
 	ceres_emc_init();
 	ceres_edp_init();
 	isomgr_init();
@@ -1247,7 +1257,9 @@ static void __init tegra_ceres_late_init(void)
 #endif
 	  ceres_audio_init();
 	}
+#ifdef S8515_HAS_PMON
 	ceres_pmon_init();
+#endif
 	ceres_sysedp_core_init();
 	sysedp_psydepl_init();
 }
@@ -1264,45 +1276,12 @@ static void __init tegra_ceres_dt_init(void)
 	tegra_ceres_late_init();
 }
 
-void tegra_debug_writec(unsigned int c)
-{
-        void __iomem *debug_port_base_addr;
-        unsigned int tmp = 0;
-
-#define DEBUG_PORT_BASE_ADDRESS  (0x70006000)
-
-	debug_port_base_addr = IO_ADDRESS(DEBUG_PORT_BASE_ADDRESS);
-
-        //tegra_write(t, c, UART_TX);
-        //tegra_write(t, UART_IER_RLSI | UART_IER_RDI, UART_IER);
-        //tegra_write(t, 0, UART_IIR);
-
-        __raw_writeb((UART_IER_RLSI | UART_IER_RDI), (debug_port_base_addr + UART_TX * 4));
-
-        __raw_writeb(0, debug_port_base_addr + UART_IIR * 4);
-
-        /* Clear LCR.DLAB bit */
-        tmp = __raw_readb(debug_port_base_addr + UART_LCR * 4);
-
-        tmp = tmp & 0x7f;
-        __raw_writeb(tmp, (debug_port_base_addr + UART_LCR * 4));
-
-        udelay(10);
-
-        __raw_writeb(c, debug_port_base_addr + UART_TX * 4);
-
-        udelay(1000);
-
-        iounmap(debug_port_base_addr);
-}
-EXPORT_SYMBOL_GPL(tegra_debug_writec);
-
 static void __init tegra_ceres_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
 	/* for PANEL_5_SHARP_1080p: 1920*1080*4*2 = 16588800 bytes */
 //	tegra_reserve(0, SZ_16M, SZ_8M);
-	tegra_reserve(0, SZ_8M, 0);	//Patched by NV for save memory
+	tegra_reserve(0, SZ_8M, 0);	//Patched by NV for save memory	
 #else
 	tegra_reserve(SZ_128M, SZ_16M, SZ_16M);
 #endif

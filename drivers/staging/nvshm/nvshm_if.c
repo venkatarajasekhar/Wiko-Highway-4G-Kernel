@@ -27,23 +27,26 @@ struct nvshm_channel *nvshm_open_channel(int chan,
 					 struct nvshm_if_operations *ops,
 					 void *interface_data)
 {
+	unsigned long f;
 	struct nvshm_handle *handle = nvshm_get_handle();
 
 	pr_debug("%s(%d)\n", __func__, chan);
-	spin_lock(&handle->lock);
+	spin_lock_irqsave(&handle->lock, f);
 	if (handle->chan[chan].ops) {
+		spin_unlock_irqrestore(&handle->lock, f);
 		pr_err("%s: already registered on chan %d\n", __func__, chan);
 		return NULL;
 	}
 
 	handle->chan[chan].ops = ops;
 	handle->chan[chan].data = interface_data;
-	spin_unlock(&handle->lock);
+	spin_unlock_irqrestore(&handle->lock, f);
 	return &handle->chan[chan];
 }
 
 void nvshm_close_channel(struct nvshm_channel *handle)
 {
+	unsigned long f;
 	struct nvshm_handle *priv = nvshm_get_handle();
 
 	/* we cannot flush the work queue here as the call to
@@ -54,22 +57,23 @@ void nvshm_close_channel(struct nvshm_channel *handle)
 	   as the main work queue handler always checks the state of
 	   the IPC */
 
-	spin_lock(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	/* Clear ops but not data as it may be used for cleanup */
 	priv->chan[handle->index].ops = NULL;
-	spin_unlock(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 }
 
 int nvshm_write(struct nvshm_channel *handle, struct nvshm_iobuf *iob)
 {
+	unsigned long f;
 	struct nvshm_handle *priv = nvshm_get_handle();
 	struct nvshm_iobuf *list, *leaf;
 	int count = 0, ret = 0;
 
-	spin_lock_bh(&priv->lock);
+	spin_lock_irqsave(&priv->lock, f);
 	if (!priv->chan[handle->index].ops) {
 		pr_err("%s: channel not mapped\n", __func__);
-		spin_unlock_bh(&priv->lock);
+		spin_unlock_irqrestore(&priv->lock, f);
 		return -EINVAL;
 	}
 
@@ -99,7 +103,7 @@ int nvshm_write(struct nvshm_channel *handle, struct nvshm_iobuf *iob)
 	iob->qnext = NULL;
 	nvshm_queue_put(priv, iob);
 	nvshm_generate_ipc(priv);
-	spin_unlock_bh(&priv->lock);
+	spin_unlock_irqrestore(&priv->lock, f);
 	return ret;
 }
 

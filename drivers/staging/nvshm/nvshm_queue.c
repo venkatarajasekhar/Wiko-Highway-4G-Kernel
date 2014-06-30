@@ -211,11 +211,12 @@ int nvshm_init_queue(struct nvshm_handle *handle)
  */
 void nvshm_process_queue(struct nvshm_handle *handle)
 {
+	unsigned long f;
 	struct nvshm_iobuf *iob;
 	struct nvshm_if_operations *ops;
 	int chan;
 
-	spin_lock_bh(&handle->lock);
+	spin_lock_irqsave(&handle->lock, f);
 	iob = nvshm_queue_get(handle);
 	while (iob) {
 		pr_debug("%s %p/%d/%d/%d->%p\n", __func__,
@@ -225,11 +226,11 @@ void nvshm_process_queue(struct nvshm_handle *handle)
 		if (iob->pool_id < NVSHM_AP_POOL_ID) {
 			ops = handle->chan[chan].ops;
 			if (ops) {
-				spin_unlock_bh(&handle->lock);
+				spin_unlock_irqrestore(&handle->lock, f);
 				ops->rx_event(
 					&handle->chan[chan],
 					iob);
-				spin_lock_bh(&handle->lock);
+				spin_lock_irqsave(&handle->lock, f);
 			} else {
 				nvshm_iobuf_free_cluster(
 					iob);
@@ -245,7 +246,7 @@ void nvshm_process_queue(struct nvshm_handle *handle)
 		}
 		iob = nvshm_queue_get(handle);
 	}
-	spin_unlock_bh(&handle->lock);
+	spin_unlock_irqrestore(&handle->lock, f);
 	/* Finalize BBC free */
 	nvshm_iobuf_bbc_free(handle);
 }

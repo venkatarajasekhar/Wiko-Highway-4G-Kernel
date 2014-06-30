@@ -137,6 +137,7 @@ static struct tegra_dc_sd_settings sd_settings;
 static struct tegra_dc_out ceres_disp1_out = {
 	.type		= TEGRA_DC_OUT_DSI,
 	.sd_settings	= &sd_settings,
+	.refresh_rate   = 60000,	/* 60Hz */
 };
 
 static int ceres_hdmi_enable(struct device *dev)

@@ -263,9 +263,24 @@ unsigned int tegra_camera_get_max_bw(struct tegra_camera *camera)
 		 * VI/ISP scales down sensor input to display size.
 		 * Effective BW in previw port can be derived from display size.
 		 */
-		if (fb_data)
-			max_bw += (fb_data->xres * fb_data->yres * 2 * 30) /
-				1000;
+		 #if 0
+		 if (fb_data)
+				 max_bw += (fb_data->xres * fb_data->yres * 2 * 30) /
+						 1000;
+		 #else
+		 /*  it is used to support ZSL for ov16825
+
+		 the function below is not necessary cause the link from vi to display
+		 is not enabled.
+
+		 if (fb_data)
+				 max_bw += (fb_data->xres * fb_data->yres * 2 * 30) /
+						 1000;
+
+		 */
+		 max_bw += (clk_round_rate(camera->clock[CAMERA_VI_CLK].clk,
+				UINT_MAX) / 1000) * 12 / 8;
+		 #endif
 	}
 #else
 	max_bw = (clk_round_rate(camera->clock[CAMERA_VI_CLK].clk, UINT_MAX) /

@@ -110,7 +110,10 @@ int __init ceres_keys_init(void)
 		 (bi.board_id == BOARD_E1671) || (bi.board_id == BOARD_E1740)) {
 		ceres_int_keys[3].gpio = TEGRA_GPIO_PJ4;
 		ceres_int_keys[3].active_low = 1;
-		ceres_int_keys[3].debounce_interval = 30;
+		if (bi.board_id == BOARD_E1680)
+			ceres_int_keys[3].debounce_interval = 30;
+		else
+			ceres_int_keys[3].debounce_interval = 10;
 		ceres_int_keys_pdata.wakeup_key	= atlantis_wakeup_key;
 	}
 

@@ -40,6 +40,7 @@
 #include <mach/tegra_bb.h>
 #include <mach/tegra_bbc_proxy.h>
 #include <mach/tegra_bbc_power.h>
+#include <mach/pm_domains.h>
 #include <linux/platform_data/nvshm.h>
 
 #include "clock.h"
@@ -1163,7 +1164,7 @@ static int tegra_bb_probe(struct platform_device *pdev)
 		kfree(bb);
 		return -ENOMEM;
 	}
-
+	bb->cpu_min_freq = BBC_CPU_MIN_FREQ;
 	pm_qos_add_request(&bb_cpufreq_min_req, PM_QOS_CPU_FREQ_MIN,
 		PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE);
 

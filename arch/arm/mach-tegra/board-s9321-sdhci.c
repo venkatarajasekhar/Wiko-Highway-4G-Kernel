@@ -27,13 +27,13 @@
 #include <linux/wl12xx.h>
 #include <linux/mfd/max77660/max77660-core.h>
 #include <linux/mfd/palmas.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/mach-types.h>
 #include <mach/irqs.h>
 #include <mach/iomap.h>
 #include <mach/sdhci.h>
 #include<mach/gpio-tegra.h>
-#include <mach/nct.h>
 
 #include "gpio-names.h"
 #include "board.h"
@@ -177,7 +177,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.ddr_clk_limit = 41000000,
 	.max_clk_limit = 82000000,//136000000,
 	.edp_support = false,
-//	.uhs_mask = MMC_UHS_MASK_SDR104 | MMC_UHS_MASK_DDR50, //wang jian add to disable SDR104 for wifi
+	.uhs_mask = MMC_MASK_HS200 | MMC_UHS_MASK_SDR104 | MMC_UHS_MASK_DDR50,
 	.en_clock_gating = true,
 };
 
@@ -200,7 +200,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.power_gpio = -1,
 	.is_8bit = 1,
 	.tap_delay = 0x3,
-	.trim_delay = 0xA,
+	.trim_delay = 0x3,
 	.max_clk_limit = 136000000,
 	.ddr_trim_delay = 0,
 	.mmc_data = {
@@ -209,9 +209,10 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	},
 	.edp_support = true,
 	.edp_states = {855, 0},
-	.en_freq_scaling = true,
 	.en_clock_gating = true,
 };
+
+static u64 tegra_sdhci_dmamask = DMA_BIT_MASK(32);
 
 static struct platform_device tegra_sdhci_device0 = {
 	.name		= "sdhci-tegra",
@@ -219,6 +220,8 @@ static struct platform_device tegra_sdhci_device0 = {
 	.resource	= sdhci_resource0,
 	.num_resources	= ARRAY_SIZE(sdhci_resource0),
 	.dev = {
+		.dma_mask = &tegra_sdhci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = &tegra_sdhci_platform_data0,
 	},
 };
@@ -229,6 +232,8 @@ static struct platform_device tegra_sdhci_device2 = {
 	.resource	= sdhci_resource2,
 	.num_resources	= ARRAY_SIZE(sdhci_resource2),
 	.dev = {
+		.dma_mask = &tegra_sdhci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = &tegra_sdhci_platform_data2,
 	},
 };
@@ -239,6 +244,8 @@ static struct platform_device tegra_sdhci_device3 = {
 	.resource	= sdhci_resource3,
 	.num_resources	= ARRAY_SIZE(sdhci_resource3),
 	.dev = {
+		.dma_mask = &tegra_sdhci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = &tegra_sdhci_platform_data3,
 	},
 };
@@ -375,7 +382,6 @@ int __init ceres_sdhci_init(void)
 		tegra_sdhci_platform_data2.cd_gpio = PALMAS_SD_CD;
 	else {
 		tegra_sdhci_platform_data2.max_clk_limit = 204000000;
-		tegra_sdhci_platform_data2.en_freq_scaling = true;
 		tegra_sdhci_platform_data0.max_clk_limit = 82000000;
 	}
 

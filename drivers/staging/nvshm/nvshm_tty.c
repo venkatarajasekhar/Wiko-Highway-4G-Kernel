@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -232,7 +232,6 @@ static void nvshm_tty_close(struct tty_struct *tty, struct file *f)
 	line = srcu_dereference(tty->driver_data, &tty_dev_lock);
 	if (line && tty_dev.up)
 		tty_port_close(&line->port, tty, f);
-
 	srcu_read_unlock(&tty_dev_lock, idx);
 }
 

@@ -240,12 +240,13 @@ static int init_interfaces(struct nvshm_handle *handle)
 
 static int cleanup_interfaces(struct nvshm_handle *handle)
 {
+	unsigned long f;
 	int nlog = 0, ntty = 0, nnet = 0, nrpc = 0;
 	int chan;
 
-	spin_lock(&handle->lock);
+	spin_lock_irqsave(&handle->lock, f);
 	handle->configured = 0;
-	spin_unlock(&handle->lock);
+	spin_unlock_irqrestore(&handle->lock, f);
 
 	for (chan = 0; chan < handle->chan_count; chan++) {
 		switch (handle->chan[chan].map.type) {
@@ -462,12 +463,13 @@ int nvshm_generate_ipc(struct nvshm_handle *handle)
 
 void nvshm_trigger_recovery()
 {
+	unsigned long f;
 	struct nvshm_handle *handle = nvshm_get_handle();
 
-	spin_lock(&handle->lock);
+	spin_lock_irqsave(&handle->lock, f);
 	if (!handle->recovery && handle->configured) {
 		handle->recovery = 1;
-		spin_unlock(&handle->lock);
+		spin_unlock_irqrestore(&handle->lock, f);
 		/* Disable ISR DL interrupt */
 		disable_irq(handle->bb_irq);
 		pr_err("%s: force recovery\n", __func__);
@@ -479,6 +481,6 @@ void nvshm_trigger_recovery()
 		/* Emulate DL ISR */
 		queue_work(handle->nvshm_wq, &handle->nvshm_work);
 	} else {
-		spin_unlock(&handle->lock);
+		spin_unlock_irqrestore(&handle->lock, f);
 	}
 }

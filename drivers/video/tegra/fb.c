@@ -165,7 +165,8 @@ static int tegra_fb_set_par(struct fb_info *info)
 		info->mode = (struct fb_videomode *)
 			fb_find_nearest_mode(&m, &info->modelist);
 #else
-		info->mode = (struct fb_videomode *)&tegra_fb->mode;
+//Ivan		info->mode = (struct fb_videomode *)&tegra_fb->mode;
+		info->mode = (struct fb_videomode *)fb_find_nearest_mode(&m, &info->modelist);
 #endif   
 		if (!info->mode) {
 			dev_warn(&tegra_fb->ndev->dev, "can't match video mode\n");
