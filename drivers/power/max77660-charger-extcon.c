@@ -1038,7 +1038,7 @@ static int max77660_charger_thermal_configure(
     ret = max77660_reg_read(chip->parent,
 		    MAX77660_CHG_SLAVE,
 		    MAX77660_CHARGER_CHGCTRL1, &jeitaStatus);
-    
+/*
     ret = max77660_reg_read(chip->parent,
 		    MAX77660_CHG_SLAVE,
 		    MAX77660_CHARGER_MBATREGMAX, &status1);
@@ -1048,6 +1048,7 @@ static int max77660_charger_thermal_configure(
 		    MAX77660_CHARGER_AICLCNTL, &status2);
         
 	dev_info(chip->dev, "Battery CHGCTRL1[0x%x],MBATREGMAX[%x],AICLCNTL[%x] \n", jeitaStatus, status1, status2 );
+*/
   #endif
 
 	return 0;
