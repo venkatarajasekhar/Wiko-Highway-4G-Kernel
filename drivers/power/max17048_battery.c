@@ -28,6 +28,7 @@
 #include <linux/reboot.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
+#include <linux/rtc.h>
 
 #define MAX17048_VCELL		0x02
 #define MAX17048_SOC		0x04
@@ -471,6 +472,8 @@ static void max17048_work(struct work_struct *work)
 	struct timeval now;
 	time_t diff;
 	uint16_t status;
+	unsigned long local_time;
+	struct rtc_time tm;
 	
 	chip = container_of(work, struct max17048_chip, work.work);
 //Ivan added	
@@ -486,6 +489,13 @@ static void max17048_work(struct work_struct *work)
 
 //Ivan added	
 	do_gettimeofday(&now);
+	
+	local_time = (u32)(now.tv_sec - (sys_tz.tz_minuteswest * 60));
+	rtc_time_to_tm(local_time, &tm);
+
+	printk(" @ (%04d-%02d-%02d %02d:%02d:%02d)\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+
 	diff = now.tv_sec - g_previous_time.tv_sec;
 	
 #ifdef MAX17048_SOC_AVERAGE
