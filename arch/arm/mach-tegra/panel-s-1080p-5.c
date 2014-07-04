@@ -58,6 +58,7 @@ static struct LCM_setting_table lcm_initialization_setting[] = {
         {0x51, 2, {0x0f,0xff}},
         {0x53, 1, {0x04}},
         
+	{0x35, 1,  {0x00}}, 
         {0x29,	0,{0x00}},
         {REGFLAG_DELAY,130,{}},
         {0x11,	0,{0x00}},
