@@ -2764,10 +2764,45 @@ static void max98090_dmic_switch(struct snd_soc_codec *codec, int state)
 struct max98090_priv *g_max98090;
 bool max98090_is_sendkey_press(void)
 {
-        return g_max98090->key_state == 1;
+		if (!g_max98090)
+			return false;
+		struct snd_soc_codec *codec = g_max98090->codec;
+		unsigned int reg = snd_soc_read(codec, M98090_REG_02_JACK_STATUS);
+		switch (reg & (M98090_LSNS_MASK | M98090_JKSNS_MASK)) {
+			case 0:
+			{
+				if (g_max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+					if (g_max98090->key_valid_flag
+							&& (g_max98090->key_state == 0)) {
+						g_max98090->key_state = 1;
+						dev_info(codec->dev,
+						"InCall Headset Button Down Detected\n");
+					}
+        			return g_max98090->key_state == 1;
+				}
+			}
+
+			case M98090_JKSNS_MASK:
+			{
+				if (g_max98090->jack_state == M98090_JACK_STATE_HEADSET) {
+					if (g_max98090->key_valid_flag
+							&& (g_max98090->key_state == 1)) {
+						dev_info(codec->dev,
+						"InCall Headset Button Up Detected\n");
+						g_max98090->key_state = 0;
+					}
+
+					return g_max98090->key_state == 1;
+				}
+			}
+
+		}
+		return false;
 }
 EXPORT_SYMBOL_GPL(max98090_is_sendkey_press);
 void max98090_switch_key_state( int status, int mask ){
+		if (!g_max98090)
+			return;
         g_max98090->jack->status &= ~mask;
         g_max98090->jack->status |= status & mask;
 }

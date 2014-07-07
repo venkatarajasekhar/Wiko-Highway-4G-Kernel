@@ -251,7 +251,7 @@ static void jack_switch_key_state(int status, int mask)  //LIUJ20140605RELE1556A
 
 #else //CONFIG_MACH_S9321 //LIUJ20140605RELE1556MODY
 
-#define MAX98090_DETECT_KEY_COUNT DETECT_KEY_COUNT*2
+#define MAX98090_DETECT_KEY_COUNT 20//DETECT_KEY_COUNT*2
 /* headset key feature   WJ  22/11/13 */   
 extern int call_status;
 extern bool max98090_is_sendkey_press(void);
