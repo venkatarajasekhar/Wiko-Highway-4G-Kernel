@@ -801,7 +801,7 @@ static int dsi_hx8394a_720p_p4_enable(struct device *dev)
 			printk("avdd_lcd regulator enable failed\n");
 			goto fail;
 		}
-		regulator_set_voltage(avdd_lcd_3v0_2v8, 3000000, 3000000);
+		regulator_set_voltage(avdd_lcd_3v0_2v8, 2800000, 2800000);
 	}
 
 	usleep_range(3000, 5000);
