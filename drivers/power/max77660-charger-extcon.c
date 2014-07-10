@@ -55,6 +55,15 @@
 #define BATT_TEMP_COOL				10
 #define BATT_TEMP_COLD				3
 
+#define BATT_HB_TEMP_COLD		0		//LIUJ20140710RELE1548ADD High Battery Temp
+#define BATT_HB_TEMP_COOL		15
+#define BATT_HB_TEMP_WARM		45
+#define BATT_HB_TEMP_HOT		60
+
+#define BATT_HB_TEMP_00_15_CUR		500		//LIUJ20140710RELE1548ADD High Battery Current
+#define BATT_HB_TEMP_45_60_CUR		700
+#define BATT_HB_TEMP_00_60_CUR		100
+
 #define NO_LIMIT				99999
 
 #define TN_BATT_HOT_STOP_TEMPERATURE		62
@@ -64,6 +73,7 @@
 
 extern void max77660_power_forceoff(void);
 
+static int tn_cur_temperature = 10;
 static int tn_bat_temperature_over = 0;
 //Ivan testing
 #ifdef TN_BATT_TEST
@@ -221,6 +231,21 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 				MAX77660_USBCHGCTRL_USB_SUSPEND);
 	if (ret < 0)
 		return ret;
+
+#ifdef CONFIG_MACH_S9321
+	printk("max77660_charger_init:Temperature %d, lim current %d\n",  tn_cur_temperature, charger->in_current_lim);
+	if (tn_cur_temperature >= BATT_HB_TEMP_COLD && tn_cur_temperature <= BATT_HB_TEMP_COOL) {
+		if (charger->in_current_lim > BATT_HB_TEMP_00_15_CUR)
+		    charger->in_current_lim = BATT_HB_TEMP_00_15_CUR;
+	} else if (tn_cur_temperature > BATT_HB_TEMP_WARM && tn_cur_temperature <= BATT_HB_TEMP_HOT) {
+		if (charger->in_current_lim > BATT_HB_TEMP_45_60_CUR)
+		    charger->in_current_lim = BATT_HB_TEMP_45_60_CUR;
+	} else if (tn_cur_temperature < BATT_HB_TEMP_COLD || tn_cur_temperature > BATT_HB_TEMP_HOT) {
+		if (charger->in_current_lim >= BATT_HB_TEMP_00_15_CUR)
+			charger->in_current_lim = BATT_HB_TEMP_00_60_CUR;
+	} 
+	printk("max77660_charger_init:finally lim current %d\n", charger->in_current_lim);
+#endif
 
 	charger->in_current_lim = fchg_current(charger->in_current_lim);
 
@@ -928,6 +953,7 @@ static int max77660_charger_thermal_configure(
 		return 0;
 	}
 	temperature = temp;
+	tn_cur_temperature = temperature;
 	dev_info(chip->dev, "Battery temp %d\n", temperature);
 #ifdef TN_BATT_TEST
 	if (tn_bat_test_count > 50 && tn_bat_test_count < 150)
@@ -956,6 +982,17 @@ static int max77660_charger_thermal_configure(
 				    BATTERY_CHARGING);
 		    } else if (enable_charg_half_current &&
 			    chip->charging_state != ENABLED_HALF_IBAT) {
+#ifdef CONFIG_MACH_S9321
+				printk("max77660_charger_thermal_configure:Temperature %d, lim current %d\n",  tn_cur_temperature, chip->last_charging_current);
+				if (tn_cur_temperature >= BATT_HB_TEMP_COLD && tn_cur_temperature <= BATT_HB_TEMP_COOL) {
+					if (chip->last_charging_current > BATT_HB_TEMP_00_15_CUR*1000)
+						chip->last_charging_current = BATT_HB_TEMP_00_15_CUR*2000;
+				} else if (tn_cur_temperature > BATT_HB_TEMP_WARM && tn_cur_temperature <= BATT_HB_TEMP_HOT) {
+					if (chip->last_charging_current > BATT_HB_TEMP_45_60_CUR*1000)
+						chip->last_charging_current = BATT_HB_TEMP_45_60_CUR*2000;
+				}
+				printk("max77660_charger_thermal_configure:finally lim current %d\n", chip->last_charging_current);
+#endif
 			    max77660_half_current_enable(chip);
 			    /*Set MBATREG voltage */
 			    battery_threshold_voltage =

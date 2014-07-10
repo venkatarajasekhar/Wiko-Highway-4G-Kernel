@@ -39,6 +39,11 @@
 #define JETI_TEMP_WARM		45
 #define JETI_TEMP_HOT		60
 
+#define JETI_HB_TEMP_COLD		0	//LIUJ20140710RELE1548ADD High Battery Temp
+#define JETI_HB_TEMP_COOL		15
+#define JETI_HB_TEMP_WARM		45
+#define JETI_HB_TEMP_HOT		60
+
 DEFINE_MUTEX(charger_gauge_list_mutex);
 static LIST_HEAD(charger_list);
 static LIST_HEAD(gauge_list);
@@ -159,6 +164,16 @@ static void battery_charger_thermal_monitor_wq(struct work_struct *work)
 #else	
 	battery_thersold_voltage = 4250;
 #endif
+
+#ifdef CONFIG_MACH_S9321
+	if (temperature <= JETI_HB_TEMP_COLD || temperature >= JETI_HB_TEMP_HOT) {
+		charger_enable_state = false;
+		charger_current_half = false;
+	} else if (temperature <= JETI_HB_TEMP_COOL || temperature >= JETI_HB_TEMP_WARM) {
+		charger_enable_state = true;
+		charger_current_half = true;
+	}
+#else
 	if (temperature <= JETI_TEMP_COLD || temperature >= JETI_TEMP_HOT) {
 		charger_enable_state = false;
 	//} else if (temperature <= JETI_TEMP_COOL ||
@@ -166,6 +181,7 @@ static void battery_charger_thermal_monitor_wq(struct work_struct *work)
 		//charger_current_half = true;   //ljs remove, bc test requirements
 		//battery_thersold_voltage = 4100;   //ljs remove, bc 4100mV not charge full
 	}
+#endif
 
 	if (bc_dev->ops->thermal_configure)
 		bc_dev->ops->thermal_configure(bc_dev, temperature,
