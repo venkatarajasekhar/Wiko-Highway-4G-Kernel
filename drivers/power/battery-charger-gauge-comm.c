@@ -166,7 +166,7 @@ static void battery_charger_thermal_monitor_wq(struct work_struct *work)
 #endif
 
 #ifdef CONFIG_MACH_S9321
-	if (temperature <= JETI_HB_TEMP_COLD || temperature >= JETI_HB_TEMP_HOT) {
+	if (temperature < JETI_HB_TEMP_COLD || temperature > JETI_HB_TEMP_HOT) {
 		charger_enable_state = false;
 		charger_current_half = false;
 	} else if (temperature <= JETI_HB_TEMP_COOL || temperature >= JETI_HB_TEMP_WARM) {
