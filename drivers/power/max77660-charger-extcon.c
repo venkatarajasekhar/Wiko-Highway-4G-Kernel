@@ -73,7 +73,7 @@
 
 extern void max77660_power_forceoff(void);
 
-static int tn_cur_temperature = 10;
+static int tn_cur_temperature = 30;
 static int tn_bat_temperature_over = 0;
 //Ivan testing
 #ifdef TN_BATT_TEST
