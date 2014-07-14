@@ -19,20 +19,20 @@
 static struct tegra14_emc_table
 	ceres_e1680_sl460_ceres_h9tq18abjtmc_table[] = {
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		12750,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		12750,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000003e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000000, /* EMC_RC */
 			0x00000003, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -56,7 +56,7 @@ static struct tegra14_emc_table
 			0x0000000b, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -66,7 +66,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000056, /* EMC_TREFBW */
@@ -141,8 +141,8 @@ static struct tegra14_emc_table
 			0x8000002c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000021, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -153,8 +153,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x77230305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x77c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -171,7 +171,7 @@ static struct tegra14_emc_table
 		},
 		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -179,20 +179,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		51000,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		51000,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000000e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000003, /* EMC_RC */
 			0x0000000a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -216,7 +216,7 @@ static struct tegra14_emc_table
 			0x00000030, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -226,7 +226,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000157, /* EMC_TREFBW */
@@ -301,8 +301,8 @@ static struct tegra14_emc_table
 			0x8000003a, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x8000002b, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -313,8 +313,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x73c30305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x73c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -331,7 +331,7 @@ static struct tegra14_emc_table
 		},
 		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -339,20 +339,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		102000, 	/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		102000,     /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000006, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000006, /* EMC_RC */
 			0x00000015, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000004, /* EMC_RAS */
-			0x00000004, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -376,7 +376,7 @@ static struct tegra14_emc_table
 			0x00000060, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000004, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -386,7 +386,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000005, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000002ae, /* EMC_TREFBW */
@@ -461,8 +461,8 @@ static struct tegra14_emc_table
 			0x8000004c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000038, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -473,8 +473,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000a0504, /* MC_EMEM_ARB_DA_COVERS */
-			0x73430505, /* MC_EMEM_ARB_MISC0 */
+			0x00090403, /* MC_EMEM_ARB_DA_COVERS */
+			0x73430504, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -491,7 +491,7 @@ static struct tegra14_emc_table
 		},
 		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -499,20 +499,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		204000, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		204000,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000000c, /* EMC_RC */
 			0x0000002a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000008, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000003, /* EMC_RP */
 			0x00000007, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -536,7 +536,7 @@ static struct tegra14_emc_table
 			0x000000c0, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000003, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -546,7 +546,7 @@ static struct tegra14_emc_table
 			0x00000004, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x0000000b, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000005, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x0000055b, /* EMC_TREFBW */
@@ -621,8 +621,8 @@ static struct tegra14_emc_table
 			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000053, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000007, /* MC_EMEM_ARB_TIMING_RP */
-			0x0000000e, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000005, /* MC_EMEM_ARB_TIMING_RP */
+			0x0000000c, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000007, /* MC_EMEM_ARB_TIMING_RAS */
 			0x0000000a, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
@@ -633,8 +633,8 @@ static struct tegra14_emc_table
 			0x0000000c, /* MC_EMEM_ARB_TIMING_R2W */
 			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
 			0x0d0c0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00170d0e, /* MC_EMEM_ARB_DA_COVERS */
-			0x7ae7130f, /* MC_EMEM_ARB_MISC0 */
+			0x00150b0c, /* MC_EMEM_ARB_DA_COVERS */
+			0x7ae7130d, /* MC_EMEM_ARB_MISC0 */
 			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -651,7 +651,7 @@ static struct tegra14_emc_table
 		},
 		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -659,14 +659,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		326400, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		326400,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllm_out0", /* clock source id */
 		0x00000002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000013, /* EMC_RC */
 			0x00000044, /* EMC_RFC */
@@ -811,7 +811,7 @@ static struct tegra14_emc_table
 		},
 		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd330008e, /* EMC_CFG */
+		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -819,14 +819,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		408000, 	/* SDRAM frequency */
-		900,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		408000,     /* SDRAM frequency */
+		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000018, /* EMC_RC */
 			0x00000055, /* EMC_RFC */
@@ -971,7 +971,7 @@ static struct tegra14_emc_table
 		},
 		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -979,14 +979,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		518400, 	/* SDRAM frequency */
-		950,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		518400,     /* SDRAM frequency */
+		950,        /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000001f, /* EMC_RC */
 			0x0000006c, /* EMC_RFC */
@@ -1131,7 +1131,7 @@ static struct tegra14_emc_table
 		},
 		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -1139,14 +1139,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		652800, 	/* SDRAM frequency */
-		1000,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		652800,     /* SDRAM frequency */
+		1000,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000027, /* EMC_RC */
 			0x00000089, /* EMC_RFC */
@@ -1291,7 +1291,7 @@ static struct tegra14_emc_table
 		},
 		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010003, /* Mode Register 1 */
@@ -1299,14 +1299,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		768000, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllc_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		768000,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllc_ud",  /* clock source id */
 		0xe0000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002e, /* EMC_RC */
 			0x000000a1, /* EMC_RFC */
@@ -1370,9 +1370,9 @@ static struct tegra14_emc_table
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR0 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR2 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -1390,7 +1390,7 @@ static struct tegra14_emc_table
 			0x0020003d, /* EMC_XM2DQSPADCTRL2 */
 			0x00000000, /* EMC_XM2DQPADCTRL2 */
 			0x77ffc004, /* EMC_XM2CLKPADCTRL */
-			0x00000f0f, /* EMC_XM2CLKPADCTRL2 */
+			0x00000b0b, /* EMC_XM2CLKPADCTRL2 */
 			0x41f1f008, /* EMC_XM2COMPPADCTRL */
 			0x00000000, /* EMC_XM2VTTGENPADCTRL */
 			0x51451420, /* EMC_XM2DQSPADCTRL3 */
@@ -1451,7 +1451,7 @@ static struct tegra14_emc_table
 		},
 		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -1459,14 +1459,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		787200, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		787200,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002f, /* EMC_RC */
 			0x000000a5, /* EMC_RFC */
@@ -1611,7 +1611,7 @@ static struct tegra14_emc_table
 		},
 		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -1623,20 +1623,20 @@ static struct tegra14_emc_table
 static struct tegra14_emc_table
 	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_der[] = {
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		12750,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		12750,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000003e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000000, /* EMC_RC */
 			0x00000003, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -1660,7 +1660,7 @@ static struct tegra14_emc_table
 			0x0000000b, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -1670,7 +1670,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000056, /* EMC_TREFBW */
@@ -1745,8 +1745,8 @@ static struct tegra14_emc_table
 			0x8000002c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000021, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000003, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -1757,8 +1757,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x77230305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x77c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -1775,7 +1775,7 @@ static struct tegra14_emc_table
 		},
 		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -1783,20 +1783,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		51000,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		51000,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000000e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000003, /* EMC_RC */
 			0x0000000a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -1820,7 +1820,7 @@ static struct tegra14_emc_table
 			0x00000030, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -1830,7 +1830,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000157, /* EMC_TREFBW */
@@ -1905,8 +1905,8 @@ static struct tegra14_emc_table
 			0x8000003a, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x8000002b, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000003, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -1917,8 +1917,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x73c30305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x73c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -1935,7 +1935,7 @@ static struct tegra14_emc_table
 		},
 		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -1943,20 +1943,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		102000, 	/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		102000,     /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000006, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000006, /* EMC_RC */
 			0x00000015, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000004, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -1980,7 +1980,7 @@ static struct tegra14_emc_table
 			0x00000060, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -1990,7 +1990,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000005, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000002ae, /* EMC_TREFBW */
@@ -2065,8 +2065,8 @@ static struct tegra14_emc_table
 			0x8000004c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000038, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000005, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -2077,8 +2077,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0605, /* MC_EMEM_ARB_DA_COVERS */
-			0x73430506, /* MC_EMEM_ARB_MISC0 */
+			0x00090403, /* MC_EMEM_ARB_DA_COVERS */
+			0x73430504, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -2095,7 +2095,7 @@ static struct tegra14_emc_table
 		},
 		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -2103,20 +2103,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		204000, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		204000,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000000c, /* EMC_RC */
 			0x0000002a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000008, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000004, /* EMC_RP */
 			0x00000007, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -2140,7 +2140,7 @@ static struct tegra14_emc_table
 			0x000000c0, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000004, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -2150,7 +2150,7 @@ static struct tegra14_emc_table
 			0x00000004, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x0000000b, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000005, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x0000055b, /* EMC_TREFBW */
@@ -2225,8 +2225,8 @@ static struct tegra14_emc_table
 			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000053, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000008, /* MC_EMEM_ARB_TIMING_RP */
-			0x0000000f, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000006, /* MC_EMEM_ARB_TIMING_RP */
+			0x0000000d, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000007, /* MC_EMEM_ARB_TIMING_RAS */
 			0x0000000a, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
@@ -2237,8 +2237,8 @@ static struct tegra14_emc_table
 			0x0000000c, /* MC_EMEM_ARB_TIMING_R2W */
 			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
 			0x0d0c0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00190f0f, /* MC_EMEM_ARB_DA_COVERS */
-			0x7ae71310, /* MC_EMEM_ARB_MISC0 */
+			0x00170d0d, /* MC_EMEM_ARB_DA_COVERS */
+			0x7ae7130e, /* MC_EMEM_ARB_MISC0 */
 			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -2255,7 +2255,7 @@ static struct tegra14_emc_table
 		},
 		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -2263,14 +2263,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		326400, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		326400,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllm_out0", /* clock source id */
 		0x00000002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000014, /* EMC_RC */
 			0x00000044, /* EMC_RFC */
@@ -2415,7 +2415,7 @@ static struct tegra14_emc_table
 		},
 		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd330008e, /* EMC_CFG */
+		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -2423,14 +2423,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		408000, 	/* SDRAM frequency */
-		900,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		408000,     /* SDRAM frequency */
+		900,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000019, /* EMC_RC */
 			0x00000055, /* EMC_RFC */
@@ -2575,7 +2575,7 @@ static struct tegra14_emc_table
 		},
 		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -2583,14 +2583,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		518400, 	/* SDRAM frequency */
-		950,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		518400,     /* SDRAM frequency */
+		950,        /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000020, /* EMC_RC */
 			0x0000006c, /* EMC_RFC */
@@ -2735,7 +2735,7 @@ static struct tegra14_emc_table
 		},
 		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -2743,14 +2743,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		652800, 	/* SDRAM frequency */
-		1000,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		652800,     /* SDRAM frequency */
+		1000,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000028, /* EMC_RC */
 			0x00000089, /* EMC_RFC */
@@ -2895,7 +2895,7 @@ static struct tegra14_emc_table
 		},
 		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010003, /* Mode Register 1 */
@@ -2903,14 +2903,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		768000, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllc_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		768000,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllc_ud",  /* clock source id */
 		0xe0000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002f, /* EMC_RC */
 			0x000000a1, /* EMC_RFC */
@@ -2974,9 +2974,9 @@ static struct tegra14_emc_table
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR0 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR2 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -2994,7 +2994,7 @@ static struct tegra14_emc_table
 			0x0020003d, /* EMC_XM2DQSPADCTRL2 */
 			0x00000000, /* EMC_XM2DQPADCTRL2 */
 			0x77ffc004, /* EMC_XM2CLKPADCTRL */
-			0x00000f0f, /* EMC_XM2CLKPADCTRL2 */
+			0x00000b0b, /* EMC_XM2CLKPADCTRL2 */
 			0x41f1f008, /* EMC_XM2COMPPADCTRL */
 			0x00000000, /* EMC_XM2VTTGENPADCTRL */
 			0x51451420, /* EMC_XM2DQSPADCTRL3 */
@@ -3055,7 +3055,7 @@ static struct tegra14_emc_table
 		},
 		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -3063,14 +3063,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		787200, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		787200,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000030, /* EMC_RC */
 			0x000000a5, /* EMC_RFC */
@@ -3215,7 +3215,7 @@ static struct tegra14_emc_table
 		},
 		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -3227,20 +3227,20 @@ static struct tegra14_emc_table
 static struct tegra14_emc_table
 	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll[] = {
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		12750,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		12750,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000003e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000000, /* EMC_RC */
 			0x00000003, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -3264,7 +3264,7 @@ static struct tegra14_emc_table
 			0x0000000b, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -3274,7 +3274,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000056, /* EMC_TREFBW */
@@ -3349,8 +3349,8 @@ static struct tegra14_emc_table
 			0x8000002c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000021, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -3361,8 +3361,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x77230305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x77c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -3379,7 +3379,7 @@ static struct tegra14_emc_table
 		},
 		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -3387,20 +3387,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		51000,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		51000,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000000e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000003, /* EMC_RC */
 			0x0000000a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -3424,7 +3424,7 @@ static struct tegra14_emc_table
 			0x00000030, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -3434,7 +3434,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000157, /* EMC_TREFBW */
@@ -3509,8 +3509,8 @@ static struct tegra14_emc_table
 			0x8000003a, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x8000002b, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -3521,8 +3521,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x73c30305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x73c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -3539,7 +3539,7 @@ static struct tegra14_emc_table
 		},
 		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -3547,20 +3547,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		102000, 	/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		102000,     /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000006, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000006, /* EMC_RC */
 			0x00000015, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000004, /* EMC_RAS */
-			0x00000004, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -3584,7 +3584,7 @@ static struct tegra14_emc_table
 			0x00000060, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000004, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -3594,7 +3594,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000005, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000002ae, /* EMC_TREFBW */
@@ -3669,8 +3669,8 @@ static struct tegra14_emc_table
 			0x8000004c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000038, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -3681,8 +3681,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000a0504, /* MC_EMEM_ARB_DA_COVERS */
-			0x73430505, /* MC_EMEM_ARB_MISC0 */
+			0x00090403, /* MC_EMEM_ARB_DA_COVERS */
+			0x73430504, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -3699,7 +3699,7 @@ static struct tegra14_emc_table
 		},
 		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -3707,20 +3707,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		204000, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		204000,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000000c, /* EMC_RC */
 			0x0000002a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000008, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000003, /* EMC_RP */
 			0x00000007, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -3744,7 +3744,7 @@ static struct tegra14_emc_table
 			0x000000c0, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000003, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -3754,7 +3754,7 @@ static struct tegra14_emc_table
 			0x00000004, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x0000000b, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000005, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x0000055b, /* EMC_TREFBW */
@@ -3829,8 +3829,8 @@ static struct tegra14_emc_table
 			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000053, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000007, /* MC_EMEM_ARB_TIMING_RP */
-			0x0000000e, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000005, /* MC_EMEM_ARB_TIMING_RP */
+			0x0000000c, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000007, /* MC_EMEM_ARB_TIMING_RAS */
 			0x0000000a, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
@@ -3841,8 +3841,8 @@ static struct tegra14_emc_table
 			0x0000000c, /* MC_EMEM_ARB_TIMING_R2W */
 			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
 			0x0d0c0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00170d0e, /* MC_EMEM_ARB_DA_COVERS */
-			0x7ae7130f, /* MC_EMEM_ARB_MISC0 */
+			0x00150b0c, /* MC_EMEM_ARB_DA_COVERS */
+			0x7ae7130d, /* MC_EMEM_ARB_MISC0 */
 			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -3859,7 +3859,7 @@ static struct tegra14_emc_table
 		},
 		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -3867,14 +3867,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		326400, 	/* SDRAM frequency */
-		880,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		326400,     /* SDRAM frequency */
+		880,        /* min voltage */
 		"pllm_out0", /* clock source id */
 		0x00010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000013, /* EMC_RC */
 			0x00000044, /* EMC_RFC */
@@ -4019,7 +4019,7 @@ static struct tegra14_emc_table
 		},
 		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd330008e, /* EMC_CFG */
+		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -4027,14 +4027,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		408000, 	/* SDRAM frequency */
-		940,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		408000,     /* SDRAM frequency */
+		940,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000018, /* EMC_RC */
 			0x00000055, /* EMC_RFC */
@@ -4179,7 +4179,7 @@ static struct tegra14_emc_table
 		},
 		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -4187,14 +4187,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		518400, 	/* SDRAM frequency */
-		1020,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		518400,     /* SDRAM frequency */
+		1020,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80010000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000001f, /* EMC_RC */
 			0x0000006c, /* EMC_RFC */
@@ -4339,7 +4339,7 @@ static struct tegra14_emc_table
 		},
 		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -4347,14 +4347,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		652800, 	/* SDRAM frequency */
-		1020,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		652800,     /* SDRAM frequency */
+		1020,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000027, /* EMC_RC */
 			0x00000089, /* EMC_RFC */
@@ -4499,7 +4499,7 @@ static struct tegra14_emc_table
 		},
 		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010003, /* Mode Register 1 */
@@ -4507,14 +4507,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		768000, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllc_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		768000,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllc_ud",  /* clock source id */
 		0xe0000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002e, /* EMC_RC */
 			0x000000a1, /* EMC_RFC */
@@ -4578,9 +4578,9 @@ static struct tegra14_emc_table
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR0 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR2 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -4598,7 +4598,7 @@ static struct tegra14_emc_table
 			0x0020003d, /* EMC_XM2DQSPADCTRL2 */
 			0x00000000, /* EMC_XM2DQPADCTRL2 */
 			0x77ffc004, /* EMC_XM2CLKPADCTRL */
-			0x00000f0f, /* EMC_XM2CLKPADCTRL2 */
+			0x00000b0b, /* EMC_XM2CLKPADCTRL2 */
 			0x41f1f008, /* EMC_XM2COMPPADCTRL */
 			0x00000000, /* EMC_XM2VTTGENPADCTRL */
 			0x51451420, /* EMC_XM2DQSPADCTRL3 */
@@ -4659,7 +4659,7 @@ static struct tegra14_emc_table
 		},
 		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -4667,14 +4667,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		787200, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		787200,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002f, /* EMC_RC */
 			0x000000a5, /* EMC_RFC */
@@ -4819,7 +4819,7 @@ static struct tegra14_emc_table
 		},
 		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -4831,20 +4831,20 @@ static struct tegra14_emc_table
 static struct tegra14_emc_table
 	ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll_der[] = {
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		12750,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		12750,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000003e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000000, /* EMC_RC */
 			0x00000003, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -4868,7 +4868,7 @@ static struct tegra14_emc_table
 			0x0000000b, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -4878,7 +4878,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000056, /* EMC_TREFBW */
@@ -4953,8 +4953,8 @@ static struct tegra14_emc_table
 			0x8000002c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000021, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000003, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -4965,8 +4965,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x77230305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x77c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -4983,7 +4983,7 @@ static struct tegra14_emc_table
 		},
 		0x0000000c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -4991,20 +4991,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		51000,		/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		51000,      /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x4000000e, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000003, /* EMC_RC */
 			0x0000000a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000002, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -5028,7 +5028,7 @@ static struct tegra14_emc_table
 			0x00000030, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -5038,7 +5038,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x00000157, /* EMC_TREFBW */
@@ -5113,8 +5113,8 @@ static struct tegra14_emc_table
 			0x8000003a, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x8000002b, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000003, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000004, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000000, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -5125,8 +5125,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0604, /* MC_EMEM_ARB_DA_COVERS */
-			0x73c30305, /* MC_EMEM_ARB_MISC0 */
+			0x00090402, /* MC_EMEM_ARB_DA_COVERS */
+			0x73c30303, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -5143,7 +5143,7 @@ static struct tegra14_emc_table
 		},
 		0x00000013, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -5151,20 +5151,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		102000, 	/* SDRAM frequency */
-		800,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		102000,     /* SDRAM frequency */
+		800,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40000006, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000006, /* EMC_RC */
 			0x00000015, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000004, /* EMC_RAS */
-			0x00000005, /* EMC_RP */
+			0x00000002, /* EMC_RP */
 			0x00000006, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -5188,7 +5188,7 @@ static struct tegra14_emc_table
 			0x00000060, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000005, /* EMC_PCHG2PDEN */
+			0x00000002, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -5198,7 +5198,7 @@ static struct tegra14_emc_table
 			0x00000003, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x00000008, /* EMC_TFAW */
-			0x00000005, /* EMC_TRPAB */
+			0x00000004, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x000002ae, /* EMC_TREFBW */
@@ -5273,8 +5273,8 @@ static struct tegra14_emc_table
 			0x8000004c, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000038, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
-			0x00000005, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
+			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RAS */
 			0x00000003, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RRD */
@@ -5285,8 +5285,8 @@ static struct tegra14_emc_table
 			0x00000004, /* MC_EMEM_ARB_TIMING_R2W */
 			0x00000005, /* MC_EMEM_ARB_TIMING_W2R */
 			0x05040102, /* MC_EMEM_ARB_DA_TURNS */
-			0x000b0605, /* MC_EMEM_ARB_DA_COVERS */
-			0x73430506, /* MC_EMEM_ARB_MISC0 */
+			0x00090403, /* MC_EMEM_ARB_DA_COVERS */
+			0x73430504, /* MC_EMEM_ARB_MISC0 */
 			0x001f0000, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -5303,7 +5303,7 @@ static struct tegra14_emc_table
 		},
 		0x00000025, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -5311,20 +5311,20 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		204000, 	/* SDRAM frequency */
-		850,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		204000,     /* SDRAM frequency */
+		850,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000000c, /* EMC_RC */
 			0x0000002a, /* EMC_RFC */
 			0x00000000, /* EMC_RFC_SLR */
 			0x00000008, /* EMC_RAS */
-			0x00000006, /* EMC_RP */
+			0x00000004, /* EMC_RP */
 			0x00000007, /* EMC_R2W */
 			0x00000008, /* EMC_W2R */
 			0x00000003, /* EMC_R2P */
@@ -5348,7 +5348,7 @@ static struct tegra14_emc_table
 			0x000000c0, /* EMC_PRE_REFRESH_REQ_CNT */
 			0x00000002, /* EMC_PDEX2WR */
 			0x00000002, /* EMC_PDEX2RD */
-			0x00000006, /* EMC_PCHG2PDEN */
+			0x00000004, /* EMC_PCHG2PDEN */
 			0x00000000, /* EMC_ACT2PDEN */
 			0x00000001, /* EMC_AR2PDEN */
 			0x0000000c, /* EMC_RW2PDEN */
@@ -5358,7 +5358,7 @@ static struct tegra14_emc_table
 			0x00000004, /* EMC_TCKESR */
 			0x00000003, /* EMC_TPD */
 			0x0000000b, /* EMC_TFAW */
-			0x00000006, /* EMC_TRPAB */
+			0x00000005, /* EMC_TRPAB */
 			0x00000003, /* EMC_TCLKSTABLE */
 			0x00000003, /* EMC_TCLKSTOP */
 			0x0000055b, /* EMC_TREFBW */
@@ -5433,8 +5433,8 @@ static struct tegra14_emc_table
 			0x8000006f, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x80000053, /* MC_EMEM_ARB_OUTSTANDING_REQ_RING3 */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RCD */
-			0x00000008, /* MC_EMEM_ARB_TIMING_RP */
-			0x0000000f, /* MC_EMEM_ARB_TIMING_RC */
+			0x00000006, /* MC_EMEM_ARB_TIMING_RP */
+			0x0000000d, /* MC_EMEM_ARB_TIMING_RC */
 			0x00000007, /* MC_EMEM_ARB_TIMING_RAS */
 			0x0000000a, /* MC_EMEM_ARB_TIMING_FAW */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RRD */
@@ -5445,8 +5445,8 @@ static struct tegra14_emc_table
 			0x0000000c, /* MC_EMEM_ARB_TIMING_R2W */
 			0x0000000d, /* MC_EMEM_ARB_TIMING_W2R */
 			0x0d0c0507, /* MC_EMEM_ARB_DA_TURNS */
-			0x00190f0f, /* MC_EMEM_ARB_DA_COVERS */
-			0x7ae71310, /* MC_EMEM_ARB_MISC0 */
+			0x00170d0d, /* MC_EMEM_ARB_DA_COVERS */
+			0x7ae7130e, /* MC_EMEM_ARB_MISC0 */
 			0x001f0001, /* MC_EMEM_ARB_RING1_THROTTLE */
 			0x00020000, /* MC_EMEM_ARB_RING3_THROTTLE */
 		},
@@ -5463,7 +5463,7 @@ static struct tegra14_emc_table
 		},
 		0x0000004a, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd320008e, /* EMC_CFG */
+		0xf320008e, /* EMC_CFG */
 		0x00580048, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -5471,14 +5471,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		326400, 	/* SDRAM frequency */
-		880,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		326400,     /* SDRAM frequency */
+		880,        /* min voltage */
 		"pllm_out0", /* clock source id */
 		0x00010002, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000014, /* EMC_RC */
 			0x00000044, /* EMC_RFC */
@@ -5623,7 +5623,7 @@ static struct tegra14_emc_table
 		},
 		0x00000076, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd330008e, /* EMC_CFG */
+		0xf330008e, /* EMC_CFG */
 		0x30270249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010083, /* Mode Register 1 */
@@ -5631,14 +5631,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		408000, 	/* SDRAM frequency */
-		940,		/* min voltage */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		408000,     /* SDRAM frequency */
+		940,        /* min voltage */
 		"pllp_out0", /* clock source id */
 		0x40010000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000019, /* EMC_RC */
 			0x00000055, /* EMC_RFC */
@@ -5783,7 +5783,7 @@ static struct tegra14_emc_table
 		},
 		0x00000093, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x301c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -5791,14 +5791,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		518400, 	/* SDRAM frequency */
-		1020,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		518400,     /* SDRAM frequency */
+		1020,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80010000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000020, /* EMC_RC */
 			0x0000006c, /* EMC_RFC */
@@ -5943,7 +5943,7 @@ static struct tegra14_emc_table
 		},
 		0x000000bb, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x30130249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x000100c3, /* Mode Register 1 */
@@ -5951,14 +5951,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		652800, 	/* SDRAM frequency */
-		1020,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		652800,     /* SDRAM frequency */
+		1020,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000028, /* EMC_RC */
 			0x00000089, /* EMC_RFC */
@@ -6103,7 +6103,7 @@ static struct tegra14_emc_table
 		},
 		0x000000ec, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300086, /* EMC_CFG */
+		0xf3300086, /* EMC_CFG */
 		0x200c0249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010003, /* Mode Register 1 */
@@ -6111,14 +6111,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		768000, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllc_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		768000,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllc_ud",  /* clock source id */
 		0xe0000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x0000002f, /* EMC_RC */
 			0x000000a1, /* EMC_RFC */
@@ -6182,9 +6182,9 @@ static struct tegra14_emc_table
 			0x00000000, /* EMC_DLL_XFORM_QUSE5 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE6 */
 			0x00000000, /* EMC_DLL_XFORM_QUSE7 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR0 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR0 */
 			0x00000000, /* EMC_DLL_XFORM_ADDR1 */
-			0x0000c016, /* EMC_DLL_XFORM_ADDR2 */
+			0x00018010, /* EMC_DLL_XFORM_ADDR2 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS0 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS1 */
 			0x00000000, /* EMC_DLI_TRIM_TXDQS2 */
@@ -6202,7 +6202,7 @@ static struct tegra14_emc_table
 			0x0020003d, /* EMC_XM2DQSPADCTRL2 */
 			0x00000000, /* EMC_XM2DQPADCTRL2 */
 			0x77ffc004, /* EMC_XM2CLKPADCTRL */
-			0x00000f0f, /* EMC_XM2CLKPADCTRL2 */
+			0x00000b0b, /* EMC_XM2CLKPADCTRL2 */
 			0x41f1f008, /* EMC_XM2COMPPADCTRL */
 			0x00000000, /* EMC_XM2VTTGENPADCTRL */
 			0x51451420, /* EMC_XM2DQSPADCTRL3 */
@@ -6263,7 +6263,7 @@ static struct tegra14_emc_table
 		},
 		0x00000115, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20080249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -6271,14 +6271,14 @@ static struct tegra14_emc_table
 		0x800b0000, /* Mode Register 4 */
 	},
 	{
-		0x52,		/* Rev 5.3.8.e */
-		"D08",		/* DVFS table version */
-		787200, 	/* SDRAM frequency */
-		1050,		/* min voltage */
-		"pllm_ud",	/* clock source id */
+		0x52,       /* Rev 5.3.8.e */
+		"D01",      /* DVFS table version */
+		787200,     /* SDRAM frequency */
+		1050,       /* min voltage */
+		"pllm_ud",  /* clock source id */
 		0x80000000, /* CLK_SOURCE_EMC */
-		129,		/* number of burst_regs */
-		9,			/* number of up_down_regs */
+		129,        /* number of burst_regs */
+		9,          /* number of up_down_regs */
 		{
 			0x00000030, /* EMC_RC */
 			0x000000a5, /* EMC_RFC */
@@ -6423,7 +6423,7 @@ static struct tegra14_emc_table
 		},
 		0x0000011c, /* EMC_ZCAL_WAIT_CNT for ZQcal Long */
 		0x001fffff, /* EMC_AUTO_CAL_INTERVAL */
-		0xd3300084, /* EMC_CFG */
+		0xf3300084, /* EMC_CFG */
 		0x20070249, /* EMC_CFG_DIG_DLL */
 		0x00000000, /* Mode Register 0 */
 		0x00010043, /* Mode Register 1 */
@@ -6442,4 +6442,3 @@ static struct tegra14_emc_pdata ceres_emc_sl460_h9tq18abjtmc_pdata = {
 		ceres_e1680_sl460_ceres_h9tq18abjtmc_table_ll_der,
 	.num_tables = ARRAY_SIZE(ceres_e1680_sl460_ceres_h9tq18abjtmc_table),
 };
-

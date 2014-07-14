@@ -11479,9 +11479,8 @@ static struct tegra14_emc_pdata atlantis_lpddr2_emc_pdata = {
 int __init ceres_emc_init(void)
 {
 	struct board_info bi;
-#if 0
 	u32 update, swizzle_map[5] = { 0x1 };
-#endif
+
 	tegra_get_board_info(&bi);
 
 	switch (bi.board_id) {
@@ -11504,7 +11503,6 @@ int __init ceres_emc_init(void)
 	case BOARD_E1680:
 	case BOARD_E1683:
 	case BOARD_E1690:
-/*
 		if (tegra_get_memory_type() == 0) {
 			pr_info("Loading Ceres EMC tables.\n");
 #ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
@@ -11526,7 +11524,6 @@ int __init ceres_emc_init(void)
 			return -EINVAL;
 		}
 		break;
-*/
 //ljs s9321
 			tegra_emc_device.dev.platform_data =
 					&ceres_emc_multi_pdata;
@@ -11543,7 +11540,7 @@ int __init ceres_emc_init(void)
 	platform_device_register(&tegra_emc_device);
 #ifdef CONFIG_ARCH_TEGRA_14x_SOC
 	tegra14_emc_init();
-#if 0
+
 	/*
 	 * Some T148 boards requires an update to the swizzling registers
 	 * that control byte0 of the DDRIOs.
@@ -11574,7 +11571,7 @@ int __init ceres_emc_init(void)
 	}
 	if (update)
 		tegra_emc_set_swizzle_map(swizzle_map, swizzle_map, 0x3);
-#endif
+
 #endif
 	return 0;
 }
