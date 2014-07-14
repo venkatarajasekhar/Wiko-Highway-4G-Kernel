@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra14_emc.c
  *
- * Copyright (c) 2013, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1877,6 +1877,8 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 		emc_table_group = SL460_H9TQ18ABJTMC_EMC_TABLE_GROUP;
 	else
 		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP;
+
+		emc_table_group = SL460_H9TQ18ABJTMC_EMC_TABLE_GROUP;
 
 	emc_mrs_id = emc_mrs;
 	sku_id = sku;
