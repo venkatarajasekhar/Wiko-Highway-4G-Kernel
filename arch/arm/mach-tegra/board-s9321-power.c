@@ -450,7 +450,7 @@ MAX77660_PDATA_INIT(LDO18, ldo18, 2700, 2700, NULL,
 		1, 0, 1, FPS_SRC_DEF, -1, -1, 0);
 
 MAX77660_PDATA_INIT(SW1, sw1, 1800, 1800, max77660_rails(buck5),
-		1, 1, 0, FPS_SRC_DEF, -1, -1, 0);
+		0, 1, 0, FPS_SRC_DEF, -1, -1, 0);
 
 //luis
 #if 0
