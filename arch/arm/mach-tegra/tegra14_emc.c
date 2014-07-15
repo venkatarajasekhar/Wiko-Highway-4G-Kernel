@@ -47,6 +47,7 @@
 #define EMC_MRS_EDB8132B3PH	0x18000003
 #define EMC_MRS_K4E8E304ED	0x1B000301
 #define EMC_MRS_H9TQ18ABJTMC	0x1F000503
+#define EMC_MRS_H9TQ18ABJTMC_SWAP	0x1F000306
 #endif
 
 #ifdef CONFIG_TEGRA_T14x_MULTI_MEMORY
@@ -1873,7 +1874,7 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 		emc_table_group = SL440_EDB8132B3PH_EMC_TABLE_GROUP;
 	else if (emc_mrs == EMC_MRS_K4E8E304ED && sku == 0x7)
 		emc_table_group = SL440_K4E8E304ED_EMC_TABLE_GROUP;
-	else if (emc_mrs == EMC_MRS_H9TQ18ABJTMC && sku == 0x83)
+	else if ((emc_mrs == EMC_MRS_H9TQ18ABJTMC || emc_mrs == EMC_MRS_H9TQ18ABJTMC_SWAP) && sku == 0x83)
 		emc_table_group = SL460_H9TQ18ABJTMC_EMC_TABLE_GROUP;
 	else
 		emc_table_group = EDF8132A1MC_EMC_TABLE_GROUP;
@@ -1882,7 +1883,8 @@ static int __devinit tegra14_emc_probe(struct platform_device *pdev)
 	sku_id = sku;
 
        pr_info("%s: emc_mrs = 0x%08X, sku = 0x%02X, emc_table_group = 0x%02X\n",
-               __func__, emc_mrs, sku, emc_table_group);	emc_pdata = pdata->emc_pdata[emc_table_group];
+               __func__, emc_mrs, sku, emc_table_group);	
+       emc_pdata = pdata->emc_pdata[emc_table_group];
 
 #else
 	emc_pdata = pdata;
