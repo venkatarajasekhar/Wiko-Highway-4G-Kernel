@@ -1575,7 +1575,7 @@ int __init ceres_soctherm_init(void)
 static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
 	/* .max = 18500 */
-	.max = 11700,
+	.max = 13500 /* 3.8*2.350*1.5 */
 };
 
 void __init ceres_sysedp_init(void)
@@ -1609,7 +1609,7 @@ void __init ceres_sysedp_init(void)
  * much power that the edp update request stops executing
  * and hang the system
 */
-#if 0
+#if 1
 static unsigned int ceres_psydepl_states[] = {
 	9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
 	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600,
@@ -1685,40 +1685,60 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 
 /* Temperature in deci-celcius */
 static struct psy_depletion_ibat_lut ceres_ibat_lut[] = {
-	{  600, 2000 },
-	{  500, 2000 },
-	{  250, 2000 },
-	{  0, 2000 },
-	{ -100, 2000 },
+	{  600, 2350 },
+	{  500, 2350 },
+	{  250, 2350 },
+	{  0, 2350 },
+	{ -100, 2350 },
 	{ -300,	0 }
 };
 
 static struct psy_depletion_rbat_lut ceres_rbat_lut[] = {
-	{ 100, 158000 },
-	{  90, 163000 },
-	{  80, 175000 },
-	{  70, 193000 },
-	{  60, 163000 },
-	{  50, 160000 },
-	{  40, 163000 },
-	{  30, 165000 },
-	{  20, 168000 },
-	{  10, 170000 },
-	{   0, 210000 }
+	{ 100, 165000 },
+	{  90, 142500 },
+	{  80, 150000 },
+	{  70, 160000 },
+	{  60, 147500 },
+	{  50, 165000 },
+	{  40, 165000 },
+	{  30, 172500 },
+	{  20, 172500 },
+	{  10, 177500 },
+	{   0, 152500 }
 };
 
+/* measured */
 static struct psy_depletion_ocv_lut ceres_ocv_lut[] = {
-	{ 100, 4200000 },
-	{  90, 4094000 },
-	{  80, 4012000 },
-	{  70, 3934000 },
-	{  60, 3860000 },
-	{  50, 3811000 },
-	{  40, 3784000 },
-	{  30, 3768000 },
-	{  20, 3738000 },
-	{  10, 3684000 },
-	{   0, 3518000 }
+	{ 100, 4350000 },
+	{  93, 4201250 },
+	{  90, 4167500 },
+	{  88, 4151250 },
+	{  85, 4118750 },
+	{  82, 4097500 },
+	{  80, 4081250 },
+	{  77, 4048750 },
+	{  75, 4021250 },
+	{  72, 4005000 },
+	{  70, 3988750 },
+	{  68, 3970000 },
+	{  65, 3940000 },
+	{  62, 3911250 },
+	{  60, 3895000 },
+	{  58, 3883750 },
+	{  55, 3860000 },
+	{  52, 3846250 },
+	{  50, 3837500 },
+	{  48, 3833750 },
+	{  45, 3817500 },
+	{  40, 3800000 },
+	{  35, 3786250 },
+	{  30, 3770000 },
+	{  25, 3733000 },
+	{  20, 3725000 },
+	{  15, 3697000 },
+	{  10, 3677000 },
+	{   5, 3588000 },
+	{   0, 3254000 }
 };
 
 static struct psy_depletion_platform_data ceres_psydepl_pdata = {
@@ -1726,10 +1746,13 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 	.states = ceres_psydepl_states,
 	.num_states = ARRAY_SIZE(ceres_psydepl_states),
 	.e0_index = ARRAY_SIZE(ceres_psydepl_states) - 7,
-	.r_const = 230000,
+	/* .r_const = 230000, */
+	.r_const = 060000,
 	.vsys_min = 3250000,
-	.vcharge = 4200000,
-	.ibat_nom = 2000,
+	/* .vcharge = 4200000, */
+	.vcharge = 4350000,
+	/* .ibat_nom = 2000, */
+	.ibat_nom = 2350,
 	.ibat_lut = ceres_ibat_lut,
 	.ocv_lut = ceres_ocv_lut,
 	.rbat_lut = ceres_rbat_lut

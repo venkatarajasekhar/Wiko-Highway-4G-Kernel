@@ -221,10 +221,15 @@ static int max17048_get_ocv(struct max17048_chip *chip)
 static int max17048_rcomp_adjust(struct max17048_chip *chip)
 {
 	struct max17048_battery_model *mdata = chip->pdata->model_data;
-
+#if CONFIG_MACH_S9321
+	int rcomp0 = 129;
+	int tempCoUp = -1.05 * 100;
+	int tempCoDown = 0 * 100;
+#else
 	int rcomp0 = 115;
 	int tempCoUp = -0.15 * 100;
 	int tempCoDown = -4.95 * 100;
+#endif
 	int rcomp, ret = 0;
 	int config_reg;
 	int temp;
