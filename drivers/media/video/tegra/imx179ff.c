@@ -1,7 +1,7 @@
 /*
 * imx179.c - imx179 sensor driver
 *
-* Copyright (c) 2012-2013 NVIDIA Corporation. All Rights Reserved.
+* Copyright (c) 2012-2014 NVIDIA Corporation. All Rights Reserved.
 *
 * This file is licensed under the terms of the GNU General Public License
 * version 2. This program is licensed "as is" without any warranty of any
@@ -211,8 +211,10 @@ static struct imx179_reg imx179_3280x2464_i2c[] = {
 	{0x33D6, 0x09},
 	{0x33D7, 0xA0},
 	{0x4100, 0x0E},
-	{0x4108, 0x01},
-	{0x4109, 0x7C},
+	/* {0x4108, 0x01}, */
+	{0x4108, 0x00},
+	/* {0x4109, 0x7C}, */
+	{0x4109, 0x2C},
 	{0x3302, 0x01},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
@@ -287,8 +289,10 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 	{0x33D6, 0x04},
 	{0x33D7, 0xD0},
 	{0x4100, 0x0E},
-	{0x4108, 0x01},
-	{0x4109, 0x7C},
+	/* {0x4108, 0x01}, */
+	{0x4108, 0x00},
+	/* {0x4109, 0x7C}, */
+	{0x4109, 0x2C},
 	{0x3302, 0x01},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
@@ -299,7 +303,7 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 
 /* 30fps */
 #define setting_1920x1080_test_addtion_frame	0
-#define setting_1920x1080_test_addtion_line		0
+#define setting_1920x1080_test_addtion_line		-10
 #define setting_1920x1080_frame_length (0x0554 + setting_1920x1080_test_addtion_frame)
 #define setting_1920x1080_line_length (0x0d70 + setting_1920x1080_test_addtion_line)
 #define reg_0x0340_1920x1080_frame_length_hi_byte	(setting_1920x1080_frame_length >> 8)
@@ -319,7 +323,8 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{0x0309,0x0A},
 	{0x030B,0x01},
 	{0x030C,0x00},
-	{0x030D,0xb1},
+	/* {0x030D,0xb1}, */
+	{0x030D,0xaf},
 	{0x0340,reg_0x0340_1920x1080_frame_length_hi_byte},
 	{0x0341,reg_0x0341_1920x1080_frame_length_lo_byte},
 	{0x0342,reg_0x0342_1920x1080_line_length_hi_byte},
@@ -366,9 +371,11 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{0x33D5,0x60},
 	{0x33D6,0x05},
 	{0x33D7,0x46},
-	{0x4100,0x0E},
-	{0x4108,0x01},
-	{0x4109,0x7C},
+	{0x4100, 0x0E},
+	/* {0x4108, 0x01}, */
+	{0x4108, 0x00},
+	/* {0x4109, 0x7C}, */
+	{0x4109, 0x2C},
 	{0x3302,0x01},
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
@@ -485,7 +492,7 @@ static struct imx179_mode_data imx179_1920x1080 = {
 		.max_coarse_diff	= 5,
 		.min_exposure_course	= 2,
 		.max_exposure_course	= 0xFFFC,
-		.diff_integration_time	= 0, /* / _INT2FLOAT_DIVISOR */
+		.diff_integration_time	= 110, /* / _INT2FLOAT_DIVISOR */
 		.line_length		= setting_1920x1080_line_length,
 		.frame_length		= setting_1920x1080_frame_length,
 		.min_frame_length	= setting_1920x1080_frame_length,
