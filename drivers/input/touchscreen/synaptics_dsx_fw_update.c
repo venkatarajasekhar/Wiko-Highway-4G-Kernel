@@ -44,7 +44,11 @@
 
 #define DEBUG_FW_UPDATE
 #define SHOW_PROGRESS
+#ifdef CONFIG_MACH_S9321
+#define FW_IMAGE_NAME "rmi4/PR1492343-s3202_30303039.img"
+#else
 #define FW_IMAGE_NAME "rmi4/PR1296077-s3202_30303034.img"
+#endif
 #define MAX_FIRMWARE_ID_LEN 10
 #define FORCE_UPDATE false
 #define INSIDE_FIRMWARE_UPDATE
@@ -563,13 +567,12 @@ static int fwu_read_f34_flash_status(void)
 static int fwu_reset_device(void)
 {
 	int retval;
-
+       
 #ifdef DEBUG_FW_UPDATE
 	dev_info(&fwu->rmi4_data->i2c_client->dev,
 			"%s: Reset device\n",
 			__func__);
 #endif
-
 	retval = fwu->rmi4_data->reset_device(fwu->rmi4_data);
 	if (retval < 0) {
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
@@ -671,6 +674,7 @@ static enum flash_area fwu_go_nogo(struct image_header *header)
 			retval);
 		goto exit;
 	}
+        
 	firmware_id[3] = 0;
 	deviceFirmwareID = extract_uint(firmware_id);
 
@@ -697,6 +701,7 @@ static enum flash_area fwu_go_nogo(struct image_header *header)
 		imagePR[index] = 0;
 
 		retval = sstrtoul(imagePR, 10, &imageFirmwareID);
+                
 		if (retval ==  -EINVAL) {
 			dev_err(&i2c_client->dev,
 				"%s: Invalid image firmware id...\n",
@@ -1591,6 +1596,8 @@ static int fwu_start_reflash(void)
 	pr_notice("%s: End of reflash process\n", __func__);
 exit:
 	kfree(fwu->firmware_name);
+       
+
 	return retval;
 }
 
@@ -1612,9 +1619,10 @@ unsigned int synaptics_get_fw_version(void)
 	unsigned long imageFirmwareID;
 	unsigned char config_id[4];
 	unsigned char firmware_id[4];
+        unsigned char base_addr = 0x004C;
    	/* device config id */
 	retval = fwu->fn_ptr->read(fwu->rmi4_data,
-				fwu->f34_fd.ctrl_base_addr,
+				base_addr,//fwu->f34_fd.ctrl_base_addr
 				config_id,
 				sizeof(config_id));
 	if (retval < 0) {
@@ -1650,9 +1658,11 @@ unsigned int synaptics_get_vendor_version(void)
 	unsigned long imageFirmwareID;
 	unsigned char config_id[4];
 	unsigned char firmware_id[4];
+        unsigned char base_addr = 0x004C;
+        
    	/* device config id */
 	retval = fwu->fn_ptr->read(fwu->rmi4_data,
-				fwu->f34_fd.ctrl_base_addr,
+				base_addr,//fwu->f34_fd.ctrl_base_addr,
 				config_id,
 				sizeof(config_id));
 	if (retval < 0) {
