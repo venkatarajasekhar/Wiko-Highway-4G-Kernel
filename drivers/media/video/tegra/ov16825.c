@@ -55,7 +55,6 @@ struct ov16825_info {
 	struct ov16825_platform_data *pdata;
 	struct nvc_imager_cap *cap;
 	struct miscdevice miscdev;
-	struct list_head list;
 	int pwr_api;
 	int pwr_dev;
 	struct nvc_gpio gpio[ARRAY_SIZE(ov18625_gpio)];
@@ -137,11 +136,6 @@ static struct nvc_imager_static_nvc ov16825_dflt_sdata = {
 	.view_angle_v		= OV16825_LENS_VIEW_ANGLE_V,
 	.res_chg_wait_time	= OV16825_RES_CHG_WAIT_TIME_MS,
 };
-
-static LIST_HEAD(ov16825_info_list);
-static DEFINE_SPINLOCK(ov16825_spinlock);
-
-
 
 static struct ov16825_reg tp_none_seq[] = {
 	{0x5040, 0x00},
@@ -1247,11 +1241,11 @@ static struct ov16825_mode_data ov16825_1920x1080 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 1,
+		.init_intra_frame_skip	= 1,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
 		.coarse_time		= 0x974, /* reg 0x3500,0x3501,0x3502 */
 		.max_coarse_diff	= 4,
 		.min_exposure_course	= 2,
@@ -1291,11 +1285,11 @@ static struct ov16825_mode_data ov16825_2176x1632 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 1,
+		.init_intra_frame_skip	= 1,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
 		.coarse_time		= 0x974, /* reg 0x3500,0x3501,0x3502 */
 		.max_coarse_diff	= 4,
 		.min_exposure_course	= 2,
@@ -1335,11 +1329,11 @@ static struct ov16825_mode_data ov16825_2304x1728 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 1,
+		.init_intra_frame_skip	= 1,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
 		.coarse_time		= 0x974, /* reg 0x3500,0x3501,0x3502 */
 		.max_coarse_diff	= 4,
 		.min_exposure_course	= 2,
@@ -1379,11 +1373,11 @@ static struct ov16825_mode_data ov16825_3840x2160 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 1,
+		.init_intra_frame_skip	= 1,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
 		.coarse_time		= 0x88e, /* reg 0x3500,0x3501,0x3502 */
 		.max_coarse_diff	= 4,
 		.min_exposure_course	= 2,
@@ -1423,11 +1417,11 @@ static struct ov16825_mode_data ov16825_4608x3456 = {
 		.region_start_y		= 0,
 		.x_scale		= 1,
 		.y_scale		= 1,
-		.bracket_caps		= 0,
-		.flush_count		= 0,
-		.init_intra_frame_skip	= 0,
-		.ss_intra_frame_skip	= 0,
-		.ss_frame_number	= 0,
+		.bracket_caps		= 1,
+		.flush_count		= 1,
+		.init_intra_frame_skip	= 1,
+		.ss_intra_frame_skip	= 2,
+		.ss_frame_number	= 3,
 		.coarse_time		= 0xbd4, /* reg 0x3500,0x3501,0x3502 */
 		.max_coarse_diff	= 4,
 		.min_exposure_course	= 2,
@@ -2459,14 +2453,14 @@ static int ov16825_mode_wr(struct ov16825_info *info,
 	if (err < 0)
 		return err;
 
-	/*
+
 	printk("ov %s mode->res_x %d mode->res_y %d mode_index %d\n",
 					__func__,
 					mode->res_x,
 					mode->res_y,
 					mode_index
 					);
-	*/
+
 
 	if (!mode->res_x && !mode->res_y) {
 		if (mode->frame_length || mode->coarse_time || mode->gain) {
@@ -3141,56 +3135,6 @@ static void ov16825_sdata_init(struct ov16825_info *info)
 		info->sdata.view_angle_v = info->pdata->lens_view_angle_v;
 }
 
-static int ov16825_sync_en(unsigned num, unsigned sync)
-{
-	struct ov16825_info *master = NULL;
-	struct ov16825_info *slave = NULL;
-	struct ov16825_info *pos = NULL;
-
-	rcu_read_lock();
-	list_for_each_entry_rcu(pos, &ov16825_info_list, list) {
-		if (pos->pdata->num == num) {
-			master = pos;
-			break;
-		}
-	}
-	pos = NULL;
-	list_for_each_entry_rcu(pos, &ov16825_info_list, list) {
-		if (pos->pdata->num == sync) {
-			slave = pos;
-			break;
-		}
-	}
-	rcu_read_unlock();
-	if (master != NULL)
-		master->s_info = NULL;
-	if (slave != NULL)
-		slave->s_info = NULL;
-	if (!sync)
-		return 0; /* no err if sync disabled */
-
-	if (num == sync)
-		return -EINVAL; /* err if sync instance is itself */
-
-	if ((master != NULL) && (slave != NULL)) {
-		master->s_info = slave;
-		slave->s_info = master;
-	}
-	return 0;
-}
-
-static int ov16825_sync_dis(struct ov16825_info *info)
-{
-	if (info->s_info != NULL) {
-		info->s_info->s_mode = 0;
-		info->s_info->s_info = NULL;
-		info->s_mode = 0;
-		info->s_info = NULL;
-		return 0;
-	}
-
-	return -EINVAL;
-}
 static int ov16825_mclk_enable(struct ov16825_info *info)
 {
 	int err;
@@ -3212,36 +3156,18 @@ static void ov16825_mclk_disable(struct ov16825_info *info)
 static int ov16825_open(struct inode *inode, struct file *file)
 {
 	struct ov16825_info *info = NULL;
-	struct ov16825_info *pos = NULL;
 	int err;
 
-	rcu_read_lock();
-	list_for_each_entry_rcu(pos, &ov16825_info_list, list) {
-		if (pos->miscdev.minor == iminor(inode)) {
-			info = pos;
-			break;
-		}
-	}
-	rcu_read_unlock();
-	if (!info)
-		return -ENODEV;
+	struct miscdevice   *miscdev = file->private_data;
+	info = container_of(miscdev, struct ov16825_info, miscdev);
 
 	err = ov16825_mclk_enable(info);
 	if (err)
 		return err;
 
-	err = ov16825_sync_en(info->pdata->num, info->pdata->sync);
-	if (err == -EINVAL)
-		dev_err(&info->i2c_client->dev,
-			"%s err: invalid num (%u) and sync (%u) instance\n",
-			__func__, info->pdata->num, info->pdata->sync);
-	if (atomic_xchg(&info->in_use, 1))
+	if (atomic_xchg(&info->in_use, 1)){
+		dev_err(&info->i2c_client->dev, "device is BUSY now %s\n", __func__);
 		return -EBUSY;
-
-	if (info->s_info != NULL) {
-		if (atomic_xchg(&info->s_info->in_use, 1))
-			return -EBUSY;
-		info->sdata.stereo_cap = 1;
 	}
 
 	file->private_data = info;
@@ -3260,7 +3186,6 @@ int ov16825_release(struct inode *inode, struct file *file)
 	WARN_ON(!atomic_xchg(&info->in_use, 0));
 	if (info->s_info != NULL)
 		WARN_ON(!atomic_xchg(&info->s_info->in_use, 0));
-	ov16825_sync_dis(info);
 	return 0;
 }
 
@@ -3277,11 +3202,6 @@ static void ov16825_del(struct ov16825_info *info)
 	if ((info->s_mode == NVC_SYNC_SLAVE) ||
 					(info->s_mode == NVC_SYNC_STEREO))
 		ov16825_pm_exit(info->s_info);
-	ov16825_sync_dis(info);
-	spin_lock(&ov16825_spinlock);
-	list_del_rcu(&info->list);
-	spin_unlock(&ov16825_spinlock);
-	synchronize_rcu();
 }
 
 static int ov16825_remove(struct i2c_client *client)
@@ -3389,10 +3309,6 @@ static int ov16825_probe(
 	else
 		info->cap = &ov16825_dflt_cap;
 	i2c_set_clientdata(client, info);
-	INIT_LIST_HEAD(&info->list);
-	spin_lock(&ov16825_spinlock);
-	list_add_rcu(&info->list, &ov16825_info_list);
-	spin_unlock(&ov16825_spinlock);
 	ov16825_pm_init(info);
 	ov16825_sdata_init(info);
 	if (info->pdata->cfg & (NVC_CFG_NODEV | NVC_CFG_BOOT_INIT)) {
