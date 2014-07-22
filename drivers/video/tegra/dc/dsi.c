@@ -177,16 +177,16 @@ static void lcd_te_work_func(struct work_struct *work)
 		bl = this_dc->out->sd_settings->bl_device;
 		brightness = bl->props.brightness;
 		bl->props.brightness = 0;
-#ifdef CONFIG_MACH_S8515
 		backlight_update_status(bl);
-#endif
 		tegra_dc_disable(this_dc);
 
 		tegra_dc_enable(this_dc);
+              #ifdef CONFIG_MACH_S9321
+                tegra_dc_unblank(this_dc); //To solve the ESD flash panel
+              #endif
 		bl->props.brightness = brightness;
-#ifdef CONFIG_MACH_S8515
 		backlight_update_status(bl);
-#endif
+               
 
 		/* start timer again */
 		enable_irq(gpio_to_irq(TE_PIN_GPIO));

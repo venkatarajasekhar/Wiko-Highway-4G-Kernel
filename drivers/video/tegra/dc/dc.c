@@ -2515,6 +2515,20 @@ void tegra_dc_blank(struct tegra_dc *dc)
 	tegra_dc_sync_windows(dcwins, DC_N_WINDOWS);
 }
 
+void tegra_dc_unblank(struct tegra_dc *dc)
+{
+	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
+	unsigned i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		dcwins[i] = tegra_dc_get_window(dc,i);
+		dcwins[i]->flags |= TEGRA_WIN_FLAG_ENABLED;
+	}
+
+	tegra_dc_update_windows(dcwins, 1);
+	tegra_dc_sync_windows(dcwins, 1);
+}
+
 static void _tegra_dc_disable(struct tegra_dc *dc)
 {
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
