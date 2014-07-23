@@ -67,6 +67,15 @@ static struct LCM_setting_table lcm_initialization_setting[] = {
        
 };
 
+static struct LCM_setting_table lcm_suspend_setting[] = {
+       
+        {0x28,	0,{0x00}},
+        {REGFLAG_DELAY,50,{}},
+        {0x10,	0,{0x00}},
+        {REGFLAG_DELAY,10,{}},
+  
+};
+
 
 
 #ifdef CONFIG_TEGRA_DC_CMU
@@ -790,6 +799,8 @@ static void dsi_s_1080p_5_dc_out_init(struct tegra_dc_out *dc)
 	u16 init_count = sizeof(lcm_initialization_setting)/sizeof(struct LCM_setting_table);
 	rebuild_tegra_lcm(lcm_initialization_setting, &dsi_s_1080p_5_pdata,init_count);
 	
+        u16 init_suspend_count = sizeof(lcm_suspend_setting)/sizeof(struct LCM_setting_table);
+	rebuild_tegra_lcm_suspend(lcm_suspend_setting, &dsi_s_1080p_5_pdata,init_suspend_count);
 	dc->dsi = &dsi_s_1080p_5_pdata;
 	dc->parent_clk = "pll_d_out0";
 	dc->modes = dsi_s_1080p_5_modes;
