@@ -3433,6 +3433,12 @@ static void tegra_sdhci_post_resume(struct sdhci_host *sdhci)
 	/* Turn OFF the clocks if the card is not present */
 	if (!(tegra_host->card_present) && tegra_host->clk_enabled)
 		tegra_sdhci_set_clock(sdhci, 0);
+	/* Turn OFF S9321 sdmmc3 clock */
+#if defined(CONFIG_MACH_S9321) && CONFIG_MACH_S9321
+	if (!strcmp(dev_name(mmc_dev(sdhci->mmc)), "sdhci-tegra.2")){
+		tegra_sdhci_set_clock(sdhci, 0);
+	}
+#endif
 }
 
 /*
