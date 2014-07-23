@@ -825,10 +825,12 @@ static void dsi_s_1080p_5_sd_settings_init
 #endif
 }
 
+#ifdef CONFIG_TEGRA_DC_CMU
 static void dsi_s_1080p_5_cmu_init(struct tegra_dc_platform_data *pdata)
 {
 	pdata->cmu = &dsi_s_1080p_5_cmu;
 }
+#endif
 
 static void dsi_s_1080p_5_set_disp_device(
 	struct platform_device *ceres_display_device)
@@ -841,7 +843,9 @@ struct tegra_panel __initdata dsi_s_1080p_5 = {
 	.init_dc_out = dsi_s_1080p_5_dc_out_init,
 	.init_fb_data = dsi_s_1080p_5_fb_data_init,
 	.register_bl_dev = dsi_s_1080p_5_register_bl_dev,
-	.set_disp_device = dsi_s_1080p_5_set_disp_device,		
+	.set_disp_device = dsi_s_1080p_5_set_disp_device,
+#ifdef CONFIG_TEGRA_DC_CMU
 	.init_cmu_data = dsi_s_1080p_5_cmu_init,
+#endif
 };
 EXPORT_SYMBOL(dsi_s_1080p_5);
