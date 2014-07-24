@@ -250,6 +250,19 @@ void updateAWBIMX179(struct imx179_info *info, u16 RoverG_dec, u16 BoverG_dec,
 	IMX179MIPI_write_cmos_sensor(info, 0x0215, G_test_L8);
 }
 
+#if defined(CONFIG_MACH_S9321) && CONFIG_MACH_S9321
+/* for s9321 */
+int IMX179_ReadFuseIDFromOTP(struct imx179_info *info)
+{
+	IMX179_ReadOtp(info,
+		1,
+		0x3404,
+		info->fuse_id.data,
+		info->fuse_id.size);
+	return 0;
+}
+#else
+/* for non s9321 */
 int IMX179_ReadFuseIDFromOTP(struct imx179_info *info)
 {
 	u16 awbGroupbank[] = { 3, 2, 1 };
@@ -280,4 +293,5 @@ int IMX179_ReadFuseIDFromOTP(struct imx179_info *info)
 
 	return 0;
 }
+#endif
 /**************************** otp end ****************************/

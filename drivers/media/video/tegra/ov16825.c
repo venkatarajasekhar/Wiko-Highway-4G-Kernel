@@ -21,6 +21,7 @@
 #include <linux/clk.h>
 #include <linux/module.h>
 #include <media/ov16825.h>
+#include <linux/regmap.h>
 
 #define OV16825_ID							0x0168
 #define OV16825_SENSOR_TYPE					NVC_IMAGER_TYPE_RAW
@@ -49,6 +50,35 @@ static struct nvc_gpio_init ov18625_gpio[] = {
 	{ OV16825_GPIO_TYPE_PWRDN, GPIOF_OUT_INIT_HIGH, "pwrdn", false, true, },
 };
 
+#define OV16825_EEPROM_BLOCK1_FUSEID_LEN	9
+#define OV16825_EEPROM_BLOCK1_FLAG_INVALID	0
+struct ov16825_eeprom_block1
+{
+	u8 fuseid[OV16825_EEPROM_BLOCK1_FUSEID_LEN];
+	u8 flag;
+};
+
+#define OV16825_EEPROM_SIZE	256
+#define OV16825_EEPROM_COUNT 6
+struct ov16825_eeprom_device {
+	struct i2c_client *i2c_client;
+	struct i2c_adapter *adap;
+	struct i2c_board_info brd;
+	struct regmap *regmap;
+	int block_nr;
+	u8 buf[OV16825_EEPROM_SIZE];
+	int size;
+};
+
+static int eeprom_dev_addr[OV16825_EEPROM_COUNT] = {
+	0xa0 >> 1,
+	0xa4 >> 1,
+	0xa6 >> 1,
+	0xa8 >> 1,
+	0xaa >> 1,
+	0xac >> 1,
+};
+
 struct ov16825_info {
 	atomic_t in_use;
 	struct i2c_client *i2c_client;
@@ -71,6 +101,8 @@ struct ov16825_info {
 	u8 bin_en;
 	struct clk *mclk;
 	struct nvc_fuseid fuse_id;
+	struct ov16825_eeprom_device
+	eeprom[OV16825_EEPROM_COUNT];
 };
 
 struct ov16825_reg {
@@ -136,6 +168,11 @@ static struct nvc_imager_static_nvc ov16825_dflt_sdata = {
 	.view_angle_v		= OV16825_LENS_VIEW_ANGLE_V,
 	.res_chg_wait_time	= OV16825_RES_CHG_WAIT_TIME_MS,
 };
+
+static void ov16825_read_fuseid_test(
+	struct ov16825_info *info,
+	int *len,
+	unsigned char *buf);
 
 static struct ov16825_reg tp_none_seq[] = {
 	{0x5040, 0x00},
@@ -2899,26 +2936,268 @@ static int ov16825_param_wr(struct ov16825_info *info, unsigned long arg)
 	}
 }
 
+static int ov16825_eeprom_release(
+	struct ov16825_info *info)
+{
+	int i;
+
+	for (i = 0; i < OV16825_EEPROM_COUNT; i++) {
+		if (info->eeprom[i].i2c_client != NULL) {
+			i2c_unregister_device(info->eeprom[i].i2c_client);
+			info->eeprom[i].i2c_client = NULL;
+		}
+	}
+
+	return 0;
+}
+
+static int ov16825_eeprom_init(
+	struct ov16825_info *info)
+{
+	const char *dev_name = "eeprom_GT24C16";
+	static struct regmap_config eeprom_regmap_config = {
+		.reg_bits = 8,
+		.val_bits = 8,
+	};
+	int i;
+	int err;
+
+	for (i = 0; i < OV16825_EEPROM_COUNT; i++) {
+		info->eeprom[i].adap = i2c_get_adapter(
+				info->i2c_client->adapter->nr);
+		memset(&info->eeprom[i].brd, 0, sizeof(info->eeprom[i].brd));
+		strncpy(info->eeprom[i].brd.type, dev_name,
+				sizeof(info->eeprom[i].brd.type));
+		info->eeprom[i].brd.addr = eeprom_dev_addr[i];
+		info->eeprom[i].i2c_client = i2c_new_device(
+				info->eeprom[i].adap, &info->eeprom[i].brd);
+
+		info->eeprom[i].regmap = devm_regmap_init_i2c(
+			info->eeprom[i].i2c_client, &eeprom_regmap_config);
+		if (IS_ERR(info->eeprom[i].regmap)) {
+			err = PTR_ERR(info->eeprom[i].regmap);
+			ov16825_eeprom_release(info);
+			return err;
+		}
+
+		info->eeprom[i].block_nr = 1 + i;
+		memset(info->eeprom[i].buf,
+			0,
+			OV16825_EEPROM_SIZE);
+		info->eeprom[i].size = OV16825_EEPROM_SIZE;
+	}
+
+	return 0;
+}
+
+static int ov16825_eeprom_rd_block_nr(
+	struct ov16825_info *info,
+	int block_nr)
+{
+	struct regmap *regmap = NULL;
+	int i = 0;
+	int reg = 0;
+	u8 *buf = NULL;
+	int length = 0;
+
+	for (i = 0; i < OV16825_EEPROM_COUNT; i++) {
+		if(info->eeprom[i].block_nr == block_nr) {
+			regmap = info->eeprom[i].regmap;
+			buf = info->eeprom[i].buf;
+			length = info->eeprom[i].size;
+		}
+	}
+
+	if (regmap == NULL)
+		return -EFAULT;
+
+	return regmap_raw_read(regmap,
+		reg,
+		buf,
+		length);
+}
+
+static int ov16825_eeprom_get_buf(
+	struct ov16825_info *info,
+	int block_nr,
+	u8 **ppbuf,
+	int *psize)
+{
+	int i = 0;
+
+	*ppbuf = NULL;
+	*psize = 0;
+
+	for (i = 0; i < OV16825_EEPROM_COUNT; i++) {
+		if(info->eeprom[i].block_nr == block_nr) {
+			*ppbuf = info->eeprom[i].buf;
+			*psize = info->eeprom[i].size;
+			return 0;
+		}
+	}
+	return -EFAULT;
+}
+
+static int ov16825_eeprom_rd_cal(
+	struct ov16825_info *info,
+	void *user_dest)
+{
+	int err = 0;
+	int i = 0;
+	u8 *buf = NULL;
+	int size = 0;
+	int user_pointer = 0;
+	const int block_nr_start = 2;
+	const int block_nr_end = 5;
+
+	for (i = block_nr_start; i <= block_nr_end; i++) {
+		err = ov16825_eeprom_rd_block_nr(
+			info,
+			i);
+		if (err) {
+			printk("%s read block err, nr %d err %x\n", __func__,
+				i,
+				err);
+			return err;
+		}
+	}
+
+	for (i = block_nr_start; i <= block_nr_end; i++) {
+		err = ov16825_eeprom_get_buf(
+			info,
+			i,
+			&buf,
+			&size);
+		if (err) {
+			printk("%s read block err, nr %d err %x\n", __func__,
+				i,
+				err);
+			return err;
+		}
+
+		if (copy_to_user(
+			(void __user *)(user_dest + user_pointer),
+			buf,
+			size)) {
+			dev_err(&info->i2c_client->dev,
+				"%s:Failed to copy status to user\n",
+				__func__);
+			return -EFAULT;
+		}
+		user_pointer += size;
+	}
+
+	printk("%s bytes copied to user %d\n", __func__,
+		user_pointer);
+
+	return err;
+}
+#if 0
+static int ov16825_eeprom_rd_fuseid(
+	struct ov16825_info *info,
+	int *plength,
+	u8 **ppbuf)
+{
+	int err = 0;
+	int i = 0;
+	u8 *buf = NULL;
+	int size = 0;
+	const int block_nr_fuseid = 1;
+	//struct ov16825_eeprom_block1 *eb1 = NULL;
+
+	*plength = 0;
+	*ppbuf = NULL;
+
+	err = ov16825_eeprom_rd_block_nr(
+		info,
+		block_nr_fuseid);
+	if (err) {
+		printk("%s read block err, nr %d err %x\n", __func__,
+			1,
+			err);
+		return err;
+	}
+
+	err = ov16825_eeprom_get_buf(
+		info,
+		block_nr_fuseid,
+		&buf,
+		&size);
+	if (err) {
+		printk("%s read block err, nr %d err %x\n", __func__,
+			i,
+			err);
+		return err;
+	}
+#if 0
+	eb1 = (struct ov16825_eeprom_block1 *)buf;
+	if (size < OV16825_EEPROM_BLOCK1_FUSEID_LEN ||
+		eb1->flag == OV16825_EEPROM_BLOCK1_FLAG_INVALID)
+		return -EFAULT;
+#endif
+
+	/* *plength = OV16825_EEPROM_BLOCK1_FUSEID_LEN; */
+	*plength = OV16825_EEPROM_SIZE;
+	*ppbuf = buf;
+
+	return err;
+}
+
+/* use eeprom */
 static int ov16825_get_fuse_id(struct ov16825_info *info)
 {
 	int ret;
+	int length = 0;
+	u8 *buf = NULL;
+	int i = 0;
+
 	if (info->fuse_id.size)
 		return 0;
 
-
-	/* this is not fully implemented */
-	ret = 32;
-
-	if (ret){
-		info->fuse_id.size = 4;
-		info->fuse_id.data[0] = ret >> 24;
-		info->fuse_id.data[1] = ret >> 16;
-		info->fuse_id.data[2] = ret >> 8;
-		info->fuse_id.data[3] = ret;
-		ret = 0;
+	ret = ov16825_eeprom_rd_fuseid(
+		info,
+		&length,
+		&buf);
+	if (ret) {
+		printk("%s error read fuseid %d\n", __func__, ret);
+		return ret;
 	}
+
+	info->fuse_id.size = length;
+	for (i = 0; i < length; i++) {
+		info->fuse_id.data[i] = buf[i];
+		printk("%s fuse id d[%d] = %02x\n", __func__, i, buf[i]);
+	}
+
 	return ret;
 }
+#else
+static int ov16825_get_fuse_id(struct ov16825_info *info)
+{
+	int ret;
+	int i = 0;
+	#define SIZE_FUSEID		9
+	u8 bytes[SIZE_FUSEID] = {0, };
+
+	if (info->fuse_id.size)
+		return 0;
+
+	ret = ov16825_NVM_read_bytes(info,
+		0x7080,
+		bytes,
+		SIZE_FUSEID);
+	if (ret)
+		return ret;
+
+	info->fuse_id.size = SIZE_FUSEID;
+	for (i = 0; i < info->fuse_id.size; i++) {
+		info->fuse_id.data[i] = bytes[i];
+		printk("%s fuse id d[%d] = %02x\n", __func__, i, bytes[i]);
+	}
+
+	return ret;
+}
+#endif
 
 static long ov16825_ioctl(struct file *file,
 			 unsigned int cmd,
@@ -2950,6 +3229,14 @@ static long ov16825_ioctl(struct file *file,
 			return -EFAULT;
 		}
 		return 0;
+	case NVC_IOCTL_GET_EEPROM_DATA:
+		err = ov16825_eeprom_rd_cal(
+			info,
+			(void *)arg);
+		if (err) {
+			pr_err("%s read eeprom data err %d\n", __func__, err);
+		}
+		return err;
 
 	case NVC_IOCTL_PARAM_WR:
 		err = ov16825_param_wr(info, arg);
@@ -3157,7 +3444,6 @@ static int ov16825_open(struct inode *inode, struct file *file)
 {
 	struct ov16825_info *info = NULL;
 	int err;
-
 	struct miscdevice   *miscdev = file->private_data;
 	info = container_of(miscdev, struct ov16825_info, miscdev);
 
@@ -3169,7 +3455,6 @@ static int ov16825_open(struct inode *inode, struct file *file)
 		dev_err(&info->i2c_client->dev, "device is BUSY now %s\n", __func__);
 		return -EBUSY;
 	}
-
 	file->private_data = info;
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
 	return 0;
@@ -3196,6 +3481,45 @@ static const struct file_operations ov16825_fileops = {
 	.release = ov16825_release,
 };
 
+static ssize_t ov16825_show_fuseid(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ov16825_info *info = i2c_get_clientdata(client);
+	int len = 0;
+	unsigned char buf_fuse[16] = {0, };/* max size for nvc_fuseid.data */
+	int pos = 0;
+	int i = 0;
+
+	if (atomic_read(&info->in_use))
+		return sprintf(buf, "device opened, close it first\n");
+
+	ov16825_read_fuseid_test(info,
+		&len,
+		buf_fuse);
+
+	if (len) {
+		for (i = 0; i < len; i++) {
+			pos += sprintf(buf + pos, "%02x", buf_fuse[i]);
+		}
+		pos += sprintf(buf + pos, "\n");
+		return pos;
+	} else
+		return sprintf(buf, "Not implemented yet %p\n", info);
+}
+
+static DEVICE_ATTR(fuseid, S_IRUSR | S_IRGRP,
+					ov16825_show_fuseid, NULL);
+
+static struct attribute *ov16825_attributes[] = {
+	&dev_attr_fuseid.attr,
+	NULL
+};
+
+static const struct attribute_group ov16825_attr_group = {
+	.attrs = ov16825_attributes,
+};
+
 static void ov16825_del(struct ov16825_info *info)
 {
 	ov16825_pm_exit(info);
@@ -3209,53 +3533,47 @@ static int ov16825_remove(struct i2c_client *client)
 	struct ov16825_info *info = i2c_get_clientdata(client);
 
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
+	sysfs_remove_group(&info->i2c_client->dev.kobj, &ov16825_attr_group);
+	ov16825_eeprom_release(info);
 	misc_deregister(&info->miscdev);
 	ov16825_del(info);
 	return 0;
 }
 
-
-static void ov16825_NVM_test(struct ov16825_info *info)
+static void ov16825_read_fuseid_test(
+	struct ov16825_info *info,
+	int *len,
+	unsigned char *buf)
 {
 	int err = 0;
+	int i = 0;
+	void *p = NULL;
+	#define SIZE_FUSEID		9
+	u8 bytes[SIZE_FUSEID] = {0, };
+
+	if (len && buf)
+		*len = 0;
+
+	p = ov16825_NVM_read_byte;
 
 	err = ov16825_mclk_enable(info);
 	if (err == 0) {
-		u8 byte1 = 0;
-		u8 byte2 = 0;
-		u8 bytes[0x80] = {0, };
-		int i = 0;
-
 		ov16825_pm_dev_wr(info, NVC_PWR_COMM);
 
-		printk("nvidia %s test ov16825_NVM_read_byte \n", __func__);
-
-		err = ov16825_NVM_read_byte(info,
-			0x7000,
-			&byte1);
-		err = ov16825_NVM_read_byte(info,
-			0x7000,
-			&byte2);
-
-		if (err == 0) {
-			printk("nvidia %s 1st read from 0x7000 0x%x \n", __func__, byte1);
-			printk("nvidia %s 2nd read from 0x7000 0x%x \n", __func__, byte2);
-		}
-		else
-			printk("nvidia %s read from 0x7000 error %d\n", __func__, err);
-
-		printk("nvidia %s test ov16825_NVM_read_bytes \n", __func__);
 		err = ov16825_NVM_read_bytes(info,
 			0x7080,
 			bytes,
-			0x80);
+			SIZE_FUSEID);
 		if (err == 0) {
-			for (i = 0; i < 0x80; i += 2) {
-				printk("nvidia %04x: %02x %02x\n", 0x7080 + i, bytes[i], bytes[i + 1]);
-			}
+			if (len)
+				*len = SIZE_FUSEID;
+			for (i = 0; i < SIZE_FUSEID; i++)
+					if (buf) {
+						buf[i] = bytes[i];
+					}
+		} else {
+			printk("nvidia %s cannot read fuseid %x", __func__, err);
 		}
-		else
-			printk("nvidia %s error read bytes from 0x7080 %d\n", __func__, err);
 
 		ov16825_pm_dev_wr(info, NVC_PWR_OFF);
 
@@ -3265,14 +3583,6 @@ static void ov16825_NVM_test(struct ov16825_info *info)
 
 
 static struct i2c_driver ov16825_i2c_driver;
-int fuseid_ov16825_value[9] = {0};
-static ssize_t imx179_fuseid_show(struct device_driver *ddri, char *buf)
-{
-	return sprintf(buf, "%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x",
-		fuseid_ov16825_value[0], fuseid_ov16825_value[1], fuseid_ov16825_value[2], fuseid_ov16825_value[3], fuseid_ov16825_value[4],
-		fuseid_ov16825_value[5], fuseid_ov16825_value[6], fuseid_ov16825_value[7], fuseid_ov16825_value[8]);
-}
-static DRIVER_ATTR(fuseid, 0644, imx179_fuseid_show, NULL);
 static ssize_t ov16825_caminfo_show(struct device_driver *ddri, char *buf)
 {
 	return sprintf(buf, "%s","ov16825");
@@ -3286,7 +3596,7 @@ static int ov16825_probe(
 	struct ov16825_info *info;
 	char dname[16];
 	unsigned long clock_probe_rate;
-	int err, i;
+	int err;
 
 
 	dev_dbg(&client->dev, "%s\n", __func__);
@@ -3360,17 +3670,6 @@ static int ov16825_probe(
 		return -ENODEV;
 	}
 
-	ov16825_pm_dev_wr(info, NVC_PWR_COMM);
-	ov16825_get_fuse_id(info);
-	ov16825_pm_dev_wr(info, NVC_PWR_OFF);
-	for (i = 0; i < info->fuse_id.size; i++)
-            fuseid_ov16825_value[i] = info->fuse_id.data[i];
-	err = driver_create_file(&ov16825_i2c_driver.driver, &driver_attr_fuseid);
-	if (err) {
-                printk("failed to register fuse id attributes\n");
-                err = 0;
-	}
-
 
 	info->mclk = devm_clk_get(&client->dev, info->pdata->clk_name);
 	if (info->mclk == NULL) {
@@ -3379,7 +3678,7 @@ static int ov16825_probe(
 		return -ENODEV;
 	}
 
-
+#if 0
 	printk("nvidia %s ---> do init i2c device check \n", __func__);
 	err = ov16825_mclk_enable(info);
 	if (err == 0) {
@@ -3391,16 +3690,41 @@ static int ov16825_probe(
 			printk("nvidia %s cannot read device id \n", __func__);
 		ov16825_mclk_disable(info);
 	}
+	printk("nvidia %s <--- do init i2c device check done \n", __func__);
+#endif
 
 	err = driver_create_file(&ov16825_i2c_driver.driver, &driver_attr_caminfo);
 	if (err) {
-                printk("failed to register caminfo attributes\n");
-                err = 0;
+		printk("failed to register caminfo attributes\n");
+		err = 0;
 	}
-        
-	printk("nvidia %s <--- do init i2c device check done \n", __func__);
+	ov16825_read_fuseid_test(info, NULL, NULL);
 
-	ov16825_NVM_test(info);
+	err = ov16825_eeprom_init(info);
+	if (err)
+		printk("%s ov16825_eeprom_init failed\n", __func__);
+#if 0
+	{
+		int len = 0;
+		u8 *buf = NULL;
+		int i = 0;
+
+		ov16825_mclk_enable(info);
+		ov16825_pm_api_wr(info, NVC_PWR_ON);
+		ov16825_eeprom_rd_fuseid(
+			info,
+			&len,
+			&buf);
+		for (i = 0; i < len; i++)
+			printk("%s %d %02x\n", __func__, i, buf[i]);
+		ov16825_pm_api_wr(info, NVC_PWR_OFF);
+		ov16825_mclk_disable(info);
+	}
+#endif
+	err = sysfs_create_group(&client->dev.kobj,
+		&ov16825_attr_group);
+	if (err)
+		printk("%s cannot create sysfs node\n", __func__);
 
 	return 0;
 }
