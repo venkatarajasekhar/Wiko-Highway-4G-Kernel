@@ -1516,7 +1516,8 @@ static int tegra_vbus_session(struct usb_gadget *gadget, int is_active)
 		cancel_delayed_work_sync(&udc->non_std_charger_work);
 		spin_lock_irqsave(&udc->lock, flags);
 		/* reset all internal Queues and inform client driver */
-		reset_queues(udc);
+		if (udc->connect_type != CONNECT_TYPE_DCP)
+			reset_queues(udc);
 		/* stop the controller and turn off the clocks */
 		dr_controller_stop(udc);
 		dr_controller_reset(udc);
