@@ -392,7 +392,7 @@ int __init ceres_sdhci_init(void)
 
 	platform_device_register(&tegra_sdhci_device3);
 	if( !get_androidboot_mode_charger() ){
-		platform_device_register(&tegra_sdhci_device2);
+		//platform_device_register(&tegra_sdhci_device2);  //LIUJ20140724RELE2016REMV remove ext sdcard
 		platform_device_register(&tegra_sdhci_device0);
 		ceres_wifi_init();
 	}
