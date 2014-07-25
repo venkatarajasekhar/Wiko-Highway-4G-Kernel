@@ -573,7 +573,8 @@ static void max17048_work(struct work_struct *work)
 	  }
 	  if (avg_v < 3500)
 	  {
-	    printk("Ivan Battery too low (3.5V), force power off...\n");	    
+	    printk("Ivan Battery too low (3.5V), force power off...\n");	
+	    mdelay(200);	    
 	    max77660_power_forceoff();
 	  }
 	}

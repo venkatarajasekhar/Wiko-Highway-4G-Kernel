@@ -276,7 +276,7 @@ void max77660_power_forceoff(void)
 
 	if (!chip)
 		return;
-
+	mdelay(500);
 	dev_info(chip->dev, "%s: Global shutdown\n", __func__);
 	/*
 	 * ES1.0 errata suggest that in place of doing read modify write,
