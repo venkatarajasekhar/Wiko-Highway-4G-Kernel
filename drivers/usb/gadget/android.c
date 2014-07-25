@@ -1518,7 +1518,8 @@ static void android_disconnect(struct usb_gadget *gadget)
 	   accessory function is not actually enabled,
 	   so we need to inform it when we are disconnected.
 	 */
-	acc_disconnect();
+	if (acc_disconnect())
+		return;
 
 	spin_lock_irqsave(&cdev->lock, flags);
 	dev->connected = 0;
