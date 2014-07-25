@@ -630,6 +630,7 @@ struct tegra_dc_win {
 	struct nvmap_handle_ref	*cur_handle;
 	unsigned		bandwidth;
 	unsigned		new_bandwidth;
+	unsigned		history_bandwidth;
 	struct tegra_dc_lut	lut;
 };
 

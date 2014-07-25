@@ -528,14 +528,9 @@ static int t14x_set_la(enum tegra_la_id id, unsigned int bw_mbps)
 	if (bw_mbps == 0) {
 		la_to_set = cs->la_max_value;
 	} else {
-		if (id >= TEGRA_LA_DISPLAY_0A && id <= TEGRA_LA_DISPLAYD) {
-			/* display la margin shold be 1.1 */
-			ideal_la = (100 * fifo_size_in_atoms * bytes_per_atom * 1000) /
-				   (DISPLAY_MARGIN * bw_mbps * cs->ns_per_tick);
-		} else {
-			ideal_la = (fifo_size_in_atoms * bytes_per_atom * 1000) /
-				   (bw_mbps * cs->ns_per_tick);
-		}
+		ideal_la = (fifo_size_in_atoms * bytes_per_atom * 1000) /
+				(bw_mbps * cs->ns_per_tick);
+
 		la_to_set = ideal_la -
 			    (ci->expiration_in_ns / cs->ns_per_tick) - 1;
 	}
