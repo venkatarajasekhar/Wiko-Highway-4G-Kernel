@@ -987,7 +987,8 @@ static struct nvc_gpio_pdata imx179_gpio_pdata[] = {
 	{IMX179_GPIO_GP1,       CAM_CHOS_TINNO,         true, false }
 }; 
 
-
+#define RCAM_RST TEGRA_GPIO_PS0
+#define RCAM_PWDN TEGRA_GPIO_PS2
 static int pluto_imx179_power_on(struct nvc_regulator *vreg)
 {
 	int err;
@@ -999,6 +1000,9 @@ static int pluto_imx179_power_on(struct nvc_regulator *vreg)
 	gpio_set_value(CAM2_POWER_DWN_GPIO, 0);
 
 	tegra_pinmux_config_table(&mclk_enable, 1);
+
+	gpio_set_value(RCAM_RST, 0);
+	gpio_set_value(RCAM_PWDN, 1);
 
 	gpio_set_value(CAM_RSTN_TINNO, 0);
 	gpio_set_value(CAM_CHOS_TINNO, 1);
@@ -1119,6 +1123,7 @@ static struct imx179_platform_data imx179_pdata = {
 
  
 #if defined(CONFIG_VIDEO_OV16825)
+#define FCAM_PWDN TEGRA_GPIO_PS3
 
 #if 0
 #define VI_PINMUX(_pingroup, _mux, _pupd, _tri, _io, _lock, _ioreset) \
@@ -1152,6 +1157,8 @@ static int generic_ov16825_power_on(
 
 	if (unlikely(!pw || !pw->avdd || !pw->dovdd || !pw->dvdd))
 		return -EFAULT;
+	/* firstly, put front camera into power down mode */
+	gpio_set_value(FCAM_PWDN, 0);
 
 	gpio_set_value(CAM_CHOS_TINNO, 0);
 
