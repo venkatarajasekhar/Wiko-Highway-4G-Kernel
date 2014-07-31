@@ -4075,7 +4075,9 @@ static int max98090_suspend(struct snd_soc_codec *codec)
 
 static int max98090_resume(struct snd_soc_codec *codec)
 {
+#ifdef CONFIG_MACH_S9321
 	interrupt_handling = false;
+#endif
 	snd_soc_cache_sync(codec);
 	return 0;
 }
@@ -4211,8 +4213,9 @@ static int max98090_probe(struct snd_soc_codec *codec)
 
 	wake_lock_init(&max98090_wakelock, WAKE_LOCK_SUSPEND,
 			"max98090 headset detect");
-
+#ifdef CONFIG_MACH_S9321
 	interrupt_handling = false;
+#endif
 err_access:
 	return ret;
 }
