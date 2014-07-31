@@ -3016,7 +3016,7 @@ Headphone_detect:
 				max98090->key_recheck_flag++;
 			}
 
-			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) return;
+			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) goto jack_work_end;  //return;
 				max98090->jack_state =
 					M98090_JACK_STATE_HEADPHONE;
 
@@ -3086,7 +3086,7 @@ Headset_detect:
 			schedule_delayed_work(&max98090->key_work,
 					msecs_to_jiffies(1000));
 
-			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) return;
+			if(gpio_get_value_cansleep(max98090->pdata->liq) == 1) goto jack_work_end; //return;
 			
 			snd_soc_jack_report(max98090->jack, SND_JACK_HEADSET,
 					SND_JACK_HEADSET);
@@ -3116,6 +3116,7 @@ Headset_detect:
 			break;
 		}
 	}
+jack_work_end:
 	interrupt_handling = false;
 	wake_unlock(&max98090_wakelock);
 }
