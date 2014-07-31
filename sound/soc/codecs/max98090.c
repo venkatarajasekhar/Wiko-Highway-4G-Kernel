@@ -2951,6 +2951,10 @@ static void max98090_jack_work(struct work_struct *work)
 		{
 Headset_removed:
 			dev_info(codec->dev, "No Headset Detected\n");
+			snd_soc_update_bits(codec, M98090_REG_15_MIX_ADC_L,
+				M98090_MIXADL_MIC2_MASK, 0);
+			snd_soc_update_bits(codec, M98090_REG_16_MIX_ADC_R,
+				M98090_MIXADR_MIC2_MASK, 0);
 
 			cancel_delayed_work(&max98090->key_up);
 			cancel_delayed_work(&max98090->key_down);
