@@ -2528,6 +2528,8 @@ static int ov16825_mode_wr(struct ov16825_info *info,
 	if (err < 0)
 		goto ov16825_mode_wr_err;
 
+	if((mode->res_x == 2304) && (mode->res_y == 1728))
+		mdelay(50);
 
 	return 0;
 
