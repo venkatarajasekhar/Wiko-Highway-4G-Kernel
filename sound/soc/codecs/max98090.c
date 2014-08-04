@@ -4153,8 +4153,8 @@ static int max98090_probe(struct snd_soc_codec *codec)
 	INIT_DELAYED_WORK(&max98090->key_down, max98090_key_down);
 
 	/* Disable jack detection */
-	snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
-		M98090_JDEB_100MS);
+	//snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
+	//	M98090_JDEB_100MS);
 
 #else
 	/* Enable jack detection */
@@ -4174,6 +4174,11 @@ static int max98090_probe(struct snd_soc_codec *codec)
 	/* Enable jack detection */
 	snd_soc_write(codec, M98090_REG_3D_CFG_JACK,
 		M98090_JDETEN_MASK | M98090_JDEB_100MS);
+
+	snd_soc_read(codec, M98090_REG_03_IRQ_ENABLE);
+	snd_soc_read(codec, M98090_REG_01_IRQ_STATUS);
+	schedule_delayed_work(&max98090->jack_work,
+		msecs_to_jiffies(200));
 #endif
 
 #ifdef MAX98090_HIGH_PERFORMANCE
