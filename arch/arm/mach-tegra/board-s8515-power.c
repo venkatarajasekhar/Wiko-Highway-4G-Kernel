@@ -1571,7 +1571,7 @@ int __init ceres_soctherm_init(void)
 static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
 	/* .max = 18500 */
-	.max = 11700,
+	.max = 15000,
 };
 
 void __init ceres_sysedp_init(void)
@@ -1605,7 +1605,7 @@ void __init ceres_sysedp_init(void)
  * much power that the edp update request stops executing
  * and hang the system
 */
-#if 0
+#if 1
 static unsigned int ceres_psydepl_states[] = {
 	9900, 9600, 9300, 9000, 8700, 8400, 8100, 7800,
 	7500, 7200, 6900, 6600, 6300, 6000, 5800, 5600,
