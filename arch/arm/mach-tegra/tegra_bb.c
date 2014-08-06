@@ -927,6 +927,8 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		clk_prepare_enable(bb->emc_clk);
 		if (bb->emc_flags & EMC_DSR)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
+		else
+			tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
 		if ((bb->emc_flags & EMC_LL) &&
 		    tegra_emc_request_low_latency_mode(true))
 			dev_err(bb->dev, "emc low latency request failed\n");
@@ -989,8 +991,7 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		if (bb->emc_flags & EMC_LL)
 			tegra_emc_request_low_latency_mode(false);
 		/* going from high to 0 */
-		if (bb->emc_flags & EMC_DSR)
-			tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
+		tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
 
 		clk_disable_unprepare(bb->emc_clk);
 		pr_debug("bbc removing emc floor\n");
