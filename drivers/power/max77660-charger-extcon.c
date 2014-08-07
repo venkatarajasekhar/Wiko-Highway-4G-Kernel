@@ -285,12 +285,21 @@ static int max77660_charger_init(struct max77660_chg_extcon *chip, int enable)
 		if (ret < 0)
 			return ret;
 
+#if (CONFIG_MACH_S9321 == 1)
+		/* Set TOPOFF to 10 min */
+		ret = max77660_reg_write(chip->parent,
+				MAX77660_CHG_SLAVE,
+				MAX77660_CHARGER_TOPOFF,
+				MAX77660_ITOPOFF_50MA |
+				MAX77660_TOPOFFT_DIS);			
+#else
 		/* Set TOPOFF to 10 min */
 		ret = max77660_reg_write(chip->parent,
 				MAX77660_CHG_SLAVE,
 				MAX77660_CHARGER_TOPOFF,
 				MAX77660_ITOPOFF_200MA |
 				MAX77660_TOPOFFT_60MIN);
+#endif
 		if (ret < 0)
 			return ret;
 //		printk("Ivan CONFIG_MACH_S9321 = %d!!!\n",CONFIG_MACH_S9321);

@@ -55,6 +55,7 @@
 #define BATTERY_MAX_OCV 4350000
 #define BATTERY_RECHARGE_OCV 4300000
 #define BATTERY_RECHARGE_VCELL 4250
+#define BATTERY_SOFTWARE_POWER_OFF_LEVEL 3400
 #else
 #define BATTERY_MAX_OCV 4200000
 #define BATTERY_RECHARGE_OCV 4180000
@@ -424,10 +425,11 @@ static void max17048_get_soc(struct i2c_client *client)
 			battery_set_charging(chip->bg_dev, false);
 			chip->soc = MAX17048_BATTERY_FULL;
 		} else if (topoff_count < TOPOFF_TIME_COUNT){
+		    chip->soc = MAX17048_BATTERY_FULL;	//Ivan added
 		    printk("Ivan max17048_get_soc TOP_OFF: status = [%d]; topoff_count[%d]; is_recharged[%d]; charge_complete[%d]\n ", chip->status,topoff_count,chip->is_recharged,chip->charge_complete);
 		    mutex_unlock(&charger_gauge_list_mutex);
 		    return;
-		}		
+		}
 		if (chip->vcell < BATTERY_RECHARGE_VCELL && !chip->is_recharged) {	//Ivan recharge depended on vcell voltage
 #else
 		if (ocv < BATTERY_MAX_OCV && !chip->is_recharged) {
@@ -566,12 +568,21 @@ static void max17048_work(struct work_struct *work)
 	
 	if (chip->status == POWER_SUPPLY_STATUS_DISCHARGING)
 	{
+#if (CONFIG_MACH_S9321 == 1)    
+	  if (avg_v < BATTERY_SOFTWARE_POWER_OFF_LEVEL + 10)
+#else	    
 	  if (avg_v < 3510)
+#endif
 	  {
 	    printk("Ivan Battery < 3510, Android power off...\n");	    
 	    chip->soc = 0;
 	  }
+	  
+#if (CONFIG_MACH_S9321 == 1)    
+	  if (avg_v < BATTERY_SOFTWARE_POWER_OFF_LEVEL - 10)
+#else	    	  
 	  if (avg_v < 3500)
+#endif
 	  {
 	    printk("Ivan Battery too low (3.5V), force power off...\n");	
 	    mdelay(200);	    
