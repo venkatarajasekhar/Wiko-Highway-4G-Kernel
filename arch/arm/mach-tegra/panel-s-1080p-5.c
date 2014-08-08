@@ -722,6 +722,7 @@ static struct tegra_dsi_out dsi_s_1080p_5_pdata = {
 
 	//.dsi_suspend_cmd = dsi_s_1080p_5_suspend_cmd,
 	//.n_suspend_cmd = ARRAY_SIZE(dsi_s_1080p_5_suspend_cmd),
+	.panel_send_dc_frames = true,
 };
 
 static int dsi_s_1080p_5_enable(struct device *dev)
