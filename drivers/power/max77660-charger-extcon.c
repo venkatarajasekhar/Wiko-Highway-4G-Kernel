@@ -1010,6 +1010,19 @@ static int max77660_charger_thermal_configure(
 					    MAX77660_CHG_SLAVE,
 					    MAX77660_CHARGER_BATREGCTRL,
 					    (battery_threshold_voltage << 1));
+#ifdef CONFIG_MACH_S9321
+				if (tn_cur_temperature > BATT_HB_TEMP_WARM && tn_cur_temperature <= BATT_HB_TEMP_HOT) {
+					u8 statusv;
+					ret = max77660_reg_read(chip->parent,
+							MAX77660_CHG_SLAVE,
+							MAX77660_CHARGER_BATREGCTRL, &statusv);
+					statusv = statusv & 0xE1 | MAX77660_MBATREG_4000MV;
+					ret = max77660_reg_write(chip->parent,
+							MAX77660_CHG_SLAVE,
+							MAX77660_CHARGER_BATREGCTRL,
+							statusv);
+				}
+#endif
 			    if (ret < 0)
 				    return ret;
 			    battery_charging_status_update(chip->bc_dev,
