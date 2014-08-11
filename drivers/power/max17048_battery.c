@@ -800,7 +800,9 @@ static int max17048_initialize(struct max17048_chip *chip)
 	status = max17048_read_word(client, MAX17048_VALRT);
 	printk("Ivan max17048_initialize valert[%x] reading[%x]\n",mdata->valert, status );
 //Ivan end
-	
+
+//Ivan S9321 non swapable battery
+#if (CONFIG_MACH_S9321 != 1)
 	ocv = max17048_read_word(client, MAX17048_OCV);
 	if (ocv < 0) {
 		dev_err(&client->dev, "%s: err %d\n", __func__, ocv);
@@ -817,7 +819,7 @@ static int max17048_initialize(struct max17048_chip *chip)
 	    max17048_write_word(client, MAX17048_OCV, vcell + 650);
 	  }
 	}
-
+#endif
 	
 	ret = max17048_write_word(client, MAX17048_VRESET, mdata->vreset);
 	if (ret < 0)
