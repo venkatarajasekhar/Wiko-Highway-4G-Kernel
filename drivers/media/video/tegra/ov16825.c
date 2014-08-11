@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <media/ov16825.h>
 #include <linux/regmap.h>
+#include <linux/edp.h>
 
 #define OV16825_ID							0x0168
 #define OV16825_SENSOR_TYPE					NVC_IMAGER_TYPE_RAW
@@ -102,7 +103,9 @@ struct ov16825_info {
 	struct clk *mclk;
 	struct nvc_fuseid fuse_id;
 	struct ov16825_eeprom_device
-	eeprom[OV16825_EEPROM_COUNT];
+		eeprom[OV16825_EEPROM_COUNT];
+	struct edp_client *edpc;
+	unsigned edp_state;
 };
 
 struct ov16825_reg {
@@ -1501,6 +1504,92 @@ static struct ov16825_mode_data *ov16825_mode_table[] = {
 	[0] = &ov16825_3840x2160,
 #endif
 };
+
+static void ov16825_edp_callback(unsigned int new_state, void *priv_data)
+{
+}
+
+static void ov16825_edp_lowest(struct ov16825_info *info)
+{
+	if (!info->edpc)
+		return;
+
+	info->edp_state = info->edpc->num_states - 1;
+	dev_dbg(&info->i2c_client->dev, "%s %d\n", __func__, info->edp_state);
+	if (edp_update_client_request(info->edpc, info->edp_state, NULL)) {
+		dev_err(&info->i2c_client->dev, "THIS IS NOT LIKELY HAPPEN!\n");
+		dev_err(&info->i2c_client->dev,
+			"UNABLE TO SET LOWEST EDP STATE!\n");
+	}
+}
+
+static void ov16825_edp_register(struct ov16825_info *info)
+{
+	struct edp_manager *edp_manager;
+	struct edp_client *edpc = &info->pdata->edpc_config;
+	int ret;
+
+	info->edpc = NULL;
+	if (!edpc->num_states) {
+		dev_warn(&info->i2c_client->dev,
+			"%s: NO edp states defined.\n", __func__);
+		return;
+	}
+
+	strncpy(edpc->name, "ov16825", EDP_NAME_LEN - 1);
+	edpc->name[EDP_NAME_LEN - 1] = 0;
+	edpc->private_data = info;
+	edpc->throttle = ov16825_edp_callback;
+	edpc->notify_promotion = ov16825_edp_callback;
+
+	dev_dbg(&info->i2c_client->dev, "%s: %s, e0 = %d, p %d\n",
+		__func__, edpc->name, edpc->e0_index, edpc->priority);
+	for (ret = 0; ret < edpc->num_states; ret++)
+		dev_dbg(&info->i2c_client->dev, "e%d = %d mA",
+			ret - edpc->e0_index, edpc->states[ret]);
+
+	edp_manager = edp_get_manager("battery");
+	if (!edp_manager) {
+		dev_err(&info->i2c_client->dev,
+			"unable to get edp manager: battery\n");
+		return;
+	}
+
+	ret = edp_register_client(edp_manager, edpc);
+	if (ret) {
+		dev_err(&info->i2c_client->dev,
+			"unable to register edp client\n");
+		return;
+	}
+
+	info->edpc = edpc;
+	/* set to lowest state at init */
+	ov16825_edp_lowest(info);
+}
+
+static int ov16825_edp_req(struct ov16825_info *info, unsigned new_state)
+{
+	unsigned approved;
+	int ret = 0;
+
+	if (!info->edpc)
+		return 0;
+
+	dev_dbg(&info->i2c_client->dev, "%s %d\n", __func__, new_state);
+	ret = edp_update_client_request(info->edpc, new_state, &approved);
+	if (ret) {
+		dev_err(&info->i2c_client->dev, "E state transition failed\n");
+		return ret;
+	}
+
+	if (approved > new_state) {
+		dev_err(&info->i2c_client->dev, "EDP no enough current\n");
+		return -ENODEV;
+	}
+
+	info->edp_state = approved;
+	return 0;
+}
 
 static int ov16825_i2c_rd8(struct ov16825_info *info, u16 reg, u8 *val)
 {
@@ -3463,6 +3552,9 @@ static int ov16825_open(struct inode *inode, struct file *file)
 	}
 	file->private_data = info;
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
+
+	ov16825_edp_req(info, 0);
+
 	return 0;
 }
 
@@ -3471,6 +3563,7 @@ int ov16825_release(struct inode *inode, struct file *file)
 	struct ov16825_info *info = file->private_data;
 
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
+	ov16825_edp_lowest(info);
 	ov16825_mclk_disable(info);
 	ov16825_pm_wr_s(info, NVC_PWR_OFF);
 	file->private_data = NULL;
@@ -3539,6 +3632,8 @@ static int ov16825_remove(struct i2c_client *client)
 	struct ov16825_info *info = i2c_get_clientdata(client);
 
 	dev_dbg(&info->i2c_client->dev, "%s\n", __func__);
+	if (info->edpc)
+		edp_unregister_client(info->edpc);
 	sysfs_remove_group(&info->i2c_client->dev.kobj, &ov16825_attr_group);
 	ov16825_eeprom_release(info);
 	misc_deregister(&info->miscdev);
@@ -3731,6 +3826,8 @@ static int ov16825_probe(
 		&ov16825_attr_group);
 	if (err)
 		printk("%s cannot create sysfs node\n", __func__);
+
+	ov16825_edp_register(info);
 
 	return 0;
 }

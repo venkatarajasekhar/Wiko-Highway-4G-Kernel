@@ -32,6 +32,8 @@
 #include <linux/clk.h>
 #include <media/nvc.h>
 #include <media/nvc_torch.h>
+#include <linux/power_supply.h>
+#include <linux/edpdev.h>
 
 #include <media/camera.h>
 
@@ -121,6 +123,8 @@ struct tinno_flash_info {
 	int edp_state_torch;
 	struct hrtimer timeout;
 	spinlock_t lock;
+	struct power_supply *psy;
+	struct psy_depletion_platform_data *psy_data;
 };
 
 struct tinno_flash_info *info;
@@ -150,6 +154,110 @@ static u32 tinno_flash_flash_timer[tinno_flash_FLASH_TIMER_NUM] = {
 static u32 tinno_flash_torch_timer[tinno_flash_TORCH_TIMER_NUM] = {
 	128, 384, 640, 896, 1410, 1920, 2430, 2940,
 };
+
+
+static int bat_read_vol(struct tinno_flash_info *info)
+{
+	union power_supply_propval pv;
+	if (info->psy) {
+		//if (! info->psy->get_property(info->psy, POWER_SUPPLY_PROP_VOLTAGE_OCV, &pv))
+		if (! info->psy->get_property(info->psy, POWER_SUPPLY_PROP_VOLTAGE_NOW, &pv))
+			return pv.intval;
+		else
+			return -1;
+	}
+	return -1;
+}
+
+static int bat_read_cap(struct tinno_flash_info *info)
+{
+	union power_supply_propval pv;
+	if (info->psy) {
+		if (! info->psy->get_property(info->psy, POWER_SUPPLY_PROP_CAPACITY, &pv))
+			return pv.intval;
+		else
+			return -1;
+	}
+	return -1;
+}
+
+static int interpolate(int x, int x1, int y1, int x2, int y2)
+{
+#if 0
+	if (x1 == x2)
+		return y1;
+	return (y2 * (x - x1) - y1 * (x - x2)) / (x2 - x1);
+#else
+	return (y1 + y2) >> 1;
+#endif
+}
+
+static int bat_read_rbat(struct tinno_flash_info *info, unsigned int capacity)
+{
+	struct psy_depletion_rbat_lut *p;
+	struct psy_depletion_rbat_lut *q;
+	int rbat = 0;
+
+	if (info->psy_data == NULL)
+		return -1;
+
+	//rbat = info->psy_data->r_const;
+	p = info->psy_data->rbat_lut;
+	if (!p)
+		return rbat;
+
+	while (p->capacity > capacity)
+		p++;
+
+	if (p == info->psy_data->rbat_lut)
+		return rbat + p->rbat;
+
+	q = p - 1;
+
+	rbat += interpolate(capacity, p->capacity, p->rbat,
+			q->capacity, q->rbat);
+	return rbat;
+}
+
+static int bat_vol_drop(int ma_100, int r)
+{
+	return ma_100 * r / 10;
+}
+
+/*
+ whether the ma_100 can be satisfied by bat
+ return 0 means safe
+ return -1 means unsafe and will lead to system shutdown
+*/
+static int bat_is_safe(struct tinno_flash_info *info, int ma_100)
+{
+	int vol = 0;
+	int cap = 0;
+	int rbat = 0;
+	int v_drop = 0;
+
+	if (info->psy == NULL)
+		return 0;
+
+	vol = bat_read_vol(info);
+	if (vol < 0)
+		return 0;
+
+	cap = bat_read_cap(info);
+	if (cap < 0)
+		return 0;
+
+	rbat = bat_read_rbat(info, cap);
+	if (rbat < 0)
+		return 0;
+
+	v_drop = bat_vol_drop(ma_100, rbat);
+
+	if (vol - v_drop > 3000000)
+		return 0;
+	else
+		return -1;
+}
 
 static void tinno_flash_set_flash(struct tinno_flash_info *info, int on);
 static void tinno_flash_set_torch(struct tinno_flash_info *info, int on);
@@ -721,7 +829,8 @@ static int tinno_flash_edp_set_leds(struct tinno_flash_info *info,
 	err = tinno_flash_edp_req(info, mask, &curr1, &curr2);
 	if (err)
 		goto edp_set_leds_end;
-
+	if (bat_is_safe(info, 27))
+		curr1 = 0;
 	err = tinno_flash_set_leds(info, mask, curr1, curr2);
 	if (!err && info->op_mode == MAXFLASH_MODE_NONE)
 		tinno_flash_edp_lowest(info);
@@ -740,6 +849,8 @@ static int tinno_torch_edp_set_leds(struct tinno_flash_info *info,
 	err = tinno_flash_edp_req(info, mask, &curr1, &curr2);
 	if (err)
 		goto edp_set_leds_end;
+	if (bat_is_safe(info, 10))
+		curr1 = 0;
 	if (curr1 > 0)
 		tinno_flash_set_torch(info,  1);
 	else
@@ -935,6 +1046,10 @@ static int tinno_flash_get_param(struct tinno_flash_info *info, long arg)
 		pinstate.values &= pinstate.mask;
 		dev_dbg(info->dev, "%s FLASH_PIN_STATE: %x & %x\n",
 				__func__, pinstate.mask, pinstate.values);
+
+		if (info->flash_level == 0)
+			pinstate.values = 0;
+
 		data_ptr = &pinstate;
 		data_size = sizeof(pinstate);
 		break;
@@ -1130,6 +1245,10 @@ static int tinno_flash_probe(struct platform_device *dev)
 
 	hrtimer_init(&info->timeout, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	info->timeout.function = tinno_flash_timeout_event;
+
+	info->psy = power_supply_get_by_name("battery");
+	info->psy_data = psy_get_pdata();
+
 	return 0;
 
 free_misc_dev:

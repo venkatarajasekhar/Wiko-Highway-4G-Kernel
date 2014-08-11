@@ -1319,7 +1319,7 @@ static struct nvc_imager_cap ceres_ov16825_cap = {
 	#endif
 	.cap_version		= NVC_IMAGER_CAPABILITIES_VERSION2,
 };
-
+static unsigned ov16825_estates[] = {1000, 0};
 static struct ov16825_platform_data tinno_ov16825_pdata = {
 	.num		= 0,
 	.dev_name	= "camera",
@@ -1329,6 +1329,12 @@ static struct ov16825_platform_data tinno_ov16825_pdata = {
 	.power_off	= generic_ov16825_power_off,
 	.clk_name   = "mclk2",
 	.cap = &ceres_ov16825_cap,
+	.edpc_config	= {
+		.states = ov16825_estates,
+		.num_states = ARRAY_SIZE(ov16825_estates),
+		.e0_index = 1,
+		.priority = EDP_MIN_PRIO - 1,
+		},
 };
 
 static struct i2c_board_info tinno_i2c_board_info_ov16825 = {

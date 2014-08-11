@@ -1760,6 +1760,11 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 };
 #endif
 
+struct psy_depletion_platform_data * psy_get_pdata(void)
+{
+	return &ceres_psydepl_pdata;
+}
+
 static struct platform_device ceres_psydepl_device = {
 	.name = "psy_depletion",
 	.id = -1,

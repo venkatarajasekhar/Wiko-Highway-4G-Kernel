@@ -68,4 +68,6 @@ struct psy_depletion_platform_data {
 	struct psy_depletion_ocv_lut *ocv_lut;
 };
 
+struct psy_depletion_platform_data* psy_get_pdata(void);
+
 #endif

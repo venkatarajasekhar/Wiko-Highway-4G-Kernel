@@ -9,6 +9,7 @@
 
 #include <media/nvc.h>
 #include <media/nvc_image.h>
+#include <linux/edp.h>
 
 /* See notes in the nvc.h file on the GPIO usage */
 enum ov16825_gpio_type {
@@ -40,5 +41,6 @@ struct ov16825_platform_data {
 	int (*power_on)(struct ov16825_power_rail *, struct nvc_gpio_pdata *, int size_gpio);
 	int (*power_off)(struct ov16825_power_rail *, struct nvc_gpio_pdata *, int size_gpio);
 	char *clk_name;
+	struct edp_client edpc_config;
 };
 #endif  /* __OV16825_H__ */
