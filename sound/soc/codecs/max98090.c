@@ -2985,6 +2985,7 @@ Headset_removed:
 				pr_info("report button down\n");
 				if (max98090->key_valid_flag
 				&& (max98090->key_state == 0) && !removed) {
+					g_max98090 = snd_soc_codec_get_drvdata(codec);
 					max98090->key_state = 1;
 					schedule_delayed_work(
 					&max98090->key_down,
@@ -3059,6 +3060,7 @@ Headphone_detect:
 				pr_info("report button up\n");
 				if (max98090->key_valid_flag
 						&& (max98090->key_state == 1)) {
+					g_max98090 = snd_soc_codec_get_drvdata(codec);
 					dev_info(codec->dev,
 					"Headset Button Up Detected\n");
 					max98090->key_state = 0;
