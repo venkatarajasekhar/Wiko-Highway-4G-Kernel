@@ -60,7 +60,7 @@ static struct LCM_setting_table lcm_initialization_setting[] = {
         
 	{0x35, 1,  {0x00}}, 
         {0x29,	0,{0x00}},
-        {REGFLAG_DELAY,130,{}},
+        {REGFLAG_DELAY,120,{}},
         {0x11,	0,{0x00}},
         {REGFLAG_DELAY,50,{}},
 
@@ -725,6 +725,14 @@ static struct tegra_dsi_out dsi_s_1080p_5_pdata = {
 	.panel_send_dc_frames = true,
 };
 
+static int dsi_s_1080p_5_hw_reset(struct device *dev)
+{
+
+	gpio_direction_output(
+		dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 1);
+	return 0;
+}
+
 static int dsi_s_1080p_5_enable(struct device *dev)
 {
 	int err = 0;
@@ -765,7 +773,7 @@ static int dsi_s_1080p_5_enable(struct device *dev)
 	//gpio_direction_output(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 1);
 	mdelay(50);
 
-#if DSI_PANEL_RESET
+#if 0// DSI_PANEL_RESET
 	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 1);
 	msleep(20);
 #endif
@@ -809,6 +817,7 @@ static void dsi_s_1080p_5_dc_out_init(struct tegra_dc_out *dc)
 	dc->modes = dsi_s_1080p_5_modes;
 	dc->n_modes = ARRAY_SIZE(dsi_s_1080p_5_modes);
 	dc->enable = dsi_s_1080p_5_enable;
+        dc->hw_reset = dsi_s_1080p_5_hw_reset;
 	dc->disable = dsi_s_1080p_5_disable;
 	dc->width = 62;
 	dc->height = 110;
