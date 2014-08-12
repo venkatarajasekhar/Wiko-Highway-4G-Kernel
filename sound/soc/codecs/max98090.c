@@ -2907,6 +2907,12 @@ static void max98090_key_up(struct work_struct *work)
 		struct max98090_priv,
 		key_up.work);
 	snd_soc_jack_report(max98090->jack, 0, 0x7E00);
+        
+        #ifdef CONFIG_MACH_S9321
+        #ifdef CONFIG_SWITCH
+        switch_set_state(&tegra_max98090_button_switch, 0);
+        #endif
+        #endif
 }
 
 static void max98090_key_down(struct work_struct *work)
@@ -2915,6 +2921,12 @@ static void max98090_key_down(struct work_struct *work)
 		struct max98090_priv,
 		key_down.work);
 	snd_soc_jack_report(max98090->jack, SND_JACK_BTN_0, 0x7E00);
+
+         #ifdef CONFIG_MACH_S9321
+        #ifdef CONFIG_SWITCH
+        switch_set_state(&tegra_max98090_button_switch, 1);
+        #endif
+        #endif
 }
 
 static bool interrupt_handling;
