@@ -32,6 +32,7 @@
 
 #define MAX17048_VCELL		0x02
 #define MAX17048_SOC		0x04
+#define MAX17048_MODE		0x06
 #define MAX17048_VER		0x08
 #define MAX17048_HIBRT		0x0A
 #define MAX17048_CONFIG		0x0C
@@ -55,7 +56,7 @@
 #define BATTERY_MAX_OCV 4350000
 #define BATTERY_RECHARGE_OCV 4300000
 #define BATTERY_RECHARGE_VCELL 4250
-#define BATTERY_SOFTWARE_POWER_OFF_LEVEL 3450
+#define BATTERY_SOFTWARE_POWER_OFF_LEVEL 3480
 #else
 #define BATTERY_MAX_OCV 4200000
 #define BATTERY_RECHARGE_OCV 4180000
@@ -518,14 +519,11 @@ static void max17048_work(struct work_struct *work)
 	}
 //Ivan End
 //Ivan add new soc sample
-	if (diff > 19)				//HZ*20
-	{
-	  for (loop = 0; loop < (VSOC_LEN - 1); loop ++)
+	for (loop = 0; loop < (VSOC_LEN - 1); loop ++)
 	    g_soc_fifo[loop] = g_soc_fifo[loop+1];
-	  
-	  g_soc_fifo[VSOC_LEN-1] = chip->soc;
-	  g_previous_time = now;
-	}
+	
+	g_soc_fifo[VSOC_LEN-1] = chip->soc;
+
 //Ivan end
 //Ivan average the vcell voltage
 	for (loop = 0; loop < VSOC_LEN; loop ++)
@@ -534,8 +532,10 @@ static void max17048_work(struct work_struct *work)
 	if (avg_v > VSOC_LEN*80)
 	  avg_v += (VSOC_LEN - 1);		//stay at 100% if SOC > 99.2%
 	chip->soc = avg_v/VSOC_LEN;
-#endif
 	
+#endif
+	g_previous_time = now;
+
 	printk("Ivan time pass = %lu \n",diff);
 	
 	battery_gauge_get_battery_temperature(chip->bg_dev,&temp);
@@ -574,17 +574,31 @@ static void max17048_work(struct work_struct *work)
 	  if (avg_v < 3510)
 #endif
 	  {
-	    printk("Ivan Battery < 3510, Android power off...\n");	    
+	    printk("Ivan Battery < 3510, Android power off...\n");	   
+#if (CONFIG_MACH_S9321 == 1)    	    
+	    if (chip->soc >= 7)
+	    {
+		printk("Ivan Battery Reset FG...\n");	    
+		max17048_write_word(chip->client, MAX17048_MODE, 0x4000);	//Reset FG
+	    }
+#endif	    
 	    chip->soc = 0;
 	  }
 	  
 #if (CONFIG_MACH_S9321 == 1)    
-	  if (avg_v < BATTERY_SOFTWARE_POWER_OFF_LEVEL - 10)
+	  if (avg_v < BATTERY_SOFTWARE_POWER_OFF_LEVEL - 10 && chip->soc != 0)
 #else	    	  
-	  if (avg_v < 3500)
+	  if (avg_v < 3500 && chip->soc != 0)
 #endif
 	  {
 	    printk("Ivan Battery too low (3.5V), force power off...\n");	
+#if (CONFIG_MACH_S9321 == 1)    	    
+	    if (chip->soc >= 7)
+	    {
+		printk("Ivan Battery Reset FG...\n");		
+		max17048_write_word(chip->client, MAX17048_MODE, 0x4000);	//Reset FG	    
+	    }
+#endif	    
 	    mdelay(200);	    
 	    max77660_power_forceoff();
 	  }
@@ -810,7 +824,7 @@ static int max17048_initialize(struct max17048_chip *chip)
 	}
 	printk("max17048_initialize: ocv:%d\n",ocv);	
 	
-	if ((vcell + 650) > ocv /* && rcomp == 151*/)		//around 50mV
+	if ((vcell + 650) > ocv  && rcomp == 151)		//around 50mV
 	{
 	  if (!(bl_status & 0x100)/* && (bl_status & 0x01)*/)	//reset and no charger
 	  {
