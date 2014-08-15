@@ -45,7 +45,7 @@
 #define DEBUG_FW_UPDATE
 #define SHOW_PROGRESS
 #ifdef CONFIG_MACH_S9321
-#define FW_IMAGE_NAME "rmi4/PR1492343-s3202_30303039.img"
+#define FW_IMAGE_NAME "rmi4/PR1647532-s3202_30303031.img"
 #else
 #define FW_IMAGE_NAME "rmi4/PR1296077-s3202_30303034.img"
 #endif
@@ -1619,7 +1619,7 @@ unsigned int synaptics_get_fw_version(void)
 	unsigned long imageFirmwareID;
 	unsigned char config_id[4];
 	unsigned char firmware_id[4];
-        unsigned char base_addr = 0x004C;
+        unsigned char base_addr = 0x004D;//0x004C;
    	/* device config id */
 	retval = fwu->fn_ptr->read(fwu->rmi4_data,
 				base_addr,//fwu->f34_fd.ctrl_base_addr
@@ -1658,7 +1658,7 @@ unsigned int synaptics_get_vendor_version(void)
 	unsigned long imageFirmwareID;
 	unsigned char config_id[4];
 	unsigned char firmware_id[4];
-        unsigned char base_addr = 0x004C;
+        unsigned char base_addr = 0x004D;//0x004C;
         
    	/* device config id */
 	retval = fwu->fn_ptr->read(fwu->rmi4_data,

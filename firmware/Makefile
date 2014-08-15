@@ -30,7 +30,7 @@ endif
 
 ###############Synaptics edit by Magnum 2013-11-12  ######################################PR1492343-s3202_30303039.img
 ifdef CONFIG_MACH_S9321
-fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) += rmi4/PR1492343-s3202_30303039.img
+fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) += rmi4/PR1647532-s3202_30303031.img
 endif
 ifdef CONFIG_MACH_S8515
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE) += rmi4/PR1296077-s3202_30303034.img
