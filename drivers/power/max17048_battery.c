@@ -92,9 +92,7 @@ static struct timeval g_charger_discon_time;
 static struct timeval g_previous_time;
 #endif
 
-#if defined (MAX17048_FAKE_FULL_HANDLE) && (CONFIG_MACH_S9321 == 1)
 static long g_soc_special_counter = 0;
-#endif
 
 static g_Batt_VL_IRQ_Count = 0;
 
