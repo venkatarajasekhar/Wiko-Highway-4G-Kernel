@@ -222,8 +222,10 @@ asmlinkage void __do_softirq(void)
 restart:
 	/* Reset the pending bitmask before enabling irqs */
 	set_softirq_pending(0);
-
-	local_irq_enable();
+	
+//Added by NV Luis
+	if (irqs_disabled())
+		local_irq_enable();
 
 	h = softirq_vec;
 
