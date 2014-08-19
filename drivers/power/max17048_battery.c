@@ -69,7 +69,7 @@ extern void max77660_power_forceoff(void);
 /*Ivan battery special config*/
 #define MAX17048_SOC_AVERAGE		/*Default Set: Set if you want to smooth the SOC change*/
 #define MAX17048_RECHARGER_HANDLE	/*Default Set: Set if you want charger continuous to turn on for while after 100% and re-charger only when battery voltage below BATTERY_RECHARGE_VCELL*/
-#define MAX17048_FAKE_FULL_HANDLE	/*Special handle for S9321, Full will be set if battery voltage >=99% and last for 15 minutes*/
+//Ivan #define MAX17048_FAKE_FULL_HANDLE	/*Special handle for S9321, Full will be set if battery voltage >=99% and last for 15 minutes*/
 
 
 
@@ -263,9 +263,13 @@ static int max17048_rcomp_adjust(struct max17048_chip *chip)
 {
 	struct max17048_battery_model *mdata = chip->pdata->model_data;
 #if CONFIG_MACH_S9321
-	int rcomp0 = 129;
-	int tempCoUp = -1.05 * 100;
-	int tempCoDown = 0 * 100;
+//Ivan	int rcomp0 = 129;
+//Ivan	int tempCoUp = -1.05 * 100;
+//Ivan	int tempCoDown = 0 * 100;
+	
+	int rcomp0 = 161;
+	int tempCoUp = -2.05 * 100;
+	int tempCoDown = -1.25 * 100;	
 #else
 	int rcomp0 = 115;
 	int tempCoUp = -0.15 * 100;
