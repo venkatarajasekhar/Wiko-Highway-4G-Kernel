@@ -116,9 +116,6 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 	int ret;
 	int i;
 	struct tegra_bbc_proxy *bbc = dev_get_drvdata(dev);
-	#define num_states_experiment 5
-	u32 states_experiment[num_states_experiment] = {
-		2000, 1500, 700, 80, 14};
 
 	mutex_lock(&bbc->edp_lock);
 
@@ -132,22 +129,11 @@ int tegra_bbc_proxy_edp_register(struct device *dev, u32 num_states,
 	memset(bbc->modem_edp_states, 0, sizeof(bbc->modem_edp_states));
 	memset(&bbc->modem_edp_client, 0, sizeof(bbc->modem_edp_client));
 
-
-#if 0
 	/* retrieve max current for supported states */
 	for (i = 0; i < num_states; i++) {
 		bbc->modem_edp_states[i] = *states;
 		states++;
 	}
-#else
-	if (num_states_experiment == num_states)
-		states = states_experiment;
-
-	for (i = 0; i < num_states; i++) {
-		bbc->modem_edp_states[i] = *states;
-		states++;
-	}
-#endif
 
 	strncpy(bbc->modem_edp_client.name, "bbc", EDP_NAME_LEN);
 	bbc->modem_edp_client.name[EDP_NAME_LEN - 1] = '\0';
@@ -839,7 +825,8 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		mgr = edp_get_manager(pdata->edp_manager_name);
 		if (!mgr) {
 			dev_err(&pdev->dev, "can't get edp manager\n");
-			goto error;
+			/* goto error; */
+			goto bypass_edp;
 		}
 
 		bbc->modem_boot_edp_client = pdata->modem_boot_edp_client;
@@ -847,7 +834,8 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev,
 				"unable to register bbc boot edp client\n");
-			goto error;
+			/* goto error; */
+			goto bypass_edp;
 		}
 
 		/* request E0 */
@@ -856,7 +844,10 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev,
 				"unable to set e0 state\n");
-			goto edp_req_error;
+			/* goto edp_req_error; */
+			edp_unregister_client(bbc->modem_boot_edp_client);
+			bbc->modem_boot_edp_client = NULL;
+			goto bypass_edp;
 		}
 
 		bbc->edp_boot_client_registered = 1;
@@ -867,7 +858,12 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 			if (ret) {
 				dev_err(&pdev->dev,
 					"can't create sysfs file\n");
-				goto edp_req_error;
+				//goto edp_req_error;
+
+				edp_unregister_client(bbc->modem_boot_edp_client);
+				bbc->modem_boot_edp_client = NULL;
+				bbc->edp_boot_client_registered = 0;
+				goto bypass_edp;
 			}
 		}
 
@@ -875,6 +871,7 @@ static int tegra_bbc_proxy_probe(struct platform_device *pdev)
 		bbc->ap_name = pdata->ap_name;
 	}
 
+bypass_edp:
 	mutex_init(&bbc->iso_lock);
 
 	bbc->isomgr_handle = tegra_isomgr_register(TEGRA_ISO_CLIENT_BBC_0,
@@ -1001,14 +998,14 @@ iso_error:
 		while ((attr = *attrs++))
 			device_remove_file(&pdev->dev, attr);
 	}
-
+#if 0
 edp_req_error:
 	if (bbc->edp_boot_client_registered)
 		edp_unregister_client(bbc->modem_boot_edp_client);
 
 error:
 	kfree(bbc);
-
+#endif
 	return ret;
 }
 
