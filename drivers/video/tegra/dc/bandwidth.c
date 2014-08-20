@@ -313,7 +313,12 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 	for (i = 0; i < DC_N_WINDOWS; i++) {
 		struct tegra_dc_win *w = &dc->windows[i];
 
-		if (use_new && w->bandwidth != w->new_bandwidth && w->new_bandwidth)
+		#define BW_MIN	8192
+		if (w->history_bandwidth == 0)
+			w->history_bandwidth = BW_MIN;
+
+		if (use_new && w->bandwidth != w->new_bandwidth
+				&& w->new_bandwidth)
 			tegra_dc_set_latency_allowance(dc, w);
 		else if (!use_new) {
 			if (w->bandwidth || w->new_bandwidth)
@@ -324,13 +329,15 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 			}
 		}
 
+		if (w->new_bandwidth) {
+			w->history_bandwidth =
+				(((w->history_bandwidth << 1) +
+					w->history_bandwidth) >> 2) +
+				(w->bandwidth >> 3) + (w->new_bandwidth >> 3);
+		}
+
 		trace_program_bandwidth(dc);
 		w->bandwidth = w->new_bandwidth;
-
-		/* a simple Kalman filter, the delta works for this case */
-		w->history_bandwidth =
-			(((w->history_bandwidth << 1) + w->history_bandwidth) >> 2) +
-			(w->bandwidth >> 3) + (w->new_bandwidth >> 3);
 	}
 }
 

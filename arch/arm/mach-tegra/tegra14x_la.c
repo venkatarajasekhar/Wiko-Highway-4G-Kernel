@@ -540,6 +540,17 @@ static int t14x_set_la(enum tegra_la_id id, unsigned int bw_mbps)
 	la_to_set = (la_to_set < 0) ? 0 : la_to_set;
 	la_to_set = (la_to_set > cs->la_max_value) ? cs->la_max_value : la_to_set;
 
+	/* experimental */
+	if (id >= TEGRA_LA_DISPLAY_0A && id <= TEGRA_LA_DISPLAYD) {
+		if (la_to_set >= 200) {
+			la_to_set = 200;
+
+			if ((id == TEGRA_LA_DISPLAYD || id == TEGRA_LA_DISPLAY_HC) &&
+				la_to_set >= 180)
+				la_to_set = 180;
+		}
+	}
+
 	if (cs->disable_la)
 		return 0;
 	program_la(ci, la_to_set);
