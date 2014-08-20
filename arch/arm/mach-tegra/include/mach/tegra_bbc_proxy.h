@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/include/mach/tegra_usb_modem_power.c
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ int tegra_bbc_proxy_bb_fusing_voltage(struct device *dev, bool enabled);
 /* values in KBps */
 #define BBC_ISO_CRASH_BW	500000
 #define BBC_ISO_BOOT_BW		1200000
-#define BBC_ISO_MARGIN_BW	1200000
+#define BBC_ISO_MARGIN_BW	1500000
 
 /* values in KBps */
 #define BBCLLR_LA_MAX_BW	640000

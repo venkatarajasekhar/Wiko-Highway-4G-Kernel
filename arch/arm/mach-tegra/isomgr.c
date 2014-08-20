@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/isomgr.c
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -747,10 +747,10 @@ retry:
 			isomgr.avail_bw += cp->margin_bw - cp->real_bw;
 		cp->margin_bw = bw;
 	} else if (bw <= cp->margin_bw) {
-		BUG_ON(cp->margin_bw > cp->real_bw);
+		BUG_ON(cp->margin_bw < cp->real_bw);
 		isomgr.avail_bw += cp->margin_bw - bw;
 		cp->margin_bw = bw;
-		BUG_ON(cp->margin_bw > cp->real_bw);
+		BUG_ON(cp->margin_bw < cp->real_bw);
 	} else if (bw > cp->margin_bw) {
 		high_bw = (cp->margin_bw > cp->real_bw) ?
 				cp->margin_bw : cp->real_bw;
