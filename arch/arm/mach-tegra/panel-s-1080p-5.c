@@ -758,10 +758,10 @@ static int dsi_s_1080p_5_enable(struct device *dev)
 			goto fail;
 		}
 	}
-	usleep_range(3000, 5000);
+	usleep_range(10000,11000);
 
 	gpio_direction_output(vdd_lcd_5v_en, 1);
-	usleep_range(3000, 5000);
+	usleep_range(10000,11000);
 
 	if (vdd_sys_bl_3v7) {
 		err = regulator_enable(vdd_sys_bl_3v7);
@@ -787,20 +787,19 @@ fail:
 static int dsi_s_1080p_5_disable(void)
 {
 	/* delay between sleep in and reset low */
-	msleep(100);
+	usleep_range(5000, 6000);
 
 	gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_rst_gpio, 0);
-	usleep_range(3000, 5000);
+	usleep_range(5000, 6000);
 
 	//gpio_set_value(dsi_s_1080p_5_pdata.dsi_panel_bl_en_gpio, 0);
 	if (vdd_sys_bl_3v7)
 		regulator_disable(vdd_sys_bl_3v7);
 	is_bl_powered = false;
-	usleep_range(3000, 5000);
 
 	if (vdd_lcd_s_1v8)
 		regulator_disable(vdd_lcd_s_1v8);
-
+	usleep_range(120000, 121000);
 	gpio_direction_output(vdd_lcd_5v_en, 0);
 	return 0;
 }
