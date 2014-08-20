@@ -51,7 +51,7 @@
 #define MAX17048_BATTERY_FULL	100
 #define MAX17048_BATTERY_LOW	15
 #define MAX17048_VERSION_NO	0x11
-#define TOPOFF_TIME_COUNT 30
+#define TOPOFF_TIME_COUNT 90
 #if (CONFIG_MACH_S9321 == 1)
 #define BATTERY_MAX_OCV 4350000
 #define BATTERY_RECHARGE_OCV 4300000
@@ -69,7 +69,7 @@ extern void max77660_power_forceoff(void);
 /*Ivan battery special config*/
 #define MAX17048_SOC_AVERAGE		/*Default Set: Set if you want to smooth the SOC change*/
 #define MAX17048_RECHARGER_HANDLE	/*Default Set: Set if you want charger continuous to turn on for while after 100% and re-charger only when battery voltage below BATTERY_RECHARGE_VCELL*/
-//Ivan #define MAX17048_FAKE_FULL_HANDLE	/*Special handle for S9321, Full will be set if battery voltage >=99% and last for 15 minutes*/
+#define MAX17048_FAKE_FULL_HANDLE	/*Special handle for S9321, Full will be set if battery voltage >=99% and last for 15 minutes*/
 
 
 
@@ -233,6 +233,7 @@ static void max17048_debug_RCOMP_Seg(struct max17048_chip *chip)
 	int reg[16];
 	int status;
 	int version;
+	int para;
 
 	status = max17048_read_word(chip->client, 0x1A);
 	version = max17048_read_word(chip->client, 0x08);
@@ -246,11 +247,13 @@ static void max17048_debug_RCOMP_Seg(struct max17048_chip *chip)
 	{
 	    reg[i] = max17048_read_word(chip->client, 0x80 +i*2);
 	}
+	
+	para = max17048_read_word(chip->client, 0x40);
 
 	r = max17048_write_word(chip->client, MAX17048_UNLOCK, 0);
 	WARN_ON(r);
 	printk("\n");
-	printk("Max17048_debug: Version[%x], Status[%x]\n",version,status >> 8);
+	printk("Max17048_debug: Version[%x], Status[%x], Para[%x]\n",version,status >> 8,para);
 	printk("Max17048_debug: RCOMPSeg[%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x,%x]\n",reg[0],reg[1],reg[2],reg[3],reg[4],reg[5],
 	       reg[6],reg[7],reg[8],reg[9],reg[10],reg[11],reg[12],reg[13],reg[14],reg[15]);
 
