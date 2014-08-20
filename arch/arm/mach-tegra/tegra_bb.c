@@ -162,7 +162,7 @@ struct tegra_bb {
 	bool is_suspending;
 	bool send_ul_flag;
 	int set_floor_type;
-	long t[4]; /* tracing bb emc floor latency */
+	long t[8]; /* tracing bb emc floor latency */
 };
 
 #define SET_FLOOR_GUARD_TIME     100
@@ -898,7 +898,7 @@ static irqreturn_t tegra_pmc_wake_intr(int irq, void *data)
 static void tegra_bb_set_emc(struct tegra_bb *bb)
 {
 	unsigned long flags;
-	static long start, diff0, diff;
+	static long start, diff0, diff, diff1, diff2, diff3, diff4;
 	static int cnt;
 
 	if (!bb)
@@ -916,19 +916,28 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		return;
 	}
 
+	bb->t[4] = jiffies;
+	diff1 = (bb->t[4] - start) * 1000 / HZ;
+
 	switch (bb->next_state) {
 	case BBC_SET_FLOOR:
 		spin_unlock_irqrestore(&bb->lock, flags);
 		bb->cpu_min_freq = BBC_CPU_MIN_FREQ;
 		pm_qos_update_request(&bb_cpufreq_min_req,
 			bb->cpu_min_freq);
+		bb->t[5] = jiffies;
+		diff2 = (bb->t[5] - start) * 1000 / HZ;
 		pm_runtime_get_sync(bb->dev);
+		bb->t[6] = jiffies;
+		diff3 = (bb->t[6] - start) * 1000 / HZ;
 		/* going from 0 to high */
 		clk_prepare_enable(bb->emc_clk);
 		if (bb->emc_flags & EMC_DSR)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		else
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_NORMAL);
+		bb->t[7] = jiffies;
+		diff4 = (bb->t[7] - start) * 1000 / HZ;
 		if ((bb->emc_flags & EMC_LL) &&
 		    tegra_emc_request_low_latency_mode(true))
 			dev_err(bb->dev, "emc low latency request failed\n");
@@ -945,8 +954,9 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 			max_emc_set_latency = (diff > max_emc_set_latency) ? diff : max_emc_set_latency;
 		}
 		if (diff > SET_FLOOR_GUARD_TIME) {
-			pr_info("bbc setting floor latency: %ld ms, irq2entry: %ld ms, type:%d, cnt:%d\n",
-				diff, diff0, bb->set_floor_type, cnt++);
+			pr_info("bbc setting floor latency: %ld ms, irq2entry: %ld ms, diff1:%ld ms,\
+				diff2:%ld ms, diff3:%ld ms, diff4:%ld ms, type:%d, cnt:%d\n",
+				diff, diff0, diff1, diff2, diff3, diff4, bb->set_floor_type, cnt++);
 		}
 		pr_debug("bbc setting floor to %luMHz\n",
 						bb->emc_min_freq/1000000);
