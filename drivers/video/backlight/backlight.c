@@ -164,7 +164,7 @@ static ssize_t backlight_store_brightness(struct device *dev,
 	int rc;
 	struct backlight_device *bd = to_backlight_device(dev);
 	unsigned long brightness;
-
+	printk("Entry of backlight_store_brightness\n");
 	rc = kstrtoul(buf, 0, &brightness);
 	if (rc)
 		return rc;
@@ -176,7 +176,7 @@ static ssize_t backlight_store_brightness(struct device *dev,
 		if (brightness > bd->props.max_brightness)
 			rc = -EINVAL;
 		else {
-			pr_debug("backlight: set brightness to %lu\n",
+			pr_err("backlight: set brightness to %lu\n",
 				 brightness);
 			bd->props.brightness = brightness;
 			backlight_update_status(bd);
