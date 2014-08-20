@@ -269,10 +269,13 @@ irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id)
 	int i;
 
 	for_each_set_bit(i, &intstat, BITS_PER_LONG) {
-		if (intr->generic_isr_thread[i])
+		if (intr->generic_isr_thread[i]) {
+			printk(KERN_ERR "nvhost_intr_irq_fn(%d)\n", i);
 			intr->generic_isr_thread[i]();
+		}
 	}
-
+	printk(KERN_ERR "nvhost_intr_irq_fn returned with last isr thread(%d)"\
+			"\n", i);
 	return IRQ_HANDLED;
 }
 
