@@ -4,7 +4,7 @@
  * Author: Syed Rafiuddin <srafiuddin@nvidia.com>
  * Author: Sumit Sharma <sumsharma@nvidia.com>
  * Renamed max77665 haptic driver and reusing as max77660 haptic driver
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on driver max8997_haptic.c
  * Copyright (c) 2012 Samsung Electronics
@@ -36,15 +36,8 @@
 /* Below name is matched with the haptic driver name in Max77660 core driver */
 #define MAX77660_HAPTIC_DRIVER_MATCHED_NAME "max77660-vibrator"
 
-#define VIBRATOR_MAX_LEVEL 100
-#define VIBRATOR_DEFAULT_LEVEL VIBRATOR_MAX_LEVEL
-
-#define MAX77660_REG_WRITE(x, y, z, w) \
-	do { \
-		dev_dbg(chip->dev, "%s: write reg addr=0x%x, val=0x%x\n", \
-			__func__, z, w); \
-		max77660_reg_write(x, y, z, w); \
-	} while (0)
+//Ivan add static flag
+//static int haptic_enable_processing = 0;
 
 struct max77660_haptic {
 	struct device *dev;
@@ -52,13 +45,10 @@ struct max77660_haptic {
 	struct input_dev *input_dev;
 	struct regulator *regulator;
 	struct work_struct work;
-	struct delayed_work vibrator_off_tmout_wrk;
 
 	bool enabled;
 
 	unsigned int level;
-	unsigned int msec_tmout;
-	unsigned int on_level;
 
 	struct pwm_device *pwm;
 	int pwm_period;
@@ -75,7 +65,7 @@ struct max77660_haptic {
 	int feedback_duty_cycle;
 	int motor_startup_val;
 	int scf_val;
-	struct mutex enable_lock;
+	struct mutex		enable_lock;
 
 	struct edp_client *haptic_edp_client;
 };
@@ -89,11 +79,11 @@ static int max77660_haptic_set_duty_cycle(struct max77660_haptic *chip)
 	bool internal_mode_valid = true;
 
 	if (chip->mode == MAX77660_EXTERNAL_MODE) {
-		duty = chip->pwm_period * chip->level / VIBRATOR_MAX_LEVEL;
+		duty = chip->pwm_period * chip->level / 100;
 		ret = pwm_config(chip->pwm, duty, chip->pwm_period);
 	} else {
 		for (i = 0; i < 64; i++) {
-			if (chip->level <= (i + 1) * VIBRATOR_MAX_LEVEL / 64) {
+			if (chip->level <= (i + 1) * 100 / 64) {
 				duty_index = i;
 				break;
 			}
@@ -122,32 +112,30 @@ static int max77660_haptic_set_duty_cycle(struct max77660_haptic *chip)
 
 		if (internal_mode_valid) {
 			if (chip->internal_mode_pattern % 2 == 1)
-				MAX77660_REG_WRITE(chip->dev->parent,
+				max77660_reg_write(chip->dev->parent,
 					MAX77660_HAPTIC_SLAVE, reg1,
 					chip->feedback_duty_cycle);
 			else
-				MAX77660_REG_WRITE(chip->dev->parent,
+				max77660_reg_write(chip->dev->parent,
 					MAX77660_HAPTIC_SLAVE, reg1,
 					chip->feedback_duty_cycle << 4);
 
-			MAX77660_REG_WRITE(chip->dev->parent,
+			max77660_reg_write(chip->dev->parent,
 				MAX77660_HAPTIC_SLAVE, reg2, duty_index);
 		}
 	}
 	return ret;
 }
 
-static void max77660_haptic_configure(struct max77660_haptic *chip,
-					bool enable)
+static void max77660_haptic_configure(struct max77660_haptic *chip)
 {
 	u8 value1, value2, reg1, reg2;
 	bool internal_mode_valid = true;
 
-	chip->enabled = enable;
 	value1 = chip->type << MAX77660_MOTOR_TYPE_SHIFT |
 		chip->enabled << MAX77660_ENABLE_SHIFT |
 		chip->mode << MAX77660_MODE_SHIFT | chip->pwm_divisor;
-	MAX77660_REG_WRITE(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
+	max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
 		MAX77660_HAPTIC_REG_CONF2, value1);
 
 	if ((chip->mode == MAX77660_INTERNAL_MODE) &&
@@ -157,7 +145,7 @@ static void max77660_haptic_configure(struct max77660_haptic *chip,
 			chip->motor_startup_val << MAX77660_MOTOR_STRT_SHIFT |
 			chip->scf_val;
 
-		MAX77660_REG_WRITE(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
+		max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
 			MAX77660_HAPTIC_REG_CONF1, value1);
 
 		switch (chip->internal_mode_pattern) {
@@ -191,9 +179,9 @@ static void max77660_haptic_configure(struct max77660_haptic *chip,
 		}
 
 		if (internal_mode_valid) {
-			MAX77660_REG_WRITE(chip->dev->parent,
+			max77660_reg_write(chip->dev->parent,
 				MAX77660_HAPTIC_SLAVE, reg1, value1);
-			MAX77660_REG_WRITE(chip->dev->parent,
+			max77660_reg_write(chip->dev->parent,
 				MAX77660_HAPTIC_SLAVE, reg2, value2);
 			value1 = chip->internal_mode_pattern
 					<< MAX77660_CYCLE_SHIFT |
@@ -203,7 +191,7 @@ static void max77660_haptic_configure(struct max77660_haptic *chip,
 					<< MAX77660_SIG_DUTY_SHIFT |
 				chip->internal_mode_pattern
 					<< MAX77660_PWM_DUTY_SHIFT;
-			MAX77660_REG_WRITE(chip->dev->parent,
+			max77660_reg_write(chip->dev->parent,
 				MAX77660_HAPTIC_SLAVE,
 				MAX77660_HAPTIC_REG_DRVCONF, value1);
 		}
@@ -212,46 +200,51 @@ static void max77660_haptic_configure(struct max77660_haptic *chip,
 
 static void max77660_haptic_enable(struct max77660_haptic *chip, bool enable)
 {
-	dev_dbg(chip->dev, "%s enable=%d, chip->enabled=%d\n", __func__,
-		enable, chip->enabled);
+//  printk("Ivan max77660_haptic_enable = %d \n", enable);
+	if (chip->enabled == enable)
+		return;
 
-	if (chip->enabled == enable) {
-		dev_dbg(chip->dev, "%s: returning as enable==chip->enabled==%d\n",
-			__func__, enable);
-		goto end;
-	}
+//	mutex_lock(&chip->enable_lock);
+	chip->enabled = enable;
 
 	if (enable) {
+//  printk("Ivan max77660_haptic_enable ENABLE! \n");	  
 		regulator_enable(chip->regulator);
-		max77660_haptic_configure(chip, enable);
+		max77660_haptic_configure(chip);
 		if (chip->mode == MAX77660_EXTERNAL_MODE)
 			pwm_enable(chip->pwm);
+//		haptic_enable_processing = 0;		//Ivan
 	} else {
-		max77660_haptic_configure(chip, enable);
+//  printk("Ivan max77660_haptic_enable DISABLE! \n");	  
+		max77660_haptic_configure(chip);
+		
+	max77660_reg_write(chip->dev->parent, MAX77660_HAPTIC_SLAVE,
+		MAX77660_HAPTIC_REG_CONF2, 2);
+	
 		if (chip->mode == MAX77660_EXTERNAL_MODE)
 			pwm_disable(chip->pwm);
 		regulator_disable(chip->regulator);
 	}
-	dev_dbg(chip->dev, "chip->enabled=%d at exit\n", chip->enabled);
-end:
-	if (enable && chip->msec_tmout) {
-		dev_dbg(chip->dev, "enable case schedule disable after %dmsec\n",
-			chip->msec_tmout);
-		schedule_delayed_work(&chip->vibrator_off_tmout_wrk,
-			chip->msec_tmout);
-	}
-	return;
+//	mutex_unlock(&chip->enable_lock);
 }
 
-static void max77660_haptic_core_enable(struct max77660_haptic *chip)
+static void max77660_haptic_throttle(unsigned int new_state, void *priv_data)
 {
+	struct max77660_haptic *chip = priv_data;
+
+	if (!chip)
+		return;
+
+	max77660_haptic_enable(chip, false);
+}
+
+static void max77660_haptic_play_effect_work(struct work_struct *work)
+{
+	struct max77660_haptic *chip =
+		container_of(work, struct max77660_haptic, work);
 	unsigned int approved;
 	int ret;
-	/* ensures that all register access for enable is done
-	 * before disable starts
-	 */
-	mutex_lock(&chip->enable_lock);
-	dev_dbg(chip->dev, "%s: chip->level=%d\n", __func__, chip->level);
+
 	if (chip->level) {
 		/* Request E-state before operating */
 		if (chip->haptic_edp_client) {
@@ -261,16 +254,21 @@ static void max77660_haptic_core_enable(struct max77660_haptic *chip)
 				dev_err(chip->dev,
 					"E state high transition failed, error=%d, approved=%d\n",
 					ret, approved);
-				goto end;
+//				haptic_enable_processing = 0;		//Ivan
+				mutex_unlock(&chip->enable_lock);
+				return;
 			}
 		}
 		ret = max77660_haptic_set_duty_cycle(chip);
 		if (ret) {
 			dev_err(chip->dev, "set_pwm_cycle failed\n");
-			goto end;
+//			haptic_enable_processing = 0;			//Ivan
+			mutex_unlock(&chip->enable_lock);
+			return;
 		}
 
 		max77660_haptic_enable(chip, true);
+		mutex_unlock(&chip->enable_lock);		
 	} else {
 		/* Disable device before releasing E-state request */
 		max77660_haptic_enable(chip, false);
@@ -281,49 +279,25 @@ static void max77660_haptic_core_enable(struct max77660_haptic *chip)
 				dev_err(chip->dev,
 					"E state low transition failed, error=%d\n",
 					ret);
-				goto end;
+				mutex_unlock(&chip->enable_lock);				
+				return;
 			}
 		}
+		mutex_unlock(&chip->enable_lock);
 	}
-end:
-	mutex_unlock(&chip->enable_lock);
 }
 
-static void max77660_haptic_throttle(unsigned int new_state, void *priv_data)
-{
-	struct max77660_haptic *chip = priv_data;
-
-	if (!chip)
-		return;
-
-	mutex_lock(&chip->enable_lock);
-	chip->level = 0;
-	dev_dbg(chip->dev, "%s, level=%d\n", __func__, chip->level);
-	mutex_unlock(&chip->enable_lock);
-	max77660_haptic_core_enable(chip);
-}
-
-static void max77660_haptic_play_effect_work(struct work_struct *work)
-{
-	struct max77660_haptic *chip =
-		container_of(work, struct max77660_haptic, work);
-
-	max77660_haptic_core_enable(chip);
-}
 
 static int max77660_haptic_play_effect(struct input_dev *dev, void *data,
-				struct ff_effect *effect)
+				  struct ff_effect *effect)
 {
 	struct max77660_haptic *chip = input_get_drvdata(dev);
 
-	mutex_lock(&chip->enable_lock);
 	chip->level = effect->u.rumble.strong_magnitude;
 	if (!chip->level)
 		chip->level = effect->u.rumble.weak_magnitude;
 
-	dev_dbg(chip->dev, "%s, level=%d\n", __func__, chip->level);
 	schedule_work(&chip->work);
-	mutex_unlock(&chip->enable_lock);
 
 	return 0;
 }
@@ -346,8 +320,6 @@ static ssize_t max77660_haptic_show(struct device *dev,
 		var = chip->pwm_divisor;
 	else if (strcmp(attr->attr.name, "vibrator_enable") == 0)
 		var = chip->enabled;
-	else if (strcmp(attr->attr.name, "vibrator_on_level") == 0)
-		var = chip->on_level;
 
 	return sprintf(buf, "%d\n", var);
 }
@@ -374,11 +346,6 @@ static ssize_t max77660_haptic_store(struct device *dev,
 	} else if (strcmp(attr->attr.name, "pwm_divisor") == 0) {
 		if (var >= 0 && var <= 3)
 			chip->pwm_divisor = var;
-	} else if (strcmp(attr->attr.name, "vibrator_on_level") == 0) {
-		if (var > 0 && var <= VIBRATOR_MAX_LEVEL)
-			chip->on_level = var;
-		else
-			chip->on_level = VIBRATOR_DEFAULT_LEVEL;
 	}
 
 	return count;
@@ -390,48 +357,23 @@ static ssize_t max77660_haptic_vibrator_ctrl(struct device *dev,
 	struct max77660_haptic *chip = dev_get_drvdata(dev);
 	int var;
 
-	sscanf(buf, "%d", &var);
 	mutex_lock(&chip->enable_lock);
-	/* timeout applies to vibrator enable case only
-	 * old delayed work to disable vibrator cancelled
-	 */
-	if (chip->msec_tmout) {
-		dev_dbg(chip->dev, "%s: cancel vibrator off tmout wrk\n",
-			__func__);
-		cancel_delayed_work(&chip->vibrator_off_tmout_wrk);
+	sscanf(buf, "%d", &var);
+	if (var == 0) {			/* stop vibrator */		  
+//		if (haptic_enable_processing == 1)
+//		  flush_scheduled_work();
+//		  schedule_delayed_work(&chip->work,msecs_to_jiffies(5));
+//		else
+		  chip->level = 0;
+		  schedule_work(&chip->work);
+//		haptic_enable_processing = 0;
+	} else if (var == 1) {
+		chip->level = 100;
+//		haptic_enable_processing = 1;			//Ivan setup flag to indicate enable processing...
+		schedule_work(&chip->work);
 	}
-	chip->msec_tmout = var;
-	if (!chip->on_level)
-		chip->on_level = VIBRATOR_DEFAULT_LEVEL;
-
-	if (var && !chip->level)
-		chip->level = chip->on_level;
-	else if (!var)
-		chip->level = 0;
-	dev_dbg(chip->dev, "%s, level=%d, tmout=%d\n",
-		__func__, chip->level, chip->msec_tmout);
-	schedule_work(&chip->work);
-	mutex_unlock(&chip->enable_lock);
 
 	return count;
-}
-
-static void vibrator_off_cb(struct work_struct *work)
-{
-	struct max77660_haptic *chip = container_of(work,
-						struct max77660_haptic,
-						vibrator_off_tmout_wrk.work);
-
-	dev_dbg(chip->dev, "vibrator off timeout forced\n");
-	mutex_lock(&chip->enable_lock);
-	dev_dbg(chip->dev, "%s, old level=%d\n", __func__, chip->level);
-	chip->msec_tmout = 0;
-	/* next call should disable the vibrator
-	 * NOTE: lock is already taken by caller
-	 */
-	chip->level = 0;
-	mutex_unlock(&chip->enable_lock);
-	max77660_haptic_core_enable(chip);
 }
 
 static DEVICE_ATTR(pattern_cycle, 0640, max77660_haptic_show,
@@ -446,8 +388,6 @@ static DEVICE_ATTR(pwm_divisor, 0640, max77660_haptic_show,
 					max77660_haptic_store);
 static DEVICE_ATTR(vibrator_enable, 0640, max77660_haptic_show,
 					max77660_haptic_vibrator_ctrl);
-static DEVICE_ATTR(vibrator_on_level, 0640, max77660_haptic_show,
-					max77660_haptic_store);
 
 static struct attribute *max77660_haptics_attr[] = {
 	&dev_attr_pattern_cycle.attr,
@@ -456,7 +396,6 @@ static struct attribute *max77660_haptics_attr[] = {
 	&dev_attr_scf_val.attr,
 	&dev_attr_pwm_divisor.attr,
 	&dev_attr_vibrator_enable.attr,
-	&dev_attr_vibrator_on_level.attr,
 	NULL,
 };
 
@@ -599,7 +538,6 @@ register_input:
 	}
 	INIT_WORK(&chip->work,
 			max77660_haptic_play_effect_work);
-	INIT_DELAYED_WORK(&chip->vibrator_off_tmout_wrk, vibrator_off_cb);
 
 	ret = input_register_device(input_dev);
 	if (ret) {
@@ -650,15 +588,21 @@ static int max77660_haptic_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct max77660_haptic *chip = platform_get_drvdata(pdev);
+	int ret;
 
-	/* No need to disable vibrator in suspend since
-	 * user layer calls the disable or the enable
-	 * has timeout to disable vibrator
-	 */
-
-	/* cancel pending work */
-	cancel_delayed_work(&chip->vibrator_off_tmout_wrk);
-	cancel_work_sync(&chip->work);
+	/* Disable device before releasing E-state request */
+//Ivan added
+//	cancel_delayed_work(&chip->work);
+	max77660_haptic_enable(chip, false);
+	if (chip->haptic_edp_client) {
+		ret = edp_update_client_request(chip->haptic_edp_client,
+				MAX77660_HAPTIC_EDP_LOW, NULL);
+		if (ret) {
+			dev_err(chip->dev,
+				"E state low transition failed in suspend\n");
+			return ret;
+		}
+	}
 
 	return 0;
 }
