@@ -899,28 +899,12 @@ static int table_show(struct seq_file *s, void *data)
 	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n", i, reg);
 
 	}
-		reg = snd_soc_read(codec1, M98090_REG_AF_BIQUAD_BASE);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_AF_BIQUAD_BASE, reg);
-		reg = snd_soc_read(codec1, M98090_REG_BE_DMIC3_VOLUME);
-	pr_info("max98090 register dump: reg is  0x%x  val is 0x%x\n",
-					M98090_REG_BE_DMIC3_VOLUME, reg);
-		reg = snd_soc_read(codec1, M98090_REG_BF_DMIC4_VOLUME);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_BF_DMIC4_VOLUME, reg);
-		reg = snd_soc_read(codec1, M98090_REG_C0_DMIC34_BQ_PREATTEN);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_C0_DMIC34_BQ_PREATTEN, reg);
-		reg = snd_soc_read(codec1, M98090_REG_C1_RECORD_TDM_SLOT);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_C1_RECORD_TDM_SLOT, reg);
-		reg = snd_soc_read(codec1, M98090_REG_C2_SAMPLE_RATE);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_C2_SAMPLE_RATE, reg);
-		reg = snd_soc_read(codec1, M98090_REG_C3_DMIC34_BIQUAD_BASE);
-	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n",
-					M98090_REG_C3_DMIC34_BIQUAD_BASE, reg);
 
+	for (i = 0x46; i < 0xAE; i++) {
+		reg = snd_soc_read(codec1, i);
+	pr_info("max98090 register dump: reg is 0x%x  val is 0x%x\n", i, reg);
+
+	}
 	return 0;
 }
 
@@ -998,13 +982,13 @@ static int max98090_spkl_set(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	unsigned int sel = ucontrol->value.integer.value[0];
-
+	unsigned int val;
 	sel = min_t(unsigned int, sel, 39) + 24;
 
 	snd_soc_update_bits(codec, M98090_REG_31_LVL_SPK_LEFT,
 		M98090_SPVOLL_MASK,
 		sel << M98090_SPVOLL_SHIFT);
-
+	val = snd_soc_read(codec, M98090_REG_31_LVL_SPK_LEFT);
 	return 0;
 }
 
@@ -3503,6 +3487,54 @@ static struct max98090_eq_cfg eq_cfg[] = {
 		0x0F, 0xD8, 0xE1,
 		0xEB, 0x83, 0x70,
 		0x08, 0x6B, 0x38,
+		},
+	},
+	{ /* Flat response */
+	.name = "SPEAKER",
+	.rate = 48000,
+	.bands = 7,
+	.coef = {
+		0x0E, 0xF4, 0x28,
+		0xE2, 0x17, 0xAF,
+		0x0E, 0xF4, 0x28,
+		0xE2, 0x38, 0xB0,
+		0x0E, 0x09, 0x52,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+
+		0x10, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00,
 		},
 	},
 };
