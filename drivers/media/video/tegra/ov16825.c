@@ -194,8 +194,8 @@ static struct ov16825_reg *test_patterns[] = {
 
 
 static struct ov16825_reg ov16825_1920x1080_i2c[] = {
-	{0x0103, 0x01},
-	{OV16825_TABLE_WAIT_MS, 20},
+	//{0x0103, 0x01},
+	//{OV16825_TABLE_WAIT_MS, 20},
 	{0x0300, 0x02},
 	//{0x0302, 0x64},
 	{0x0302, 0x40},
@@ -407,8 +407,8 @@ static struct ov16825_reg ov16825_1920x1080_i2c[] = {
 };
 
 static struct ov16825_reg ov16825_2304x1728_i2c[] = {
-	{0x0103, 0x01},
-	{OV16825_TABLE_WAIT_MS, 20},
+	//{0x0103, 0x01},
+	//{OV16825_TABLE_WAIT_MS, 20},
 	{0x0300, 0x02},
 	//{0x0302, 0x50},
 	{0x0302, 0x40},//0x32
@@ -627,8 +627,8 @@ static struct ov16825_reg ov16825_2304x1728_i2c[] = {
 };
 
 static struct ov16825_reg ov16825_2176x1632_i2c[] = {
-	{0x0103, 0x01},
-	{OV16825_TABLE_WAIT_MS, 20},
+	//{0x0103, 0x01},
+	//{OV16825_TABLE_WAIT_MS, 20},
 	{0x0300, 0x02},
 	{0x0302, 0x64},
 	{0x0305, 0x01},
@@ -841,8 +841,8 @@ static struct ov16825_reg ov16825_2176x1632_i2c[] = {
 };
 
 static struct ov16825_reg ov16825_3840x2160_i2c[] = {
-	{0x0103, 0x01},
-	{OV16825_TABLE_WAIT_MS, 20},
+	//{0x0103, 0x01},
+	//{OV16825_TABLE_WAIT_MS, 20},
 	{0x0300, 0x02},
 	{0x0302, 0x64},
 	{0x0305, 0x01},
@@ -1055,8 +1055,8 @@ static struct ov16825_reg ov16825_3840x2160_i2c[] = {
 
 
 static struct ov16825_reg ov16825_4608x3456_i2c[] = {
-	{0x0103, 0x01},
-	{OV16825_TABLE_WAIT_MS, 20},
+	//{0x0103, 0x01},
+	//{OV16825_TABLE_WAIT_MS, 20},
 	{0x0300, 0x02},
 	{0x0302, 0x64},
 	{0x0305, 0x01},
@@ -2340,6 +2340,8 @@ static int ov16825_pm_wr(struct ov16825_info *info, int pwr)
 	case NVC_PWR_COMM:
 	case NVC_PWR_ON:
 		err = ov16825_power_on(info, false);
+		ov16825_i2c_wr8(info, 0x0103, 0x01);
+		mdelay(20);
 		break;
 
 	default:
