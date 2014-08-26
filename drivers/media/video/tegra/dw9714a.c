@@ -122,6 +122,7 @@
 #define DW9714A_MAX_RETRIES		3
 
 #endif
+#define DW9714A_JUMP_BACK_STEP		100
 
 /*
 static struct nvc_gpio_init dw9714a_gpio[] = {
@@ -880,6 +881,33 @@ static int dw9714a_open(struct inode *inode, struct file *file)
 static int dw9714a_release(struct inode *inode, struct file *file)
 {
 	struct dw9714a_info *info = file->private_data;
+        u32 position;
+        dw9714a_position_rd(info, &position);
+        if (position > 450) {
+	    dw9714a_position_wr(info, 4*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, 3*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, 2*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+        } else if (position > 350) {
+	    dw9714a_position_wr(info, 3*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, 2*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+        } else if (position > 250) {
+	    dw9714a_position_wr(info, 2*DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+	    dw9714a_position_wr(info, DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+        } else if (position > 150) {
+	    dw9714a_position_wr(info, DW9714A_JUMP_BACK_STEP);
+	    mdelay(10);
+        }
 	dw9714a_pm_wr(info, NVC_PWR_OFF);
 	file->private_data = NULL;
 	WARN_ON(!atomic_xchg(&info->in_use, 0));
