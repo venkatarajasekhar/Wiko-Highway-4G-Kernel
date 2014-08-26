@@ -298,6 +298,12 @@ static int max17048_rcomp_adjust(struct max17048_chip *chip)
 	else
 		rcomp = rcomp0 + (int)((temp - 20)*tempCoDown/(100));
 
+//Ivan added RCOMP clamped to 120 for temperature above 40 RCOMP(40˚C)
+#if CONFIG_MACH_S9321		
+	if (temp > 40)
+	    rcomp = 120;
+#endif
+
 	config_reg = max17048_read_word(chip->client, MAX17048_CONFIG);
 	if (config_reg < 0) {
 		dev_err(&chip->client->dev, "Error reading config register.\n");
