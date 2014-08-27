@@ -1760,10 +1760,12 @@ static struct psy_depletion_platform_data ceres_psydepl_pdata = {
 };
 #endif
 
+#if defined(CONFIG_MACH_S9321) && CONFIG_MACH_S9321
 struct psy_depletion_platform_data * psy_get_pdata(void)
 {
 	return &ceres_psydepl_pdata;
 }
+#endif
 
 static struct platform_device ceres_psydepl_device = {
 	.name = "psy_depletion",
