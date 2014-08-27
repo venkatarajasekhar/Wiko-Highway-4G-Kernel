@@ -1576,7 +1576,7 @@ static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
 	/* .max = 18500 */
 //Ivan	.max = 13500 /* 3.8*2.350*1.5 */
-	.max = 14500,
+	.max = 22215,
 };
 
 void __init ceres_sysedp_init(void)
