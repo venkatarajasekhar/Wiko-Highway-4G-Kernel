@@ -27,7 +27,7 @@
 #include <linux/platform_device.h>
 #include <mach/board.h>
 
-#ifdef CONFIG_MACH_S9321
+#if defined(CONFIG_MACH_S9321) && CONFIG_MACH_S9321
 #define HW_2_LANES	1
 #endif
 
@@ -300,7 +300,7 @@ static struct imx179_reg imx179_1640x1232_i2c[] = {
 
 
 
-#if 1
+#if 0
 /* 30fps */
 #define setting_1920x1080_test_addtion_frame	0
 #define setting_1920x1080_test_addtion_line		-10
@@ -380,7 +380,10 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
 	{IMX179_TABLE_END, 0x00}
 };
-#else
+#endif
+
+#if 0
+//22fps
 #define setting_1920x1080_test_addtion_frame	0
 #define setting_1920x1080_test_addtion_line		0
 #define setting_1920x1080_frame_length (0x0744 + setting_1920x1080_test_addtion_frame)
@@ -459,6 +462,99 @@ static struct imx179_reg imx179_1920x1080_i2c[] = {
 	{0x33D5,0xD0},
 	{0x33D6,0x07},
 	{0x33D7,0x36},
+	{0x4100,0x0E},
+	{0x4108,0x01},
+	{0x4109,0x7C},
+	{0x3302,0x01}, //0x01 low power mode, 0x00, cont mode
+	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
+	{IMX179_TABLE_END, 0x00}
+};
+#endif
+
+#if 1
+/*
+  new setting with larger fov
+  it is 97% of the full fov that the sensor
+  can achieve 30fps@2lanes.
+*/
+#define setting_1920x1080_test_addtion_frame	0
+#define setting_1920x1080_test_addtion_line		0
+#define setting_1920x1080_frame_length (0x073B + setting_1920x1080_test_addtion_frame)
+#define setting_1920x1080_line_length (0x0DC0 + setting_1920x1080_test_addtion_line)
+#define reg_0x0340_1920x1080_frame_length_hi_byte	(setting_1920x1080_frame_length >> 8)
+#define reg_0x0341_1920x1080_frame_length_lo_byte	(setting_1920x1080_frame_length & 0xff)
+#define reg_0x0342_1920x1080_line_length_hi_byte	(setting_1920x1080_line_length >> 8)
+#define reg_0x0343_1920x1080_line_length_lo_byte	(setting_1920x1080_line_length & 0xff)
+
+#define setting_1920x1080_width		(1920 - 0)
+#define setting_1920x1080_height	(1080 - 0)
+static struct imx179_reg imx179_1920x1080_i2c[] = {
+	/*stand by*/
+	{0x0100, 0x00},
+	{IMX179_TABLE_WAIT_MS, IMX179_WAIT_MS},
+	{0x0101,0x03},
+	{0x0202,0x07},
+	{0x0203,0x37},
+	{0x0301,0x09},//
+	{0x0303,0x01},
+	{0x0305,0x06},
+	{0x0309,0x0A},
+	{0x030B,0x01},
+	{0x030C,0x00},
+	{0x030D,0xdc}, //
+	{0x0340,reg_0x0340_1920x1080_frame_length_hi_byte},
+	{0x0341,reg_0x0341_1920x1080_frame_length_lo_byte},
+	{0x0342,reg_0x0342_1920x1080_line_length_hi_byte},
+	{0x0343,reg_0x0343_1920x1080_line_length_lo_byte},
+	{0x0344,0x00},
+	{0x0345,0x14},
+	{0x0346,0x01},
+	{0x0347,0x40},
+	{0x0348,0x0C},
+	{0x0349,0xBB},
+	{0x034A,0x08},
+	{0x034B,0x5F},
+#if 0
+	{0x034C,0x07},
+	{0x034D,0x94},
+	{0x034E,0x04},
+	{0x034F,0x44},
+#else
+	{0x034C,0x07},
+	{0x034D,0x80},
+	{0x034E,0x04},
+	{0x034F,0x38},
+#endif
+	{0x0383,0x01},
+	{0x0387,0x01},
+	{0x0390,0x00},
+	{0x0401,0x02},
+	{0x0405,0x1B},
+	{0x3020,0x10},
+	{0x3041,0x15},
+	{0x3042,0x87},
+	{0x3089,0x4F},
+	{0x3309,0x9A},
+	{0x3344,0x6F},
+	{0x3345,0x1F},
+	{0x3362,0x0A},
+	{0x3363,0x0A},
+	{0x3364,0x02},
+	{0x3368,0x18},
+	{0x3369,0x00},
+	{0x3370,0x7F},
+	{0x3371,0x37},
+	{0x3372,0x67},
+	{0x3373,0x3F},
+	{0x3374,0x3F},
+	{0x3375,0x47},
+	{0x3376,0xCF},
+	{0x3377,0x47},
+	{0x33C8,0x00},
+	{0x33D4,0x0C},
+	{0x33D5,0xA8},
+	{0x33D6,0x07},
+	{0x33D7,0x20},
 	{0x4100,0x0E},
 	{0x4108,0x01},
 	{0x4109,0x7C},
@@ -561,7 +657,7 @@ static struct imx179_mode_data imx179_1920x1080 = {
 		.active_stary_y		= 0,
 		.peak_frame_rate	= 30000, /* / _INT2FLOAT_DIVISOR */
 		.pixel_aspect_ratio	= 1000, /* / _INT2FLOAT_DIVISOR */
-		.pll_multiplier		= 8000, /* / _INT2FLOAT_DIVISOR */
+		.pll_multiplier		= 21250, /* / _INT2FLOAT_DIVISOR */ //21250
 		.crop_mode		= NVC_IMAGER_CROPMODE_NONE,
 	},
 	.sensor_dnvc = {
@@ -590,8 +686,8 @@ static struct imx179_mode_data imx179_1920x1080 = {
 		.inherent_gain_bin_en	= 1000, /* / _INT2FLOAT_DIVISOR */
 		.support_bin_control	= 0,
 		.support_fast_mode	= 0,
-		.pll_mult		= 0xaf,
-		.pll_div		= 0x06,
+		.pll_mult		= 0x29,
+		.pll_div		= 0x01,
 	},
 	.p_mode_i2c			= imx179_1920x1080_i2c,
 };
