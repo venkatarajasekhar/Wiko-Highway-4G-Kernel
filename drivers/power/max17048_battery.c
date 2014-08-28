@@ -57,6 +57,7 @@
 #define BATTERY_RECHARGE_OCV 4300000
 #define BATTERY_RECHARGE_VCELL 4250
 #define BATTERY_SOFTWARE_POWER_OFF_LEVEL 3480
+#define BATTERY_HARDWARE_POWER_OFF_LEVEL 3200
 #else
 #define BATTERY_MAX_OCV 4200000
 #define BATTERY_RECHARGE_OCV 4180000
@@ -648,7 +649,7 @@ static void max17048_work(struct work_struct *work)
 	  {
 	    printk("Ivan Battery < 3510, Android power off...\n");	   
 #if (CONFIG_MACH_S9321 == 1)    	    
-	    if (chip->soc >= 7)
+	    if (chip->soc > 0)
 	    {
 		printk("Ivan Battery Reset FG...\n");	    
 		max17048_write_word(chip->client, MAX17048_MODE, 0x4000);	//Reset FG
@@ -658,14 +659,14 @@ static void max17048_work(struct work_struct *work)
 	  }
 	  
 #if (CONFIG_MACH_S9321 == 1)    
-	  if (avg_v < BATTERY_SOFTWARE_POWER_OFF_LEVEL - 10 && chip->soc != 0)
+	  if (avg_v < BATTERY_HARDWARE_POWER_OFF_LEVEL)
 #else	    	  
 	  if (avg_v < 3500 && chip->soc != 0)
 #endif
 	  {
 	    printk("Ivan Battery too low (3.5V), force power off...\n");	
 #if (CONFIG_MACH_S9321 == 1)    	    
-	    if (chip->soc >= 7)
+	    if (chip->soc > 0)
 	    {
 		printk("Ivan Battery Reset FG...\n");		
 		max17048_write_word(chip->client, MAX17048_MODE, 0x4000);	//Reset FG	    
