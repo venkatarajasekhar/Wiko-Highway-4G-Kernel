@@ -173,7 +173,7 @@ static void lcd_te_work_func(struct work_struct *work)
 			return;
 		}
 
-		pr_info("LCD TE INT lcd_te_work_func\n");
+		printk("LCD TE INT lcd_te_work_func!\n");
 		bl = this_dc->out->sd_settings->bl_device;
 		brightness = bl->props.brightness;
 		bl->props.brightness = 0;
