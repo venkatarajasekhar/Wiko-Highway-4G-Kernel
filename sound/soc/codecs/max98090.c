@@ -4131,7 +4131,7 @@ static int max98090_resume(struct snd_soc_codec *codec)
 	interrupt_handling = false;
 	cancel_delayed_work(&max98090->jack_work);
 	schedule_delayed_work(&max98090->jack_work,
-		msecs_to_jiffies(200));
+		msecs_to_jiffies(100));
 #endif
 	snd_soc_cache_sync(codec);
 	return 0;
