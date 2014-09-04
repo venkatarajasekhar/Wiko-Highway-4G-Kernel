@@ -420,6 +420,15 @@ fail:
 	return err;
 }
 
+#if (defined(CONFIG_MACH_S9321) && CONFIG_MACH_S9321)
+#define USE_GLOBAL_MEMORY	1
+#endif
+
+#if defined(USE_GLOBAL_MEMORY) && USE_GLOBAL_MEMORY
+#define MAX_NP	48 /* host->info.nb_pts */
+static u32 g_waitbases[MAX_NP] = {0, };
+#endif
+
 static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		struct nvhost_submit_args *args)
 {
@@ -445,8 +454,14 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	u32 *local_waitbases = NULL;
 	int err, i, hwctx_syncpt_idx = -1;
 
-	if (num_syncpt_incrs > host->info.nb_pts)
+#if defined(USE_GLOBAL_MEMORY) && USE_GLOBAL_MEMORY
+	memset(g_waitbases, 0, sizeof (g_waitbases));
+#endif
+
+	if (num_syncpt_incrs > host->info.nb_pts) {
+		printk("nvhost_ioctl error: num_syncpt_incrs invalid\n");
 		return -EINVAL;
+	}
 
 	job = nvhost_job_alloc(ctx->ch,
 			ctx->hwctx,
@@ -492,11 +507,17 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	/* mass copy waitbases */
 	if (args->waitbases) {
+#if defined(USE_GLOBAL_MEMORY) && USE_GLOBAL_MEMORY
+		local_waitbases = g_waitbases;
+#else
 		local_waitbases = kzalloc(sizeof(u32) * num_syncpt_incrs,
 			GFP_KERNEL);
+#endif
+
 		err = copy_from_user(local_waitbases, waitbases,
 			sizeof(u32) * num_syncpt_incrs);
 		if (err) {
+			printk("nvhost_ioctl error: copy_from_user[waitbases]\n");
 			err = -EINVAL;
 			goto fail;
 		}
@@ -525,6 +546,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 		/* Validate */
 		if (sp.syncpt_id > host->info.nb_pts) {
+			printk("nvhost_ioctl error: sp.syncpt_id invalid\n");
 			err = -EINVAL;
 			goto fail;
 		}
@@ -547,11 +569,15 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	}
 
 	/* not needed anymore */
+
+#if !defined(USE_GLOBAL_MEMORY)
 	kfree(local_waitbases);
+#endif
 	local_waitbases = NULL;
 
 	/* Is hwctx_syncpt_idx valid? */
 	if (hwctx_syncpt_idx == -1) {
+		printk("nvhost_ioctl error: hwctx_syncpt_idx invalid\n");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -597,7 +623,10 @@ fail_submit:
 	nvhost_job_unpin(job);
 fail:
 	nvhost_job_put(job);
+#if !defined(USE_GLOBAL_MEMORY)
 	kfree(local_waitbases);
+#endif
+	printk("nvhost_ioctl return fail\n");
 	return err;
 }
 
