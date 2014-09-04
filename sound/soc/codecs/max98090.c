@@ -4127,7 +4127,11 @@ static int max98090_suspend(struct snd_soc_codec *codec)
 static int max98090_resume(struct snd_soc_codec *codec)
 {
 #ifdef CONFIG_MACH_S9321
+	struct max98090_priv *max98090 = snd_soc_codec_get_drvdata(codec);
 	interrupt_handling = false;
+	cancel_delayed_work(&max98090->jack_work);
+	schedule_delayed_work(&max98090->jack_work,
+		msecs_to_jiffies(500));
 #endif
 	snd_soc_cache_sync(codec);
 	return 0;
