@@ -590,8 +590,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		job->sp[job->hwctx_syncpt_idx].incrs);
 
 	err = nvhost_job_pin(job, &nvhost_get_host(ctx->ch->dev)->syncpt);
-	if (err)
+	if (err) {
+		printk("nvhost_ioctl error: nvhost_job_pin, err = %d\n", err);
 		goto fail;
+	}
 
 	if (args->timeout)
 		job->timeout = min(ctx->timeout, args->timeout);
@@ -600,8 +602,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->timeout_debug_dump = ctx->timeout_debug_dump;
 
 	err = nvhost_channel_submit(job);
-	if (err)
+	if (err) {
+		printk("nvhost_ioctl error: nvhost_channel_submit, err = %d\n", err);
 		goto fail_submit;
+	}
 
 	/* Deliver multiple fences back to the userspace */
 	if (fences)
