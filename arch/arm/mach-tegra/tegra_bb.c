@@ -922,8 +922,6 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 	case BBC_SET_FLOOR:
 		spin_unlock_irqrestore(&bb->lock, flags);
 		bb->cpu_min_freq = BBC_CPU_MIN_FREQ;
-		pm_qos_update_request(&bb_cpufreq_min_req,
-			bb->cpu_min_freq);
 		bb->t[5] = jiffies;
 		diff2 = (bb->t[5] - start) * 1000 / HZ;
 		pm_runtime_get_sync(bb->dev);
@@ -941,9 +939,6 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		    tegra_emc_request_low_latency_mode(true))
 			dev_err(bb->dev, "emc low latency request failed\n");
 		bb->t[3] = jiffies;
-
-		pm_qos_update_request(&bb_cpufreq_min_req,
-			PM_QOS_CPU_FREQ_MIN_DEFAULT_VALUE);
 
 		diff = (bb->t[3] - start) * 1000 / HZ;
 		if (diff >= 0) {
