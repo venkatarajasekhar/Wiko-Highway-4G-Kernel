@@ -386,10 +386,17 @@ int clk_enable(struct clk *c)
 {
 	int ret = 0;
 	unsigned long flags;
-
+	if (!strcmp(c->name, "bbc_fl.emc"))
+		pr_err("Clk name %s test point 1\n",c->name);
 	clk_lock_save(c, &flags);
+	if (!strcmp(c->name, "bbc_fl.emc"))
+		pr_err("Clk name %s test point 2\n",c->name);
 	ret = clk_enable_locked(c);
+	if (!strcmp(c->name, "bbc_fl.emc"))
+		pr_err("Clk name %s test point 3\n",c->name);
 	clk_unlock_restore(c, &flags);
+	if (!strcmp(c->name, "bbc_fl.emc"))
+		pr_err("Clk name %s test point 4\n",c->name);
 	return ret;
 }
 EXPORT_SYMBOL(clk_enable);
