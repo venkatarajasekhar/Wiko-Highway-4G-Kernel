@@ -928,9 +928,7 @@ static void tegra_bb_set_emc(struct tegra_bb *bb)
 		bb->t[6] = jiffies;
 		diff3 = (bb->t[6] - start) * 1000 / HZ;
 		/* going from 0 to high */
-		pr_err("Clk name bbc_fl.emc test point 0\n");
 		clk_prepare_enable(bb->emc_clk);
-		pr_err("Clk name bbc_fl.emc test point 5\n");
 		if (bb->emc_flags & EMC_DSR)
 			tegra_emc_dsr_override(TEGRA_EMC_DSR_OVERRIDE);
 		else
