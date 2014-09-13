@@ -13,7 +13,7 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/export.h>
-#include <linux/mutex.h>
+#include <linux/rtmutex.h>
 #include <linux/err.h>
 
 #define CREATE_TRACE_POINTS
@@ -181,12 +181,12 @@ static unsigned int regmap_parse_32(void *buf)
 
 static void regmap_lock_mutex(struct regmap *map)
 {
-	mutex_lock(&map->mutex);
+	rt_mutex_lock(&map->mutex);
 }
 
 static void regmap_unlock_mutex(struct regmap *map)
 {
-	mutex_unlock(&map->mutex);
+	rt_mutex_unlock(&map->mutex);
 }
 
 static void regmap_lock_spinlock(struct regmap *map)
@@ -233,7 +233,7 @@ struct regmap *regmap_init(struct device *dev,
 		map->lock = regmap_lock_spinlock;
 		map->unlock = regmap_unlock_spinlock;
 	} else {
-		mutex_init(&map->mutex);
+		rt_mutex_init(&map->mutex);
 		map->lock = regmap_lock_mutex;
 		map->unlock = regmap_unlock_mutex;
 	}

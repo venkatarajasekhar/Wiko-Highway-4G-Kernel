@@ -15,6 +15,7 @@
 
 #include <linux/regmap.h>
 #include <linux/fs.h>
+#include <linux/rtmutex.h>
 
 struct regmap;
 struct regcache_ops;
@@ -35,7 +36,7 @@ typedef void (*regmap_lock)(struct regmap *map);
 typedef void (*regmap_unlock)(struct regmap *map);
 
 struct regmap {
-	struct mutex mutex;
+	struct rt_mutex mutex;
 	spinlock_t spinlock;
 	regmap_lock lock;
 	regmap_unlock unlock;
