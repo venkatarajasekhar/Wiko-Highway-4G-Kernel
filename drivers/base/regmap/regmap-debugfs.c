@@ -11,7 +11,7 @@
  */
 
 #include <linux/slab.h>
-#include <linux/rtmutex.h>
+#include <linux/mutex.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/device.h>

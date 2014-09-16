@@ -21,7 +21,7 @@
 #include "internal.h"
 
 struct regmap_irq_chip_data {
-	struct rt_mutex lock;
+	struct mutex lock;
 	struct irq_chip irq_chip;
 
 	struct regmap *map;
@@ -55,7 +55,7 @@ static void regmap_irq_lock(struct irq_data *data)
 {
 	struct regmap_irq_chip_data *d = irq_data_get_irq_chip_data(data);
 
-	rt_mutex_lock(&d->lock);
+	mutex_lock(&d->lock);
 }
 
 static void regmap_irq_sync_unlock(struct irq_data *data)
@@ -113,7 +113,7 @@ static void regmap_irq_sync_unlock(struct irq_data *data)
 
 	d->wake_count = 0;
 
-	rt_mutex_unlock(&d->lock);
+	mutex_unlock(&d->lock);
 }
 
 static void regmap_irq_enable(struct irq_data *data)
@@ -369,7 +369,7 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 
 	d->type_reg_stride = chip->type_reg_stride ? : 1;
 
-	rt_mutex_init(&d->lock);
+	mutex_init(&d->lock);
 
 	for (i = 0; i < chip->num_irqs; i++)
 		d->mask_buf_def[chip->irqs[i].reg_offset / map->reg_stride]
