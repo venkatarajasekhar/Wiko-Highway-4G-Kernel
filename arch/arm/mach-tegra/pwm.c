@@ -114,8 +114,6 @@ int pwm_enable(struct pwm_device *pwm)
 			u32 val = readl(pwm->mmio_base);
 			writel(val | PWM_ENABLE, pwm->mmio_base);
 			pwm->clk_enb = 1;
-			dev_warn(&pwm->pdev->dev, "%s called on enabled PWM *really*\n",
-				 __func__);
 		}
 	}
 	mutex_unlock(&pwm_lock);
@@ -132,8 +130,6 @@ void pwm_disable(struct pwm_device *pwm)
 		writel(val & ~PWM_ENABLE, pwm->mmio_base);
 		clk_disable_unprepare(pwm->clk);
 		pwm->clk_enb = 0;
-		dev_warn(&pwm->pdev->dev, "%s called on disabled PWM *really*\n",
-			 __func__);
 	} else
 		dev_warn(&pwm->pdev->dev, "%s called on disabled PWM\n",
 			 __func__);
