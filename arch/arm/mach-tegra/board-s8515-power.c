@@ -1571,7 +1571,7 @@ int __init ceres_soctherm_init(void)
 static struct edp_manager ceres_sysedp_manager = {
 	.name = "battery",
 	/* .max = 18500 */
-	.max = 15000,
+	.max = 26048,//15000
 };
 
 void __init ceres_sysedp_init(void)
