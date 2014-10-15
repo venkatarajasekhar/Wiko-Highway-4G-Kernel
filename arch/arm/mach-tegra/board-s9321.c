@@ -534,6 +534,19 @@ static struct platform_device *atlantis_only_audio_devices[] __initdata = {
 	&ceres_audio_aic325x_device,
 };
 
+#ifdef CONFIG_MACH_S9321
+static struct platform_device ceres_gpio_button_device = {
+	.name           = "gpio-button",
+	.id             = -1,
+	//.irq			= TEGRA_GPIO_PJ3,
+};
+static noinline void __init ceres_setup_gpio_button(void)
+{
+	platform_device_register(&ceres_gpio_button_device);
+	return;
+};
+#endif
+
 static struct platform_device *ceres_common_audio_devices[] __initdata = {
 	&tegra_ahub_device,
 	&tegra_pcm_device,
@@ -1272,6 +1285,9 @@ static void __init tegra_ceres_late_init(void)
 	isomgr_init();
 	ceres_panel_init();
 	ceres_sensors_init();
+#ifdef CONFIG_MACH_S9321
+	ceres_setup_gpio_button();
+#endif
 
 	if( !get_androidboot_mode_charger() )
 		ceres_modem_init();
